@@ -1,0 +1,114 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum EventStatus {
+  DRAFT
+  OPEN
+  CLOSED
+  ARCHIVED
+}
+
+model Event {
+  id          String       @id // e.g. "photography-2026", "dancing-2026", "singing-2026"
+  name        String       // e.g. "Photography Club", "Dancing", "Singing"
+  slug        String       // e.g. "photography", "dancing", "singing"
+  year        Int          @default(2026)
+  status      EventStatus  @default(OPEN)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  submissions Submission[]
+}
+
+model Submission {
+  id              String           @id @default(cuid())
+  eventId         String           @default("photography-2026")
+  event           Event            @relation(fields: [eventId], references: [id])
+  name            String
+  rollNo          String
+  section         String           // e.g. "A", "B"
+  branch          String           // e.g. "IT"
+  year            Int              // e.g. 1, 2, 3, 4
+  email           String
+
+  photo1DriveId   String?
+  photo2DriveId   String?
+  photo3DriveId   String?
+  videoDriveId    String?          // optional
+  audioDriveId    String?          // optional
+  mediaType       String?          // e.g. "PHOTOS", "VIDEO", "AUDIO"
+
+  driveFolderPath String           // e.g. "Photography/2026/3-A/IT_2024IT101_JohnDoe"
+  status          SubmissionStatus @default(SUBMITTED)
+  isWinner        Boolean          @default(false)
+  winnerRank      Int?             // 1st, 2nd, 3rd, etc — nullable
+
+  submittedAt     DateTime         @default(now())
+
+  @@unique([eventId, rollNo, year, branch, section])
+  @@unique([eventId, email])
+  @@index([eventId, branch, section, year])
+}
+
+enum SubmissionStatus {
+  SUBMITTED
+  UNDER_REVIEW
+  WINNER
+  REJECTED
+}
+
+model AdminUser {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+}
+
+model EmailLog {
+  id           String            @id @default(cuid())
+  eventId      String            @default("photography-2026")
+  submissionId String
+  templateType EmailTemplateType
+  sentAt       DateTime          @default(now())
+  status       String            // "sent" | "failed"
+}
+
+enum EmailTemplateType {
+  WINNER
+  PARTICIPANT_THANKYOU
+}
+
+model DriveFolderCache {
+  id            String @id @default(cuid())
+  pathKey       String @unique // e.g. "photography-2026/2026/2-A"
+  driveFolderId String
+}
+
+enum ActivityStatus {
+  SUCCESS
+  WARNING
+  ERROR
+  INFO
+}
+
+model ActivityLog {
+  id            String         @id @default(cuid())
+  eventId       String         @default("photo-2026")
+  category      String         // "APPLICATION", "ADMIN", "FILE_UPLOAD", "EMAIL", "GOOGLE_DRIVE", "DATABASE", "AUTH"
+  action        String         // e.g. "Admin opened applicant", "Application submitted"
+  details       String?        // Additional context
+  userEmail     String?        // e.g. "admin@club.internal"
+  applicantName String?        // e.g. "A.Kartheek Swamy"
+  status        ActivityStatus @default(SUCCESS)
+  errorMessage  String?        // Technical error details if applicable
+  createdAt     DateTime       @default(now())
+
+  @@index([eventId, createdAt])
+  @@index([category, status])
+}
+
