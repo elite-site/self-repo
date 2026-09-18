@@ -20,14 +20,20 @@ self-intro-portal/
 
 ## Setup
 
-Backend (PostgreSQL):
+Database (Supabase — same project as parent, **isolated `self_intro` schema** so tables never collide with the parent's `public` tables):
+
+```bash
+cp backend/.env.example backend/.env   # edit values (or use backend/.env with your creds)
+npm run db:setup && npx prisma db push && npm run prisma:seed
+```
+
+`db:setup` ensures the schema named in your `DATABASE_URL` (`?schema=self_intro`) exists. `prisma db push` then creates the portal's tables/enums inside that schema only.
+
+Local dev:
 
 ```bash
 cd backend
-cp .env.example .env          # edit DATABASE_URL, secrets, Google Drive creds
 npm install                   # also builds admin-client via postinstall
-npx prisma db push            # creates the schema (db `self_intro_portal`)
-npm run prisma:seed           # seeds Self Introduction event + admin user
 npm run dev                   # API on http://localhost:5001
 ```
 
@@ -45,6 +51,20 @@ cd web
 npm install
 npm run dev                   # Vite on http://localhost:5177
 ```
+
+## Deployment
+
+### Render (backend + admin)
+- Root Directory: `backend`
+- Build: `npm install && npx prisma generate && npm run build && npm run build:admin`
+- Start: `node dist/server.js`
+- Env: use the same env vars as `backend/.env`. `DATABASE_URL` must include `?schema=self_intro` (Supabase pooler **session mode, port 5432** — not 6543, which can break the schema param).
+- After first deploy, run once: `npm run db:setup && npx prisma db push && npm run prisma:seed`
+
+### Netlify (public form)
+- Base directory: `web`, build `npm run build`, publish `dist`
+- Env: `VITE_API_BASE_URL=https://<render-service>.onrender.com/api`
+- `ALLOWED_ORIGINS` on Render must include the Netlify URL.
 
 ## Configuration
 

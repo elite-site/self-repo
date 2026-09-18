@@ -15,6 +15,7 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:push": "prisma db push",
     "prisma:seed": "ts-node prisma/seed.ts",
+    "db:setup": "ts-node scripts/db-setup.ts",
     "get-token": "ts-node scripts/get-oauth-token.ts"
   },
   "dependencies": {
@@ -45,7 +46,7 @@
     "form-data": "^4.0.6",
     "prisma": "^5.22.0",
     "ts-node": "^10.9.2",
-    "typescript": "^5.7.2"
+    "typescript": "5.9.3"
   },
   "allowScripts": {
     "@prisma/client@5.22.0": true,
