@@ -61,10 +61,11 @@ npm run dev                   # Vite on http://localhost:5177
 - Env: use the same env vars as `backend/.env`. `DATABASE_URL` must include `?schema=self_intro` (Supabase pooler **session mode, port 5432** — not 6543, which can break the schema param).
 - After first deploy, run once: `npm run db:setup && npx prisma db push && npm run prisma:seed`
 
-### Netlify (public form)
-- Base directory: `web`, build `npm run build`, publish `dist`
+### Vercel (public form)
+- Root `vercel.json` sets `rootDirectory: web`, build `npm run build`, publish `dist`, SPA rewrite.
+- Import `elite-site/self-repo` on Vercel → Auto-detected Vite → Deploy.
 - Env: `VITE_API_BASE_URL=https://<render-service>.onrender.com/api`
-- `ALLOWED_ORIGINS` on Render must include the Netlify URL.
+- `ALLOWED_ORIGIN(S)` on Render must include the Vercel URL.
 
 ## Configuration
 
