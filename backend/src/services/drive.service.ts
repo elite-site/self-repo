@@ -434,6 +434,55 @@ class DriveService {
   }
 
   /**
+   * Deletes only the video file for a submission (mock storage or Google Drive),
+   * leaving the rest of the record and folder intact so the student can re-upload.
+   */
+  public async deleteVideo(submission: {
+    videoDriveId?: string | null;
+    driveFolderPath: string;
+  }): Promise<void> {
+    if (!submission.videoDriveId) {
+      return;
+    }
+
+    if (this.isMock || !this.drive) {
+      if (submission.driveFolderPath) {
+        const dirPath = path.join(this.mockBaseDir, submission.driveFolderPath);
+        if (fs.existsSync(dirPath)) {
+          const files = fs.readdirSync(dirPath);
+          for (const file of files) {
+            if (file.startsWith('video') && !file.endsWith('.meta.json')) {
+              try {
+                fs.unlinkSync(path.join(dirPath, file));
+              } catch (err) {
+                console.warn(`Failed to delete mock video file ${file}:`, err);
+              }
+            }
+            if (file.endsWith('.meta.json')) {
+              try {
+                const meta = JSON.parse(fs.readFileSync(path.join(dirPath, file), 'utf-8'));
+                if (meta.id === submission.videoDriveId) {
+                  fs.unlinkSync(path.join(dirPath, file));
+                }
+              } catch (_) {}
+            }
+          }
+        }
+      }
+      return;
+    }
+
+    try {
+      await this.drive.files.delete({
+        fileId: submission.videoDriveId,
+        supportsAllDrives: true,
+      });
+    } catch (err) {
+      console.warn(`Failed to delete Drive video file ${submission.videoDriveId}:`, err);
+    }
+  }
+
+  /**
    * Deletes all files and folder associated with a submission from Google Drive or mock storage
    */
   public async deleteSubmissionFiles(submission: {

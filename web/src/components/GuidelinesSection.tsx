@@ -36,7 +36,7 @@ export const GuidelinesSection: React.FC = () => {
               <span>Format & Quality</span>
             </div>
             <p className="text-xs text-neutral-600 leading-relaxed">
-              Video: MP4, MOV, WEBM (Max 80MB). Ensure clear audio and good lighting.
+              Video: MP4, MOV, WEBM (Max 25MB). Ensure clear audio and good lighting.
             </p>
           </div>
 
@@ -46,7 +46,7 @@ export const GuidelinesSection: React.FC = () => {
               <span>One Entry Per Student</span>
             </div>
             <p className="text-xs text-neutral-600 leading-relaxed">
-              Only one audition entry per roll number is accepted. Shortlisted candidates will be called for live campus interactions.
+              Only one introduction video per roll number is accepted. Your details are verified automatically from the student list when you enter your roll number.
             </p>
           </div>
         </div>

@@ -5,8 +5,7 @@ import { StatsDashboard } from './components/StatsDashboard';
 import { EventHomeView } from './components/EventHomeView';
 import { SubmissionsTable } from './components/SubmissionsTable';
 import { SubmissionDetailModal } from './components/SubmissionDetailModal';
-import { WinnersView } from './components/WinnersView';
-import { EmailCenter } from './components/EmailCenter';
+import { StudentsView } from './components/StudentsView';
 import { ActivityLogView } from './components/ActivityLogView';
 import { LoginPage } from './components/LoginPage';
 import { AdminStats, AdminUser, Submission } from './types';
@@ -146,7 +145,7 @@ export const App: React.FC = () => {
             />
           )}
 
-          {(activeTab === 'submissions' || activeTab === 'rejected') && (
+          {(activeTab === 'submissions') && (
             <SubmissionsTable
               activeEventId={ACTIVE_EVENT_ID}
               onSelectSubmission={(sub) => setSelectedSubmission(sub)}
@@ -154,15 +153,12 @@ export const App: React.FC = () => {
             />
           )}
 
-          {activeTab === 'winners' && (
-            <WinnersView
+          {activeTab === 'students' && (
+            <StudentsView
               activeEventId={ACTIVE_EVENT_ID}
-              onSelectSubmission={(sub) => setSelectedSubmission(sub)}
-              onNavigateToEmails={() => setActiveTab('emails')}
+              onNavigateToSubmissions={() => setActiveTab('submissions')}
             />
           )}
-
-          {activeTab === 'emails' && <EmailCenter activeEventId={ACTIVE_EVENT_ID} />}
 
           {activeTab === 'activity' && <ActivityLogView activeEventId={ACTIVE_EVENT_ID} />}
         </main>

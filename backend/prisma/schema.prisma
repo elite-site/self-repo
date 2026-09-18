@@ -26,32 +26,59 @@ model Event {
 }
 
 model Submission {
-  id              String           @id @default(cuid())
-  eventId         String           @default("photography-2026")
-  event           Event            @relation(fields: [eventId], references: [id])
+  id              String            @id @default(cuid())
+  eventId         String            @default("self-introduction-2026")
+  event           Event             @relation(fields: [eventId], references: [id])
   name            String
   rollNo          String
-  section         String           // e.g. "A", "B"
-  branch          String           // e.g. "IT"
-  year            Int              // e.g. 1, 2, 3, 4
+  section         String            // e.g. "A", "B"
+  branch          String            // e.g. "IT"
+  year            Int               // e.g. 1, 2, 3, 4
   email           String
 
   photo1DriveId   String?
   photo2DriveId   String?
   photo3DriveId   String?
-  videoDriveId    String?          // optional
-  audioDriveId    String?          // optional
-  mediaType       String?          // e.g. "PHOTOS", "VIDEO", "AUDIO"
+  videoDriveId    String?           // optional
+  audioDriveId    String?           // optional
+  mediaType       String?           // e.g. "VIDEO"
 
-  driveFolderPath String           // e.g. "Photography/2026/3-A/IT_2024IT101_JohnDoe"
-  status          SubmissionStatus @default(SUBMITTED)
-  isWinner        Boolean          @default(false)
-  winnerRank      Int?             // 1st, 2nd, 3rd, etc — nullable
+  driveFolderPath String            // e.g. "Self Introduction/2026/3-A/IT_2024IT101_JohnDoe"
+  status          SubmissionStatus  @default(SUBMITTED)
 
-  submittedAt     DateTime         @default(now())
+  rating          SubmissionRating? // GOOD | AVERAGE | POOR performance evaluation
+  ratedAt         DateTime?
+
+  submittedAt     DateTime          @default(now())
+  updatedAt       DateTime          @default(now()) @updatedAt
 
   @@unique([eventId, rollNo, year, branch, section])
-  @@unique([eventId, email])
+  @@index([eventId, rollNo])
+  @@index([eventId, branch, section, year])
+}
+
+enum SubmissionRating {
+  GOOD
+  AVERAGE
+  POOR
+}
+
+// Master roster of registered students. The public form auto-fills student
+// details from here when a roll number is entered, and the admin dashboard
+// computes "remaining to upload" by comparing this roster against submissions.
+model Student {
+  id        String   @id @default(cuid())
+  eventId   String   @default("self-introduction-2026")
+  rollNo    String
+  name      String
+  branch    String
+  section   String
+  year      Int
+  email     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([eventId, rollNo])
   @@index([eventId, branch, section, year])
 }
 

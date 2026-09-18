@@ -22,7 +22,7 @@ export const HeroSection: React.FC = () => {
 
           {/* Subtitle */}
           <p className="text-sm sm:text-base text-elite-darkgray max-w-lg leading-relaxed font-normal">
-            Tell us who you are. Join <strong className="text-elite-red font-semibold">ELITE Self Introduction Club</strong>. Submit your introduction video and let the panel meet the real you.
+            Tell us who you are. Join <strong className="text-elite-red font-semibold">ELITE Self Introduction</strong>. Submit your introduction video and let the panel meet the real you.
           </p>
 
           {/* 4 HORIZONTAL HIGHLIGHTS */}

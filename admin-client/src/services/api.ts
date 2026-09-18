@@ -2,11 +2,13 @@ import axios from 'axios';
 import {
   AdminStats,
   AdminUser,
-  EmailLogEntry,
-  EmailPreviewData,
   EventItem,
+  ImportResult,
+  Student,
   Submission,
+  SubmissionRating,
   SubmissionsResponse,
+  StudentsResponse,
 } from '../types';
 
 const client = axios.create({
@@ -55,7 +57,7 @@ export const adminApi = {
     section?: string;
     year?: number;
     status?: string;
-    isWinner?: boolean;
+    rating?: string;
     search?: string;
     sortBy?: string;
     sortOrder?: 'asc' | 'desc';
@@ -69,15 +71,11 @@ export const adminApi = {
     return res.data;
   },
 
-  async updateWinner(
+  async updateRating(
     id: string,
-    isWinner: boolean,
-    winnerRank?: number | null
+    rating: SubmissionRating | null
   ): Promise<{ success: boolean; submission: Submission }> {
-    const res = await client.patch(`/admin/api/submissions/${id}/winner`, {
-      isWinner,
-      winnerRank,
-    });
+    const res = await client.patch(`/admin/api/submissions/${id}/rating`, { rating });
     return res.data;
   },
 
@@ -89,12 +87,17 @@ export const adminApi = {
     return res.data;
   },
 
+  async deleteVideo(id: string): Promise<{ success: boolean; message: string; submission: Submission }> {
+    const res = await client.delete(`/admin/api/submissions/${id}/video`);
+    return res.data;
+  },
+
   async deleteSubmission(id: string): Promise<{ success: boolean; message: string }> {
     const res = await client.delete(`/admin/api/submissions/${id}`);
     return res.data;
   },
 
-  getMediaUrl(submissionId: string, fileKey: 'photo1' | 'photo2' | 'photo3' | 'video' | 'audio'): string {
+  getMediaUrl(submissionId: string, fileKey: 'video'): string {
     return `/admin/api/submissions/${submissionId}/media/${fileKey}`;
   },
 
@@ -102,35 +105,39 @@ export const adminApi = {
     return `/admin/api/export/excel?eventId=${encodeURIComponent(eventId || 'self-introduction-2026')}`;
   },
 
-  // Email
-  async previewEmail(
-    templateType: 'WINNER' | 'PARTICIPANT_THANKYOU',
-    submissionId?: string
-  ): Promise<EmailPreviewData> {
-    const res = await client.get('/admin/api/email/preview', {
-      params: { templateType, submissionId },
+  // Students (roster)
+  async getStudents(params: {
+    eventId?: string;
+    page?: number;
+    limit?: number;
+    section?: string;
+    year?: number;
+    search?: string;
+  }): Promise<StudentsResponse> {
+    const res = await client.get('/admin/api/students', { params });
+    return res.data;
+  },
+
+  async importStudents(file: File): Promise<ImportResult> {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await client.post('/admin/api/students/import', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 120000,
     });
     return res.data;
   },
 
-  async sendEmails(
-    templateType: 'WINNER' | 'PARTICIPANT_THANKYOU',
-    submissionIds: string[],
-    forceResend?: boolean
-  ): Promise<any> {
-    const res = await client.post('/admin/api/email/send', {
-      templateType,
-      submissionIds,
-      forceResend,
-    });
+  getStudentTemplateUrl(): string {
+    return `/admin/api/students/template`;
+  },
+
+  async deleteStudent(id: string): Promise<{ success: boolean; message: string }> {
+    const res = await client.delete(`/admin/api/students/${id}`);
     return res.data;
   },
 
-  async getEmailLogs(eventId?: string): Promise<{ logs: EmailLogEntry[] }> {
-    const res = await client.get('/admin/api/email/logs', { params: { eventId } });
-    return res.data;
-  },
-
+  // Activity logs
   async getActivityLogs(params: {
     eventId?: string;
     category?: string;
@@ -160,4 +167,4 @@ export const adminApi = {
 };
 
 export const api = adminApi;
-
+export type { Student }; // re-export convenience

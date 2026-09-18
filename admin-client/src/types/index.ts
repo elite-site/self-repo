@@ -6,6 +6,8 @@ export interface EventItem {
   status: 'DRAFT' | 'OPEN' | 'CLOSED' | 'ARCHIVED';
 }
 
+export type SubmissionRating = 'GOOD' | 'AVERAGE' | 'POOR';
+
 export interface Submission {
   id: string;
   eventId?: string;
@@ -15,27 +17,53 @@ export interface Submission {
   branch: string;
   year: number;
   email: string;
-  photo1DriveId?: string | null;
-  photo2DriveId?: string | null;
-  photo3DriveId?: string | null;
   videoDriveId?: string | null;
-  audioDriveId?: string | null;
-  mediaType?: 'PHOTOS' | 'VIDEO' | 'AUDIO' | string | null;
+  mediaType?: string | null;
   driveFolderPath: string;
-  status: 'SUBMITTED' | 'UNDER_REVIEW' | 'WINNER' | 'REJECTED';
-  isWinner: boolean;
-  winnerRank?: number | null;
+  status: string;
+  rating?: SubmissionRating | null;
+  ratedAt?: string | null;
   submittedAt: string;
+}
+
+export interface Student {
+  id: string;
+  eventId?: string;
+  rollNo: string;
+  name: string;
+  branch: string;
+  section: string;
+  year: number;
+  email: string;
+  submissionId?: string | null;
+  hasVideo: boolean;
+  rating?: SubmissionRating | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface SectionProgress {
+  label: string;
+  year: number | string;
+  branch?: string;
+  section: string;
+  total: number;
+  submitted: number;
+  remaining: number;
 }
 
 export interface AdminStats {
   eventId?: string;
+  totalStudents: number;
   totalSubmissions: number;
-  totalWinners: number;
-  byBranch: Record<string, number>;
+  totalVideos: number;
+  totalRated: number;
+  totalRemaining: number;
   byYear: Record<string, number>;
-  bySection: Array<{ label: string; count: number; year: number | string; branch?: string; section: string }>;
+  byYearProgress: Record<string, { total: number; submitted: number; remaining: number }>;
+  bySection: SectionProgress[];
   byStatus: Record<string, number>;
+  byRating: Record<string, number>;
   overTime: Array<{ date: string; count: number }>;
 }
 
@@ -50,24 +78,27 @@ export interface SubmissionsResponse {
   };
 }
 
-export interface EmailPreviewData {
-  subject: string;
-  html: string;
-  recipientName: string;
-  recipientEmail: string;
+export interface StudentsResponse {
+  eventId?: string;
+  data: Student[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
 }
 
-export interface EmailLogEntry {
-  id: string;
-  eventId?: string;
-  submissionId: string;
-  templateType: 'WINNER' | 'PARTICIPANT_THANKYOU';
-  sentAt: string;
-  status: string;
+export interface ImportResult {
+  success: boolean;
+  message: string;
+  imported: number;
+  updated: number;
+  skipped: number;
+  errors: string[];
 }
 
 export interface AdminUser {
   userId: string;
   email: string;
 }
-

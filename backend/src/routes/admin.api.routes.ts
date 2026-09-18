@@ -3,11 +3,13 @@ import ExcelJS from 'exceljs';
 import { requireAdminAuth } from '../middleware/auth';
 import { prisma } from '../lib/prisma';
 import { driveService } from '../services/drive.service';
-import { emailService, EmailTemplateType } from '../services/email.service';
-import { SUBMISSION_STATUSES, WINNER_RANKS } from '../config/constants';
+import { RATINGS, RATING_LABELS, SUBMISSION_STATUSES, SECTIONS, BRANCHES, YEARS } from '../config/constants';
+import { studentImportUploadMiddleware } from '../middleware/upload';
 import { ActivityService } from '../services/activity.service';
 
 const router = Router();
+
+const ACTIVE_EVENT_ID = 'self-introduction-2026';
 
 // Protect all /admin/api routes with JWT authentication
 router.use(requireAdminAuth);
@@ -32,122 +34,123 @@ router.get('/events', async (_req: Request, res: Response): Promise<void> => {
 // ==========================================
 router.get('/stats', async (req: Request, res: Response): Promise<void> => {
   try {
-    const eventId = ((req.query.eventId as string) || 'self-introduction-2026').trim();
+    const eventId = ((req.query.eventId as string) || ACTIVE_EVENT_ID).trim();
 
-    const totalSubmissions = await prisma.submission.count({ where: { eventId } });
-    const totalWinners = await prisma.submission.count({ where: { eventId, isWinner: true } });
+    const [totalStudents, totalVideos, totalRated, studentGroups, videoGroups, ratingGroups, overTimeRows] =
+      await Promise.all([
+        prisma.student.count({ where: { eventId } }),
+        prisma.submission.count({ where: { eventId, videoDriveId: { not: null } } }),
+        prisma.submission.count({ where: { eventId, rating: { not: null } } }),
+        prisma.student.groupBy({
+          by: ['branch', 'section', 'year'],
+          where: { eventId },
+          _count: { _all: true },
+        }),
+        prisma.submission.groupBy({
+          by: ['branch', 'section', 'year'],
+          where: { eventId, videoDriveId: { not: null } },
+          _count: { _all: true },
+        }),
+        prisma.submission.groupBy({
+          by: ['rating'],
+          where: { eventId, rating: { not: null } },
+          _count: { _all: true },
+        }),
+        prisma.submission.findMany({
+          where: { eventId, videoDriveId: { not: null } },
+          select: { submittedAt: true },
+          orderBy: { submittedAt: 'asc' },
+        }),
+      ]);
 
-    // Group by branch
-    const branchGroups = await prisma.submission.groupBy({
-      by: ['branch'],
-      where: { eventId },
-      _count: { _all: true },
-    });
-    const byBranch: Record<string, number> = {};
-    branchGroups.forEach((g) => {
-      byBranch[g.branch] = g._count._all;
-    });
-
-    // Group by year (excluding 1st year)
-    const yearGroups = await prisma.submission.groupBy({
-      by: ['year'],
-      where: { eventId },
-      _count: { _all: true },
-    });
-    const byYear: Record<string, number> = {};
-    yearGroups.forEach((g) => {
-      const yNum = typeof g.year === 'number' ? g.year : parseInt(String(g.year), 10);
-      if (yNum !== 1) {
-        byYear[`Year ${g.year}`] = g._count._all;
-      }
-    });
-
-    // Group by year, branch, & section (excluding 1st year)
-    const sectionGroups = await prisma.submission.groupBy({
-      by: ['year', 'branch', 'section'],
-      where: { eventId },
-      _count: { _all: true },
-    });
+    const totalRemaining = Math.max(0, totalStudents - totalVideos);
 
     const formatYearLabel = (y: number | string): string => {
-      const str = String(y).trim();
-      if (str.toLowerCase().includes('year')) return str;
-      const num = parseInt(str, 10);
-      if (isNaN(num)) return str;
+      const num = parseInt(String(y), 10);
+      if (isNaN(num)) return String(y);
       if (num === 2) return '2nd Year';
       if (num === 3) return '3rd Year';
       if (num === 4) return '4th Year';
       return `${num}th Year`;
     };
 
-    const yearToNum = (y: number | string): number => {
-      if (typeof y === 'number') return y;
-      const match = String(y).match(/\d+/);
-      return match ? parseInt(match[0], 10) : 999;
-    };
+    const key = (g: { branch: string; section: string; year: number }) =>
+      `${String(g.year)}|${(g.branch || '').trim()}|${(g.section || '').trim()}`;
 
-    const bySection: Array<{ label: string; count: number; year: number; branch: string; section: string }> = sectionGroups
-      .filter((g) => {
-        const yNum = yearToNum(g.year);
-        return yNum !== 1;
-      })
+    const submittedMap = new Map<string, number>();
+    videoGroups.forEach((g) => submittedMap.set(key(g), g._count._all));
+
+    const bySection = studentGroups
       .map((g) => {
-        const yearFormatted = formatYearLabel(g.year);
-        const branchStr = g.branch ? g.branch.trim() : 'IT';
-        const label = `${yearFormatted} · ${branchStr}-${g.section}`;
+        const k = key(g);
+        const submitted = submittedMap.get(k) || 0;
         return {
-          label,
-          count: g._count._all,
+          label: `${formatYearLabel(g.year)} · ${(g.branch || 'IT').trim()}-${(g.section || '').trim()}`,
           year: g.year,
           branch: g.branch,
           section: g.section,
+          total: g._count._all,
+          submitted,
+          remaining: Math.max(0, g._count._all - submitted),
         };
       })
       .sort((a, b) => {
-        const yearDiff = yearToNum(a.year) - yearToNum(b.year);
-        if (yearDiff !== 0) return yearDiff;
-        const branchDiff = (a.branch || '').localeCompare(b.branch || '');
-        if (branchDiff !== 0) return branchDiff;
+        if (a.year !== b.year) return a.year - b.year;
+        if ((a.branch || '') !== (b.branch || '')) return (a.branch || '').localeCompare(b.branch || '');
         return (a.section || '').localeCompare(b.section || '');
       });
 
-    // Group by status
-    const statusGroups = await prisma.submission.groupBy({
-      by: ['status'],
-      where: { eventId },
-      _count: { _all: true },
+    const yearTotals = new Map<number, { total: number; submitted: number }>();
+    studentGroups.forEach((g) => {
+      const cur = yearTotals.get(g.year) || { total: 0, submitted: 0 };
+      cur.total += g._count._all;
+      yearTotals.set(g.year, cur);
     });
-    const byStatus: Record<string, number> = {};
-    statusGroups.forEach((g) => {
-      byStatus[g.status] = g._count._all;
+    videoGroups.forEach((g) => {
+      const cur = yearTotals.get(g.year) || { total: 0, submitted: 0 };
+      cur.submitted += g._count._all;
+      yearTotals.set(g.year, cur);
+    });
+    const byYear: Record<string, number> = {};
+    const byYearProgress: Record<string, { total: number; submitted: number; remaining: number }> = {};
+    [...yearTotals.entries()].sort((a, b) => a[0] - b[0]).forEach(([y, v]) => {
+      byYear[`Year ${y}`] = v.submitted;
+      byYearProgress[`Year ${y}`] = {
+        total: v.total,
+        submitted: v.submitted,
+        remaining: Math.max(0, v.total - v.submitted),
+      };
     });
 
-    // Submissions over time (mini timeline)
-    const allDates = await prisma.submission.findMany({
-      where: { eventId },
-      select: { submittedAt: true },
-      orderBy: { submittedAt: 'asc' },
+    const byStatus: Record<string, number> = {};
+    (['SUBMITTED', 'UNDER_REVIEW', 'REJECTED'] as const).forEach((s) => {
+      byStatus[s] = 0;
+    });
+
+    const byRating: Record<string, number> = {};
+    ratingGroups.forEach((g) => {
+      if (g.rating) byRating[g.rating] = g._count._all;
     });
 
     const dateCounts: Record<string, number> = {};
-    allDates.forEach((s) => {
+    overTimeRows.forEach((s) => {
       const dateKey = s.submittedAt.toISOString().split('T')[0];
       dateCounts[dateKey] = (dateCounts[dateKey] || 0) + 1;
     });
-
-    const overTime = Object.entries(dateCounts).map(([date, count]) => ({
-      date,
-      count,
-    }));
+    const overTime = Object.entries(dateCounts).map(([date, count]) => ({ date, count }));
 
     res.json({
       eventId,
-      totalSubmissions,
-      totalWinners,
-      byBranch,
+      totalStudents,
+      totalSubmissions: totalVideos,
+      totalVideos,
+      totalRated,
+      totalRemaining,
       byYear,
+      byYearProgress,
       bySection,
       byStatus,
+      byRating,
       overTime,
     });
   } catch (err: any) {
@@ -161,7 +164,7 @@ router.get('/stats', async (req: Request, res: Response): Promise<void> => {
 // ==================================================
 router.get('/submissions', async (req: Request, res: Response): Promise<void> => {
   try {
-    const eventId = ((req.query.eventId as string) || 'self-introduction-2026').trim();
+    const eventId = ((req.query.eventId as string) || ACTIVE_EVENT_ID).trim();
     const page = Math.max(1, parseInt((req.query.page as string) || '1', 10));
     const limit = Math.min(100, Math.max(1, parseInt((req.query.limit as string) || '25', 10)));
     const skip = (page - 1) * limit;
@@ -170,7 +173,7 @@ router.get('/submissions', async (req: Request, res: Response): Promise<void> =>
     const section = req.query.section as string | undefined;
     const year = req.query.year ? parseInt(req.query.year as string, 10) : undefined;
     const status = req.query.status as any;
-    const isWinner = req.query.isWinner !== undefined ? req.query.isWinner === 'true' : undefined;
+    const rating = req.query.rating as any;
     const search = (req.query.search as string | undefined)?.trim();
 
     const sortBy = (req.query.sortBy as string) || 'submittedAt';
@@ -182,7 +185,7 @@ router.get('/submissions', async (req: Request, res: Response): Promise<void> =>
     if (section) whereClause.section = section;
     if (year) whereClause.year = year;
     if (status && SUBMISSION_STATUSES.includes(status)) whereClause.status = status;
-    if (isWinner !== undefined) whereClause.isWinner = isWinner;
+    if (rating && RATINGS.includes(rating)) whereClause.rating = rating;
 
     if (search) {
       whereClause.AND = [
@@ -282,43 +285,42 @@ router.get('/submissions/:id/media/:fileKey', async (req: Request, res: Response
 });
 
 // ==============================================================
-// 5. MARK WINNER & RANK (PATCH /admin/api/submissions/:id/winner)
+// 5. SET PERFORMANCE RATING (PATCH /admin/api/submissions/:id/rating)
 // ==============================================================
-router.patch('/submissions/:id/winner', async (req: Request, res: Response): Promise<void> => {
+router.patch('/submissions/:id/rating', async (req: Request, res: Response): Promise<void> => {
   try {
-    const { isWinner, winnerRank } = req.body;
+    const { rating } = req.body;
 
-    const parsedRank = isWinner && winnerRank !== undefined && winnerRank !== null
-      ? parseInt(winnerRank, 10)
-      : null;
+    const hasRating = rating !== null && rating !== undefined && rating !== '';
+    const normalized = hasRating ? String(rating).toUpperCase() : null;
+
+    if (normalized && !RATINGS.includes(normalized as any)) {
+      res.status(400).json({ error: 'INVALID_RATING', message: `Invalid rating. Available options: ${RATINGS.join(', ')}.` });
+      return;
+    }
 
     const updated = await prisma.submission.update({
       where: { id: req.params.id },
       data: {
-        isWinner: Boolean(isWinner),
-        winnerRank: parsedRank,
-        status: isWinner ? 'WINNER' : 'SUBMITTED',
+        rating: (normalized as any) || null,
+        ratedAt: normalized ? new Date() : null,
       },
     });
 
     await ActivityService.log({
       eventId: updated.eventId,
       category: 'ADMIN',
-      action: isWinner ? 'Admin marked applicant as winner' : 'Admin removed winner status',
-      details: isWinner ? `Winner Rank: ${parsedRank || 'Unranked'}` : 'Status reset to SUBMITTED',
+      action: normalized ? `Admin rated student ${RATING_LABELS[normalized]}` : 'Admin cleared performance rating',
+      details: normalized ? `Rating: ${normalized} (${RATING_LABELS[normalized]})` : 'Rating cleared',
       applicantName: updated.name,
       userEmail: updated.email,
       status: 'SUCCESS',
     });
 
-    res.json({
-      success: true,
-      message: isWinner ? 'Submission marked as winner' : 'Winner flag removed',
-      submission: updated,
-    });
+    res.json({ success: true, submission: updated });
   } catch (err: any) {
-    console.error('Error updating winner status:', err);
-    res.status(500).json({ error: 'FAILED_TO_UPDATE_WINNER', message: err.message });
+    console.error('Error updating rating:', err);
+    res.status(500).json({ error: 'FAILED_TO_UPDATE_RATING', message: err.message });
   }
 });
 
@@ -336,11 +338,7 @@ router.patch('/submissions/:id/status', async (req: Request, res: Response): Pro
 
     const updated = await prisma.submission.update({
       where: { id: req.params.id },
-      data: {
-        status,
-        isWinner: status === 'WINNER',
-        ...(status !== 'WINNER' ? { winnerRank: null } : {}),
-      },
+      data: { status },
     });
 
     await ActivityService.log({
@@ -360,81 +358,64 @@ router.patch('/submissions/:id/status', async (req: Request, res: Response): Pro
   }
 });
 
-// ========================================================
-// 7. EMAIL PREVIEW (GET /admin/api/email/preview)
-// ========================================================
-router.get('/email/preview', async (req: Request, res: Response): Promise<void> => {
+// ==============================================================
+// 7. DELETE ONLY THE VIDEO (DELETE /admin/api/submissions/:id/video)
+// Removes the video file so the student can upload a replacement.
+// ==============================================================
+router.delete('/submissions/:id/video', async (req: Request, res: Response): Promise<void> => {
   try {
-    const templateType = (req.query.templateType as EmailTemplateType) || 'WINNER';
-    const submissionId = req.query.submissionId as string | undefined;
+    const { id } = req.params;
+    const submission = await prisma.submission.findUnique({ where: { id } });
 
-    const preview = await emailService.previewTemplate(templateType, submissionId);
-    res.json(preview);
-  } catch (err: any) {
-    console.error('Error generating email preview:', err);
-    res.status(500).json({ error: 'PREVIEW_FAILED', message: err.message });
-  }
-});
-
-// ========================================================
-// 8. SEND EMAILS (POST /admin/api/email/send)
-// ========================================================
-router.post('/email/send', async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { templateType, submissionIds, forceResend } = req.body;
-
-    if (!templateType || !['WINNER', 'PARTICIPANT_THANKYOU'].includes(templateType)) {
-      res.status(400).json({ error: 'INVALID_TEMPLATE', message: 'Valid templateType is required.' });
+    if (!submission) {
+      res.status(404).json({ error: 'NOT_FOUND', message: 'Submission not found' });
       return;
     }
 
-    if (!Array.isArray(submissionIds) || submissionIds.length === 0) {
-      res.status(400).json({ error: 'NO_RECIPIENTS', message: 'At least one submission ID must be selected.' });
+    if (!submission.videoDriveId) {
+      res.status(400).json({ error: 'NO_VIDEO', message: 'This submission has no video to delete.' });
       return;
     }
 
-    const result = await emailService.sendBatch({
-      templateType,
-      submissionIds,
-      forceResend: Boolean(forceResend),
+    await driveService.deleteVideo(submission);
+
+    const updated = await prisma.submission.update({
+      where: { id },
+      data: {
+        videoDriveId: null,
+      },
     });
 
-    res.json(result);
-  } catch (err: any) {
-    console.error('Error sending emails:', err);
-    res.status(500).json({ error: 'EMAIL_SEND_FAILED', message: err.message });
-  }
-});
-
-// ========================================================
-// 9. EMAIL LOGS (GET /admin/api/email/logs)
-// ========================================================
-router.get('/email/logs', async (req: Request, res: Response): Promise<void> => {
-  try {
-    const eventId = ((req.query.eventId as string) || 'self-introduction-2026').trim();
-
-    const logs = await prisma.emailLog.findMany({
-      where: { eventId },
-      orderBy: { sentAt: 'desc' },
-      take: 100,
+    await ActivityService.log({
+      eventId: updated.eventId,
+      category: 'ADMIN',
+      action: 'Admin deleted student introduction video',
+      details: `Video removed for ${updated.rollNo}. Student may re-upload.`,
+      applicantName: updated.name,
+      userEmail: updated.email,
+      status: 'WARNING',
     });
 
-    res.json({ eventId, logs });
+    res.json({
+      success: true,
+      message: 'Introduction video deleted. The student can now upload a replacement.',
+      submission: updated,
+    });
   } catch (err: any) {
-    console.error('Error fetching email logs:', err);
-    res.status(500).json({ error: 'FAILED_TO_FETCH_LOGS', message: err.message });
+    console.error('Error deleting video:', err);
+    res.status(500).json({ error: 'VIDEO_DELETE_FAILED', message: err.message });
   }
 });
 
 // ==============================================================
-// 10. EXCEL EXPORT (GET /admin/api/export/excel)
+// 8. EXCEL EXPORT (GET /admin/api/export/excel)
 // ==============================================================
 router.get('/export/excel', async (req: Request, res: Response): Promise<void> => {
   try {
-    const eventId = ((req.query.eventId as string) || 'self-introduction-2026').trim();
+    const eventId = ((req.query.eventId as string) || ACTIVE_EVENT_ID).trim();
     const event = await prisma.event.findUnique({ where: { id: eventId } });
     const eventName = event ? event.name : 'Self Introduction';
-    const eventSlug = event ? event.slug : 'photography';
+    const eventSlug = event ? event.slug : 'self-introduction';
 
     const submissions = await prisma.submission.findMany({
       where: { eventId },
@@ -445,41 +426,33 @@ router.get('/export/excel', async (req: Request, res: Response): Promise<void> =
     workbook.creator = 'ELITE Admin Control Center';
     workbook.created = new Date();
 
-    const worksheet = workbook.addWorksheet(`${eventName} Applicants`);
+    const worksheet = workbook.addWorksheet(`${eventName} Submissions`);
 
-    // Styling headers
     worksheet.columns = [
       { header: 'S.No', key: 'sno', width: 8 },
-      { header: 'Applicant Name', key: 'name', width: 25 },
+      { header: 'Student Name', key: 'name', width: 25 },
       { header: 'Roll Number', key: 'rollNo', width: 18 },
       { header: 'Year', key: 'year', width: 8 },
       { header: 'Section', key: 'section', width: 10 },
       { header: 'Branch', key: 'branch', width: 10 },
       { header: 'Email Address', key: 'email', width: 30 },
-      { header: 'Media Type', key: 'mediaType', width: 14 },
+      { header: 'Rating', key: 'rating', width: 14 },
       { header: 'Status', key: 'status', width: 15 },
-      { header: 'Winner', key: 'isWinner', width: 10 },
-      { header: 'Rank', key: 'winnerRank', width: 20 },
       { header: 'Submitted At', key: 'submittedAt', width: 22 },
       { header: 'Drive Folder Path', key: 'driveFolderPath', width: 45 },
     ];
 
-    // Style Header Row
     const headerRow = worksheet.getRow(1);
     headerRow.font = { bold: true, color: { argb: 'FFFFFF' }, size: 11 };
     headerRow.fill = {
       type: 'pattern',
       pattern: 'solid',
-      fgColor: { argb: '1E293B' }, // ELITE dark theme header
+      fgColor: { argb: '1E293B' },
     };
     headerRow.height = 24;
 
     submissions.forEach((sub, idx) => {
-      let rankText = '-';
-      if (sub.isWinner && sub.winnerRank) {
-        const foundRank = WINNER_RANKS.find((r) => r.rank === sub.winnerRank);
-        rankText = foundRank ? foundRank.label : `${sub.winnerRank}th Place`;
-      }
+      const ratingText = sub.rating ? `${sub.rating} (${RATING_LABELS[sub.rating] || sub.rating})` : 'Not Rated';
 
       worksheet.addRow({
         sno: idx + 1,
@@ -489,10 +462,8 @@ router.get('/export/excel', async (req: Request, res: Response): Promise<void> =
         section: sub.section,
         branch: sub.branch,
         email: sub.email,
-        mediaType: sub.mediaType || 'PHOTOS',
+        rating: ratingText,
         status: sub.status,
-        isWinner: sub.isWinner ? 'YES' : 'NO',
-        winnerRank: rankText,
         submittedAt: new Date(sub.submittedAt).toLocaleString(),
         driveFolderPath: sub.driveFolderPath,
       });
@@ -504,7 +475,7 @@ router.get('/export/excel', async (req: Request, res: Response): Promise<void> =
     );
     res.setHeader(
       'Content-Disposition',
-      `attachment; filename=ELITE_${eventSlug}_2026_Applicants.xlsx`
+      `attachment; filename=ELITE_${eventSlug}_2026_Submissions.xlsx`
     );
 
     await ActivityService.log({
@@ -524,7 +495,7 @@ router.get('/export/excel', async (req: Request, res: Response): Promise<void> =
 });
 
 // ==============================================================
-// 11. DELETE SUBMISSION & DRIVE FILES (DELETE /admin/api/submissions/:id)
+// 9. DELETE SUBMISSION & DRIVE FILES (DELETE /admin/api/submissions/:id)
 // ==============================================================
 router.delete('/submissions/:id', async (req: Request, res: Response): Promise<void> => {
   try {
@@ -539,10 +510,7 @@ router.delete('/submissions/:id', async (req: Request, res: Response): Promise<v
     // 1. Delete associated files and folder from Google Drive or mock storage
     await driveService.deleteSubmissionFiles(submission);
 
-    // 2. Delete associated email logs
-    await prisma.emailLog.deleteMany({ where: { submissionId: id } });
-
-    // 3. Delete submission record from database
+    // 2. Delete submission record from database
     await prisma.submission.delete({ where: { id } });
 
     await ActivityService.log({
@@ -557,7 +525,7 @@ router.delete('/submissions/:id', async (req: Request, res: Response): Promise<v
 
     res.json({
       success: true,
-      message: 'Submission and associated Google Drive assets purged successfully.',
+      message: 'Submission and associated files purged successfully.',
     });
   } catch (err: any) {
     console.error('Error deleting submission:', err);
@@ -565,9 +533,334 @@ router.delete('/submissions/:id', async (req: Request, res: Response): Promise<v
   }
 });
 
-// =========================================================================
-// 12. ACTIVITY & AUDIT LOGS (GET /admin/api/activity-logs)
-// =========================================================================
+// ==========================================
+// 10. STUDENT ROSTER LIST (GET /admin/api/students)
+// ==========================================
+router.get('/students', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const eventId = ((req.query.eventId as string) || ACTIVE_EVENT_ID).trim();
+    const page = Math.max(1, parseInt((req.query.page as string) || '1', 10));
+    const limit = Math.min(100, Math.max(1, parseInt((req.query.limit as string) || '25', 10)));
+    const skip = (page - 1) * limit;
+
+    const section = req.query.section as string | undefined;
+    const year = req.query.year ? parseInt(req.query.year as string, 10) : undefined;
+    const search = (req.query.search as string | undefined)?.trim();
+
+    const whereClause: any = { eventId };
+    if (section) whereClause.section = section;
+    if (year) whereClause.year = year;
+    if (search) {
+      whereClause.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { rollNo: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    const [total, students] = await Promise.all([
+      prisma.student.count({ where: whereClause }),
+      prisma.student.findMany({
+        where: whereClause,
+        skip,
+        take: limit,
+        orderBy: { rollNo: 'asc' },
+      }),
+    ]);
+
+    // Attach submission state (hasVideo + rating) for each student
+    const submissions = await prisma.submission.findMany({
+      where: { eventId, rollNo: { in: students.map((s) => s.rollNo) } },
+      select: { rollNo: true, videoDriveId: true, rating: true, id: true, year: true, branch: true, section: true },
+    });
+
+    const stateMap = new Map<string, { id: string; hasVideo: boolean; rating: string | null }>();
+    submissions.forEach((sub) => {
+      stateMap.set(sub.rollNo, {
+        id: sub.id,
+        hasVideo: Boolean(sub.videoDriveId),
+        rating: sub.rating as string | null,
+      });
+    });
+
+    res.json({
+      eventId,
+      data: students.map((s) => ({
+        ...s,
+        submissionId: stateMap.get(s.rollNo)?.id || null,
+        hasVideo: stateMap.get(s.rollNo)?.hasVideo || false,
+        rating: stateMap.get(s.rollNo)?.rating || null,
+      })),
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    });
+  } catch (err: any) {
+    console.error('Error fetching student roster:', err);
+    res.status(500).json({ error: 'FAILED_TO_FETCH_STUDENTS', message: err.message });
+  }
+});
+
+// ==========================================
+// 11. IMPORT STUDENT ROSTER (POST /admin/api/students/import)
+// Accepts .xlsx or .csv (multipart field "file")
+// ==========================================
+router.post('/students/import', studentImportUploadMiddleware, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const eventId = ((req.query.eventId as string) || ACTIVE_EVENT_ID).trim();
+    const file = req.file;
+
+    if (!file) {
+      res.status(400).json({ error: 'NO_FILE', message: 'Please attach an Excel (.xlsx) or CSV file.' });
+      return;
+    }
+
+    const fileName = (file.originalname || '').toLowerCase();
+    const isCsv = fileName.endsWith('.csv');
+
+    interface RawRow {
+      rollNo: string;
+      name: string;
+      branch: string;
+      section: string;
+      year: number;
+      email: string;
+    }
+
+    let rows: RawRow[] = [];
+
+    if (isCsv) {
+      const content = file.buffer.toString('utf-8');
+      const lines = content.split(/\r?\n/).filter((l) => l.trim().length > 0);
+      if (lines.length < 2) {
+        res.status(400).json({ error: 'EMPTY_FILE', message: 'CSV file must contain a header row and at least one student row.' });
+        return;
+      }
+      const headers = lines[0].split(',').map((h) => h.trim().replace(/^"|"$/g, '').toLowerCase());
+      const colIdx = (name: string) => headers.findIndex((h) => h.includes(name));
+
+      lines.slice(1).forEach((line) => {
+        const cells = line.split(',').map((c) => c.trim().replace(/^"|"$/g, ''));
+        const get = (name: string, fallbackIdx?: number) =>
+          colIdx(name) >= 0 ? cells[colIdx(name)] : cells[fallbackIdx ?? -1];
+
+        if (cells.filter((c) => c).length === 0) return;
+
+        const rollNo = (get('roll', 0) || '').toUpperCase();
+        const name = get('name', 1) || '';
+        const branch = (get('branch', 2) || 'IT').toUpperCase();
+        const section = (get('section', 3) || '').toUpperCase();
+        const year = parseInt(get('year', 4) || '0', 10);
+        const email = (get('email', 5) || '').toLowerCase();
+
+        if (rollNo && name && section && year) {
+          rows.push({ rollNo, name, branch, section, year, email });
+        }
+      });
+    } else {
+      const workbook = new ExcelJS.Workbook();
+      const arrayBuffer = file.buffer.buffer.slice(
+        file.buffer.byteOffset,
+        file.buffer.byteOffset + file.buffer.byteLength
+      );
+      await workbook.xlsx.load(arrayBuffer as ArrayBuffer);
+      const worksheet = workbook.worksheets[0];
+      if (!worksheet) {
+        res.status(400).json({ error: 'EMPTY_FILE', message: 'Excel file does not contain a worksheet.' });
+        return;
+      }
+
+      const headerRow = worksheet.getRow(1);
+      const headers: string[] = [];
+      headerRow.eachCell({ includeEmpty: false }, (cell) => {
+        headers.push(String(cell.value ?? '').trim().toLowerCase());
+      });
+      const colIdx = (name: string) => headers.findIndex((h) => h.includes(name));
+
+      worksheet.eachRow((row, rowNumber) => {
+        if (rowNumber === 1) return;
+        const cell = (name: string, fallbackIdx?: number) => {
+          const idx = colIdx(name) >= 0 ? colIdx(name) : fallbackIdx;
+          if (idx === undefined || idx === null || idx < 0) return '';
+          const val = row.getCell(idx + 1).value;
+          return val === null || val === undefined ? '' : String(val).trim();
+        };
+
+        const rollNo = cell('roll', 0).toUpperCase();
+        const name = cell('name', 1);
+        const branch = (cell('branch', 2) || 'IT').toUpperCase();
+        const section = cell('section', 3).toUpperCase();
+        const year = parseInt(cell('year', 4) || '0', 10);
+        const email = cell('email', 5).toLowerCase();
+
+        if (rollNo && name && section && year) {
+          rows.push({ rollNo, name, branch, section, year, email });
+        }
+      });
+    }
+
+    if (rows.length === 0) {
+      res.status(400).json({ error: 'NO_ROWS', message: 'No valid student rows were found in the uploaded file.' });
+      return;
+    }
+
+    // Normalize & validate against allowed options
+    const validBranches = new Set<string>(BRANCHES as unknown as string[]);
+    const validSections = new Set<string>(SECTIONS as unknown as string[]);
+    const validYears = new Set<number>(YEARS as unknown as number[]);
+
+    const errors: string[] = [];
+    let imported = 0;
+    let updated = 0;
+    let skipped = 0;
+    const seenRollNos = new Set<string>();
+
+    for (const row of rows) {
+      if (seenRollNos.has(row.rollNo)) {
+        skipped++;
+        continue;
+      }
+      seenRollNos.add(row.rollNo);
+
+      const finalSection = validSections.has(row.section) ? row.section : (SECTIONS[0] as string);
+      const finalYear = validYears.has(row.year) ? row.year : NaN;
+      const finalBranch = validBranches.has(row.branch) ? row.branch : (BRANCHES[0] as string);
+
+      if (!Number.isFinite(finalYear)) {
+        errors.push(`${row.rollNo}: invalid year "${row.year}"`);
+        skipped++;
+        continue;
+      }
+
+      const existing = await prisma.student.findUnique({
+        where: { eventId_rollNo: { eventId, rollNo: row.rollNo } },
+      });
+
+      if (existing) {
+        await prisma.student.update({
+          where: { id: existing.id },
+          data: {
+            name: row.name,
+            branch: finalBranch,
+            section: finalSection,
+            year: finalYear,
+            email: row.email,
+          },
+        });
+        updated++;
+      } else {
+        await prisma.student.create({
+          data: {
+            eventId,
+            rollNo: row.rollNo,
+            name: row.name,
+            branch: finalBranch,
+            section: finalSection,
+            year: finalYear,
+            email: row.email,
+          },
+        });
+        imported++;
+      }
+    }
+
+    await ActivityService.log({
+      eventId,
+      category: 'ADMIN',
+      action: 'Admin imported student roster',
+      details: `Imported ${imported} new, updated ${updated}, skipped ${skipped}, errors ${errors.length}`,
+      status: 'SUCCESS',
+    });
+
+    res.json({
+      success: true,
+      message: `Student roster imported: ${imported} new, ${updated} updated, ${skipped} skipped.`,
+      imported,
+      updated,
+      skipped,
+      errors,
+    });
+  } catch (err: any) {
+    console.error('Error importing student roster:', err);
+    res.status(500).json({ error: 'IMPORT_FAILED', message: err.message });
+  }
+});
+
+// ==========================================
+// 12. STUDENT ROSTER TEMPLATE (GET /admin/api/students/template)
+// ==========================================
+router.get('/students/template', async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'ELITE Admin Control Center';
+    workbook.created = new Date();
+
+    const worksheet = workbook.addWorksheet('Students');
+    worksheet.columns = [
+      { header: 'Roll No', key: 'rollNo', width: 18 },
+      { header: 'Name', key: 'name', width: 30 },
+      { header: 'Branch', key: 'branch', width: 10 },
+      { header: 'Section', key: 'section', width: 10 },
+      { header: 'Year', key: 'year', width: 8 },
+      { header: 'Email', key: 'email', width: 30 },
+    ];
+
+    const headerRow = worksheet.getRow(1);
+    headerRow.font = { bold: true, color: { argb: 'FFFFFF' }, size: 11 };
+    headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '1E293B' } };
+
+    worksheet.addRow({ rollNo: '25K61A1201', name: 'Jane Smith', branch: 'IT', section: 'A', year: 2, email: 'janesmith@sasi.ac.in' });
+    worksheet.addRow({ rollNo: '23K61A1202', name: 'John Doe', branch: 'IT', section: 'B', year: 3, email: 'johndoe@sasi.ac.in' });
+
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
+    res.setHeader('Content-Disposition', 'attachment; filename=student_roster_template.xlsx');
+
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (err: any) {
+    console.error('Error generating student template:', err);
+    res.status(500).json({ error: 'TEMPLATE_FAILED', message: err.message });
+  }
+});
+
+// ==========================================
+// 13. DELETE STUDENT (DELETE /admin/api/students/:id)
+// ==========================================
+router.delete('/students/:id', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const student = await prisma.student.findUnique({ where: { id: req.params.id } });
+
+    if (!student) {
+      res.status(404).json({ error: 'NOT_FOUND', message: 'Student not found' });
+      return;
+    }
+
+    await prisma.student.delete({ where: { id: student.id } });
+
+    await ActivityService.log({
+      eventId: student.eventId,
+      category: 'ADMIN',
+      action: 'Admin removed student from roster',
+      details: `Removed ${student.rollNo} (${student.name})`,
+      status: 'WARNING',
+    });
+
+    res.json({ success: true, message: `Student ${student.rollNo} removed from the roster.` });
+  } catch (err: any) {
+    console.error('Error deleting student:', err);
+    res.status(500).json({ error: 'DELETE_FAILED', message: err.message });
+  }
+});
+
+// ==============================================================
+// 14. ACTIVITY & AUDIT LOGS (GET /admin/api/activity-logs)
+// ==============================================================
 router.get('/activity-logs', async (req: Request, res: Response): Promise<void> => {
   try {
     const eventId = (req.query.eventId as string) || 'all';
@@ -613,7 +906,6 @@ router.get('/activity-logs', async (req: Request, res: Response): Promise<void> 
       }),
     ]);
 
-    // Calculate aggregated stats
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
 
@@ -669,4 +961,3 @@ router.get('/activity-logs', async (req: Request, res: Response): Promise<void> 
 });
 
 export default router;
-

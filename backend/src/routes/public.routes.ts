@@ -28,66 +28,95 @@ router.get('/years', (_req: Request, res: Response) => {
   res.json({ years: YEARS });
 });
 
+// GET /api/students/:rollNo
+// Public lookup used by the submission form to auto-fill student details from the roster.
+router.get('/students/:rollNo', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const rollNo = (req.params.rollNo || '').trim().toUpperCase();
+
+    if (!rollNo) {
+      res.status(400).json({ error: 'VALIDATION_ERROR', field: 'rollNo', message: 'Roll number is required.' });
+      return;
+    }
+
+    const student = await prisma.student.findUnique({
+      where: { eventId_rollNo: { eventId: EVENT_ID, rollNo } },
+    });
+
+    if (!student) {
+      res.status(404).json({ error: 'STUDENT_NOT_FOUND', message: 'No student found with this roll number.' });
+      return;
+    }
+
+    const submission = await prisma.submission.findUnique({
+      where: {
+        eventId_rollNo_year_branch_section: {
+          eventId: EVENT_ID,
+          rollNo: student.rollNo,
+          year: student.year,
+          branch: student.branch,
+          section: student.section,
+        },
+      },
+      select: {
+        id: true,
+        name: true,
+        rollNo: true,
+        videoDriveId: true,
+        rating: true,
+        submittedAt: true,
+      },
+    });
+
+    res.json({
+      student: {
+        name: student.name,
+        rollNo: student.rollNo,
+        branch: student.branch,
+        section: student.section,
+        year: student.year,
+        email: student.email,
+      },
+      submission: submission
+        ? {
+            id: submission.id,
+            hasVideo: Boolean(submission.videoDriveId),
+            rating: submission.rating,
+            submittedAt: submission.submittedAt,
+          }
+        : null,
+    });
+  } catch (err: any) {
+    console.error('Error looking up student:', err);
+    res.status(500).json({ error: 'LOOKUP_FAILED', message: 'Could not look up student details.' });
+  }
+});
+
 // POST /api/submissions
+// Accepts only `rollNo` + `video`. All student details are auto-filled server-side
+// from the roster. A student may upload one video; if the admin deleted their video,
+// they can upload a replacement to the same submission record.
 router.post(
   '/submissions',
   submissionRateLimiter,
   submissionUploadMiddleware,
   async (req: Request, res: Response): Promise<void> => {
-    let currentApplicantName = (req.body.name || '').trim();
-    let currentEmail = (req.body.email || '').trim();
+    let currentRollNo = '';
+    let currentStudentName = '';
 
     try {
       const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
 
-      // 1. Normalize textual inputs
-      const name = (req.body.name || '').trim();
+      // 1. Normalize roll number
       const rollNo = (req.body.rollNo || '').trim().toUpperCase();
-      const section = (req.body.section || '').trim().toUpperCase();
-      const branch = (req.body.branch || '').trim().toUpperCase();
-      const year = parseInt(req.body.year || '0', 10);
-      const email = (req.body.email || '').trim().toLowerCase();
+      currentRollNo = rollNo;
 
-      // 2. Validate required text fields
-      if (!name) {
-        res.status(400).json({ error: 'VALIDATION_ERROR', field: 'name', message: 'Full name is required.' });
-        return;
-      }
       if (!rollNo) {
         res.status(400).json({ error: 'VALIDATION_ERROR', field: 'rollNo', message: 'Roll number is required.' });
         return;
       }
-      if (!branch || !BRANCHES.includes(branch as any)) {
-        res.status(400).json({
-          error: 'VALIDATION_ERROR',
-          field: 'branch',
-          message: `Invalid branch. Available options: ${BRANCHES.join(', ')}`,
-        });
-        return;
-      }
-      if (!section || !SECTIONS.includes(section as any)) {
-        res.status(400).json({
-          error: 'VALIDATION_ERROR',
-          field: 'section',
-          message: `Invalid section. Available options: ${SECTIONS.join(', ')}`,
-        });
-        return;
-      }
-      if (!year || !YEARS.includes(year as any)) {
-        res.status(400).json({
-          error: 'VALIDATION_ERROR',
-          field: 'year',
-          message: `Invalid year. Available options: ${YEARS.join(', ')}`,
-        });
-        return;
-      }
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!email || !emailRegex.test(email)) {
-        res.status(400).json({ error: 'VALIDATION_ERROR', field: 'email', message: 'A valid email address is required.' });
-        return;
-      }
 
-      // 3. Ensure target event exists in database
+      // 2. Ensure target event exists in database
       const dbEvent = await prisma.event.findUnique({ where: { id: EVENT_ID } });
       if (!dbEvent) {
         await prisma.event.create({
@@ -101,73 +130,45 @@ router.post(
         });
       }
 
-      const videoFile = files?.video?.[0];
-      const audioFile = files?.audio?.[0];
-      const photoFiles = [
-        ...(files?.photo1 || []),
-        ...(files?.photo2 || []),
-        ...(files?.photo3 || []),
-      ];
+      // 3. Auto-fill student details from the roster
+      const student = await prisma.student.findUnique({
+        where: { eventId_rollNo: { eventId: EVENT_ID, rollNo } },
+      });
 
-      // 4. Video-only constraint
+      if (!student) {
+        res.status(404).json({
+          error: 'STUDENT_NOT_FOUND',
+          field: 'rollNo',
+          message: 'No student found with this roll number. Please verify your roll number and try again.',
+        });
+        return;
+      }
+
+      const name = student.name;
+      const branch = student.branch;
+      const section = student.section;
+      const year = student.year;
+      const email = student.email;
+      currentStudentName = name;
+
+      // 4. Validate branch/section/year against allowed options
+      if (!BRANCHES.includes(branch as any)) {
+        res.status(400).json({ error: 'VALIDATION_ERROR', field: 'branch', message: `Invalid branch: ${branch}` });
+        return;
+      }
+      if (!SECTIONS.includes(section as any)) {
+        res.status(400).json({ error: 'VALIDATION_ERROR', field: 'section', message: `Invalid section: ${section}` });
+        return;
+      }
+      if (!YEARS.includes(year as any)) {
+        res.status(400).json({ error: 'VALIDATION_ERROR', field: 'year', message: `Invalid year: ${year}` });
+        return;
+      }
+
+      // 5. Require exactly one video file
+      const videoFile = files?.video?.[0];
       if (!videoFile) {
         res.status(400).json({ error: 'VALIDATION_ERROR', field: 'video', message: 'Self introduction video is required.' });
-        return;
-      }
-      const mediaType = 'VIDEO';
-      if (audioFile || photoFiles.length > 0) {
-        res.status(400).json({ error: 'VALIDATION_ERROR', field: 'media', message: 'Self introduction auditions accept video files only.' });
-        return;
-      }
-
-      // 5. Duplicate Check (CRITICAL: before touching Drive - scoped to eventId)
-      const existingByRoll = await prisma.submission.findFirst({
-        where: {
-          eventId: EVENT_ID,
-          rollNo,
-          year,
-          branch,
-          section,
-        },
-      });
-
-      if (existingByRoll) {
-        await ActivityService.log({
-          eventId: EVENT_ID,
-          category: 'APPLICATION',
-          action: 'Submission rejected (Duplicate Roll Number)',
-          details: `Roll Number: ${rollNo}`,
-          applicantName: name,
-          userEmail: email,
-          status: 'WARNING',
-        });
-        res.status(409).json({
-          error: 'DUPLICATE_ROLL_NO',
-          field: 'rollNo',
-          message: `It looks like you've already submitted an entry for ${EVENT_NAME} with this roll number.`,
-        });
-        return;
-      }
-
-      const existingByEmail = await prisma.submission.findFirst({
-        where: { eventId: EVENT_ID, email },
-      });
-
-      if (existingByEmail) {
-        await ActivityService.log({
-          eventId: EVENT_ID,
-          category: 'APPLICATION',
-          action: 'Submission rejected (Duplicate Email)',
-          details: `Email: ${email}`,
-          applicantName: name,
-          userEmail: email,
-          status: 'WARNING',
-        });
-        res.status(409).json({
-          error: 'DUPLICATE_EMAIL',
-          field: 'email',
-          message: `It looks like you've already submitted an entry for ${EVENT_NAME} with this email address.`,
-        });
         return;
       }
 
@@ -188,7 +189,38 @@ router.post(
         return;
       }
 
-      // 7. Upload video to Google Drive
+      // 7. Duplicate check (one video per student)
+      const existing = await prisma.submission.findUnique({
+        where: {
+          eventId_rollNo_year_branch_section: {
+            eventId: EVENT_ID,
+            rollNo,
+            year,
+            branch,
+            section,
+          },
+        },
+      });
+
+      if (existing && existing.videoDriveId) {
+        await ActivityService.log({
+          eventId: EVENT_ID,
+          category: 'APPLICATION',
+          action: 'Submission rejected (Video already uploaded)',
+          details: `Roll Number: ${rollNo}`,
+          applicantName: name,
+          userEmail: email,
+          status: 'WARNING',
+        });
+        res.status(409).json({
+          error: 'DUPLICATE_VIDEO',
+          field: 'video',
+          message: `A self introduction video has already been submitted for roll number ${rollNo}. You can upload again only if the admin removes the current video.`,
+        });
+        return;
+      }
+
+      // 8. Upload video to Google Drive
       const uploadResult = await driveService.uploadSubmissionFiles(
         {
           eventName: EVENT_NAME,
@@ -209,28 +241,41 @@ router.post(
         }
       );
 
-      // 8. Insert record into Postgres
-      const submission = await prisma.submission.create({
-        data: {
-          eventId: EVENT_ID,
-          name,
-          rollNo,
-          section,
-          branch,
-          year,
-          email,
-          videoDriveId: uploadResult.videoDriveId || null,
-          mediaType,
-          driveFolderPath: uploadResult.driveFolderPath,
-          status: 'SUBMITTED',
-        },
-      });
+      // 9. Create the record, or update the existing one if the admin removed its video
+      let submission;
+      if (existing) {
+        submission = await prisma.submission.update({
+          where: { id: existing.id },
+          data: {
+            videoDriveId: uploadResult.videoDriveId || null,
+            driveFolderPath: uploadResult.driveFolderPath,
+            status: 'SUBMITTED',
+            submittedAt: new Date(),
+          },
+        });
+      } else {
+        submission = await prisma.submission.create({
+          data: {
+            eventId: EVENT_ID,
+            name,
+            rollNo,
+            section,
+            branch,
+            year,
+            email,
+            videoDriveId: uploadResult.videoDriveId || null,
+            mediaType: 'VIDEO',
+            driveFolderPath: uploadResult.driveFolderPath,
+            status: 'SUBMITTED',
+          },
+        });
+      }
 
       await ActivityService.log({
         eventId: EVENT_ID,
         category: 'APPLICATION',
-        action: 'Application submitted',
-        details: `Media Type: ${mediaType}, Branch: ${branch}, Roll: ${rollNo}`,
+        action: existing ? 'Submission video re-uploaded' : 'Application submitted',
+        details: `Media Type: VIDEO, Branch: ${branch}, Roll: ${rollNo}`,
         applicantName: name,
         userEmail: email,
         status: 'SUCCESS',
@@ -249,17 +294,16 @@ router.post(
         category: 'APPLICATION',
         action: 'Application submission failed',
         details: err?.message || 'Unexpected server error',
-        applicantName: currentApplicantName,
-        userEmail: currentEmail,
+        applicantName: currentStudentName,
+        userEmail: currentRollNo,
         status: 'ERROR',
         errorMessage: err?.stack || err?.message,
       });
 
-      // In case of duplicate key race condition from DB constraint:
       if (err.code === 'P2002') {
         res.status(409).json({
           error: 'DUPLICATE_SUBMISSION',
-          message: 'An entry with this roll number or email already exists.',
+          message: 'An entry with this roll number already exists.',
         });
         return;
       }

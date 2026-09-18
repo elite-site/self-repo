@@ -1,12 +1,18 @@
 import React from 'react';
-import { CheckCircle2, Clock, ArrowRight } from 'lucide-react';
+import { Users, Film, Hourglass, Gauge, ArrowRight } from 'lucide-react';
 import { AdminStats } from '../types';
 
 interface StatsDashboardProps {
   stats: AdminStats | null;
   loading: boolean;
-  onNavigateTab?: (tab: 'submissions' | 'winners' | 'emails') => void;
+  onNavigateTab?: (tab: 'submissions' | 'students' | 'activity') => void;
 }
+
+const ratingColors: Record<string, { dot: string; text: string; label: string }> = {
+  GOOD: { dot: 'bg-emerald-500', text: 'text-emerald-600', label: 'Good' },
+  AVERAGE: { dot: 'bg-amber-400', text: 'text-amber-600', label: 'Average' },
+  POOR: { dot: 'bg-red-500', text: 'text-red-600', label: 'Poor' },
+};
 
 export const StatsDashboard: React.FC<StatsDashboardProps> = ({
   stats,
@@ -18,19 +24,55 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
       <div className="p-16 flex items-center justify-center min-h-[400px]">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-2 border-elite-red border-t-transparent rounded-full animate-spin" />
-          <span className="text-xs text-neutral-500 font-medium">Loading applicant statistics...</span>
+          <span className="text-xs text-neutral-500 font-medium">Loading submission statistics...</span>
         </div>
       </div>
     );
   }
 
-  const totalApps = stats.totalSubmissions;
-  const totalVideos = totalApps; // 1 video per applicant
-  const selectedCount = stats.totalWinners;
-  const pendingCount = Math.max(0, totalApps - selectedCount);
+  const totalStudents = stats.totalStudents;
+  const submitted = stats.totalVideos;
+  const remaining = stats.totalRemaining;
+  const rated = stats.totalRated;
 
-  // Calculate max section count for relative bar width
-  const maxSectionCount = Math.max(1, ...stats.bySection.map((s) => s.count));
+  // Progress cards
+  const cards = [
+    {
+      label: 'Total Students',
+      value: totalStudents,
+      sub: 'Registered in the roster',
+      dotClass: 'bg-elite-red',
+      Icon: Users,
+    },
+    {
+      label: 'Videos Submitted',
+      value: submitted,
+      sub: 'Introduction videos uploaded',
+      dotClass: 'bg-emerald-500',
+      Icon: Film,
+    },
+    {
+      label: 'Remaining to Upload',
+      value: remaining,
+      sub: 'Students yet to submit',
+      dotClass: 'bg-amber-400',
+      Icon: Hourglass,
+    },
+    {
+      label: 'Rated',
+      value: rated,
+      sub: 'Good / Average / Poor marked',
+      dotClass: 'bg-neutral-400',
+      Icon: Gauge,
+    },
+  ];
+
+  const maxSectionTotal = Math.max(1, ...stats.bySection.map((s) => s.total));
+
+  let overallPct = 0;
+  if (totalStudents > 0) {
+    overallPct = Math.round((submitted / totalStudents) * 100);
+  }
 
   return (
     <div className="space-y-10 text-left">
@@ -40,206 +82,218 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
           Organizer Dashboard
         </div>
         <h1 className="text-3xl sm:text-4xl font-extrabold text-elite-black font-display tracking-tight mt-1">
-          CLUB MEMBER SELECTION 2026
+          SELF INTRODUCTION 2026
         </h1>
         <p className="text-sm text-neutral-600 mt-2 max-w-xl font-normal">
-          Review applications and select the next members of ELITE Self Introduction.
+          Track upload progress and review student introduction videos across every section and year.
         </p>
       </div>
 
-      {/* 2. KEY METRIC CARDS (Clean white cards, thin borders, red accents) */}
+      {/* 2. KEY METRIC CARDS */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        {/* Total Applications */}
-        <div className="bg-white border border-neutral-200 rounded-xl p-5 hover:border-neutral-300 transition-all shadow-sm group">
-          <div className="flex items-center justify-between text-neutral-500 text-xs uppercase font-bold tracking-wider mb-3">
-            <span>Total Applications</span>
-            <div className="w-2 h-2 rounded-full bg-elite-red" />
-          </div>
-          <div className="text-4xl font-extrabold text-elite-black font-display tracking-tight">
-            {totalApps}
-          </div>
-          <div className="text-xs text-neutral-500 mt-2 font-medium">
-            Applications received
-          </div>
-        </div>
+        {cards.map((c) => {
+          const IconComponent = c.Icon;
+          return (
+            <div key={c.label} className="bg-white border border-neutral-200 rounded-xl p-5 hover:border-neutral-300 transition-all shadow-sm">
+              <div className="flex items-center justify-between text-neutral-500 text-xs uppercase font-bold tracking-wider mb-3">
+                <span>{c.label}</span>
+                <div className={`w-2 h-2 rounded-full ${c.dotClass}`} />
+              </div>
+              <div className="text-4xl font-extrabold text-elite-black font-display tracking-tight">
+                {c.value}
+              </div>
+              <div className="text-xs text-neutral-500 mt-2 font-medium flex items-center gap-1">
+                <IconComponent className="w-3.5 h-3.5 text-neutral-400" />
+                <span>{c.sub}</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
 
-        {/* Videos Received */}
-        <div className="bg-white border border-neutral-200 rounded-xl p-5 hover:border-neutral-300 transition-all shadow-sm group">
-          <div className="flex items-center justify-between text-neutral-500 text-xs uppercase font-bold tracking-wider mb-3">
-            <span>Videos Received</span>
-            <div className="w-2 h-2 rounded-full bg-neutral-400" />
+      {/* 3. OVERALL PROGRESS */}
+      <div className="bg-white border border-neutral-200 rounded-xl p-6 shadow-sm space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-xs font-bold uppercase tracking-widest text-elite-black font-display">
+              Overall Upload Progress
+            </h2>
+            <p className="text-xs text-neutral-500 mt-0.5">
+              {submitted} of {totalStudents} students have uploaded their introduction video
+            </p>
           </div>
-          <div className="text-4xl font-extrabold text-elite-black font-display tracking-tight">
-            {totalVideos}
-          </div>
-          <div className="text-xs text-neutral-500 mt-2 font-medium">
-            Introduction videos uploaded
-          </div>
+          <span className="text-2xl font-extrabold text-elite-red font-display">
+            {overallPct}%
+          </span>
         </div>
-
-        {/* Selected Members */}
-        <div className="bg-white border border-neutral-200 rounded-xl p-5 hover:border-elite-red transition-all shadow-sm group">
-          <div className="flex items-center justify-between text-elite-red text-xs uppercase font-bold tracking-wider mb-3">
-            <span>Selected Members</span>
-            <CheckCircle2 className="w-4 h-4 text-elite-red" />
-          </div>
-          <div className="text-4xl font-extrabold text-elite-red font-display tracking-tight">
-            {selectedCount}
-          </div>
-          <div className="text-xs text-neutral-500 mt-2 font-medium">
-            Applicants accepted for club
-          </div>
+        <div className="w-full h-3 bg-neutral-100 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-gradient-to-r from-elite-red to-emerald-500 rounded-full transition-all duration-300"
+            style={{ width: `${Math.max(2, overallPct)}%` }}
+          />
         </div>
-
-        {/* Pending Review */}
-        <div className="bg-white border border-neutral-200 rounded-xl p-5 hover:border-neutral-300 transition-all shadow-sm group">
-          <div className="flex items-center justify-between text-neutral-500 text-xs uppercase font-bold tracking-wider mb-3">
-            <span>Pending Review</span>
-            <Clock className="w-4 h-4 text-neutral-400" />
-          </div>
-          <div className="text-4xl font-extrabold text-neutral-800 font-display tracking-tight">
-            {pendingCount}
-          </div>
-          <div className="text-xs text-neutral-500 mt-2 font-medium">
-            Awaiting evaluation
-          </div>
+        <div className="flex items-center gap-4 text-[11px] text-neutral-500 font-mono">
+          <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500" /> {remaining} remaining</span>
+          <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-neutral-300" /> rated</span>
         </div>
       </div>
 
-      {/* 3. SECTION STATISTICS (Minimal bar visualization, white background, red bars) */}
+      {/* 4. SECTION STATISTICS */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* Left 8 cols: Applications By Section */}
+        {/* Left 7 cols: Upload progress by section */}
         <div className="lg:col-span-7 bg-white border border-neutral-200 rounded-xl p-6 shadow-sm space-y-5">
           <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
             <div>
               <h2 className="text-xs font-bold uppercase tracking-widest text-elite-black font-display">
-                Applications by Section
+                Progress by Section
               </h2>
               <p className="text-xs text-neutral-500 mt-0.5">
-                Distribution across Information Technology sections
+                Submitted out of total students, section by section across years
               </p>
             </div>
             <span className="text-xs font-semibold text-elite-red font-mono">
-              {stats.bySection
-                .filter((sec) => {
-                  const yStr = String(sec.year || '').trim();
-                  const yNum = parseInt(yStr, 10);
-                  if (yNum === 1 || yStr === '1' || yStr.startsWith('1st')) return false;
-                  if (sec.label && sec.label.startsWith('1st Year')) return false;
-                  return true;
-                })
-                .reduce((acc, curr) => acc + curr.count, 0)} Total
+              {submitted}/{totalStudents} done
             </span>
           </div>
 
           <div className="space-y-4 pt-1">
-            {stats.bySection
-              .filter((sec) => {
-                const yStr = String(sec.year || '').trim();
-                const yNum = parseInt(yStr, 10);
-                if (yNum === 1 || yStr === '1' || yStr.startsWith('1st')) return false;
-                if (sec.label && sec.label.startsWith('1st Year')) return false;
-                return true;
-              })
-              .map((sec, idx) => {
-                const percent = Math.round((sec.count / maxSectionCount) * 100);
-                
-                // Ensure label formatting is clean and fallback to Year · Branch-Section if needed
-                const yearStr = String(sec.year || '2').trim();
-                let formattedYear = yearStr;
-                if (!yearStr.toLowerCase().includes('year')) {
-                  const num = parseInt(yearStr, 10);
-                  if (num === 2) formattedYear = '2nd Year';
-                  else if (num === 3) formattedYear = '3rd Year';
-                  else if (num === 4) formattedYear = '4th Year';
-                  else if (!isNaN(num)) formattedYear = `${num}th Year`;
-                }
-                const branchStr = sec.branch ? sec.branch.trim() : 'IT';
-                const displayLabel = sec.label && sec.label.includes('·')
-                  ? sec.label
-                  : `${formattedYear} · ${branchStr}-${sec.section}`;
-
-                return (
-                  <div key={`${displayLabel}-${idx}`} className="space-y-1.5">
-                    <div className="flex items-center justify-between text-xs gap-2 min-w-0">
-                      <span className="font-bold text-elite-black font-mono truncate">
-                        {displayLabel}
+            {stats.bySection.map((sec, idx) => {
+              const widthPct = sec.submitted > 0
+                ? Math.round((sec.submitted / maxSectionTotal) * 100)
+                : 0;
+              return (
+                <div key={`${sec.label}-${idx}`} className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs gap-2 min-w-0">
+                    <span className="font-bold text-elite-black font-mono truncate">
+                      {sec.label}
+                    </span>
+                    <span className="font-semibold text-neutral-700 shrink-0">
+                      {sec.submitted}/{sec.total}
+                      <span className="text-neutral-400 font-normal ml-1">
+                        · {sec.remaining} left
                       </span>
-                      <span className="font-semibold text-neutral-700 shrink-0">
-                        {sec.count} <span className="text-neutral-400 font-normal">{sec.count === 1 ? 'applicant' : 'applicants'}</span>
+                    </span>
+                  </div>
+                  <div className="w-full h-2 bg-neutral-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-elite-red rounded-full transition-all duration-300"
+                      style={{ width: `${Math.max(sec.submitted > 0 ? 6 : 0, widthPct)}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+            {stats.bySection.length === 0 && (
+              <p className="text-xs text-neutral-400 py-6 text-center">
+                No students in the roster yet. Import the student list from the Students tab.
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Right 5 cols: Year-wise progress + Quick actions */}
+        <div className="lg:col-span-5 space-y-6">
+          {/* Year wise cards */}
+          <div className="bg-white border border-neutral-200 rounded-xl p-6 shadow-sm space-y-3">
+            <h2 className="text-xs font-bold uppercase tracking-widest text-elite-black font-display">
+              Year-wise Progress
+            </h2>
+            <div className="space-y-3 pt-1">
+              {Object.entries(stats.byYearProgress || {}).sort((a, b) => {
+                const n = (s: string) => parseInt((s.match(/\d+/) || ['0'])[0], 10);
+                return n(a[0]) - n(b[0]);
+              }).map(([year, p]) => {
+                const pct = p.total > 0 ? Math.round((p.submitted / p.total) * 100) : 0;
+                return (
+                  <div key={year} className="bg-[#fafafa] border border-neutral-200 rounded-xl p-4 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-elite-black">{year}</span>
+                      <span className="text-[11px] text-neutral-500 font-mono">
+                        {p.submitted}/{p.total} · {p.remaining} remaining
                       </span>
                     </div>
-                    <div className="w-full h-2 bg-neutral-100 rounded-full overflow-hidden">
+                    <div className="w-full h-1.5 bg-neutral-200 rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-elite-red rounded-full transition-all duration-300"
-                        style={{ width: `${Math.max(4, percent)}%` }}
+                        className="h-full bg-gradient-to-r from-elite-red to-amber-400 rounded-full"
+                        style={{ width: `${Math.max(2, pct)}%` }}
                       />
                     </div>
                   </div>
                 );
               })}
-          </div>
-        </div>
-
-        {/* Right 5 cols: Quick Actions / Workflow Guide */}
-        <div className="lg:col-span-5 bg-[#fafafa] border border-neutral-200 rounded-xl p-6 shadow-sm space-y-5">
-          <div>
-            <h2 className="text-xs font-bold uppercase tracking-widest text-elite-black font-display">
-              Selection Workflow
-            </h2>
-            <p className="text-xs text-neutral-500 mt-0.5">
-              Recommended steps for club coordinators
-            </p>
+              {Object.keys(stats.byYearProgress || {}).length === 0 && (
+                <p className="text-xs text-neutral-400 py-4 text-center">No roster data yet.</p>
+              )}
+            </div>
           </div>
 
-          <div className="space-y-3 text-xs">
-            <div
-              onClick={() => onNavigateTab && onNavigateTab('submissions')}
-              className="bg-white border border-neutral-200 rounded-lg p-3.5 hover:border-elite-red transition-all cursor-pointer flex items-center justify-between group"
-            >
-              <div>
-                <div className="font-bold text-elite-black group-hover:text-elite-red transition-colors">
-                  1. Review Applicants
-                </div>
-                <div className="text-neutral-500 text-[11px] mt-0.5">
-                  Inspect submitted intro videos and applicant info
-                </div>
-              </div>
-              <ArrowRight className="w-4 h-4 text-neutral-400 group-hover:text-elite-red transition-colors" />
+          {/* Quick actions */}
+          <div className="bg-[#fafafa] border border-neutral-200 rounded-xl p-6 shadow-sm space-y-5">
+            <div>
+              <h2 className="text-xs font-bold uppercase tracking-widest text-elite-black font-display">
+                Workflow
+              </h2>
+              <p className="text-xs text-neutral-500 mt-0.5">
+                Recommended steps for coordinators
+              </p>
             </div>
 
-            <div
-              onClick={() => onNavigateTab && onNavigateTab('winners')}
-              className="bg-white border border-neutral-200 rounded-lg p-3.5 hover:border-elite-red transition-all cursor-pointer flex items-center justify-between group"
-            >
-              <div>
-                <div className="font-bold text-elite-black group-hover:text-elite-red transition-colors">
-                  2. Confirm Selection
+            <div className="space-y-3 text-xs">
+              <div
+                onClick={() => onNavigateTab && onNavigateTab('students')}
+                className="bg-white border border-neutral-200 rounded-lg p-3.5 hover:border-elite-red transition-all cursor-pointer flex items-center justify-between group"
+              >
+                <div>
+                  <div className="font-bold text-elite-black group-hover:text-elite-red transition-colors">
+                    1. Manage Student Roster
+                  </div>
+                  <div className="text-neutral-500 text-[11px] mt-0.5">
+                    Import the student list or download the Excel template
+                  </div>
                 </div>
-                <div className="text-neutral-500 text-[11px] mt-0.5">
-                  Review the {selectedCount} shortlisted members
-                </div>
+                <ArrowRight className="w-4 h-4 text-neutral-400 group-hover:text-elite-red transition-colors" />
               </div>
-              <ArrowRight className="w-4 h-4 text-neutral-400 group-hover:text-elite-red transition-colors" />
-            </div>
 
-            <div
-              onClick={() => onNavigateTab && onNavigateTab('emails')}
-              className="bg-white border border-neutral-200 rounded-lg p-3.5 hover:border-elite-red transition-all cursor-pointer flex items-center justify-between group"
-            >
-              <div>
-                <div className="font-bold text-elite-black group-hover:text-elite-red transition-colors">
-                  3. Send Notifications
+              <div
+                onClick={() => onNavigateTab && onNavigateTab('submissions')}
+                className="bg-white border border-neutral-200 rounded-lg p-3.5 hover:border-elite-red transition-all cursor-pointer flex items-center justify-between group"
+              >
+                <div>
+                  <div className="font-bold text-elite-black group-hover:text-elite-red transition-colors">
+                    2. Review & Rate Videos
+                  </div>
+                  <div className="text-neutral-500 text-[11px] mt-0.5">
+                    Watch each submission and mark Good, Average, or Poor
+                  </div>
                 </div>
-                <div className="text-neutral-500 text-[11px] mt-0.5">
-                  Dispatch selection and thank-you emails
-                </div>
+                <ArrowRight className="w-4 h-4 text-neutral-400 group-hover:text-elite-red transition-colors" />
               </div>
-              <ArrowRight className="w-4 h-4 text-neutral-400 group-hover:text-elite-red transition-colors" />
             </div>
           </div>
         </div>
       </div>
+
+      {/* 5. RATING BREAKDOWN */}
+      {(stats.byRating.GOOD || stats.byRating.AVERAGE || stats.byRating.POOR) ? (
+        <div className="bg-white border border-neutral-200 rounded-xl p-6 shadow-sm space-y-4">
+          <h2 className="text-xs font-bold uppercase tracking-widest text-elite-black font-display">
+            Performance Ratings
+          </h2>
+          <div className="grid grid-cols-3 gap-4">
+            {(['GOOD', 'AVERAGE', 'POOR'] as const).map((r) => {
+              const meta = ratingColors[r];
+              const count = stats.byRating[r] || 0;
+              return (
+                <div key={r} className="bg-[#fafafa] border border-neutral-200 rounded-xl p-4 flex flex-col items-center gap-1">
+                  <span className={`w-3 h-3 rounded-full ${meta.dot}`} />
+                  <span className={`text-xl font-extrabold font-display ${meta.text}`}>{count}</span>
+                  <span className="text-[11px] text-neutral-500 font-semibold uppercase tracking-wider">{meta.label}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 };

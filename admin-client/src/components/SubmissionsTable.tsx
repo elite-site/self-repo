@@ -9,7 +9,7 @@ import {
   Trash2,
   FileSpreadsheet,
 } from 'lucide-react';
-import { Submission, SubmissionsResponse } from '../types';
+import { Submission, SubmissionsResponse, SubmissionRating } from '../types';
 import { adminApi } from '../services/api';
 
 interface SubmissionsTableProps {
@@ -17,6 +17,27 @@ interface SubmissionsTableProps {
   onSelectSubmission: (submission: Submission) => void;
   onRefreshStats?: () => void;
 }
+
+const ratingMeta: Record<SubmissionRating, { dot: string; text: string; label: string; badge: string }> = {
+  GOOD: {
+    dot: 'bg-emerald-500',
+    text: 'text-emerald-700',
+    label: 'Good',
+    badge: 'bg-emerald-50 border-emerald-200',
+  },
+  AVERAGE: {
+    dot: 'bg-amber-400',
+    text: 'text-amber-700',
+    label: 'Average',
+    badge: 'bg-amber-50 border-amber-200',
+  },
+  POOR: {
+    dot: 'bg-red-500',
+    text: 'text-elite-red',
+    label: 'Poor',
+    badge: 'bg-red-50 border-red-200',
+  },
+};
 
 export const SubmissionsTable: React.FC<SubmissionsTableProps> = ({
   activeEventId,
@@ -30,7 +51,7 @@ export const SubmissionsTable: React.FC<SubmissionsTableProps> = ({
   const [search, setSearch] = useState('');
   const [yearFilter, setYearFilter] = useState<string>('');
   const [sectionFilter, setSectionFilter] = useState<string>('');
-  const [winnerFilter, setWinnerFilter] = useState<string>('');
+  const [ratingFilter, setRatingFilter] = useState<string>('');
 
   const loadSubmissions = useCallback(async () => {
     setLoading(true);
@@ -42,7 +63,7 @@ export const SubmissionsTable: React.FC<SubmissionsTableProps> = ({
         search: search.trim() || undefined,
         year: yearFilter ? parseInt(yearFilter, 10) : undefined,
         section: sectionFilter || undefined,
-        isWinner: winnerFilter === 'true' ? true : winnerFilter === 'false' ? false : undefined,
+        rating: ratingFilter || undefined,
       });
       setData(res);
     } catch (err) {
@@ -50,7 +71,7 @@ export const SubmissionsTable: React.FC<SubmissionsTableProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [activeEventId, page, search, yearFilter, sectionFilter, winnerFilter]);
+  }, [activeEventId, page, search, yearFilter, sectionFilter, ratingFilter]);
 
   useEffect(() => {
     loadSubmissions();
@@ -64,7 +85,7 @@ export const SubmissionsTable: React.FC<SubmissionsTableProps> = ({
 
   const handleRowDelete = async (e: React.MouseEvent, sub: Submission) => {
     e.stopPropagation();
-    const confirmText = `Delete submission for ${sub.name} (${sub.rollNo})?\n\nThis will purge all associated files from Google Drive and remove the record permanently.`;
+    const confirmText = `Delete submission for ${sub.name} (${sub.rollNo})?\n\nThis will purge all associated files and remove the record permanently.`;
     if (!window.confirm(confirmText)) return;
 
     setDeletingId(sub.id);
@@ -92,13 +113,13 @@ export const SubmissionsTable: React.FC<SubmissionsTableProps> = ({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-200 pb-5">
         <div>
           <div className="text-xs font-mono font-bold tracking-widest text-elite-red uppercase">
-            Applicant Roster
+            Submitted Introductions
           </div>
           <h1 className="text-3xl font-extrabold text-elite-black font-display tracking-tight mt-1">
-            APPLICANTS
+            VIDEOS
           </h1>
           <p className="text-xs text-neutral-500 mt-1 font-normal">
-            Review submissions, evaluate self introductions, and select club members.
+            Review each student's introduction video and mark their performance.
           </p>
         </div>
 
@@ -172,32 +193,33 @@ export const SubmissionsTable: React.FC<SubmissionsTableProps> = ({
             <option value="4">4th Year</option>
           </select>
 
-          {/* Selection Status Filter */}
+          {/* Rating Filter */}
           <select
-            value={winnerFilter}
+            value={ratingFilter}
             onChange={(e) => {
-              setWinnerFilter(e.target.value);
+              setRatingFilter(e.target.value);
               setPage(1);
             }}
             className="bg-[#fafafa] border border-neutral-200 rounded-lg px-2.5 py-1.5 text-xs text-neutral-800 focus:outline-none focus:border-elite-red cursor-pointer"
           >
-            <option value="">All Statuses</option>
-            <option value="true">Selected Members</option>
-            <option value="false">Pending / Not Selected</option>
+            <option value="">All Ratings</option>
+            <option value="GOOD">Good</option>
+            <option value="AVERAGE">Average</option>
+            <option value="POOR">Poor</option>
           </select>
         </div>
       </div>
 
-      {/* 3. EDITORIAL APPLICANT TABLE */}
+      {/* 3. SUBMISSIONS TABLE */}
       <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden shadow-sm">
         {loading ? (
           <div className="p-16 text-center text-neutral-500 flex flex-col items-center gap-2">
             <div className="w-6 h-6 border-2 border-elite-red border-t-transparent rounded-full animate-spin" />
-            <span className="text-xs font-medium">Loading applicants...</span>
+            <span className="text-xs font-medium">Loading submissions...</span>
           </div>
         ) : !data || data.data.length === 0 ? (
           <div className="p-16 text-center space-y-2">
-            <p className="text-sm font-semibold text-neutral-800">No applicants found</p>
+            <p className="text-sm font-semibold text-neutral-800">No submissions found</p>
             <p className="text-xs text-neutral-500">
               Try adjusting your search query or filters.
             </p>
@@ -207,16 +229,17 @@ export const SubmissionsTable: React.FC<SubmissionsTableProps> = ({
             <table className="w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="bg-[#fafafa] border-b border-neutral-200 text-[11px] font-bold text-neutral-500 uppercase tracking-wider">
-                  <th className="py-3 px-5">Applicant</th>
+                  <th className="py-3 px-5">Student</th>
                   <th className="py-3 px-4">Roll Number</th>
                   <th className="py-3 px-4">Section & Year</th>
                   <th className="py-3 px-4 text-center">Video</th>
-                  <th className="py-3 px-4">Status</th>
+                  <th className="py-3 px-4">Rating</th>
                   <th className="py-3 px-5 text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-100">
                 {data.data.map((sub) => {
+                  const meta = sub.rating ? ratingMeta[sub.rating] : null;
                   return (
                     <tr
                       key={sub.id}
@@ -245,27 +268,32 @@ export const SubmissionsTable: React.FC<SubmissionsTableProps> = ({
                         <span>Year {sub.year}</span>
                       </td>
 
-                      {/* Video Count */}
-                      <td className="py-3.5 px-4 text-center font-mono text-neutral-600">
-                        1
+                      {/* Video Presence */}
+                      <td className="py-3.5 px-4 text-center">
+                        {sub.videoDriveId ? (
+                          <span className="inline-flex items-center gap-1.5 text-emerald-600 text-[11px] font-bold">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+                            UPLOADED
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 text-neutral-400 text-[11px] font-semibold">
+                            <span className="w-2 h-2 rounded-full bg-neutral-300 inline-block" />
+                            REMOVED
+                          </span>
+                        )}
                       </td>
 
-                      {/* Status indicator (● PENDING / ● SELECTED / ● NOT SELECTED) */}
+                      {/* Rating badge */}
                       <td className="py-3.5 px-4">
-                        {sub.isWinner ? (
-                          <div className="inline-flex items-center gap-1.5 text-elite-red font-bold text-[11px] tracking-wide">
-                            <span className="w-2 h-2 rounded-full bg-elite-red inline-block" />
-                            <span>SELECTED</span>
-                          </div>
-                        ) : sub.status === 'REJECTED' ? (
-                          <div className="inline-flex items-center gap-1.5 text-neutral-500 font-semibold text-[11px] tracking-wide">
-                            <span className="w-2 h-2 rounded-full bg-neutral-400 inline-block" />
-                            <span>NOT SELECTED</span>
+                        {meta ? (
+                          <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border ${meta.badge} ${meta.text}`}>
+                            <span className={`w-2 h-2 rounded-full ${meta.dot} inline-block`} />
+                            <span className="text-[11px] font-bold tracking-wide uppercase">{meta.label}</span>
                           </div>
                         ) : (
-                          <div className="inline-flex items-center gap-1.5 text-neutral-600 font-medium text-[11px] tracking-wide">
+                          <div className="inline-flex items-center gap-1.5 text-neutral-500 font-medium text-[11px] tracking-wide">
                             <span className="w-2 h-2 rounded-full bg-neutral-300 inline-block" />
-                            <span>PENDING</span>
+                            <span>NOT RATED</span>
                           </div>
                         )}
                       </td>
@@ -287,7 +315,7 @@ export const SubmissionsTable: React.FC<SubmissionsTableProps> = ({
                           <button
                             disabled={deletingId === sub.id}
                             onClick={(e) => handleRowDelete(e, sub)}
-                            title="Delete Submission & Purge Drive Files"
+                            title="Delete Submission & Files"
                             className="p-1.5 bg-red-50 hover:bg-red-100 text-elite-red border border-red-200 rounded transition-colors cursor-pointer disabled:opacity-50"
                           >
                             <Trash2 className={`w-3.5 h-3.5 ${deletingId === sub.id ? 'animate-spin' : ''}`} />
@@ -307,7 +335,7 @@ export const SubmissionsTable: React.FC<SubmissionsTableProps> = ({
           <div className="p-4 bg-[#fafafa] border-t border-neutral-200 flex items-center justify-between text-xs text-neutral-600">
             <div>
               Showing page <span className="font-bold text-neutral-900">{data.pagination.page}</span> of{' '}
-              <span className="font-bold text-neutral-900">{data.pagination.totalPages}</span> ({data.pagination.total} total applicants)
+              <span className="font-bold text-neutral-900">{data.pagination.totalPages}</span> ({data.pagination.total} total submissions)
             </div>
 
             <div className="flex items-center gap-2">

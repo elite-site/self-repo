@@ -7,7 +7,7 @@ interface EventHomeViewProps {
 }
 
 const EVENT = {
-  name: 'Self Introduction Auditions',
+  name: 'Self Introduction',
   slug: 'self-introduction',
   year: 2026,
   status: 'OPEN' as const,
@@ -16,10 +16,10 @@ const EVENT = {
 const mediaInfo = {
   icon: UserRound,
   maxFiles: '1 Video File',
-  maxSize: 'Video: 80 MB',
+  maxSize: 'Video: 25 MB',
   formats: 'MP4, MOV, WEBM',
   driveFolder: `Self Introduction/${EVENT.year}`,
-  categoryTitle: 'Self Introduction Auditions',
+  categoryTitle: 'Self Introduction',
   description: 'Personal introduction clips evaluated on clarity, confidence, and communication.',
 };
 
@@ -218,7 +218,7 @@ export const EventHomeView: React.FC<EventHomeViewProps> = ({ stats }) => {
                 <li>Record a single self-introduction video clip with clear speech.</li>
                 <li>Demonstrate confidence, personality, and impressive stage presence.</li>
                 <li>Open exclusively to Information Technology students across 2nd, 3rd, and 4th years.</li>
-                <li>Best entries will be shortlisted for the official ELITE core team.</li>
+                <li>Admins review each video and rate performance as Good, Average, or Poor.</li>
               </ul>
             </div>
           )}

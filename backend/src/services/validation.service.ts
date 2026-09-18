@@ -91,19 +91,19 @@ export class ValidationService {
   }
 
   /**
-   * Validates an optional video file (max 80MB)
+   * Validates an optional video file (max 25MB)
    */
   public static async validateVideo(
     fileBuffer: Buffer,
     fileName: string,
     fileSize: number
   ): Promise<FileValidationResult> {
-    // 1. Check size limit (80MB for video)
-    const maxSizeBytes = 80 * 1024 * 1024;
+    // 1. Check size limit
+    const maxSizeBytes = env.MAX_VIDEO_SIZE_MB * 1024 * 1024;
     if (fileSize > maxSizeBytes) {
       return {
         valid: false,
-        error: 'Video file is too large. Maximum size is 80 MB.',
+        error: `Video file is too large. Maximum size is ${env.MAX_VIDEO_SIZE_MB} MB.`,
       };
     }
 
@@ -118,7 +118,7 @@ export class ValidationService {
     if (!ALLOWED_VIDEO_EXTS.includes(ext)) {
       return {
         valid: false,
-        error: 'Unsupported file format. Please upload MP3, WAV, M4A, AAC, OGG audio up to 10 MB, or MP4, MOV, WebM video up to 80 MB.',
+        error: `Unsupported file format. Please upload MP4, MOV, or WebM video up to ${env.MAX_VIDEO_SIZE_MB} MB.`,
       };
     }
 
@@ -129,7 +129,7 @@ export class ValidationService {
       if (type && (BLOCKED_MIMES.includes(type.mime) || type.mime.startsWith('image/'))) {
         return {
           valid: false,
-          error: 'Unsupported file format. Please upload MP3, WAV, M4A, AAC, OGG audio up to 10 MB, or MP4, MOV, WebM video up to 80 MB.',
+          error: `Unsupported file format. Please upload MP4, MOV, or WebM video up to ${env.MAX_VIDEO_SIZE_MB} MB.`,
         };
       }
 
@@ -178,7 +178,7 @@ export class ValidationService {
     if (!ALLOWED_AUDIO_EXTS.includes(ext)) {
       return {
         valid: false,
-        error: 'Unsupported file format. Please upload MP3, WAV, M4A, AAC, OGG audio up to 10 MB, or MP4, MOV, WebM video up to 80 MB.',
+        error: 'Unsupported file format. Please upload MP3, WAV, M4A, AAC, OGG audio up to 10 MB, ',
       };
     }
 
@@ -189,7 +189,7 @@ export class ValidationService {
       if (type && (BLOCKED_MIMES.includes(type.mime) || type.mime.startsWith('image/'))) {
         return {
           valid: false,
-          error: 'Unsupported file format. Please upload MP3, WAV, M4A, AAC, OGG audio up to 10 MB, or MP4, MOV, WebM video up to 80 MB.',
+          error: 'Unsupported file format. Please upload MP3, WAV, M4A, AAC, OGG audio up to 10 MB, ',
         };
       }
 

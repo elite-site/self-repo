@@ -26,7 +26,7 @@ export const ConfirmationState: React.FC<ConfirmationStateProps> = ({
           Thank you, {studentName}!
         </h2>
         <p className="text-sm text-neutral-600 max-w-md mx-auto leading-relaxed">
-          Your self introduction for <strong className="text-elite-red font-semibold">ELITE Self Introduction Club</strong> has been received successfully.
+          Your self introduction for <strong className="text-elite-red font-semibold">ELITE Self Introduction</strong> has been received successfully.
         </p>
       </div>
 

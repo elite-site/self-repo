@@ -3,9 +3,7 @@ import {
   Home,
   Info,
   Users,
-  CheckCircle2,
-  XCircle,
-  Mail,
+  ClipboardList,
   FileSpreadsheet,
   Folder,
   Clock,
@@ -21,9 +19,7 @@ export type AdminTab =
   | 'dashboard'
   | 'event-home'
   | 'submissions'
-  | 'winners'
-  | 'rejected'
-  | 'emails'
+  | 'students'
   | 'activity';
 
 interface SidebarProps {
@@ -47,10 +43,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const navItems = [
     { id: 'dashboard' as AdminTab, label: 'Home', icon: Home },
     { id: 'event-home' as AdminTab, label: 'Event Home', icon: Info },
-    { id: 'submissions' as AdminTab, label: 'Applicants', icon: Users },
-    { id: 'winners' as AdminTab, label: 'Selected Members', icon: CheckCircle2 },
-    { id: 'rejected' as AdminTab, label: 'Not Selected', icon: XCircle },
-    { id: 'emails' as AdminTab, label: 'Emails', icon: Mail },
+    { id: 'submissions' as AdminTab, label: 'Videos Submitted', icon: Users },
+    { id: 'students' as AdminTab, label: 'Students', icon: ClipboardList },
   ];
 
   return (

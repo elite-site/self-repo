@@ -44,12 +44,7 @@ export const App: React.FC = () => {
     setTotalSizeText(formattedTotal);
 
     const formData = new FormData();
-    formData.append('name', data.name);
     formData.append('rollNo', data.rollNo);
-    formData.append('branch', data.branch);
-    formData.append('section', data.section);
-    formData.append('year', data.year.toString());
-    formData.append('email', data.email);
     formData.append('category', 'SELF_INTRO');
 
     if (data.video) formData.append('video', data.video);
@@ -78,13 +73,18 @@ export const App: React.FC = () => {
 
         if (err.response.status === 409) {
           setErrorMessage({
-            title: 'Application Already Submitted',
-            message: errorData.message || "An application has already been recorded with this roll number or email address for ELITE Self Introduction Club.",
+            title: 'Video Already Submitted',
+            message: errorData.message || "An introduction video has already been submitted for this roll number.",
+          });
+        } else if (err.response.status === 404) {
+          setErrorMessage({
+            title: 'Student Not Found',
+            message: errorData.message || 'No student was found with this roll number. Please verify and try again.',
           });
         } else if (err.response.status === 400) {
           setErrorMessage({
-            title: 'Application Validation Error',
-            message: errorData.message || 'Please check that all required fields and introduction video are properly formatted.',
+            title: 'Validation Error',
+            message: errorData.message || 'Please check that your video is properly formatted (MP4, MOV, or WebM up to 25 MB).',
           });
         } else {
           setErrorMessage({

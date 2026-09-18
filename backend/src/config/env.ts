@@ -25,10 +25,10 @@ export const env = {
   RESEND_API_KEY: process.env.RESEND_API_KEY || '',
   EMAIL_FROM_ADDRESS: process.env.EMAIL_FROM_ADDRESS || 'Self Introduction <elite@sasi.ac.in>',
 
-  // Size Limits (10 MB for images & audio, 80 MB strictly for videos)
+  // Size Limits (25 MB strictly for videos)
   MAX_IMAGE_SIZE_MB: parseInt(process.env.MAX_IMAGE_SIZE_MB || '10', 10),
   MAX_AUDIO_SIZE_MB: parseInt(process.env.MAX_AUDIO_SIZE_MB || '10', 10),
-  MAX_VIDEO_SIZE_MB: parseInt(process.env.MAX_VIDEO_SIZE_MB || '80', 10),
+  MAX_VIDEO_SIZE_MB: parseInt(process.env.MAX_VIDEO_SIZE_MB || '25', 10),
 
   // CORS - parse comma-separated list of allowed origins or single origin safely
   ALLOWED_ORIGINS: (() => {
