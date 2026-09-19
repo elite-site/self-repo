@@ -25,6 +25,11 @@ export interface Submission {
   rating?: SubmissionRating | null;
   ratedAt?: string | null;
   submittedAt: string;
+  reviewText?: string | null;
+  reviewPros?: string[];
+  reviewCons?: string[];
+  reviewedAt?: string | null;
+  reviewedBy?: string | null;
 }
 
 export interface SectionProgress {
@@ -58,7 +63,41 @@ export interface SubmissionsResponse {
   };
 }
 
+// Roster row returned by GET /admin/api/students
+export interface Student {
+  id: string;
+  rollNo: string;
+  name: string;
+  year: number;
+  section: string;
+  branch: string;
+  hasUploaded: boolean;
+  submission: {
+    id: string;
+    status: string;
+    submittedAt: string;
+    videoDriveId?: string | null;
+    reviewText?: string | null;
+    reviewPros?: string[];
+    reviewCons?: string[];
+    reviewedAt?: string | null;
+  } | null;
+}
+
+export interface StudentsResponse {
+  eventId?: string;
+  data: Student[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    rosterTotal: number;
+  };
+}
+
 export interface AdminUser {
   userId: string;
   email: string;
+  username?: string;
 }

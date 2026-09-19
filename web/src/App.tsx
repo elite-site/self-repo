@@ -1,115 +1,61 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Navbar } from './components/Navbar';
 import { HeroSection } from './components/HeroSection';
-import { SubmissionForm } from './components/SubmissionForm';
+import { StudentLogin } from './components/StudentLogin';
+import { StudentDashboard } from './components/StudentDashboard';
 import { AboutSidebar } from './components/AboutSidebar';
 import { GuidelinesSection } from './components/GuidelinesSection';
-import { UploadProgressBar } from './components/UploadProgressBar';
-import { ConfirmationState } from './components/ConfirmationState';
-import { AlertBanner } from './components/AlertBanner';
 import { Footer } from './components/Footer';
-import { SelfIntroductionSubmissionFormData } from './types';
-import { api } from './services/api';
-import axios from 'axios';
+import { StudentSession } from './types';
+import { api, setStudentToken } from './services/api';
+
+const SESSION_KEY = 'ita_student_session';
+
+function loadSession(): StudentSession | null {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as StudentSession;
+    if (!parsed?.token || !parsed?.student) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
 
 export const App: React.FC = () => {
-  const [status, setStatus] = useState<'idle' | 'uploading' | 'success'>('idle');
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [loadedBytes, setLoadedBytes] = useState(0);
-  const [totalBytes, setTotalBytes] = useState(0);
-  const [uploadFiles, setUploadFiles] = useState<{ label: string; size: number }[]>([]);
-  const [totalSizeText, setTotalSizeText] = useState('');
-  const [confirmedStudentName, setConfirmedStudentName] = useState('');
-  const [confirmedSubmissionId, setConfirmedSubmissionId] = useState('');
-  const [errorMessage, setErrorMessage] = useState<{ title?: string; message: string } | null>(null);
+  const [session, setSession] = useState<StudentSession | null>(null);
+  const [authChecking, setAuthChecking] = useState(true);
 
-  const handleFormSubmit = async (data: SelfIntroductionSubmissionFormData) => {
-    setErrorMessage(null);
-    setStatus('uploading');
-    setUploadProgress(0);
-
-    const filesList: { label: string; size: number }[] = [];
-    if (data.video) {
-      filesList.push({ label: 'Video Introduction Reel', size: data.video.size });
-    }
-    setUploadFiles(filesList);
-
-    const totalPayloadBytes = data.video?.size || 0;
-    setTotalBytes(totalPayloadBytes);
-    setLoadedBytes(0);
-
-    const formattedTotal = totalPayloadBytes > 1024 * 1024
-      ? `${(totalPayloadBytes / (1024 * 1024)).toFixed(1)} MB`
-      : `${(totalPayloadBytes / 1024).toFixed(0)} KB`;
-    setTotalSizeText(formattedTotal);
-
-    const formData = new FormData();
-    formData.append('name', data.name);
-    formData.append('rollNo', data.rollNo);
-    formData.append('year', String(data.year));
-    formData.append('section', data.section);
-    formData.append('email', data.email);
-    formData.append('phoneNo', data.phoneNo);
-    formData.append('category', 'SELF_INTRO');
-
-    if (data.video) formData.append('video', data.video);
-
-    try {
-      const response = await api.submitEntry(formData, (progressEvent) => {
-        setLoadedBytes(progressEvent.loaded);
-        if (progressEvent.total) {
-          setTotalBytes(progressEvent.total);
-          const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          setUploadProgress(percent);
-        }
-      });
-
-      setConfirmedStudentName(response.name);
-      setConfirmedSubmissionId(response.id);
-      setStatus('success');
-      const el = document.getElementById('main-content');
-      if (el) el.scrollIntoView({ behavior: 'smooth' });
-    } catch (err: any) {
-      setStatus('idle');
-      setUploadProgress(0);
-
-      if (axios.isAxiosError(err) && err.response) {
-        const errorData = err.response.data;
-
-        if (err.response.status === 409) {
-          setErrorMessage({
-            title: 'Video Already Submitted',
-            message: errorData.message || "An introduction video has already been submitted for this roll number.",
-          });
-        } else if (err.response.status === 400) {
-          setErrorMessage({
-            title: 'Validation Error',
-            message: errorData.message || 'Please check that your video is properly formatted (MP4, MOV, or WebM up to 25 MB).',
-          });
-        } else {
-          setErrorMessage({
-            title: 'Submission Error',
-            message: errorData.message || 'Could not upload your introduction. Please check your internet connection and try again.',
-          });
-        }
-      } else {
-        setErrorMessage({
-          title: 'Connection Error',
-          message: 'Could not reach the server. Please verify your connection and try again.',
+  useEffect(() => {
+    const stored = loadSession();
+    if (stored) {
+      setStudentToken(stored.token);
+      // Refresh the profile (re-fetches admin review status), keep stored as fallback.
+      api
+        .getMe()
+        .then((res) => {
+          const updated: StudentSession = { token: stored.token, student: res.student };
+          setSession(updated);
+          localStorage.setItem(SESSION_KEY, JSON.stringify(updated));
+        })
+        .catch(() => {
+          setSession(stored);
         });
-      }
-
-      window.scrollTo({ top: 400, behavior: 'smooth' });
     }
-  };
+    setAuthChecking(false);
+  }, []);
 
-  const handleReset = () => {
-    setStatus('idle');
-    setUploadProgress(0);
-    setConfirmedStudentName('');
-    setConfirmedSubmissionId('');
-    setErrorMessage(null);
-  };
+  const handleLogin = useCallback((next: StudentSession) => {
+    setSession(next);
+    localStorage.setItem(SESSION_KEY, JSON.stringify(next));
+  }, []);
+
+  const handleLogout = useCallback(() => {
+    setSession(null);
+    localStorage.removeItem(SESSION_KEY);
+    setStudentToken(null);
+  }, []);
 
   const handleNavigate = (sectionId: string) => {
     const el = document.getElementById(sectionId);
@@ -118,53 +64,51 @@ export const App: React.FC = () => {
     }
   };
 
+  if (authChecking) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-elite-red border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-white text-neutral-900 flex flex-col justify-between">
       <div>
-        <Navbar onNavigate={handleNavigate} />
-        <HeroSection />
+        <Navbar session={session} onLogout={handleLogout} onNavigate={handleNavigate} />
 
-        <main id="main-content" className="max-w-7xl mx-auto px-6 sm:px-10 py-6 sm:py-10">
-          {errorMessage && (
-            <div className="mb-6">
-              <AlertBanner
-                type="error"
-                title={errorMessage.title}
-                message={errorMessage.message}
-                onClose={() => setErrorMessage(null)}
-              />
-            </div>
-          )}
-
-          {status === 'success' ? (
-            <ConfirmationState
-              studentName={confirmedStudentName}
-              submissionId={confirmedSubmissionId}
-              onReset={handleReset}
-            />
-          ) : status === 'uploading' ? (
-            <div className="max-w-xl mx-auto py-12 px-4 animate-in fade-in duration-200">
-              <UploadProgressBar
-                progress={uploadProgress}
-                totalSizeText={totalSizeText}
-                files={uploadFiles}
-                loadedBytes={loadedBytes}
-                totalBytes={totalBytes}
-              />
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-              <div className="lg:col-span-8">
-                <SubmissionForm onSubmit={handleFormSubmit} isLoading={false} />
+        {session ? (
+          <>
+            <main id="main-content" className="max-w-7xl mx-auto px-6 sm:px-10 py-8 sm:py-10">
+              <StudentDashboard initialStudent={session.student} onLogout={handleLogout} />
+            </main>
+            <GuidelinesSection />
+          </>
+        ) : (
+          <>
+            <HeroSection />
+            <main id="main-content" className="max-w-7xl mx-auto px-6 sm:px-10 py-6 sm:py-10">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                <div className="lg:col-span-7">
+                  <p className="text-sm text-neutral-600 text-left mb-6 max-w-xl leading-relaxed">
+                    Sign in with the roll number printed on your ID card. You can then upload
+                    your introduction video, preview it, resubmit if you'd like, and see your
+                    coordinators' response once it's been reviewed.
+                  </p>
+                </div>
+                <div className="lg:col-span-5">
+                  <StudentLogin onLogin={handleLogin} />
+                </div>
               </div>
-              <div className="lg:col-span-4">
-                <AboutSidebar />
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start mt-10">
+                <div className="lg:col-span-8">
+                  <AboutSidebar />
+                </div>
               </div>
-            </div>
-          )}
-        </main>
-
-        <GuidelinesSection />
+            </main>
+            <GuidelinesSection />
+          </>
+        )}
       </div>
 
       <Footer />

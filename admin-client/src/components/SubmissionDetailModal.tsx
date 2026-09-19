@@ -1,8 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
-import { X, Film, Trash2, VideoOff, Circle } from 'lucide-react';
+import { X, Film, Trash2, VideoOff, Circle, MessageSquare, Send, Eraser } from 'lucide-react';
 import { Submission, SubmissionRating } from '../types';
 import { adminApi } from '../services/api';
+
+const REVIEW_PROS = [
+  'expressive posture',
+  'commanding voice',
+  'focused mindset',
+  'perfect lighting & background',
+];
+const REVIEW_CONS = [
+  'unclear thoughts',
+  'broken voice',
+  'bad lighting',
+];
 
 interface SubmissionDetailModalProps {
   submission: Submission | null;
@@ -54,6 +66,10 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
   const [deleting, setDeleting] = useState(false);
   const [deletingVideo, setDeletingVideo] = useState(false);
   const [hasVideo, setHasVideo] = useState<boolean>(Boolean(submission.videoDriveId));
+  const [reviewText, setReviewText] = useState(submission.reviewText || '');
+  const [reviewPros, setReviewPros] = useState<string[]>(submission.reviewPros || []);
+  const [reviewCons, setReviewCons] = useState<string[]>(submission.reviewCons || []);
+  const [sendingReview, setSendingReview] = useState(false);
 
   // Lock background body scroll and listen for Escape key
   useEffect(() => {
@@ -129,6 +145,45 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
   };
 
   const activeRating = ratingOptions.find((r) => r.value === rating);
+
+  const togglePros = (tag: string) => {
+    setReviewPros((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    );
+  };
+
+  const toggleCons = (tag: string) => {
+    setReviewCons((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    );
+  };
+
+  const handleSubmitReview = async (clear: boolean) => {
+    setSendingReview(true);
+    try {
+      const res = await adminApi.updateReview(submission.id, {
+        reviewText: clear ? '' : reviewText,
+        pros: clear ? [] : reviewPros,
+        cons: clear ? [] : reviewCons,
+      });
+      if (res.success) {
+        if (clear) {
+          setReviewText('');
+          setReviewPros([]);
+          setReviewCons([]);
+        } else {
+          setReviewText(res.submission.reviewText || '');
+          setReviewPros(res.submission.reviewPros || []);
+          setReviewCons(res.submission.reviewCons || []);
+        }
+        onUpdated(res.submission);
+      }
+    } catch (err: any) {
+      alert(`Failed to send response: ${err.message || 'Unknown error'}`);
+    } finally {
+      setSendingReview(false);
+    }
+  };
 
   return ReactDOM.createPortal(
     <>
@@ -274,6 +329,103 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                     {updating && (
                       <div className="text-[11px] text-neutral-400 font-mono pt-1">Saving rating...</div>
                     )}
+                  </div>
+                </div>
+
+                {/* SEND RESPONSE TO STUDENT */}
+                <div className="bg-white border border-neutral-200 rounded-xl p-4 sm:p-5 space-y-4 shadow-sm">
+                  <div className="flex items-start gap-2.5">
+                    <MessageSquare className="w-4 h-4 text-elite-red mt-0.5 shrink-0" />
+                    <div>
+                      <h3 className="font-bold text-elite-black uppercase tracking-wider text-[11px]">
+                        Send Response to Student
+                      </h3>
+                      <p className="text-[11px] text-neutral-500 mt-0.5 leading-relaxed">
+                        Text feedback plus hashtag keywords. The student sees this reply after submitting.
+                      </p>
+                    </div>
+                  </div>
+
+                  <textarea
+                    value={reviewText}
+                    onChange={(e) => setReviewText(e.target.value)}
+                    rows={3}
+                    placeholder="Write your review — what the student did well and what to improve..."
+                    className="w-full bg-white border border-neutral-200 rounded-lg px-3 py-2.5 text-xs text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:border-elite-red transition-colors resize-y"
+                  />
+
+                  {/* Pros / Cons hashtags */}
+                  <div className="space-y-2.5">
+                    <div>
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 mb-1.5">
+                        Pros — select keywords
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {REVIEW_PROS.map((tag) => {
+                          const on = reviewPros.includes(tag);
+                          return (
+                            <button
+                              key={tag}
+                              type="button"
+                              onClick={() => togglePros(tag)}
+                              className={`px-2.5 py-1 rounded-full border text-[11px] font-semibold transition-colors cursor-pointer ${
+                                on
+                                  ? 'bg-emerald-600 text-white border-emerald-600'
+                                  : 'bg-emerald-50/50 text-emerald-700 border-emerald-200 hover:border-emerald-400'
+                              }`}
+                            >
+                              # {tag}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-elite-red mb-1.5">
+                        Cons — select keywords
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {REVIEW_CONS.map((tag) => {
+                          const on = reviewCons.includes(tag);
+                          return (
+                            <button
+                              key={tag}
+                              type="button"
+                              onClick={() => toggleCons(tag)}
+                              className={`px-2.5 py-1 rounded-full border text-[11px] font-semibold transition-colors cursor-pointer ${
+                                on
+                                  ? 'bg-elite-darkred text-white border-elite-darkred'
+                                  : 'bg-red-50/50 text-elite-red border-red-200 hover:border-red-400'
+                              }`}
+                            >
+                              # {tag}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      disabled={sendingReview || deleting || deletingVideo}
+                      onClick={() => handleSubmitReview(false)}
+                      className="flex-1 py-2.5 px-4 bg-elite-red hover:bg-elite-darkred text-white font-bold text-xs uppercase tracking-wider rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
+                    >
+                      <Send className="w-3.5 h-3.5" />
+                      <span>{sendingReview ? 'Sending...' : 'Send Response'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={sendingReview || deleting || deletingVideo}
+                      onClick={() => handleSubmitReview(true)}
+                      title="Clear the response (marks the submission as not yet reviewed)"
+                      className="py-2.5 px-3.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-600 border border-neutral-200 font-semibold text-xs rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
+                    >
+                      <Eraser className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">Clear</span>
+                    </button>
                   </div>
                 </div>
 

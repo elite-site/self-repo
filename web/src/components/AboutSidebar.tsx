@@ -4,7 +4,7 @@ import { Mic, Sparkles, Smile } from 'lucide-react';
 export const AboutSidebar: React.FC = () => {
   return (
     <aside id="about" className="space-y-6 text-left">
-      {/* CARD 1: ABOUT ELITE SELF INTRODUCTION */}
+      {/* CARD 1: ABOUT IT-ASSOCIATIONS SELF INTRODUCTION */}
       <div className="bg-white border border-neutral-200 rounded-3xl p-6 sm:p-8 space-y-4 shadow-sm">
         <div className="flex items-center gap-3 border-b border-neutral-100 pb-3">
           <div className="w-9 h-9 rounded-xl bg-red-50 text-elite-red flex items-center justify-center font-bold">
@@ -12,7 +12,7 @@ export const AboutSidebar: React.FC = () => {
           </div>
           <div>
             <h3 className="text-base font-extrabold text-elite-black font-display tracking-tight">
-              About ELITE Self Introduction
+              About IT-Associations Self Introduction
             </h3>
             <p className="text-[11px] text-neutral-500 font-semibold uppercase">
               Department of Information Technology
@@ -21,7 +21,7 @@ export const AboutSidebar: React.FC = () => {
         </div>
 
         <p className="text-xs sm:text-sm text-neutral-600 leading-relaxed">
-          ELITE Self Introduction is an initiative of the Department of Information
+          IT-Associations Self Introduction is an initiative of the Department of Information
           Technology — a simple, personal exercise in communication. Introduce
           yourself, your interests, and your personality, clearly and naturally.
         </p>

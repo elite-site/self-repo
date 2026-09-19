@@ -3,6 +3,7 @@ import {
   Home,
   Info,
   ClipboardList,
+  Users,
   FileSpreadsheet,
   Folder,
   Clock,
@@ -18,6 +19,7 @@ export type AdminTab =
   | 'dashboard'
   | 'overview'
   | 'submissions'
+  | 'students'
   | 'activity';
 
 interface SidebarProps {
@@ -42,6 +44,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'dashboard' as AdminTab, label: 'Home', icon: Home },
     { id: 'overview' as AdminTab, label: 'Overview', icon: Info },
     { id: 'submissions' as AdminTab, label: 'Videos Submitted', icon: ClipboardList },
+    { id: 'students' as AdminTab, label: 'All Students', icon: Users },
   ];
 
   return (
@@ -55,7 +58,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <div>
             <div className="flex items-center gap-1.5">
               <span className="text-xl font-extrabold text-elite-red font-display tracking-tight">
-                ELITE
+                IT-Associations
               </span>
             </div>
             <div className="text-[10px] text-neutral-500 dark:text-neutral-400 font-semibold uppercase tracking-wider">
@@ -139,7 +142,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </button>
 
           <div className="text-[10px] text-neutral-400 dark:text-neutral-500 text-center font-mono">
-            © 2026 ELITE Self Introduction. All rights reserved.
+            © 2026 IT-Associations Self Introduction. All rights reserved.
           </div>
         </div>
       </div>

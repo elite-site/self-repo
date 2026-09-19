@@ -58,7 +58,7 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
       {/* 1. EDITORIAL HEADER */}
       <div className="border-b border-neutral-200 pb-6">
         <div className="text-xs font-mono font-bold tracking-widest text-elite-red uppercase">
-          Organizer Dashboard
+          IT-Associations • Organizer Dashboard
         </div>
         <h1 className="text-3xl sm:text-4xl font-extrabold text-elite-black font-display tracking-tight mt-1">
           SELF INTRODUCTION 2026

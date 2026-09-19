@@ -10,6 +10,7 @@ export const env = {
   DATABASE_URL: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/photoclub?schema=public',
   JWT_SECRET: process.env.JWT_SECRET || 'dev_secret_photoclub_change_in_production',
   ADMIN_SESSION_COOKIE_NAME: process.env.ADMIN_SESSION_COOKIE_NAME || 'pc_admin_session',
+  STUDENT_JWT_SECRET: process.env.STUDENT_JWT_SECRET || 'student_jwt_secret_change_in_production',
 
   // Google Drive OAuth 2.0 (Primary)
   GOOGLE_OAUTH_CLIENT_ID: process.env.GOOGLE_OAUTH_CLIENT_ID || '',

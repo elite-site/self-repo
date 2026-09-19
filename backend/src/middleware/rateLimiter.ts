@@ -23,3 +23,15 @@ export const adminLoginRateLimiter = rateLimit({
     message: 'Too many login attempts. Please wait 15 minutes before trying again.',
   },
 });
+
+// Limit student login attempts: max 10 attempts per 15 minutes per IP
+export const studentLoginRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: 'TOO_MANY_LOGIN_ATTEMPTS',
+    message: 'Too many login attempts. Please wait 15 minutes before trying again.',
+  },
+});

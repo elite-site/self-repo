@@ -50,6 +50,12 @@ model Submission {
   rating          SubmissionRating? // GOOD | AVERAGE | POOR performance evaluation
   ratedAt         DateTime?
 
+  reviewText      String?           // free-text feedback from admin
+  reviewPros      String[]          @default([]) // positive hashtag keywords
+  reviewCons      String[]          @default([]) // negative hashtag keywords
+  reviewedAt      DateTime?
+  reviewedBy      String?           // admin username
+
   submittedAt     DateTime          @default(now())
   updatedAt       DateTime          @default(now()) @updatedAt
 
@@ -67,15 +73,33 @@ enum SubmissionRating {
 enum SubmissionStatus {
   SUBMITTED
   UNDER_REVIEW
+  REVIEWED
   WINNER
   REJECTED
 }
 
 model AdminUser {
+  id           String    @id @default(cuid())
+  email        String?   @unique
+  username     String?   @unique
+  passwordHash String
+  createdAt    DateTime  @default(now())
+}
+
+// Student roster imported from Students_Login_Credentials (IT Department)
+model Student {
   id           String   @id @default(cuid())
-  email        String   @unique
+  rollNo       String   @unique
+  name         String
+  year         Int      // 2, 3, 4
+  section      String   // "A" | "B"
+  branch       String   @default("IT")
   passwordHash String
   createdAt    DateTime @default(now())
+
+  @@unique([rollNo, year, section])
+  @@index([name])
+  @@index([section, year])
 }
 
 model EmailLog {

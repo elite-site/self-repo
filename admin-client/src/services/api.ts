@@ -3,6 +3,7 @@ import {
   AdminStats,
   AdminUser,
   EventItem,
+  StudentsResponse,
   Submission,
   SubmissionRating,
   SubmissionsResponse,
@@ -14,8 +15,8 @@ const client = axios.create({
 
 export const adminApi = {
   // Auth
-  async login(email: string, password: string): Promise<{ success: boolean; user: AdminUser }> {
-    const res = await client.post('/admin/login', { email, password });
+  async login(username: string, password: string): Promise<{ success: boolean; user: AdminUser }> {
+    const res = await client.post('/admin/login', { username, password });
     return res.data;
   },
 
@@ -55,11 +56,34 @@ export const adminApi = {
     year?: number;
     status?: string;
     rating?: string;
+    tag?: string;
     search?: string;
     sortBy?: string;
     sortOrder?: 'asc' | 'desc';
   }): Promise<SubmissionsResponse> {
     const res = await client.get('/admin/api/submissions', { params });
+    return res.data;
+  },
+
+  // Student roster
+  async getStudents(params: {
+    eventId?: string;
+    page?: number;
+    limit?: number;
+    year?: number;
+    section?: string;
+    uploaded?: string;
+    search?: string;
+  }): Promise<StudentsResponse> {
+    const res = await client.get('/admin/api/students', { params });
+    return res.data;
+  },
+
+  async updateReview(
+    id: string,
+    data: { reviewText: string; pros: string[]; cons: string[] }
+  ): Promise<{ success: boolean; submission: Submission }> {
+    const res = await client.patch(`/admin/api/submissions/${id}/review`, data);
     return res.data;
   },
 

@@ -4,7 +4,8 @@ import { env } from '../config/env';
 
 export interface AdminJwtPayload {
   userId: string;
-  email: string;
+  email?: string;
+  username?: string;
 }
 
 declare global {

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Lock, Mail, AlertCircle, ArrowRight } from 'lucide-react';
+import { Lock, UserRound, AlertCircle, ArrowRight } from 'lucide-react';
 import { adminApi } from '../services/api';
 import { AdminUser } from '../types';
 
@@ -8,7 +8,7 @@ interface LoginPageProps {
 }
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -19,14 +19,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     setLoading(true);
 
     try {
-      const res = await adminApi.login(email, password);
+      const res = await adminApi.login(username, password);
       if (res.success) {
         onLoginSuccess(res.user);
       } else {
         setError('Login failed. Please check your credentials.');
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Invalid email or password.');
+      setError(err.response?.data?.message || 'Invalid username or password.');
     } finally {
       setLoading(false);
     }
@@ -35,16 +35,16 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   return (
     <div className="min-h-screen bg-[#fafafa] flex items-center justify-center p-4">
       <div className="w-full max-w-md bg-white border border-neutral-200 rounded-2xl p-8 shadow-sm text-left">
-        {/* ELITE Crest & Header */}
+        {/* IT-Associations Crest & Header */}
         <div className="text-center mb-8 space-y-3">
           <img
             src="/admin/elite-logo.png"
-            alt="ELITE Crest"
+            alt="IT-Associations Crest"
             className="w-16 h-16 object-contain mx-auto"
           />
           <div>
             <h1 className="text-xl font-extrabold text-elite-black font-display tracking-tight">
-              <span className="text-elite-red">ELITE </span>SELF INTRODUCTION
+              <span className="text-elite-red">IT-Associations </span>SELF INTRODUCTION
             </h1>
             <p className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mt-0.5">
               Dept. of Information Technology • Organizer Portal
@@ -62,15 +62,16 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-neutral-700">
-              Organizer Email Address
+              Organizer Username
             </label>
             <div className="relative">
-              <Mail className="w-4 h-4 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <UserRound className="w-4 h-4 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                type="text"
+                placeholder="ADMIN"
+                autoCapitalize="none"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 required
                 className="w-full bg-white border border-neutral-200 rounded-lg pl-9 pr-4 py-2.5 text-xs sm:text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:border-elite-red transition-colors"
               />

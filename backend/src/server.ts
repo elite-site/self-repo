@@ -6,6 +6,7 @@ import fs from 'fs';
 import { env } from './config/env';
 import { errorHandler } from './middleware/errorHandler';
 import publicRoutes from './routes/public.routes';
+import studentRoutes from './routes/student.routes';
 import adminAuthRoutes from './routes/admin.auth.routes';
 import adminApiRoutes from './routes/admin.api.routes';
 
@@ -50,6 +51,9 @@ app.get('/health', (_req, res) => {
 
 // 1. Public API routes (used by Netlify submission form)
 app.use('/api', publicRoutes);
+
+// 1b. Student portal API routes (login, profile, video upload/media)
+app.use('/api/student', studentRoutes);
 
 // 2. Admin Auth routes (login, logout, me)
 app.use('/admin', adminAuthRoutes);

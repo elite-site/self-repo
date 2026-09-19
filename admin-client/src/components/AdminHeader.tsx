@@ -141,7 +141,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
           </div>
           <div className="text-left leading-tight hidden sm:block">
             <div className="text-xs font-bold text-neutral-900 dark:text-white truncate max-w-[130px]">
-              {user?.email ? user.email.split('@')[0] : 'Admin User'}
+              {user?.username || (user?.email ? user.email.split('@')[0] : 'Admin User')}
             </div>
             <div className="text-[10px] text-neutral-500 dark:text-neutral-400 font-medium">Super Admin</div>
           </div>

@@ -1,51 +1,51 @@
 import axios, { AxiosProgressEvent } from 'axios';
-import { SubmissionResponse } from '../types';
+import { StudentLoginResponse, StudentProfile } from '../types';
 
 const API_BASE = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api').replace(/\/$/, '');
 
 const client = axios.create({
   baseURL: API_BASE,
-  timeout: 180000,
+  timeout: 240000,
 });
 
+export function setStudentToken(token: string | null) {
+  if (token) {
+    client.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+  } else {
+    delete client.defaults.headers.common['Authorization'];
+  }
+}
+
 export const api = {
-  async getBranches(): Promise<string[]> {
-    try {
-      const res = await client.get<{ branches: string[] }>('/branches');
-      return res.data.branches;
-    } catch {
-      return ['IT'];
-    }
+  async login(rollNo: string, password: string): Promise<StudentLoginResponse> {
+    const res = await client.post('/student/login', { rollNo, password });
+    setStudentToken(res.data.token);
+    return res.data;
   },
 
-  async getSections(): Promise<string[]> {
-    try {
-      const res = await client.get<{ sections: string[] }>('/sections');
-      return res.data.sections;
-    } catch {
-      return ['A', 'B'];
-    }
+  async getMe(): Promise<{ student: StudentProfile }> {
+    const res = await client.get('/student/me');
+    return res.data;
   },
 
-  async getYears(): Promise<number[]> {
-    try {
-      const res = await client.get<{ years: number[] }>('/years');
-      return res.data.years;
-    } catch {
-      return [2, 3, 4];
-    }
-  },
-
-  async submitEntry(
+  async submitVideo(
     formData: FormData,
     onUploadProgress?: (progressEvent: AxiosProgressEvent) => void
-  ): Promise<SubmissionResponse> {
-    const response = await client.post<SubmissionResponse>('/submissions', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
+  ): Promise<{ success: boolean; id: string; message: string }> {
+    const res = await client.post('/student/submission', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
       onUploadProgress,
     });
-    return response.data;
+    return res.data;
+  },
+
+  // Fetch the student's own uploaded video as a playable blob URL (sends the auth token).
+  async getVideoBlobUrl(): Promise<string> {
+    const res = await client.get('/student/submission/media/video', { responseType: 'blob' });
+    return URL.createObjectURL(res.data as Blob);
   },
 };
+
+export async function clearStudentToken() {
+  setStudentToken(null);
+}

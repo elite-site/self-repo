@@ -10,7 +10,7 @@ export const HeroSection: React.FC = () => {
           {/* Eyebrow */}
           <div>
             <div className="inline-flex items-center gap-2 text-xs font-bold font-mono tracking-widest text-elite-red uppercase">
-              <span>ELITE SELF-INTRODUCTION 2026</span>
+              <span>IT-ASSOCIATIONS • SELF-INTRODUCTION 2026</span>
               <span className="w-6 h-[2px] bg-elite-red inline-block" />
             </div>
             <div className="mt-1.5 text-[10px] sm:text-[11px] font-semibold text-elite-muted uppercase tracking-wider">
@@ -98,7 +98,7 @@ export const HeroSection: React.FC = () => {
         <div className="lg:col-span-5 relative flex items-center justify-center">
           <div className="w-full max-w-sm sm:max-w-md mx-auto bg-gradient-to-br from-neutral-900 to-black text-white p-8 rounded-3xl shadow-2xl space-y-6 text-left border border-neutral-800">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-elite-red/20 text-red-400 border border-red-500/30 text-xs font-bold font-mono tracking-wider">
-              <span>ELITE SELF INTRODUCTION</span>
+              <span>IT-ASSOCIATIONS • SELF INTRODUCTION</span>
             </div>
 
             <h3 className="text-2xl sm:text-3xl font-extrabold tracking-tight font-display leading-[1.15]">

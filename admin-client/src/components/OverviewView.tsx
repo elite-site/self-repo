@@ -32,7 +32,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({ stats }) => {
       <div className="border-b border-neutral-200 pb-4 flex items-center justify-between">
         <div>
           <div className="text-xs font-mono font-bold tracking-widest text-elite-red uppercase">
-            ELITE SELF-INTRODUCTION
+            IT-ASSOCIATIONS • SELF-INTRODUCTION
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-elite-black font-display tracking-tight mt-0.5">
             Overview
@@ -249,7 +249,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({ stats }) => {
 
           {activeTab === 'contact' && (
             <div className="space-y-1">
-              <div className="font-bold text-neutral-900">ELITE Coordination Team</div>
+              <div className="font-bold text-neutral-900">IT-Associations Coordination Team</div>
               <div className="text-neutral-500 font-mono">Department of Information Technology</div>
               <div className="text-neutral-500 font-mono">SASI Institute of Technology & Engineering</div>
             </div>

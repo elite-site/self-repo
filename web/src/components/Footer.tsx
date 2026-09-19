@@ -13,7 +13,7 @@ export const Footer: React.FC = () => {
             </div>
             <div>
               <div className="text-base font-extrabold font-display tracking-tight text-white">
-                ELITE SELF INTRODUCTION
+                IT-Associations SELF INTRODUCTION
               </div>
               <div className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">
                 Department of Information Technology
@@ -40,7 +40,7 @@ export const Footer: React.FC = () => {
             <div className="font-extrabold uppercase tracking-wider text-white font-display">Contact & Support</div>
             <div className="flex items-center gap-2 text-neutral-400">
               <Mail className="w-4 h-4 text-elite-red shrink-0" />
-              <span>elite@sasi.ac.in</span>
+              <span>itassociations@sasi.ac.in</span>
             </div>
             <div className="flex items-center gap-2 text-neutral-400">
               <Globe className="w-4 h-4 text-elite-red shrink-0" />
@@ -52,7 +52,7 @@ export const Footer: React.FC = () => {
 
       {/* COPYRIGHT */}
       <div className="max-w-7xl mx-auto pt-6 flex flex-col sm:flex-row items-center justify-between text-[11px] text-neutral-500 gap-2 font-mono">
-        <div>© 2026 ELITE Self Introduction — Department of Information Technology</div>
+        <div>© 2026 IT-Associations Self Introduction — Department of Information Technology</div>
         <div>Engineered for SASI Institute of Technology & Engineering</div>
       </div>
     </footer>

@@ -8,29 +8,37 @@ import { requireAdminAuth } from '../middleware/auth';
 
 const router = Router();
 
-// POST /admin/login
+// POST /admin/login — accepts username (e.g. ADMIN) or email
 router.post('/login', adminLoginRateLimiter, async (req: Request, res: Response): Promise<void> => {
-  const { email, password } = req.body;
+  const { username, password } = req.body;
 
-  if (!email || !password) {
+  if (!username || !password) {
     res.status(400).json({
       error: 'MISSING_FIELDS',
-      message: 'Both email and password are required.',
+      message: 'Both username and password are required.',
     });
     return;
   }
 
-  const cleanEmail = email.trim().toLowerCase();
+  const cleanUsername = String(username).trim();
+  const lowerUsername = cleanUsername.toLowerCase();
 
   try {
-    const adminUser = await prisma.adminUser.findUnique({
-      where: { email: cleanEmail },
+    const adminUser = await prisma.adminUser.findFirst({
+      where: {
+        OR: [
+          { username: cleanUsername },
+          { username: { equals: cleanUsername, mode: 'insensitive' } },
+          { email: lowerUsername },
+          { email: { equals: lowerUsername, mode: 'insensitive' } },
+        ],
+      },
     });
 
     if (!adminUser) {
       res.status(401).json({
         error: 'INVALID_CREDENTIALS',
-        message: 'Invalid email or password.',
+        message: 'Invalid username or password.',
       });
       return;
     }
@@ -39,14 +47,18 @@ router.post('/login', adminLoginRateLimiter, async (req: Request, res: Response)
     if (!isMatch) {
       res.status(401).json({
         error: 'INVALID_CREDENTIALS',
-        message: 'Invalid email or password.',
+        message: 'Invalid username or password.',
       });
       return;
     }
 
     // Generate JWT
     const token = jwt.sign(
-      { userId: adminUser.id, email: adminUser.email },
+      {
+        userId: adminUser.id,
+        email: adminUser.email || undefined,
+        username: adminUser.username || undefined,
+      },
       env.JWT_SECRET,
       { expiresIn: '12h' }
     );
@@ -65,6 +77,7 @@ router.post('/login', adminLoginRateLimiter, async (req: Request, res: Response)
       user: {
         id: adminUser.id,
         email: adminUser.email,
+        username: adminUser.username,
       },
     });
   } catch (err: any) {

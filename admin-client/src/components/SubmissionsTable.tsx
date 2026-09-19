@@ -6,6 +6,7 @@ import {
   Eye,
   RefreshCw,
   SlidersHorizontal,
+  Hash,
   Trash2,
   FileSpreadsheet,
 } from 'lucide-react';
@@ -49,6 +50,7 @@ export const SubmissionsTable: React.FC<SubmissionsTableProps> = ({
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
+  const [tagFilter, setTagFilter] = useState('');
   const [yearFilter, setYearFilter] = useState<string>('');
   const [sectionFilter, setSectionFilter] = useState<string>('');
   const [ratingFilter, setRatingFilter] = useState<string>('');
@@ -61,6 +63,7 @@ export const SubmissionsTable: React.FC<SubmissionsTableProps> = ({
         page,
         limit: 15,
         search: search.trim() || undefined,
+        tag: tagFilter.trim() || undefined,
         year: yearFilter ? parseInt(yearFilter, 10) : undefined,
         section: sectionFilter || undefined,
         rating: ratingFilter || undefined,
@@ -71,7 +74,7 @@ export const SubmissionsTable: React.FC<SubmissionsTableProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [activeEventId, page, search, yearFilter, sectionFilter, ratingFilter]);
+  }, [activeEventId, page, search, tagFilter, yearFilter, sectionFilter, ratingFilter]);
 
   useEffect(() => {
     loadSubmissions();
@@ -164,6 +167,21 @@ export const SubmissionsTable: React.FC<SubmissionsTableProps> = ({
             <span>Filter:</span>
           </div>
 
+          {/* Review Hashtag Filter */}
+          <div className="relative">
+            <Hash className="w-3.5 h-3.5 text-neutral-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="#tag (e.g. commanding)"
+              value={tagFilter}
+              onChange={(e) => {
+                setTagFilter(e.target.value);
+                setPage(1);
+              }}
+              className="bg-[#fafafa] border border-neutral-200 rounded-lg pl-8 pr-3 py-1.5 text-xs text-neutral-800 placeholder:text-neutral-400 focus:outline-none focus:border-elite-red transition-colors w-48"
+            />
+          </div>
+
           {/* Section Filter */}
           <select
             value={sectionFilter}
@@ -234,6 +252,7 @@ export const SubmissionsTable: React.FC<SubmissionsTableProps> = ({
                   <th className="py-3 px-4">Section & Year</th>
                   <th className="py-3 px-4 text-center">Video</th>
                   <th className="py-3 px-4">Rating</th>
+                  <th className="py-3 px-4">Response</th>
                   <th className="py-3 px-5 text-right">Action</th>
                 </tr>
               </thead>
@@ -295,6 +314,21 @@ export const SubmissionsTable: React.FC<SubmissionsTableProps> = ({
                             <span className="w-2 h-2 rounded-full bg-neutral-300 inline-block" />
                             <span>NOT RATED</span>
                           </div>
+                        )}
+                      </td>
+
+                      {/* Admin response badge */}
+                      <td className="py-3.5 px-4">
+                        {sub.reviewedAt && (sub.reviewText || (sub.reviewPros?.length ?? 0) > 0 || (sub.reviewCons?.length ?? 0) > 0) ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-emerald-200 bg-emerald-50 text-emerald-700">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+                            <span className="text-[11px] font-bold tracking-wide uppercase">Responded</span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 text-amber-600 font-medium text-[11px] tracking-wide">
+                            <span className="w-2 h-2 rounded-full bg-amber-400 inline-block" />
+                            <span>Pending</span>
+                          </span>
                         )}
                       </td>
 

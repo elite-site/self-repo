@@ -135,11 +135,13 @@ router.get('/submissions', async (req: Request, res: Response): Promise<void> =>
     const status = req.query.status as any;
     const rating = req.query.rating as any;
     const search = (req.query.search as string | undefined)?.trim();
+    const tag = (req.query.tag as string | undefined)?.trim().toLowerCase();
 
     const sortBy = (req.query.sortBy as string) || 'submittedAt';
     const sortOrder = (req.query.sortOrder as string) === 'asc' ? 'asc' : 'desc';
 
     const whereClause: any = { eventId };
+    const andConditions: any[] = [];
 
     if (branch) whereClause.branch = branch;
     if (section) whereClause.section = section;
@@ -147,17 +149,28 @@ router.get('/submissions', async (req: Request, res: Response): Promise<void> =>
     if (status && SUBMISSION_STATUSES.includes(status)) whereClause.status = status;
     if (rating && RATINGS.includes(rating)) whereClause.rating = rating;
 
+    // Filter by a review hashtag keyword (matches pros or cons on the review)
+    if (tag) {
+      andConditions.push({
+        OR: [
+          { reviewPros: { has: tag } },
+          { reviewCons: { has: tag } },
+        ],
+      });
+    }
+
     if (search) {
-      whereClause.AND = [
-        { eventId },
-        {
-          OR: [
-            { name: { contains: search, mode: 'insensitive' } },
-            { rollNo: { contains: search, mode: 'insensitive' } },
-            { email: { contains: search, mode: 'insensitive' } },
-          ],
-        },
-      ];
+      andConditions.push({
+        OR: [
+          { name: { contains: search, mode: 'insensitive' } },
+          { rollNo: { contains: search, mode: 'insensitive' } },
+          { email: { contains: search, mode: 'insensitive' } },
+        ],
+      });
+    }
+
+    if (andConditions.length > 0) {
+      whereClause.AND = andConditions;
     }
 
     const [total, submissions] = await Promise.all([
@@ -187,7 +200,108 @@ router.get('/submissions', async (req: Request, res: Response): Promise<void> =>
 });
 
 // ======================================================
-// 3. SUBMISSION DETAIL (GET /admin/api/submissions/:id)
+// 3. STUDENT ROSTER (GET /admin/api/students)
+// Full IT-Department roster imported from the XLSX sheet,
+// joined with each student's upload status + review info.
+// ======================================================
+router.get('/students', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const eventId = ((req.query.eventId as string) || ACTIVE_EVENT_ID).trim();
+    const page = Math.max(1, parseInt((req.query.page as string) || '1', 10));
+    const limit = Math.min(200, Math.max(1, parseInt((req.query.limit as string) || '25', 10)));
+    const skip = (page - 1) * limit;
+
+    const section = req.query.section as string | undefined;
+    const year = req.query.year ? parseInt(req.query.year as string, 10) : undefined;
+    const uploaded = req.query.uploaded as string | undefined; // 'yes' | 'no'
+    const search = (req.query.search as string | undefined)?.trim();
+
+    const whereClause: any = {};
+    if (section) whereClause.section = section;
+    if (year) whereClause.year = year;
+    if (search) {
+      whereClause.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { rollNo: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    const [students, submissions] = await Promise.all([
+      prisma.student.findMany({
+        where: whereClause,
+        orderBy: [{ year: 'asc' }, { section: 'asc' }, { rollNo: 'asc' }],
+      }),
+      prisma.submission.findMany({
+        where: { eventId },
+        orderBy: { submittedAt: 'desc' },
+      }),
+    ]);
+
+    // Join submissions by roll number (latest wins per student)
+    const submissionByRoll = new Map<string, typeof submissions[number] | null>();
+    for (const sub of submissions) {
+      const key = `${sub.rollNo}|${sub.year}|${sub.section}`;
+      if (!submissionByRoll.has(key)) {
+        submissionByRoll.set(key, sub);
+      }
+    }
+
+    // 'uploaded' filter applied post-join
+    const rows = students
+      .map((student) => {
+        const key = `${student.rollNo}|${student.year}|${student.section}`;
+        const submission = submissionByRoll.get(key) || null;
+        return {
+          id: student.id,
+          rollNo: student.rollNo,
+          name: student.name,
+          year: student.year,
+          section: student.section,
+          branch: student.branch,
+          hasUploaded: Boolean(submission?.videoDriveId),
+          submission: submission
+            ? {
+                id: submission.id,
+                status: submission.status,
+                submittedAt: submission.submittedAt,
+                videoDriveId: submission.videoDriveId,
+                reviewText: submission.reviewText,
+                reviewPros: submission.reviewPros,
+                reviewCons: submission.reviewCons,
+                reviewedAt: submission.reviewedAt,
+              }
+            : null,
+        };
+      })
+      .filter((row): any => {
+        if (uploaded === 'yes') return row.hasUploaded;
+        if (uploaded === 'no') return !row.hasUploaded;
+        return true;
+      });
+
+    const total = rows.length;
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+    const paginated = rows.slice(skip, skip + limit);
+
+    res.json({
+      eventId,
+      data: paginated,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        rosterTotal: students.length,
+      },
+    });
+  } catch (err: any) {
+    console.error('Error fetching student roster:', err);
+    res.status(500).json({ error: 'FAILED_TO_FETCH_STUDENTS', message: err.message });
+  }
+});
+
+// ======================================================
+// 4. SUBMISSION DETAIL (GET /admin/api/submissions/:id)
 // ======================================================
 router.get('/submissions/:id', async (req: Request, res: Response): Promise<void> => {
   try {
@@ -284,9 +398,74 @@ router.patch('/submissions/:id/rating', async (req: Request, res: Response): Pro
   }
 });
 
-// ==========================================================
-// 6. UPDATE STATUS (PATCH /admin/api/submissions/:id/status)
-// ==========================================================
+// ==============================================================
+// 6. SUBMIT REVIEW RESPONSE (PATCH /admin/api/submissions/:id/review)
+// Saves free-text feedback + pros/cons hashtag keywords. The student sees
+// this response on their portal after sending.
+// ==============================================================
+router.patch('/submissions/:id/review', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { reviewText, pros, cons } = req.body;
+
+    const normalizedPros = Array.isArray(pros)
+      ? (pros as string[]).map((p) => String(p).trim().toLowerCase()).filter(Boolean)
+      : [];
+    const normalizedCons = Array.isArray(cons)
+      ? (cons as string[]).map((c) => String(c).trim().toLowerCase()).filter(Boolean)
+      : [];
+    const hasReview = Boolean(
+      (reviewText && String(reviewText).trim()) || normalizedPros.length > 0 || normalizedCons.length > 0
+    );
+
+    const existing = await prisma.submission.findUnique({ where: { id: req.params.id } });
+    if (!existing) {
+      res.status(404).json({ error: 'NOT_FOUND', message: 'Submission not found' });
+      return;
+    }
+
+    const updated = await prisma.submission.update({
+      where: { id: req.params.id },
+      data: hasReview
+        ? {
+            reviewText: reviewText ? String(reviewText).trim() : null,
+            reviewPros: normalizedPros,
+            reviewCons: normalizedCons,
+            reviewedAt: new Date(),
+            reviewedBy: req.adminUser?.username || undefined,
+            status: 'REVIEWED',
+          }
+        : {
+            reviewText: null,
+            reviewPros: [],
+            reviewCons: [],
+            reviewedAt: null,
+            reviewedBy: undefined,
+            status: 'SUBMITTED',
+          },
+    });
+
+    await ActivityService.log({
+      eventId: updated.eventId,
+      category: 'ADMIN',
+      action: hasReview ? 'Admin sent review response to student' : 'Admin cleared review response',
+      details: hasReview
+        ? `Pros: ${normalizedPros.length}, Cons: ${normalizedCons.length}`
+        : 'Review cleared',
+      applicantName: updated.name,
+      userEmail: updated.email,
+      status: 'SUCCESS',
+    });
+
+    res.json({ success: true, submission: updated });
+  } catch (err: any) {
+    console.error('Error updating review:', err);
+    res.status(500).json({ error: 'FAILED_TO_UPDATE_REVIEW', message: err.message });
+  }
+});
+
+// ==============================================================
+// 7. UPDATE STATUS (PATCH /admin/api/submissions/:id/status)
+// ==============================================================
 router.patch('/submissions/:id/status', async (req: Request, res: Response): Promise<void> => {
   try {
     const { status } = req.body;

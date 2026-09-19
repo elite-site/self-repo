@@ -13,5 +13,20 @@ export const RATING_LABELS: Record<string, string> = {
 export const SUBMISSION_STATUSES = [
   'SUBMITTED',
   'UNDER_REVIEW',
+  'REVIEWED',
   'REJECTED',
+] as const;
+
+// Default review hashtag keywords shown to the admin while reviewing a video.
+export const REVIEW_PROS = [
+  'expressive posture',
+  'commanding voice',
+  'focused mindset',
+  'perfect lighting & background',
+] as const;
+
+export const REVIEW_CONS = [
+  'unclear thoughts',
+  'broken voice',
+  'bad lighting',
 ] as const;
