@@ -1,5 +1,5 @@
 import React from 'react';
-import { UserRound, Sparkles, Users, Award } from 'lucide-react';
+import { UserRound, Sparkles, Users, Fingerprint } from 'lucide-react';
 
 export const HeroSection: React.FC = () => {
   return (
@@ -21,30 +21,25 @@ export const HeroSection: React.FC = () => {
           {/* Main Headline */}
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-elite-black font-display leading-[1.08]">
             INTRODUCE YOURSELF.<br />
-            OWN YOUR <span className="text-elite-red">PRESENCE.</span><br />
-            REPRESENT IT.
+            <span className="text-elite-red">AS YOURSELF.</span>
           </h1>
 
-          {/* Tagline */}
+          {/* Pillars */}
           <div className="text-xs font-mono font-bold tracking-[0.18em] text-elite-red uppercase">
-            YOUR STORY · YOUR PRESENCE · YOUR IDENTITY
+            IDENTITY · PERSONALITY · CONFIDENCE · AUTHENTICITY
           </div>
 
           {/* Subtitle */}
           <p className="text-sm sm:text-base text-elite-darkgray max-w-lg leading-relaxed font-normal">
-            This is more than a name and a roll number — it's your chance to introduce{' '}
-            <strong className="text-elite-red font-semibold">the person behind them</strong>.
-            Record a short self-introduction and let us know who you are — your interests,
-            personality, ambitions, experiences, or simply what makes you different.
+            Record a short video introduction and tell us who you are — your name,
+            your interests, the personality behind it. There is no fixed script.
+            Just you, speaking naturally.
           </p>
 
-          {/* ELITE STANDARD */}
+          {/* Approach */}
           <div className="border-l-2 border-elite-red pl-3 text-[11px] sm:text-xs text-elite-muted leading-relaxed">
-            No fixed script. No rehearsed corporate speeches. No complicated vocabulary. Just{' '}
-            <span className="font-semibold text-elite-black">
-              confidence, clarity, and authenticity
-            </span>
-            .
+            Do not use a rehearsed or AI-generated introduction. Talk the way you
+            normally do — normal pauses, genuine reactions, and all.
           </div>
 
           {/* 4 HORIZONTAL HIGHLIGHTS */}
@@ -54,10 +49,10 @@ export const HeroSection: React.FC = () => {
                 <UserRound className="w-4 h-4" />
               </div>
               <div className="text-xs font-bold text-elite-black uppercase tracking-tight">
-                Your Story
+                Who You Are
               </div>
               <div className="text-[11px] text-neutral-500 leading-snug">
-                Tell us who you are
+                Introduce yourself, simply
               </div>
             </div>
 
@@ -78,22 +73,22 @@ export const HeroSection: React.FC = () => {
                 <Users className="w-4 h-4" />
               </div>
               <div className="text-xs font-bold text-elite-black uppercase tracking-tight">
-                Your Presence
+                Your Personality
               </div>
               <div className="text-[11px] text-neutral-500 leading-snug">
-                Confidence without a script
+                Let it come through naturally
               </div>
             </div>
 
             <div className="space-y-1.5">
               <div className="w-8 h-8 rounded-full bg-red-50 text-elite-red flex items-center justify-center">
-                <Award className="w-4 h-4" />
+                <Fingerprint className="w-4 h-4" />
               </div>
               <div className="text-xs font-bold text-elite-black uppercase tracking-tight">
-                ELITE
+                Your Identity
               </div>
               <div className="text-[11px] text-neutral-500 leading-snug">
-                Represent the Department of IT
+                Be yourself, on camera
               </div>
             </div>
           </div>
@@ -107,13 +102,14 @@ export const HeroSection: React.FC = () => {
             </div>
 
             <h3 className="text-2xl sm:text-3xl font-extrabold tracking-tight font-display leading-[1.15]">
-              Your First Impression.
+              A Personal Self-Introduction.
               <br />
-              Your Signature.
+              Not a Performance.
             </h3>
 
             <p className="text-xs sm:text-sm text-neutral-300 leading-relaxed">
-              A platform to present your identity, personality, and presence — beyond academics and titles.
+              A short video from the Department of Information Technology. Introduce
+              yourself, share what matters to you, and let who you are come through.
             </p>
 
             <div className="pt-4 border-t border-neutral-800 flex items-center justify-between text-xs font-mono text-neutral-400">

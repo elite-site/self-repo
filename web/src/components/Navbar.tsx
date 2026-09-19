@@ -31,10 +31,10 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate }) => {
           <div className="leading-tight text-left">
             <div className="text-sm sm:text-base font-extrabold tracking-tight font-display">
               <span className="text-elite-red">ELITE </span>
-              <span className="text-elite-black">SELF-INTRO CLUB</span>
+              <span className="text-elite-black">SELF-INTRODUCTION</span>
             </div>
             <div className="text-[10px] sm:text-[11px] font-semibold text-elite-muted uppercase tracking-wider">
-              DEPT. OF INFORMATION TECHNOLOGY (IT)
+              Department of Information Technology
             </div>
           </div>
         </div>
@@ -50,11 +50,11 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate }) => {
           </button>
 
           <button
-            onClick={() => handleNavClick('about-club')}
+            onClick={() => handleNavClick('about')}
             className="flex items-center gap-2 hover:text-red-200 transition-colors cursor-pointer py-1"
           >
             <Users className="w-3.5 h-3.5" />
-            <span>ABOUT SELF-INTRO</span>
+            <span>ABOUT</span>
           </button>
 
           <button
@@ -97,11 +97,11 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate }) => {
             <span>HOME</span>
           </button>
           <button
-            onClick={() => handleNavClick('about-club')}
+            onClick={() => handleNavClick('about')}
             className="w-full flex items-center gap-3 py-2 text-left hover:text-red-200 cursor-pointer"
           >
             <Users className="w-4 h-4" />
-            <span>ABOUT SELF-INTRO</span>
+            <span>ABOUT</span>
           </button>
           <button
             onClick={() => handleNavClick('guidelines')}

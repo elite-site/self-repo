@@ -13,15 +13,16 @@ export const Footer: React.FC = () => {
             </div>
             <div>
               <div className="text-base font-extrabold font-display tracking-tight text-white">
-                ELITE SELF INTRODUCTION CLUB
+                ELITE SELF INTRODUCTION
               </div>
               <div className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">
-                DEPT. OF INFORMATION TECHNOLOGY
+                Department of Information Technology
               </div>
             </div>
           </div>
           <p className="text-xs text-neutral-400 max-w-sm leading-relaxed">
-            The official self introduction and communication club of Information Technology. Empowering confident voices, strong first impressions, and personal growth.
+            The self-introduction initiative of the Department of Information Technology
+            — encouraging clear, natural communication. No scripts. No rehearsed lines. Just you.
           </p>
         </div>
 
@@ -51,7 +52,7 @@ export const Footer: React.FC = () => {
 
       {/* COPYRIGHT */}
       <div className="max-w-7xl mx-auto pt-6 flex flex-col sm:flex-row items-center justify-between text-[11px] text-neutral-500 gap-2 font-mono">
-        <div>© 2026 ELITE Self Introduction — Department of IT</div>
+        <div>© 2026 ELITE Self Introduction — Department of Information Technology</div>
         <div>Engineered for SASI Institute of Technology & Engineering</div>
       </div>
     </footer>

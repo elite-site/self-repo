@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Navbar } from './components/Navbar';
 import { HeroSection } from './components/HeroSection';
 import { SubmissionForm } from './components/SubmissionForm';
-import { ClubSidebar } from './components/ClubSidebar';
+import { AboutSidebar } from './components/AboutSidebar';
 import { GuidelinesSection } from './components/GuidelinesSection';
 import { UploadProgressBar } from './components/UploadProgressBar';
 import { ConfirmationState } from './components/ConfirmationState';
@@ -158,7 +158,7 @@ export const App: React.FC = () => {
                 <SubmissionForm onSubmit={handleFormSubmit} isLoading={false} />
               </div>
               <div className="lg:col-span-4">
-                <ClubSidebar />
+                <AboutSidebar />
               </div>
             </div>
           )}

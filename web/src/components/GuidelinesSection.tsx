@@ -1,5 +1,5 @@
 import React from 'react';
-import { Video, ShieldCheck, Clock, FileCheck } from 'lucide-react';
+import { Video, ShieldCheck, Clock, FileCheck, MessageCircle } from 'lucide-react';
 
 export const GuidelinesSection: React.FC = () => {
   return (
@@ -19,7 +19,7 @@ export const GuidelinesSection: React.FC = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           <div className="bg-neutral-50 border border-neutral-200/80 rounded-2xl p-5 space-y-2">
             <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-elite-black">
               <Clock className="w-4 h-4 text-elite-red" />
@@ -47,6 +47,16 @@ export const GuidelinesSection: React.FC = () => {
             </div>
             <p className="text-xs text-neutral-600 leading-relaxed">
               Only one introduction video per roll number is accepted. Please double-check your details before submitting.
+            </p>
+          </div>
+
+          <div className="bg-elite-black text-white border border-neutral-800 rounded-2xl p-5 space-y-2">
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-white">
+              <MessageCircle className="w-4 h-4 text-elite-red" />
+              <span>A Natural Approach</span>
+            </div>
+            <p className="text-xs text-neutral-300 leading-relaxed">
+              Introduce yourself, share your interests and personality, and speak at your own pace. There is no fixed script — no rehearsed or AI-generated introduction.
             </p>
           </div>
         </div>
