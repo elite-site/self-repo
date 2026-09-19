@@ -34,6 +34,8 @@ export const env = {
   ALLOWED_ORIGINS: (() => {
     const raw = process.env.ALLOWED_ORIGINS || process.env.ALLOWED_ORIGIN || '';
     const defaults = [
+      'https://self-repo.onrender.com',
+      'https://self-e.netlify.app',
       'https://elitephotoit.netlify.app',
       'http://localhost:5173',
       'http://localhost:3000',
