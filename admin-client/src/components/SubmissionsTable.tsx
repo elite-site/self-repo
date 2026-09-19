@@ -119,7 +119,7 @@ export const SubmissionsTable: React.FC<SubmissionsTableProps> = ({
             VIDEOS
           </h1>
           <p className="text-xs text-neutral-500 mt-1 font-normal">
-            Review each student's introduction video and mark their performance.
+            Review each student's introduction video and mark it.
           </p>
         </div>
 

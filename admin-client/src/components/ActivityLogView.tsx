@@ -171,7 +171,7 @@ export const ActivityLogView: React.FC<ActivityLogViewProps> = ({
             <span>Activity Audit Log</span>
           </h1>
           <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
-            Real-time administrative audit trail, system events, and upload status logs.
+            Real-time administrative audit trail, system activity, and upload status logs.
           </p>
         </div>
 
@@ -325,7 +325,7 @@ export const ActivityLogView: React.FC<ActivityLogViewProps> = ({
                 <th className="py-3 px-4">Status</th>
                 <th className="py-3 px-4">Category</th>
                 <th className="py-3 px-4">Timestamp</th>
-                <th className="py-3 px-4">Action / Event</th>
+                <th className="py-3 px-4">Action / Detail</th>
                 <th className="py-3 px-4">Details & Context</th>
                 <th className="py-3 px-4">User / Applicant</th>
               </tr>

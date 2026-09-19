@@ -2,15 +2,13 @@ import React, { useState } from 'react';
 import { UserRound, Folder, CheckCircle2, Users } from 'lucide-react';
 import { AdminStats } from '../types';
 
-interface EventHomeViewProps {
+interface OverviewViewProps {
   stats: AdminStats | null;
 }
 
-const EVENT = {
+const PROGRAM = {
   name: 'Self Introduction',
-  slug: 'self-introduction',
   year: 2026,
-  status: 'OPEN' as const,
 };
 
 const mediaInfo = {
@@ -18,12 +16,12 @@ const mediaInfo = {
   maxFiles: '1 Video File',
   maxSize: 'Video: 25 MB',
   formats: 'MP4, MOV, WEBM',
-  driveFolder: `Self Introduction/${EVENT.year}`,
+  driveFolder: `Self Introduction/${PROGRAM.year}`,
   categoryTitle: 'Self Introduction',
-  description: 'Personal introduction clips evaluated on clarity, confidence, and communication.',
+  description: 'Personal self-introduction clips from students of the Department of Information Technology.',
 };
 
-export const EventHomeView: React.FC<EventHomeViewProps> = ({ stats }) => {
+export const OverviewView: React.FC<OverviewViewProps> = ({ stats }) => {
   const [activeTab, setActiveTab] = useState<'about' | 'guidelines' | 'dates' | 'contact'>('about');
 
   const IconComponent = mediaInfo.icon;
@@ -34,13 +32,13 @@ export const EventHomeView: React.FC<EventHomeViewProps> = ({ stats }) => {
       <div className="border-b border-neutral-200 pb-4 flex items-center justify-between">
         <div>
           <div className="text-xs font-mono font-bold tracking-widest text-elite-red uppercase">
-            Event Management
+            ELITE SELF-INTRODUCTION
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-elite-black font-display tracking-tight mt-0.5">
-            Event Home
+            Overview
           </h1>
           <p className="text-xs text-neutral-500 mt-1">
-            Manage event details, media guidelines, and drive storage settings.
+            Manage submission details, media guidelines, and drive storage settings.
           </p>
         </div>
 
@@ -55,11 +53,11 @@ export const EventHomeView: React.FC<EventHomeViewProps> = ({ stats }) => {
         <div className="relative z-10 max-w-2xl space-y-3">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-white/90 text-xs font-semibold">
             <IconComponent className="w-4 h-4 text-red-400" />
-            <span>{EVENT.year} Official Competition</span>
+            <span>{PROGRAM.year} Personal Self-Introduction</span>
           </div>
 
           <h2 className="text-2xl sm:text-4xl font-extrabold tracking-tight font-display text-white">
-            {EVENT.name} {EVENT.year}
+            {PROGRAM.name} {PROGRAM.year}
           </h2>
 
           <p className="text-xs sm:text-sm text-neutral-300 leading-relaxed font-normal">
@@ -79,25 +77,25 @@ export const EventHomeView: React.FC<EventHomeViewProps> = ({ stats }) => {
         </div>
       </div>
 
-      {/* 3. EVENT PARAMETER GRID CARDS */}
+      {/* 3. PROGRAM PARAMETER GRID CARDS */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {/* Event Name */}
+        {/* Initiative Name */}
         <div className="bg-white border border-neutral-200 rounded-xl p-4 shadow-sm space-y-1">
           <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
-            Event Name
+            Initiative
           </div>
           <div className="text-sm font-bold text-elite-black truncate">
-            {EVENT.name} {EVENT.year}
+            {PROGRAM.name} {PROGRAM.year}
           </div>
         </div>
 
-        {/* Event Type */}
+        {/* Department */}
         <div className="bg-white border border-neutral-200 rounded-xl p-4 shadow-sm space-y-1">
           <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
-            Event Type
+            Department
           </div>
           <div className="text-sm font-bold text-elite-black">
-            Department of IT
+            Information Technology
           </div>
         </div>
 
@@ -107,7 +105,7 @@ export const EventHomeView: React.FC<EventHomeViewProps> = ({ stats }) => {
             Academic Year
           </div>
           <div className="text-sm font-bold text-elite-black font-mono">
-            {EVENT.year}
+            {PROGRAM.year}
           </div>
         </div>
 
@@ -163,7 +161,7 @@ export const EventHomeView: React.FC<EventHomeViewProps> = ({ stats }) => {
         </div>
       </div>
 
-      {/* 4. EVENT DETAILS SUB-TABS */}
+      {/* 4. PROGRAM DETAILS SUB-TABS */}
       <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden shadow-sm">
         <div className="flex border-b border-neutral-200 bg-[#fafafa]">
           <button
@@ -174,7 +172,7 @@ export const EventHomeView: React.FC<EventHomeViewProps> = ({ stats }) => {
                 : 'text-neutral-500 hover:text-neutral-900'
             }`}
           >
-            About Event
+            About
           </button>
           <button
             onClick={() => setActiveTab('guidelines')}
@@ -212,13 +210,13 @@ export const EventHomeView: React.FC<EventHomeViewProps> = ({ stats }) => {
           {activeTab === 'about' && (
             <div className="space-y-3 leading-relaxed">
               <p className="font-medium text-neutral-900">
-                {EVENT.name} is the official platform for students of the Department of Information Technology (IT) to showcase confident, clear, and memorable personal introductions.
+                {PROGRAM.name} is a personal self-introduction initiative of the Department of Information Technology — a simple, natural way to introduce yourself, your interests, and your personality.
               </p>
               <ul className="space-y-2 text-neutral-600 list-disc pl-5">
                 <li>Record a single self-introduction video clip with clear speech.</li>
-                <li>Demonstrate confidence, personality, and impressive stage presence.</li>
+                <li>Speak naturally and let your personality come through.</li>
                 <li>Open exclusively to Information Technology students across 2nd, 3rd, and 4th years.</li>
-                <li>Admins review each video and rate performance as Good, Average, or Poor.</li>
+                <li>Admins review each video and rate it as Good, Average, or Poor.</li>
               </ul>
             </div>
           )}
@@ -243,7 +241,7 @@ export const EventHomeView: React.FC<EventHomeViewProps> = ({ stats }) => {
                 <span className="font-mono text-neutral-600">Active Now</span>
               </div>
               <div className="flex items-center justify-between p-3 bg-[#fafafa] rounded-lg border border-neutral-200">
-                <span className="font-semibold">Evaluation Phase</span>
+                <span className="font-semibold">Review Phase</span>
                 <span className="font-mono text-neutral-600">Ongoing</span>
               </div>
             </div>

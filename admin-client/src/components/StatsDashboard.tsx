@@ -226,7 +226,7 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
       {(stats.byRating.GOOD || stats.byRating.AVERAGE || stats.byRating.POOR) ? (
         <div className="bg-white border border-neutral-200 rounded-xl p-6 shadow-sm space-y-4">
           <h2 className="text-xs font-bold uppercase tracking-widest text-elite-black font-display">
-            Performance Ratings
+            Introduction Ratings
           </h2>
           <div className="grid grid-cols-3 gap-4">
             {(['GOOD', 'AVERAGE', 'POOR'] as const).map((r) => {

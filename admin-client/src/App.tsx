@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Sidebar, AdminTab, ACTIVE_EVENT_ID } from './components/Sidebar';
 import { AdminHeader } from './components/AdminHeader';
 import { StatsDashboard } from './components/StatsDashboard';
-import { EventHomeView } from './components/EventHomeView';
+import { OverviewView } from './components/OverviewView';
 import { SubmissionsTable } from './components/SubmissionsTable';
 import { SubmissionDetailModal } from './components/SubmissionDetailModal';
 import { ActivityLogView } from './components/ActivityLogView';
@@ -138,8 +138,8 @@ export const App: React.FC = () => {
             />
           )}
 
-          {activeTab === 'event-home' && (
-            <EventHomeView
+          {activeTab === 'overview' && (
+            <OverviewView
               stats={stats}
             />
           )}

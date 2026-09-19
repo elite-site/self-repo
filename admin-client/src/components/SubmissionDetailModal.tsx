@@ -233,13 +233,13 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                   </div>
                 </div>
 
-                {/* PERFORMANCE RATING CONTROLS */}
+                {/* RATING CONTROLS */}
                 <div className="bg-white border border-neutral-200 rounded-xl p-4 sm:p-5 space-y-3 shadow-sm">
                   <h3 className="font-bold text-elite-black uppercase tracking-wider text-[11px]">
-                    Performance Rating
+                    Introduction Rating
                   </h3>
                   <p className="text-xs text-neutral-500">
-                    Evaluate the student's introduction performance and mark it with a colour.
+                    Review the student's introduction and mark it with a colour.
                   </p>
 
                   <div className="pt-1 space-y-2">

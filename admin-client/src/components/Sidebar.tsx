@@ -16,7 +16,7 @@ export const ACTIVE_EVENT_ID = 'self-introduction-2026';
 
 export type AdminTab =
   | 'dashboard'
-  | 'event-home'
+  | 'overview'
   | 'submissions'
   | 'activity';
 
@@ -40,7 +40,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const navItems = [
     { id: 'dashboard' as AdminTab, label: 'Home', icon: Home },
-    { id: 'event-home' as AdminTab, label: 'Event Home', icon: Info },
+    { id: 'overview' as AdminTab, label: 'Overview', icon: Info },
     { id: 'submissions' as AdminTab, label: 'Videos Submitted', icon: ClipboardList },
   ];
 
@@ -64,10 +64,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
         </div>
 
-        {/* 2. EVENT BANNER (single fixed event) */}
+        {/* 2. PROGRAM BANNER (single fixed program) */}
         <div className="p-4 border-b border-neutral-100 dark:border-neutral-800">
           <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1.5 px-1">
-            EVENT
+            PROGRAM
           </div>
           <div className="w-full bg-elite-red text-white p-2.5 rounded-lg font-bold text-xs flex items-center gap-2 shadow-sm">
             <span className="text-sm">👤</span>
@@ -108,7 +108,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </button>
 
           <button
-            onClick={() => onSelectTab('event-home')}
+            onClick={() => onSelectTab('overview')}
             className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-xs font-semibold text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100/70 dark:hover:bg-neutral-800/60 transition-all cursor-pointer"
           >
             <Folder className="w-4 h-4 text-neutral-500 dark:text-neutral-400" />
@@ -139,7 +139,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </button>
 
           <div className="text-[10px] text-neutral-400 dark:text-neutral-500 text-center font-mono">
-            © 2026 ELITE Events. All rights reserved.
+            © 2026 ELITE Self Introduction. All rights reserved.
           </div>
         </div>
       </div>
