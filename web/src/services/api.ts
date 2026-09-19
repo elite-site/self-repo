@@ -1,5 +1,5 @@
 import axios, { AxiosProgressEvent } from 'axios';
-import { StudentLookupResponse, SubmissionResponse } from '../types';
+import { SubmissionResponse } from '../types';
 
 const API_BASE = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api').replace(/\/$/, '');
 
@@ -34,11 +34,6 @@ export const api = {
     } catch {
       return [2, 3, 4];
     }
-  },
-
-  async lookupStudent(rollNo: string): Promise<StudentLookupResponse> {
-    const res = await client.get<StudentLookupResponse>(`/students/${encodeURIComponent(rollNo)}`);
-    return res.data;
   },
 
   async submitEntry(

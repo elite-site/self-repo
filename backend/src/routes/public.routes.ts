@@ -28,74 +28,11 @@ router.get('/years', (_req: Request, res: Response) => {
   res.json({ years: YEARS });
 });
 
-// GET /api/students/:rollNo
-// Public lookup used by the submission form to auto-fill student details from the roster.
-router.get('/students/:rollNo', async (req: Request, res: Response): Promise<void> => {
-  try {
-    const rollNo = (req.params.rollNo || '').trim().toUpperCase();
-
-    if (!rollNo) {
-      res.status(400).json({ error: 'VALIDATION_ERROR', field: 'rollNo', message: 'Roll number is required.' });
-      return;
-    }
-
-    const student = await prisma.student.findUnique({
-      where: { eventId_rollNo: { eventId: EVENT_ID, rollNo } },
-    });
-
-    if (!student) {
-      res.status(404).json({ error: 'STUDENT_NOT_FOUND', message: 'No student found with this roll number.' });
-      return;
-    }
-
-    const submission = await prisma.submission.findUnique({
-      where: {
-        eventId_rollNo_year_branch_section: {
-          eventId: EVENT_ID,
-          rollNo: student.rollNo,
-          year: student.year,
-          branch: student.branch,
-          section: student.section,
-        },
-      },
-      select: {
-        id: true,
-        name: true,
-        rollNo: true,
-        videoDriveId: true,
-        rating: true,
-        submittedAt: true,
-      },
-    });
-
-    res.json({
-      student: {
-        name: student.name,
-        rollNo: student.rollNo,
-        branch: student.branch,
-        section: student.section,
-        year: student.year,
-        email: student.email,
-      },
-      submission: submission
-        ? {
-            id: submission.id,
-            hasVideo: Boolean(submission.videoDriveId),
-            rating: submission.rating,
-            submittedAt: submission.submittedAt,
-          }
-        : null,
-    });
-  } catch (err: any) {
-    console.error('Error looking up student:', err);
-    res.status(500).json({ error: 'LOOKUP_FAILED', message: 'Could not look up student details.' });
-  }
-});
-
 // POST /api/submissions
-// Accepts only `rollNo` + `video`. All student details are auto-filled server-side
-// from the roster. A student may upload one video; if the admin deleted their video,
-// they can upload a replacement to the same submission record.
+// Accepts manually entered student details (`name`, `rollNo`, `year`, `section`,
+// `email`, `phoneNo`) + `video`. Branch is recorded as IT. A student may upload
+// one video; if the admin deleted their video, they can upload a replacement to
+// the same submission record.
 router.post(
   '/submissions',
   submissionRateLimiter,
@@ -107,16 +44,44 @@ router.post(
     try {
       const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
 
-      // 1. Normalize roll number
+      // 1. Read & normalize manual form fields
       const rollNo = (req.body.rollNo || '').trim().toUpperCase();
+      const name = (req.body.name || '').trim();
+      const email = (req.body.email || '').trim().toLowerCase();
+      const phoneNo = (req.body.phoneNo || '').trim();
+      const section = String(req.body.section || '').trim().toUpperCase();
+      const year = parseInt(String(req.body.year || ''), 10);
+      const branch = 'IT';
       currentRollNo = rollNo;
+      currentStudentName = name;
 
+      // 2. Validate student details
       if (!rollNo) {
         res.status(400).json({ error: 'VALIDATION_ERROR', field: 'rollNo', message: 'Roll number is required.' });
         return;
       }
+      if (!name || name.length < 2 || name.length > 100) {
+        res.status(400).json({ error: 'VALIDATION_ERROR', field: 'name', message: 'Please enter your full name.' });
+        return;
+      }
+      if (!YEARS.includes(year as any)) {
+        res.status(400).json({ error: 'VALIDATION_ERROR', field: 'year', message: `Invalid year. Available options: ${YEARS.join(', ')}.` });
+        return;
+      }
+      if (!SECTIONS.includes(section as any)) {
+        res.status(400).json({ error: 'VALIDATION_ERROR', field: 'section', message: `Invalid section. Available options: ${SECTIONS.join(', ')}.` });
+        return;
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 200) {
+        res.status(400).json({ error: 'VALIDATION_ERROR', field: 'email', message: 'Please enter a valid email address.' });
+        return;
+      }
+      if (!/^\+?\d{10,15}$/.test(phoneNo)) {
+        res.status(400).json({ error: 'VALIDATION_ERROR', field: 'phoneNo', message: 'Please enter a valid phone number (10–15 digits).' });
+        return;
+      }
 
-      // 2. Ensure target event exists in database
+      // 3. Ensure target event exists in database
       const dbEvent = await prisma.event.findUnique({ where: { id: EVENT_ID } });
       if (!dbEvent) {
         await prisma.event.create({
@@ -130,49 +95,14 @@ router.post(
         });
       }
 
-      // 3. Auto-fill student details from the roster
-      const student = await prisma.student.findUnique({
-        where: { eventId_rollNo: { eventId: EVENT_ID, rollNo } },
-      });
-
-      if (!student) {
-        res.status(404).json({
-          error: 'STUDENT_NOT_FOUND',
-          field: 'rollNo',
-          message: 'No student found with this roll number. Please verify your roll number and try again.',
-        });
-        return;
-      }
-
-      const name = student.name;
-      const branch = student.branch;
-      const section = student.section;
-      const year = student.year;
-      const email = student.email;
-      currentStudentName = name;
-
-      // 4. Validate branch/section/year against allowed options
-      if (!BRANCHES.includes(branch as any)) {
-        res.status(400).json({ error: 'VALIDATION_ERROR', field: 'branch', message: `Invalid branch: ${branch}` });
-        return;
-      }
-      if (!SECTIONS.includes(section as any)) {
-        res.status(400).json({ error: 'VALIDATION_ERROR', field: 'section', message: `Invalid section: ${section}` });
-        return;
-      }
-      if (!YEARS.includes(year as any)) {
-        res.status(400).json({ error: 'VALIDATION_ERROR', field: 'year', message: `Invalid year: ${year}` });
-        return;
-      }
-
-      // 5. Require exactly one video file
+      // 4. Require exactly one video file
       const videoFile = files?.video?.[0];
       if (!videoFile) {
         res.status(400).json({ error: 'VALIDATION_ERROR', field: 'video', message: 'Self introduction video is required.' });
         return;
       }
 
-      // 6. Validate video integrity & format
+      // 5. Validate video integrity & format
       const vVideo = await ValidationService.validateVideo(videoFile.buffer, videoFile.originalname, videoFile.size);
       if (!vVideo.valid) {
         await ActivityService.log({
@@ -189,7 +119,7 @@ router.post(
         return;
       }
 
-      // 7. Duplicate check (one video per student)
+      // 6. Duplicate check (one video per roll number)
       const existing = await prisma.submission.findUnique({
         where: {
           eventId_rollNo_year_branch_section: {
@@ -220,7 +150,7 @@ router.post(
         return;
       }
 
-      // 8. Upload video to Google Drive
+      // 7. Upload video to Google Drive
       const uploadResult = await driveService.uploadSubmissionFiles(
         {
           eventName: EVENT_NAME,
@@ -241,12 +171,15 @@ router.post(
         }
       );
 
-      // 9. Create the record, or update the existing one if the admin removed its video
+      // 8. Create the record, or update the existing one if the admin removed its video
       let submission;
       if (existing) {
         submission = await prisma.submission.update({
           where: { id: existing.id },
           data: {
+            name,
+            email,
+            phoneNo,
             videoDriveId: uploadResult.videoDriveId || null,
             driveFolderPath: uploadResult.driveFolderPath,
             status: 'SUBMITTED',
@@ -263,6 +196,7 @@ router.post(
             branch,
             year,
             email,
+            phoneNo,
             videoDriveId: uploadResult.videoDriveId || null,
             mediaType: 'VIDEO',
             driveFolderPath: uploadResult.driveFolderPath,

@@ -2,7 +2,6 @@ import React from 'react';
 import {
   Home,
   Info,
-  Users,
   ClipboardList,
   FileSpreadsheet,
   Folder,
@@ -19,7 +18,6 @@ export type AdminTab =
   | 'dashboard'
   | 'event-home'
   | 'submissions'
-  | 'students'
   | 'activity';
 
 interface SidebarProps {
@@ -43,8 +41,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const navItems = [
     { id: 'dashboard' as AdminTab, label: 'Home', icon: Home },
     { id: 'event-home' as AdminTab, label: 'Event Home', icon: Info },
-    { id: 'submissions' as AdminTab, label: 'Videos Submitted', icon: Users },
-    { id: 'students' as AdminTab, label: 'Students', icon: ClipboardList },
+    { id: 'submissions' as AdminTab, label: 'Videos Submitted', icon: ClipboardList },
   ];
 
   return (

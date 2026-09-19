@@ -35,6 +35,7 @@ model Submission {
   branch          String            // e.g. "IT"
   year            Int               // e.g. 1, 2, 3, 4
   email           String
+  phoneNo         String?
 
   photo1DriveId   String?
   photo2DriveId   String?
@@ -61,25 +62,6 @@ enum SubmissionRating {
   GOOD
   AVERAGE
   POOR
-}
-
-// Master roster of registered students. The public form auto-fills student
-// details from here when a roll number is entered, and the admin dashboard
-// computes "remaining to upload" by comparing this roster against submissions.
-model Student {
-  id        String   @id @default(cuid())
-  eventId   String   @default("self-introduction-2026")
-  rollNo    String
-  name      String
-  branch    String
-  section   String
-  year      Int
-  email     String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([eventId, rollNo])
-  @@index([eventId, branch, section, year])
 }
 
 enum SubmissionStatus {

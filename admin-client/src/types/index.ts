@@ -17,6 +17,7 @@ export interface Submission {
   branch: string;
   year: number;
   email: string;
+  phoneNo?: string | null;
   videoDriveId?: string | null;
   mediaType?: string | null;
   driveFolderPath: string;
@@ -26,41 +27,20 @@ export interface Submission {
   submittedAt: string;
 }
 
-export interface Student {
-  id: string;
-  eventId?: string;
-  rollNo: string;
-  name: string;
-  branch: string;
-  section: string;
-  year: number;
-  email: string;
-  submissionId?: string | null;
-  hasVideo: boolean;
-  rating?: SubmissionRating | null;
-  createdAt?: string;
-  updatedAt?: string;
-}
-
 export interface SectionProgress {
   label: string;
   year: number | string;
   branch?: string;
   section: string;
-  total: number;
   submitted: number;
-  remaining: number;
 }
 
 export interface AdminStats {
   eventId?: string;
-  totalStudents: number;
   totalSubmissions: number;
   totalVideos: number;
   totalRated: number;
-  totalRemaining: number;
   byYear: Record<string, number>;
-  byYearProgress: Record<string, { total: number; submitted: number; remaining: number }>;
   bySection: SectionProgress[];
   byStatus: Record<string, number>;
   byRating: Record<string, number>;
@@ -76,26 +56,6 @@ export interface SubmissionsResponse {
     total: number;
     totalPages: number;
   };
-}
-
-export interface StudentsResponse {
-  eventId?: string;
-  data: Student[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
-}
-
-export interface ImportResult {
-  success: boolean;
-  message: string;
-  imported: number;
-  updated: number;
-  skipped: number;
-  errors: string[];
 }
 
 export interface AdminUser {

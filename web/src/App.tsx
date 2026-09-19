@@ -44,7 +44,12 @@ export const App: React.FC = () => {
     setTotalSizeText(formattedTotal);
 
     const formData = new FormData();
+    formData.append('name', data.name);
     formData.append('rollNo', data.rollNo);
+    formData.append('year', String(data.year));
+    formData.append('section', data.section);
+    formData.append('email', data.email);
+    formData.append('phoneNo', data.phoneNo);
     formData.append('category', 'SELF_INTRO');
 
     if (data.video) formData.append('video', data.video);
@@ -75,11 +80,6 @@ export const App: React.FC = () => {
           setErrorMessage({
             title: 'Video Already Submitted',
             message: errorData.message || "An introduction video has already been submitted for this roll number.",
-          });
-        } else if (err.response.status === 404) {
-          setErrorMessage({
-            title: 'Student Not Found',
-            message: errorData.message || 'No student was found with this roll number. Please verify and try again.',
           });
         } else if (err.response.status === 400) {
           setErrorMessage({

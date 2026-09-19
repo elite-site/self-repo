@@ -3,12 +3,9 @@ import {
   AdminStats,
   AdminUser,
   EventItem,
-  ImportResult,
-  Student,
   Submission,
   SubmissionRating,
   SubmissionsResponse,
-  StudentsResponse,
 } from '../types';
 
 const client = axios.create({
@@ -105,38 +102,6 @@ export const adminApi = {
     return `/admin/api/export/excel?eventId=${encodeURIComponent(eventId || 'self-introduction-2026')}`;
   },
 
-  // Students (roster)
-  async getStudents(params: {
-    eventId?: string;
-    page?: number;
-    limit?: number;
-    section?: string;
-    year?: number;
-    search?: string;
-  }): Promise<StudentsResponse> {
-    const res = await client.get('/admin/api/students', { params });
-    return res.data;
-  },
-
-  async importStudents(file: File): Promise<ImportResult> {
-    const formData = new FormData();
-    formData.append('file', file);
-    const res = await client.post('/admin/api/students/import', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-      timeout: 120000,
-    });
-    return res.data;
-  },
-
-  getStudentTemplateUrl(): string {
-    return `/admin/api/students/template`;
-  },
-
-  async deleteStudent(id: string): Promise<{ success: boolean; message: string }> {
-    const res = await client.delete(`/admin/api/students/${id}`);
-    return res.data;
-  },
-
   // Activity logs
   async getActivityLogs(params: {
     eventId?: string;
@@ -167,4 +132,3 @@ export const adminApi = {
 };
 
 export const api = adminApi;
-export type { Student }; // re-export convenience

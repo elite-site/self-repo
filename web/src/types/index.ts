@@ -1,27 +1,11 @@
 export interface SelfIntroductionSubmissionFormData {
-  rollNo: string;
-  video: File | null;
-}
-
-export interface StudentInfo {
   name: string;
   rollNo: string;
-  branch: string;
-  section: string;
   year: number;
+  section: string;
   email: string;
-}
-
-export interface StudentLookupSubmission {
-  id: string;
-  hasVideo: boolean;
-  rating?: string | null;
-  submittedAt?: string;
-}
-
-export interface StudentLookupResponse {
-  student: StudentInfo;
-  submission: StudentLookupSubmission | null;
+  phoneNo: string;
+  video: File | null;
 }
 
 export interface SubmissionResponse {

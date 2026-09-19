@@ -206,6 +206,11 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                     </div>
 
                     <div>
+                      <div className="text-neutral-400 uppercase text-[10px] font-semibold">Phone Number</div>
+                      <div className="text-neutral-900 font-mono font-semibold mt-0.5">{submission.phoneNo || '—'}</div>
+                    </div>
+
+                    <div>
                       <div className="text-neutral-400 uppercase text-[10px] font-semibold">Department & Section</div>
                       <div className="text-neutral-900 font-medium mt-0.5">
                         {submission.branch} • Section {submission.section} • Year {submission.year}

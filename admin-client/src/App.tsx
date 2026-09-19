@@ -5,7 +5,6 @@ import { StatsDashboard } from './components/StatsDashboard';
 import { EventHomeView } from './components/EventHomeView';
 import { SubmissionsTable } from './components/SubmissionsTable';
 import { SubmissionDetailModal } from './components/SubmissionDetailModal';
-import { StudentsView } from './components/StudentsView';
 import { ActivityLogView } from './components/ActivityLogView';
 import { LoginPage } from './components/LoginPage';
 import { AdminStats, AdminUser, Submission } from './types';
@@ -150,13 +149,6 @@ export const App: React.FC = () => {
               activeEventId={ACTIVE_EVENT_ID}
               onSelectSubmission={(sub) => setSelectedSubmission(sub)}
               onRefreshStats={() => loadStats()}
-            />
-          )}
-
-          {activeTab === 'students' && (
-            <StudentsView
-              activeEventId={ACTIVE_EVENT_ID}
-              onNavigateToSubmissions={() => setActiveTab('submissions')}
             />
           )}
 

@@ -15,5 +15,3 @@ export const upload = multer({
 export const submissionUploadMiddleware = upload.fields([
   { name: 'video', maxCount: 1 },
 ]);
-
-export const studentImportUploadMiddleware = upload.single('file');
