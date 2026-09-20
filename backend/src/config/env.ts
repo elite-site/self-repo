@@ -26,6 +26,13 @@ export const env = {
   RESEND_API_KEY: process.env.RESEND_API_KEY || '',
   EMAIL_FROM_ADDRESS: process.env.EMAIL_FROM_ADDRESS || 'Self Introduction <elite@sasi.ac.in>',
 
+  // Google Workspace SSO (student login)
+  GOOGLE_SSO_CLIENT_ID: process.env.GOOGLE_SSO_CLIENT_ID || '',
+  GOOGLE_SSO_CLIENT_SECRET: process.env.GOOGLE_SSO_CLIENT_SECRET || '',
+  GOOGLE_SSO_REDIRECT_URI: process.env.GOOGLE_SSO_REDIRECT_URI || 'http://localhost:5173/login',
+  GOOGLE_SSO_HD: process.env.GOOGLE_SSO_HD || 'sasi.ac.in',
+  STUDENT_APP_LOGIN_URL: process.env.STUDENT_APP_LOGIN_URL || 'http://localhost:5173/login',
+
   // Size Limits (25 MB strictly for videos)
   MAX_IMAGE_SIZE_MB: parseInt(process.env.MAX_IMAGE_SIZE_MB || '10', 10),
   MAX_AUDIO_SIZE_MB: parseInt(process.env.MAX_AUDIO_SIZE_MB || '10', 10),
