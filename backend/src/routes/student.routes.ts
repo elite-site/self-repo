@@ -1,4 +1,6 @@
 import { Router, Request, Response } from 'express';
+import crypto from 'crypto';
+import jwt from 'jsonwebtoken';
 import { env } from '../config/env';
 import { prisma } from '../lib/prisma';
 import { requireStudentAuth } from '../middleware/studentAuth';
@@ -6,6 +8,7 @@ import { submissionUploadMiddleware } from '../middleware/upload';
 import { ValidationService } from '../services/validation.service';
 import { driveService } from '../services/drive.service';
 import { ActivityService } from '../services/activity.service';
+import { ssoService } from '../services/sso.service';
 
 const router = Router();
 
@@ -44,6 +47,76 @@ function serializeStudentView(student: {
       : null,
   };
 }
+
+function signedState(): string {
+  return jwt.sign({ nonce: crypto.randomUUID() }, env.STUDENT_JWT_SECRET, { expiresIn: '10m' });
+}
+
+// GET /api/student/google/authorize — kick off Google Workspace SSO.
+router.get('/google/authorize', (_req: Request, res: Response): void => {
+  const url = ssoService.getAuthUrl();
+  const sep = url.includes('?') ? '&' : '?';
+  res.redirect(302, `${url}${sep}state=${encodeURIComponent(signedState())}`);
+});
+
+// GET /api/student/google/callback — verify id_token, look up roster email, mint our JWT.
+router.get('/google/callback', async (req: Request, res: Response): Promise<void> => {
+  const { code, state } = req.query;
+
+  try {
+    jwt.verify(String(state ?? ''), env.STUDENT_JWT_SECRET);
+  } catch {
+    res.status(400).json({ error: 'INVALID_STATE', message: 'State mismatch or expired. Try signing in again.' });
+    return;
+  }
+
+  if (!code) {
+    res.status(400).json({ error: 'MISSING_CODE', message: 'No authorization code returned.' });
+    return;
+  }
+
+  try {
+    const identity = await ssoService.exchangeCode(String(code));
+
+    if (!ssoService.isAllowed(identity)) {
+      res.status(403).json({ error: 'DOMAIN_FORBIDDEN', message: `Only ${env.GOOGLE_SSO_HD} college emails are allowed.` });
+      return;
+    }
+
+    const student = await prisma.student.findUnique({ where: { email: identity.email } });
+
+    if (!student) {
+      res.status(403).json({
+        error: 'EMAIL_NOT_REGISTERED',
+        message: 'This college email is not registered in the roster. Contact your coordinators.',
+      });
+      return;
+    }
+
+    const token = jwt.sign(
+      { studentId: student.id, rollNo: student.rollNo, name: student.name, email: student.email },
+      env.STUDENT_JWT_SECRET,
+      { expiresIn: '12h' }
+    );
+
+    await ActivityService.log({
+      eventId: EVENT_ID,
+      category: 'APPLICATION',
+      action: 'Student logged in via Google',
+      details: `Email: ${identity.email}`,
+      applicantName: student.name,
+      userEmail: identity.email,
+      status: 'SUCCESS',
+    });
+
+    const target = new URL(env.STUDENT_APP_LOGIN_URL);
+    target.searchParams.set('token', token);
+    res.redirect(302, target.toString());
+  } catch (err: any) {
+    console.error('SSO callback error:', err);
+    res.status(500).json({ error: 'SSO_FAILED', message: 'Could not complete Google sign-in.' });
+  }
+});
 
 // GET /api/student/me — current student profile + submission status + admin review
 router.get('/me', requireStudentAuth, async (req: Request, res: Response): Promise<void> => {

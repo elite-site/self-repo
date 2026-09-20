@@ -6,6 +6,7 @@ export interface StudentJwtPayload {
   studentId: string;
   rollNo: string;
   name: string;
+  email?: string;
 }
 
 declare global {
