@@ -1,28 +1,61 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import request from 'supertest';
+import jwt from 'jsonwebtoken';
+import app from '../src/server';
+import { env } from '../src/config/env';
+import { prisma } from '../src/lib/prisma';
+import { ssoService } from '../src/services/sso.service';
 
 vi.mock('../src/lib/prisma', () => ({ prisma: { student: { findUnique: vi.fn() } } }));
+vi.mock('../src/services/sso.service', () => ({
+  ssoService: {
+    getAuthUrl: vi.fn(),
+    exchangeCode: vi.fn(),
+    isAllowed: vi.fn(),
+  },
+}));
 
-const { prisma } = await import('../src/lib/prisma');
+beforeEach(() => {
+  vi.clearAllMocks();
+  (ssoService.isAllowed as unknown as ReturnType<typeof vi.fn>).mockReturnValue(true);
+});
 
-describe('blank-email lockout', () => {
-  it('students whose roster email is NULL cannot be found by the SSO email lookup', async () => {
-    // The SSO callback looks up `prisma.student.findUnique({ where: { email } })`.
-    // A student without an email simply does not match any email — including one
-    // derived from their roll number.
-    for (const probe of ['23k61a1201@sasi.ac.in', '23K61A1201@sasi.ac.in', '']) {
-      (prisma.student.findUnique as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(null);
-      const found = await prisma.student.findUnique({ where: { email: probe } });
-      expect(found).toBeNull();
-    }
+const goodState = jwt.sign({ nonce: 'n1' }, env.STUDENT_JWT_SECRET, { expiresIn: '10m' });
+
+describe('blank-email lockout (via the SSO callback route)', () => {
+  it('no email is fabricated from a roll number', async () => {
+    (ssoService.exchangeCode as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      email: '23k61a1201@sasi.ac.in',
+      emailVerified: true,
+      domain: 'sasi.ac.in',
+      sub: '222',
+    });
+    (prisma.student.findUnique as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+
+    const res = await request(app)
+      .get('/api/student/google/callback')
+      .query({ code: 'c1', state: goodState });
+
+    expect(res.status).toBe(403);
+    expect(res.body.error).toBe('EMAIL_NOT_REGISTERED');
+    expect(res.headers.location ?? '').not.toMatch(/token=/);
   });
 
-  it('only a registered college email yields a student record', async () => {
-    (prisma.student.findUnique as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
-      id: 's1',
-      rollNo: '23K61A1201',
+  it('only a registered roster email yields a token', async () => {
+    (ssoService.exchangeCode as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
       email: 'test@sasi.ac.in',
+      emailVerified: true,
+      domain: 'sasi.ac.in',
+      sub: '333',
     });
-    const found = await prisma.student.findUnique({ where: { email: 'test@sasi.ac.in' } });
-    expect(found?.email).toBe('test@sasi.ac.in');
+    (prisma.student.findUnique as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+
+    const res = await request(app)
+      .get('/api/student/google/callback')
+      .query({ code: 'c1', state: goodState });
+
+    expect(prisma.student.findUnique).toHaveBeenCalledWith({ where: { email: 'test@sasi.ac.in' } });
+    expect(res.status).toBe(403);
+    expect(res.body.error).toBe('EMAIL_NOT_REGISTERED');
   });
 });

@@ -47,4 +47,12 @@ describe('SSOService', () => {
     expect(url).toMatch(/accounts\.google\.com\/o\/oauth2\/v2\/auth/);
     expect(url).toContain('hd=sasi.ac.in');
   });
+
+  it('consent callback target is the backend callback, not the SPA', () => {
+    const url = new URL(createService(null).getAuthUrl());
+    const redirectUri = url.searchParams.get('redirect_uri');
+    expect(redirectUri).toBeTruthy();
+    expect(redirectUri).toContain('/api/student/google/callback');
+    expect(redirectUri).not.toMatch(/\/login$/);
+  });
 });

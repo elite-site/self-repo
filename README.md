@@ -51,8 +51,10 @@ and re-imported. There is **no rollNo/password student login anymore**. Admin au
     Drive folder for uploads; the refresh token is minted with `npm run get-token`
     (runbook: `docs/runbooks/drive-reauth.md`);
   - a _SSO OAuth 2.0 Web client_ (`GOOGLE_SSO_CLIENT_ID` / `GOOGLE_SSO_CLIENT_SECRET`) with
-    **Authorized redirect URI = `GOOGLE_SSO_REDIRECT_URI`** (e.g. `https://<web>/login` in
-    production).
+    **Authorized redirect URI = `GOOGLE_SSO_REDIRECT_URI`** (e.g.
+    `https://<render-api>/api/student/google/callback` in production). `GOOGLE_SSO_REDIRECT_URI`
+    must be the backend route that exchanges the code; `STUDENT_APP_LOGIN_URL` is the SPA page
+    students land on after sign-in.
 - A **Resend** API key for admin email (winner / thank-you).
 
 ## Local setup
@@ -143,8 +145,9 @@ server). **Change the password after first login** - there is no self-service re
   - Health: `/health` (liveness), `/ready` (DB + Drive readiness; 503 until both respond).
 
   `ALLOWED_ORIGIN` on Render must include the Netlify production URL, and the prod env must
-  override `GOOGLE_SSO_REDIRECT_URI` and `STUDENT_APP_LOGIN_URL` with the production login
-  path.
+  set `GOOGLE_SSO_REDIRECT_URI` to the production API callback
+  (`https://<render-api>/api/student/google/callback`) and `STUDENT_APP_LOGIN_URL` to the
+  production login page (`https://<netlify-prod>.netlify.app/login`).
 
 ## Secret inventory
 

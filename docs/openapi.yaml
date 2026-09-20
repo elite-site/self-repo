@@ -65,13 +65,13 @@ paths:
       parameters:
         - name: code
           in: query
-          required: false
+          required: true
           description: Authorization code returned by Google.
           schema:
             type: string
         - name: state
           in: query
-          required: false
+          required: true
           description: Signed state JWT that must match the one from /google/authorize.
           schema:
             type: string

@@ -29,7 +29,7 @@ export const env = {
   // Google Workspace SSO (student login)
   GOOGLE_SSO_CLIENT_ID: process.env.GOOGLE_SSO_CLIENT_ID || '',
   GOOGLE_SSO_CLIENT_SECRET: process.env.GOOGLE_SSO_CLIENT_SECRET || '',
-  GOOGLE_SSO_REDIRECT_URI: process.env.GOOGLE_SSO_REDIRECT_URI || 'http://localhost:5173/login',
+  GOOGLE_SSO_REDIRECT_URI: process.env.GOOGLE_SSO_REDIRECT_URI || 'http://localhost:5001/api/student/google/callback',
   GOOGLE_SSO_HD: process.env.GOOGLE_SSO_HD || 'sasi.ac.in',
   STUDENT_APP_LOGIN_URL: process.env.STUDENT_APP_LOGIN_URL || 'http://localhost:5173/login',
 

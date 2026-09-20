@@ -61,15 +61,17 @@ DATABASE_URL=postgresql://postgres.<ref>:<password>@aws-0-ap-south-1.pooler.supa
 JWT_SECRET, ADMIN_SESSION_COOKIE_NAME, STUDENT_JWT_SECRET
 GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET, GOOGLE_OAUTH_REFRESH_TOKEN, GOOGLE_DRIVE_ROOT_FOLDER_ID
 RESEND_API_KEY, EMAIL_FROM_ADDRESS
-GOOGLE_SSO_CLIENT_ID, GOOGLE_SSO_CLIENT_SECRET, GOOGLE_SSO_REDIRECT_URI, GOOGLE_SSO_HD, STUDENT_APP_LOGIN_URL
+GOOGLE_SSO_CLIENT_ID, GOOGLE_SSO_CLIENT_SECRET, GOOGLE_SSO_HD, STUDENT_APP_LOGIN_URL
+GOOGLE_SSO_REDIRECT_URI=https://<render-api>/api/student/google/callback (the backend route that exchanges the code)
 ALLOWED_ORIGIN=https://<netlify-prod>.netlify.app
 PORT=5000 (or any public port Render assigns)
 ```
 
 Notes:
 
-- Staging and prod each need their own `GOOGLE_SSO_REDIRECT_URI` and `STUDENT_APP_LOGIN_URL`
-  pointing at the matching app origin, and their origin must be in `ALLOWED_ORIGIN`.
+- Staging and prod each need `GOOGLE_SSO_REDIRECT_URI` set to their own Render API callback
+  (`https://<render-api>.onrender.com/api/student/google/callback`) and `STUDENT_APP_LOGIN_URL`
+  set to their own Netlify login page; the app origin must be in `ALLOWED_ORIGIN`.
 - The migration step (`prisma migrate deploy`) is the only way schema changes reach the
   deployed DB - never run `prisma db push` against prod.
 
