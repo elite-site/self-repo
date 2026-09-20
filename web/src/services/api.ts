@@ -1,7 +1,7 @@
 import axios, { AxiosProgressEvent } from 'axios';
-import { StudentLoginResponse, StudentProfile } from '../types';
+import { StudentProfile } from '../types';
 
-const API_BASE = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api').replace(/\/$/, '');
+export const API_BASE = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api').replace(/\/$/, '');
 
 const client = axios.create({
   baseURL: API_BASE,
@@ -17,10 +17,8 @@ export function setStudentToken(token: string | null) {
 }
 
 export const api = {
-  async login(rollNo: string, password: string): Promise<StudentLoginResponse> {
-    const res = await client.post('/student/login', { rollNo, password });
-    setStudentToken(res.data.token);
-    return res.data;
+  getOAuthAuthorizeUrl(): string {
+    return `${API_BASE}/student/google/authorize`;
   },
 
   async getMe(): Promise<{ student: StudentProfile }> {

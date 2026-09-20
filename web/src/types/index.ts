@@ -12,17 +12,12 @@ export interface StudentSubmission {
 export interface StudentProfile {
   id: string;
   rollNo: string;
+  email: string | null;
   name: string;
   year: number;
   section: string;
   branch: string;
   submission: StudentSubmission | null;
-}
-
-export interface StudentLoginResponse {
-  success: boolean;
-  token: string;
-  student: StudentProfile;
 }
 
 export interface StudentSession {

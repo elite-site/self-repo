@@ -29,6 +29,29 @@ export const App: React.FC = () => {
   const [authChecking, setAuthChecking] = useState(true);
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const oauthToken = params.get('token');
+    if (oauthToken) {
+      // Arrived back from the Google SSO redirect carrying our signed JWT.
+      setStudentToken(oauthToken);
+      api
+        .getMe()
+        .then((res) => {
+          const sess: StudentSession = { token: oauthToken, student: res.student };
+          setSession(sess);
+          localStorage.setItem(SESSION_KEY, JSON.stringify(sess));
+        })
+        .catch(() => {
+          localStorage.removeItem(SESSION_KEY);
+          setStudentToken(null);
+        })
+        .finally(() => {
+          window.history.replaceState({}, '', window.location.pathname);
+          setAuthChecking(false);
+        });
+      return;
+    }
+
     const stored = loadSession();
     if (stored) {
       setStudentToken(stored.token);
@@ -45,11 +68,6 @@ export const App: React.FC = () => {
         });
     }
     setAuthChecking(false);
-  }, []);
-
-  const handleLogin = useCallback((next: StudentSession) => {
-    setSession(next);
-    localStorage.setItem(SESSION_KEY, JSON.stringify(next));
   }, []);
 
   const handleLogout = useCallback(() => {
@@ -103,9 +121,9 @@ export const App: React.FC = () => {
                         <span className="text-elite-red">YOUR VIDEO.</span>
                       </h2>
                       <p className="text-sm sm:text-base text-elite-darkgray max-w-lg leading-relaxed font-normal mt-4">
-                        Sign in with the roll number printed on your ID card. You can then
-                        upload your introduction video, preview it, resubmit if you'd like,
-                        and read your coordinators' response once it has been reviewed.
+                        Sign in with your college email. You can then upload your introduction
+                        video, preview it, resubmit if you'd like, and read your coordinators'
+                        response once it has been reviewed.
                       </p>
                     </div>
 
@@ -116,7 +134,7 @@ export const App: React.FC = () => {
                         </div>
                         <div>
                           <div className="text-xs font-bold text-elite-black uppercase tracking-wide">Sign in</div>
-                          <div className="text-[11px] text-neutral-500">Use your roll number — no printed password needed.</div>
+                          <div className="text-[11px] text-neutral-500">Use your college email — no separate password needed.</div>
                         </div>
                       </div>
                       <div className="flex items-center gap-3.5 py-3.5">
@@ -141,7 +159,7 @@ export const App: React.FC = () => {
                   </div>
                 </div>
                 <div className="lg:col-span-5">
-                  <StudentLogin onLogin={handleLogin} />
+                  <StudentLogin />
                 </div>
               </div>
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start mt-10">
