@@ -351,6 +351,25 @@ class DriveService {
   }
 
   /**
+   * Reachability probe used by /ready: verifies the Drive root folder exists and
+   * is not trashed (no-op for the local mock storage).
+   */
+  public async assertRootReachable(): Promise<void> {
+    if (this.isMock || !this.drive) {
+      if (!fs.existsSync(this.mockBaseDir)) {
+        fs.mkdirSync(this.mockBaseDir, { recursive: true });
+      }
+      return;
+    }
+    const res = await this.drive.files.get({
+      fileId: env.GOOGLE_DRIVE_ROOT_FOLDER_ID,
+      fields: 'id,trashed',
+      supportsAllDrives: true,
+    });
+    if (res.data.trashed) throw new Error('Drive root folder is trashed');
+  }
+
+  /**
    * Proxy/Stream a Drive file to the client for admin media viewing
    */
   public async streamDriveFile(

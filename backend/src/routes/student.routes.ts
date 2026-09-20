@@ -1,11 +1,8 @@
 import { Router, Request, Response } from 'express';
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
 import { env } from '../config/env';
 import { prisma } from '../lib/prisma';
 import { requireStudentAuth } from '../middleware/studentAuth';
 import { submissionUploadMiddleware } from '../middleware/upload';
-import { studentLoginRateLimiter } from '../middleware/rateLimiter';
 import { ValidationService } from '../services/validation.service';
 import { driveService } from '../services/drive.service';
 import { ActivityService } from '../services/activity.service';
@@ -15,16 +12,11 @@ const router = Router();
 const EVENT_ID = 'self-introduction-2026';
 const EVENT_NAME = 'Self Introduction';
 
-// Students have no email in the roster sheet; store a derived placeholder so the
-// required Submission.email stays populated.
-function studentEmail(rollNo: string): string {
-  return `${rollNo.toLowerCase()}@itassociations.local`;
-}
-
 // Serialize the student's profile + their submission for the frontend
 function serializeStudentView(student: {
   id: string;
   rollNo: string;
+  email: string | null;
   name: string;
   year: number;
   section: string;
@@ -33,6 +25,7 @@ function serializeStudentView(student: {
   return {
     id: student.id,
     rollNo: student.rollNo,
+    email: student.email ?? null,
     name: student.name,
     year: student.year,
     section: student.section,
@@ -51,78 +44,6 @@ function serializeStudentView(student: {
       : null,
   };
 }
-
-// POST /api/student/login — login with roll number + password (default = roll number).
-// Students can sign in with just their roll number; when no password is supplied,
-// the roll number itself is used as the password.
-router.post('/login', studentLoginRateLimiter, async (req: Request, res: Response): Promise<void> => {
-  const { rollNo, password } = req.body;
-
-  if (!rollNo) {
-    res.status(400).json({
-      error: 'MISSING_FIELDS',
-      message: 'Roll number is required.',
-    });
-    return;
-  }
-
-  const cleanRollNo = String(rollNo).trim().toUpperCase();
-  const effectivePassword = String(password ?? '').trim() || cleanRollNo;
-
-  try {
-    const student = await prisma.student.findUnique({ where: { rollNo: cleanRollNo } });
-
-    if (!student) {
-      res.status(401).json({
-        error: 'INVALID_CREDENTIALS',
-        message: 'No account found for this roll number. Please verify your roll number with the coordinators.',
-      });
-      return;
-    }
-
-    const isMatch = await bcrypt.compare(effectivePassword, student.passwordHash);
-    if (!isMatch) {
-      res.status(401).json({
-        error: 'INVALID_CREDENTIALS',
-        message: 'Invalid roll number or password.',
-      });
-      return;
-    }
-
-    const submission = await prisma.submission.findFirst({
-      where: { rollNo: cleanRollNo },
-      orderBy: { submittedAt: 'desc' },
-    });
-
-    const token = jwt.sign(
-      { studentId: student.id, rollNo: student.rollNo, name: student.name },
-      env.STUDENT_JWT_SECRET,
-      { expiresIn: '12h' }
-    );
-
-    await ActivityService.log({
-      eventId: EVENT_ID,
-      category: 'APPLICATION',
-      action: 'Student logged in',
-      details: `Roll: ${student.rollNo}`,
-      applicantName: student.name,
-      userEmail: student.rollNo,
-      status: 'SUCCESS',
-    });
-
-    res.json({
-      success: true,
-      token,
-      student: serializeStudentView(student, submission),
-    });
-  } catch (err: any) {
-    console.error('Error during student login:', err);
-    res.status(500).json({
-      error: 'LOGIN_FAILED',
-      message: 'An error occurred during login. Please try again.',
-    });
-  }
-});
 
 // GET /api/student/me — current student profile + submission status + admin review
 router.get('/me', requireStudentAuth, async (req: Request, res: Response): Promise<void> => {
@@ -224,7 +145,7 @@ router.post(
       const data = {
         name: student.name,
         rollNo: student.rollNo,
-        email: studentEmail(student.rollNo),
+        email: student.email ?? '',
         section: student.section,
         branch: student.branch,
         year: student.year,

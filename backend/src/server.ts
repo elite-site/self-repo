@@ -5,6 +5,8 @@ import path from 'path';
 import fs from 'fs';
 import { env } from './config/env';
 import { errorHandler } from './middleware/errorHandler';
+import { prisma } from './lib/prisma';
+import { driveService } from './services/drive.service';
 import publicRoutes from './routes/public.routes';
 import studentRoutes from './routes/student.routes';
 import adminAuthRoutes from './routes/admin.auth.routes';
@@ -47,6 +49,27 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Healthcheck
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Readiness probe for Render/Railway: DB + Drive must both respond.
+app.get('/ready', async (_req, res) => {
+  const probe: Record<string, 'ok' | 'down'> = { db: 'down', drive: 'down' };
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    probe.db = 'ok';
+  } catch {
+    /* keep down */
+  }
+  try {
+    await driveService.assertRootReachable();
+    probe.drive = 'ok';
+  } catch {
+    /* keep down */
+  }
+  const ready = probe.db === 'ok' && probe.drive === 'ok';
+  res
+    .status(ready ? 200 : 503)
+    .json({ status: ready ? 'ok' : 'unready', ...probe, timestamp: new Date().toISOString() });
 });
 
 // 1. Public API routes (used by Netlify submission form)
