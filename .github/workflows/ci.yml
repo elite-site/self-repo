@@ -1,0 +1,32 @@
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            web/package-lock.json
+            admin-client/package-lock.json
+      - name: Backend build + test
+        working-directory: backend
+        run: |
+          npm ci
+          npx prisma generate
+          npm run build
+          npm test
+      - name: Web build
+        working-directory: web
+        run: npm ci && npm run build
+      - name: Admin-client build
+        working-directory: admin-client
+        run: npm ci && npm run build
