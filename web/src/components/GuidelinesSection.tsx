@@ -3,14 +3,14 @@ import { Video, ShieldCheck, Clock, FileCheck, MessageCircle } from 'lucide-reac
 
 export const GuidelinesSection: React.FC = () => {
   return (
-    <section id="guidelines" className="max-w-7xl mx-auto px-6 sm:px-10 py-12 border-t border-neutral-100 text-left">
+    <section id="guidelines" aria-labelledby="guidelines-title" className="max-w-7xl mx-auto px-6 sm:px-10 py-12 border-t border-neutral-100 text-left">
       <div className="space-y-6">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-red-50 text-elite-red flex items-center justify-center font-bold">
             <FileCheck className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-2xl font-extrabold text-elite-black font-display tracking-tight">
+            <h2 id="guidelines-title" className="text-2xl font-extrabold text-elite-black font-display tracking-tight">
               Self-Introduction Guidelines
             </h2>
             <p className="text-xs text-neutral-500">

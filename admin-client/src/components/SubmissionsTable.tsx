@@ -8,7 +8,6 @@ import {
   SlidersHorizontal,
   Hash,
   Trash2,
-  FileSpreadsheet,
 } from 'lucide-react';
 import { Submission, SubmissionsResponse, SubmissionRating } from '../types';
 import { adminApi } from '../services/api';
@@ -105,45 +104,29 @@ export const SubmissionsTable: React.FC<SubmissionsTableProps> = ({
     }
   };
 
-  const handleExportExcel = () => {
-    const url = adminApi.getExcelExportUrl(activeEventId);
-    window.open(url, '_blank');
-  };
-
   return (
     <div className="space-y-6 text-left">
-      {/* 1. HEADER & REFRESH / EXPORT */}
+      {/* 1. HEADER & REFRESH */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-200 pb-5">
         <div>
           <div className="text-xs font-mono font-bold tracking-widest text-elite-red uppercase">
-            Submitted Introductions
+            Review & Rate Introductions
           </div>
-          <h1 className="text-3xl font-extrabold text-elite-black font-display tracking-tight mt-1">
-            VIDEOS
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-elite-black font-display tracking-tight mt-1">
+            Videos Submitted
           </h1>
           <p className="text-xs text-neutral-500 mt-1 font-normal">
-            Review each student's introduction video and mark it.
+            Watch each clip, mark it, and send the student a response.
           </p>
         </div>
 
-        <div className="flex items-center gap-2 self-start sm:self-auto">
-          <button
-            onClick={handleExportExcel}
-            className="inline-flex items-center gap-2 px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm cursor-pointer"
-            title="Download formatted Excel report"
-          >
-            <FileSpreadsheet className="w-3.5 h-3.5" />
-            <span>Export Excel</span>
-          </button>
-
-          <button
-            onClick={loadSubmissions}
-            className="inline-flex items-center gap-2 px-3.5 py-2 bg-white hover:bg-neutral-50 border border-neutral-200 text-neutral-700 text-xs font-semibold rounded-lg transition-colors shadow-sm cursor-pointer"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-elite-red' : ''}`} />
-            <span>Refresh List</span>
-          </button>
-        </div>
+        <button
+          onClick={loadSubmissions}
+          className="inline-flex items-center gap-2 px-3.5 py-2 bg-white hover:bg-neutral-50 border border-neutral-200 text-neutral-700 text-xs font-semibold rounded-lg transition-colors shadow-sm cursor-pointer self-start sm:self-auto"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-elite-red' : ''}`} />
+          <span>Refresh List</span>
+        </button>
       </div>
 
       {/* 2. SEARCH & FILTERS BAR */}
@@ -267,11 +250,23 @@ export const SubmissionsTable: React.FC<SubmissionsTableProps> = ({
                     >
                       {/* Name & Email */}
                       <td className="py-3.5 px-5">
-                        <div className="font-bold text-neutral-900 group-hover:text-elite-red transition-colors">
-                          {sub.name}
-                        </div>
-                        <div className="text-[11px] text-neutral-500 mt-0.5">
-                          {sub.email}
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-lg bg-red-50 text-elite-red flex items-center justify-center text-xs font-extrabold font-display shrink-0">
+                            {sub.name
+                              .split(' ')
+                              .filter(Boolean)
+                              .slice(0, 2)
+                              .map((w) => w[0]?.toUpperCase())
+                              .join('') || '?'}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="font-bold text-neutral-900 group-hover:text-elite-red transition-colors truncate">
+                              {sub.name}
+                            </div>
+                            <div className="text-[11px] text-neutral-500 mt-0.5 truncate">
+                              {sub.email}
+                            </div>
+                          </div>
                         </div>
                       </td>
 

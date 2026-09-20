@@ -3,7 +3,7 @@ import { UserRound, Sparkles, Users, Fingerprint } from 'lucide-react';
 
 export const HeroSection: React.FC = () => {
   return (
-    <section id="hero" className="max-w-7xl mx-auto px-6 sm:px-10 pt-10 sm:pt-14 pb-8 sm:pb-12">
+    <section id="hero" aria-labelledby="hero-title" className="max-w-7xl mx-auto px-6 sm:px-10 pt-10 sm:pt-14 pb-8 sm:pb-12">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-8 items-center">
         {/* LEFT COLUMN: HEADLINE & HIGHLIGHTS */}
         <div className="lg:col-span-7 space-y-6 text-left">
@@ -19,7 +19,7 @@ export const HeroSection: React.FC = () => {
           </div>
 
           {/* Main Headline */}
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-elite-black font-display leading-[1.08]">
+          <h1 id="hero-title" className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-elite-black font-display leading-[1.08]">
             INTRODUCE YOURSELF.<br />
             <span className="text-elite-red">AS YOURSELF.</span>
           </h1>
@@ -101,11 +101,11 @@ export const HeroSection: React.FC = () => {
               <span>IT-ASSOCIATIONS • SELF INTRODUCTION</span>
             </div>
 
-            <h3 className="text-2xl sm:text-3xl font-extrabold tracking-tight font-display leading-[1.15]">
+            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight font-display leading-[1.15]">
               A Personal Self-Introduction.
               <br />
               Not a Performance.
-            </h3>
+            </h2>
 
             <p className="text-xs sm:text-sm text-neutral-300 leading-relaxed">
               A short video from the Department of Information Technology. Introduce

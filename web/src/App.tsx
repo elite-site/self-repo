@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { KeyRound, UploadCloud, MessageSquare } from 'lucide-react';
 import { Navbar } from './components/Navbar';
 import { HeroSection } from './components/HeroSection';
 import { StudentLogin } from './components/StudentLogin';
@@ -73,7 +74,7 @@ export const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-white text-neutral-900 flex flex-col justify-between">
+    <div className="min-h-screen bg-[#FAFAFA] text-neutral-900 flex flex-col justify-between">
       <div>
         <Navbar session={session} onLogout={handleLogout} onNavigate={handleNavigate} />
 
@@ -88,13 +89,56 @@ export const App: React.FC = () => {
           <>
             <HeroSection />
             <main id="main-content" className="max-w-7xl mx-auto px-6 sm:px-10 py-6 sm:py-10">
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-start">
                 <div className="lg:col-span-7">
-                  <p className="text-sm text-neutral-600 text-left mb-6 max-w-xl leading-relaxed">
-                    Sign in with the roll number printed on your ID card. You can then upload
-                    your introduction video, preview it, resubmit if you'd like, and see your
-                    coordinators' response once it's been reviewed.
-                  </p>
+                  <div className="space-y-6 text-left">
+                    <div>
+                      <div className="inline-flex items-center gap-2 text-xs font-bold font-mono tracking-widest text-elite-red uppercase">
+                        <span>Sign in to your portal</span>
+                        <span className="w-6 h-[2px] bg-elite-red inline-block" />
+                      </div>
+                      <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-elite-black font-display leading-[1.08] mt-3">
+                        YOUR SPACE.
+                        <br />
+                        <span className="text-elite-red">YOUR VIDEO.</span>
+                      </h2>
+                      <p className="text-sm sm:text-base text-elite-darkgray max-w-lg leading-relaxed font-normal mt-4">
+                        Sign in with the roll number printed on your ID card. You can then
+                        upload your introduction video, preview it, resubmit if you'd like,
+                        and read your coordinators' response once it has been reviewed.
+                      </p>
+                    </div>
+
+                    <div className="divide-y divide-neutral-100 border-y border-neutral-100">
+                      <div className="flex items-center gap-3.5 py-3.5">
+                        <div className="w-9 h-9 rounded-lg bg-red-50 text-elite-red flex items-center justify-center shrink-0">
+                          <KeyRound className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="text-xs font-bold text-elite-black uppercase tracking-wide">Sign in</div>
+                          <div className="text-[11px] text-neutral-500">Use your roll number — no printed password needed.</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3.5 py-3.5">
+                        <div className="w-9 h-9 rounded-lg bg-red-50 text-elite-red flex items-center justify-center shrink-0">
+                          <UploadCloud className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="text-xs font-bold text-elite-black uppercase tracking-wide">Upload your video</div>
+                          <div className="text-[11px] text-neutral-500">Preview it before sending, and resubmit any time.</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3.5 py-3.5">
+                        <div className="w-9 h-9 rounded-lg bg-red-50 text-elite-red flex items-center justify-center shrink-0">
+                          <MessageSquare className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="text-xs font-bold text-elite-black uppercase tracking-wide">Get your response</div>
+                          <div className="text-[11px] text-neutral-500">Coordinators' feedback appears right in your portal.</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
                 <div className="lg:col-span-5">
                   <StudentLogin onLogin={handleLogin} />

@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Sidebar, AdminTab, ACTIVE_EVENT_ID } from './components/Sidebar';
 import { AdminHeader } from './components/AdminHeader';
 import { StatsDashboard } from './components/StatsDashboard';
-import { OverviewView } from './components/OverviewView';
 import { SubmissionsTable } from './components/SubmissionsTable';
 import { StudentsTable } from './components/StudentsTable';
 import { SubmissionDetailModal } from './components/SubmissionDetailModal';
@@ -139,13 +138,7 @@ export const App: React.FC = () => {
             />
           )}
 
-          {activeTab === 'overview' && (
-            <OverviewView
-              stats={stats}
-            />
-          )}
-
-          {(activeTab === 'submissions') && (
+          {activeTab === 'submissions' && (
             <SubmissionsTable
               activeEventId={ACTIVE_EVENT_ID}
               onSelectSubmission={(sub) => setSelectedSubmission(sub)}

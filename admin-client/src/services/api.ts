@@ -66,6 +66,10 @@ export const adminApi = {
   },
 
   // Student roster
+  getStudentsExportUrl(eventId?: string): string {
+    return `/admin/api/students/export?eventId=${encodeURIComponent(eventId || '')}`;
+  },
+
   async getStudents(params: {
     eventId?: string;
     page?: number;
@@ -120,10 +124,6 @@ export const adminApi = {
 
   getMediaUrl(submissionId: string, fileKey: 'video'): string {
     return `/admin/api/submissions/${submissionId}/media/${fileKey}`;
-  },
-
-  getExcelExportUrl(eventId?: string): string {
-    return `/admin/api/export/excel?eventId=${encodeURIComponent(eventId || 'self-introduction-2026')}`;
   },
 
   // Activity logs

@@ -1,23 +1,18 @@
 import React from 'react';
 import {
   Home,
-  Info,
   ClipboardList,
   Users,
-  FileSpreadsheet,
-  Folder,
   Clock,
   LogOut,
   UserRound,
 } from 'lucide-react';
 import { AdminUser } from '../types';
-import { adminApi } from '../services/api';
 
 export const ACTIVE_EVENT_ID = 'self-introduction-2026';
 
 export type AdminTab =
   | 'dashboard'
-  | 'overview'
   | 'submissions'
   | 'students'
   | 'activity';
@@ -35,14 +30,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   user: _user,
   onLogout,
 }) => {
-  const handleExportExcel = () => {
-    const url = adminApi.getExcelExportUrl(ACTIVE_EVENT_ID);
-    window.open(url, '_blank');
-  };
-
   const navItems = [
     { id: 'dashboard' as AdminTab, label: 'Home', icon: Home },
-    { id: 'overview' as AdminTab, label: 'Overview', icon: Info },
     { id: 'submissions' as AdminTab, label: 'Videos Submitted', icon: ClipboardList },
     { id: 'students' as AdminTab, label: 'All Students', icon: Users },
   ];
@@ -100,23 +89,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           })}
 
           <div className="my-2 border-t border-neutral-100 dark:border-neutral-800 pt-2" />
-
-          {/* ACTION NAVIGATION ITEMS */}
-          <button
-            onClick={handleExportExcel}
-            className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-xs font-semibold text-neutral-600 dark:text-neutral-300 hover:text-emerald-700 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition-all cursor-pointer group"
-          >
-            <FileSpreadsheet className="w-4 h-4 text-neutral-500 dark:text-neutral-400 group-hover:text-emerald-600" />
-            <span>Export to Excel</span>
-          </button>
-
-          <button
-            onClick={() => onSelectTab('overview')}
-            className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-xs font-semibold text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100/70 dark:hover:bg-neutral-800/60 transition-all cursor-pointer"
-          >
-            <Folder className="w-4 h-4 text-neutral-500 dark:text-neutral-400" />
-            <span>Drive Folders</span>
-          </button>
 
           <button
             onClick={() => onSelectTab('activity')}

@@ -52,19 +52,22 @@ function serializeStudentView(student: {
   };
 }
 
-// POST /api/student/login — login with roll number + password (default = roll number)
+// POST /api/student/login — login with roll number + password (default = roll number).
+// Students can sign in with just their roll number; when no password is supplied,
+// the roll number itself is used as the password.
 router.post('/login', studentLoginRateLimiter, async (req: Request, res: Response): Promise<void> => {
   const { rollNo, password } = req.body;
 
-  if (!rollNo || !password) {
+  if (!rollNo) {
     res.status(400).json({
       error: 'MISSING_FIELDS',
-      message: 'Both roll number and password are required.',
+      message: 'Roll number is required.',
     });
     return;
   }
 
   const cleanRollNo = String(rollNo).trim().toUpperCase();
+  const effectivePassword = String(password ?? '').trim() || cleanRollNo;
 
   try {
     const student = await prisma.student.findUnique({ where: { rollNo: cleanRollNo } });
@@ -77,7 +80,7 @@ router.post('/login', studentLoginRateLimiter, async (req: Request, res: Respons
       return;
     }
 
-    const isMatch = await bcrypt.compare(String(password), student.passwordHash);
+    const isMatch = await bcrypt.compare(effectivePassword, student.passwordHash);
     if (!isMatch) {
       res.status(401).json({
         error: 'INVALID_CREDENTIALS',

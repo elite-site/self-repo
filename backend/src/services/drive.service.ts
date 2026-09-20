@@ -287,7 +287,10 @@ class DriveService {
       let videoDriveId: string | undefined = undefined;
       if (files.video) {
         const videoExt = path.extname(files.video.originalname) || '.mp4';
-        videoDriveId = await this.uploadFile(files.video, `video${videoExt}`, folderId, relativePath);
+        const cleanName = meta.name.replace(/[^a-zA-Z0-9]/g, '');
+        const cleanRollNo = meta.rollNo.toUpperCase().replace(/[^a-zA-Z0-9]/g, '');
+        const videoFileName = `${cleanRollNo}_${cleanName}${videoExt}`;
+        videoDriveId = await this.uploadFile(files.video, videoFileName, folderId, relativePath);
         createdFileIds.push(videoDriveId);
       }
 
@@ -451,21 +454,17 @@ class DriveService {
         if (fs.existsSync(dirPath)) {
           const files = fs.readdirSync(dirPath);
           for (const file of files) {
-            if (file.startsWith('video') && !file.endsWith('.meta.json')) {
-              try {
+            if (!file.endsWith('.meta.json')) continue;
+            try {
+              const meta = JSON.parse(fs.readFileSync(path.join(dirPath, file), 'utf-8'));
+              if (meta.id === submission.videoDriveId) {
                 fs.unlinkSync(path.join(dirPath, file));
-              } catch (err) {
-                console.warn(`Failed to delete mock video file ${file}:`, err);
-              }
-            }
-            if (file.endsWith('.meta.json')) {
-              try {
-                const meta = JSON.parse(fs.readFileSync(path.join(dirPath, file), 'utf-8'));
-                if (meta.id === submission.videoDriveId) {
-                  fs.unlinkSync(path.join(dirPath, file));
+                const actualFile = file.replace('.meta.json', '');
+                if (fs.existsSync(path.join(dirPath, actualFile))) {
+                  fs.unlinkSync(path.join(dirPath, actualFile));
                 }
-              } catch (_) {}
-            }
+              }
+            } catch (_) {}
           }
         }
       }

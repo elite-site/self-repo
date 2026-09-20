@@ -51,7 +51,7 @@ export const Footer: React.FC = () => {
       </div>
 
       {/* COPYRIGHT */}
-      <div className="max-w-7xl mx-auto pt-6 flex flex-col sm:flex-row items-center justify-between text-[11px] text-neutral-500 gap-2 font-mono">
+      <div className="max-w-7xl mx-auto pt-6 flex flex-col sm:flex-row items-center justify-between text-[11px] text-neutral-400 gap-2 font-mono">
         <div>© 2026 IT-Associations Self Introduction — Department of Information Technology</div>
         <div>Engineered for SASI Institute of Technology & Engineering</div>
       </div>

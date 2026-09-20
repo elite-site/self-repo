@@ -301,6 +301,135 @@ router.get('/students', async (req: Request, res: Response): Promise<void> => {
 });
 
 // ======================================================
+// 3.5 STUDENT ROSTER EXCEL EXPORT (GET /admin/api/students/export)
+// Full roster dump from the parent database: every student with
+// their complete submission + review information, as an .xlsx file.
+// ======================================================
+router.get('/students/export', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const eventId = ((req.query.eventId as string) || ACTIVE_EVENT_ID).trim();
+    const event = await prisma.event.findUnique({ where: { id: eventId } });
+    const eventName = event ? event.name : 'Self Introduction';
+    const eventSlug = event ? event.slug : 'self-introduction';
+
+    const [students, submissions] = await Promise.all([
+      prisma.student.findMany({
+        orderBy: [{ year: 'asc' }, { section: 'asc' }, { rollNo: 'asc' }],
+      }),
+      prisma.submission.findMany({
+        where: { eventId },
+        orderBy: { submittedAt: 'desc' },
+      }),
+    ]);
+
+    // Join submissions by roll number (latest wins per student)
+    const submissionByRoll = new Map<string, typeof submissions[number] | null>();
+    for (const sub of submissions) {
+      const key = `${sub.rollNo}|${sub.year}|${sub.section}`;
+      if (!submissionByRoll.has(key)) {
+        submissionByRoll.set(key, sub);
+      }
+    }
+
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'ELITE Admin Control Center';
+    workbook.created = new Date();
+
+    const worksheet = workbook.addWorksheet('All Students');
+
+    worksheet.columns = [
+      { header: 'S.No', key: 'sno', width: 6 },
+      { header: 'Student Name', key: 'name', width: 26 },
+      { header: 'Roll Number', key: 'rollNo', width: 18 },
+      { header: 'Year', key: 'year', width: 8 },
+      { header: 'Section', key: 'section', width: 10 },
+      { header: 'Branch', key: 'branch', width: 10 },
+      { header: 'Email Address', key: 'email', width: 32 },
+      { header: 'Phone No', key: 'phoneNo', width: 16 },
+      { header: 'Submission Status', key: 'status', width: 16 },
+      { header: 'Has Video', key: 'hasVideo', width: 12 },
+      { header: 'Submitted At', key: 'submittedAt', width: 22 },
+      { header: 'Rating', key: 'rating', width: 16 },
+      { header: 'Review Feedback', key: 'reviewText', width: 45 },
+      { header: 'Pros / Keywords', key: 'pros', width: 32 },
+      { header: 'Cons / Keywords', key: 'cons', width: 32 },
+      { header: 'Reviewed At', key: 'reviewedAt', width: 22 },
+      { header: 'Reviewed By', key: 'reviewedBy', width: 14 },
+      { header: 'Drive Folder Path', key: 'driveFolderPath', width: 48 },
+      { header: 'Video Drive ID', key: 'videoDriveId', width: 30 },
+    ];
+
+    const headerRow = worksheet.getRow(1);
+    headerRow.font = { bold: true, color: { argb: 'FFFFFF' }, size: 11 };
+    headerRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: '1E293B' },
+    };
+    headerRow.height = 24;
+    worksheet.views = [{ state: 'frozen', ySplit: 1 }];
+
+    let exported = 0;
+    students.forEach((student, idx) => {
+      const key = `${student.rollNo}|${student.year}|${student.section}`;
+      const sub = submissionByRoll.get(key) || null;
+
+      const ratingText = sub?.rating
+        ? `${sub.rating} (${RATING_LABELS[sub.rating] || sub.rating})`
+        : sub?.videoDriveId
+          ? 'Not Rated'
+          : '';
+
+      worksheet.addRow({
+        sno: idx + 1,
+        name: student.name,
+        rollNo: student.rollNo,
+        year: `Year ${student.year}`,
+        section: student.section,
+        branch: student.branch,
+        email: sub?.email || `${student.rollNo.toLowerCase()}@itassociations.local`,
+        phoneNo: sub?.phoneNo || '',
+        status: sub ? sub.status : 'NOT SUBMITTED',
+        hasVideo: sub?.videoDriveId ? 'Yes' : 'No',
+        submittedAt: sub ? new Date(sub.submittedAt).toLocaleString() : '',
+        rating: ratingText,
+        reviewText: sub?.reviewText || '',
+        pros: (sub?.reviewPros || []).join(', '),
+        cons: (sub?.reviewCons || []).join(', '),
+        reviewedAt: sub?.reviewedAt ? new Date(sub.reviewedAt).toLocaleString() : '',
+        reviewedBy: sub?.reviewedBy || '',
+        driveFolderPath: sub?.driveFolderPath || '',
+        videoDriveId: sub?.videoDriveId || '',
+      });
+      if (sub) exported += 1;
+    });
+
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename=${eventSlug}_2026_All_Students.xlsx`
+    );
+
+    await ActivityService.log({
+      eventId,
+      category: 'ADMIN',
+      action: 'Admin exported full student roster',
+      details: `Exported ${students.length} students (${exported} with submissions) for ${eventName}`,
+      status: 'SUCCESS',
+    });
+
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (err: any) {
+    console.error('Error exporting student roster:', err);
+    res.status(500).json({ error: 'STUDENTS_EXPORT_FAILED', message: err.message });
+  }
+});
+
+// ======================================================
 // 4. SUBMISSION DETAIL (GET /admin/api/submissions/:id)
 // ======================================================
 router.get('/submissions/:id', async (req: Request, res: Response): Promise<void> => {

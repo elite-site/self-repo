@@ -108,13 +108,16 @@ export const Navbar: React.FC<NavbarProps> = ({ session, onLogout, onNavigate })
             <div className="relative" ref={chipRef}>
               <button
                 onClick={() => setProfileOpen(!profileOpen)}
-                className="flex items-center gap-2 pl-3 pr-2 py-1.5 rounded-full bg-white/15 hover:bg-white/25 border border-white/20 transition-colors cursor-pointer"
+                onKeyDown={(e) => { if (e.key === 'Escape') setProfileOpen(false); }}
+                aria-expanded={profileOpen}
+                aria-haspopup="menu"
+                className="flex items-center gap-2 pl-3 pr-2 py-1.5 rounded-full bg-white hover:bg-red-50 border border-white/60 transition-colors cursor-pointer"
               >
-                <span className="w-8 h-8 rounded-full bg-white text-elite-red flex items-center justify-center text-xs font-extrabold font-display shrink-0">
+                <span className="w-8 h-8 rounded-full bg-red-50 text-elite-red flex items-center justify-center text-xs font-extrabold font-display shrink-0">
                   {initials}
                 </span>
-                <span className="max-w-[90px] truncate">{session.student.name.split(' ')[0]}</span>
-                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${profileOpen ? 'rotate-180' : ''}`} />
+                <span className="max-w-[90px] truncate text-elite-red">{session.student.name.split(' ')[0]}</span>
+                <ChevronDown className={`w-3.5 h-3.5 text-elite-red transition-transform ${profileOpen ? 'rotate-180' : ''}`} />
               </button>
 
               {profileOpen && (
@@ -156,6 +159,9 @@ export const Navbar: React.FC<NavbarProps> = ({ session, onLogout, onNavigate })
             <div className="relative mr-2" ref={chipRef}>
               <button
                 onClick={() => setProfileOpen(!profileOpen)}
+                onKeyDown={(e) => { if (e.key === 'Escape') setProfileOpen(false); }}
+                aria-expanded={profileOpen}
+                aria-haspopup="menu"
                 className="w-9 h-9 rounded-full bg-white text-elite-red flex items-center justify-center text-xs font-extrabold font-display cursor-pointer"
               >
                 {initials}

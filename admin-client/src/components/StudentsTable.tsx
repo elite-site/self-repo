@@ -9,6 +9,7 @@ import {
   Eye,
   Clapperboard,
   Clock,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { StudentsResponse, Student, Submission } from '../types';
 import { adminApi } from '../services/api';
@@ -128,6 +129,15 @@ export const StudentsTable: React.FC<StudentsTableProps> = ({
         >
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-elite-red' : ''}`} />
           <span>Refresh Roster</span>
+        </button>
+
+        <button
+          onClick={() => window.open(adminApi.getStudentsExportUrl(activeEventId), '_blank')}
+          className="inline-flex items-center gap-2 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition-colors shadow-sm cursor-pointer self-start sm:self-auto"
+          title="Download the full student roster, with all submission and review information, as an Excel (.xlsx) file"
+        >
+          <FileSpreadsheet className="w-3.5 h-3.5" />
+          <span>Download All Students (Excel)</span>
         </button>
       </div>
 
