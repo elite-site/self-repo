@@ -86,16 +86,17 @@ model AdminUser {
   createdAt    DateTime  @default(now())
 }
 
-// Student roster imported from Students_Login_Credentials (IT Department)
+// Student roster imported from Students_Master_List.xlsx (IT Department).
+// email is the Google Workspace identity key (allowlist); NULL means not yet registered.
 model Student {
-  id           String   @id @default(cuid())
-  rollNo       String   @unique
-  name         String
-  year         Int      // 2, 3, 4
-  section      String   // "A" | "B"
-  branch       String   @default("IT")
-  passwordHash String
-  createdAt    DateTime @default(now())
+  id        String   @id @default(cuid())
+  rollNo    String   @unique
+  email     String?  @unique
+  name      String
+  year      Int      // 2, 3, 4
+  section   String   // "A" | "B"
+  branch    String   @default("IT")
+  createdAt DateTime @default(now())
 
   @@unique([rollNo, year, section])
   @@index([name])
