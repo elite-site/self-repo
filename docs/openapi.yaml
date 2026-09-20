@@ -1,0 +1,667 @@
+openapi: "3.0.3"
+info:
+  title: Self Introduction Portal API
+  version: "1.0.0"
+  description: |
+    Backend API for the Student Self Introduction Portal (Google Workspace SSO).
+
+    Student endpoints are mounted under `/api/student` (see `backend/src/server.ts`).
+    `GET /api/student/me`, `POST /api/student/submission`, and
+    `GET /api/student/submission/media/video` require a student JWT sent as
+    `Authorization: Bearer <token>`. The JWT is minted by the SSO callback and contains
+    `{ studentId, rollNo, name, email }` (see `backend/src/middleware/studentAuth.ts`).
+
+    Admin login is mounted under `/admin` (see `backend/src/server.ts`) and sets an
+    httpOnly session cookie (`pc_admin_session` by default, see `backend/src/config/env.ts`).
+
+    Errors share the shape `{ "error": "<CODE>", "message": "<human-readable message>" }`
+    (see the route handlers in `backend/src/routes/student.routes.ts` and
+    `backend/src/routes/admin.auth.routes.ts`).
+servers:
+  - url: http://localhost:5000
+    description: Local development (default PORT in backend/src/config/env.ts)
+
+tags:
+  - name: Student SSO
+    description: Google Workspace login flow (backend/src/routes/student.routes.ts, services/sso.service.ts)
+  - name: Student
+    description: Authenticated student profile, submission, and media endpoints
+  - name: Admin
+    description: Admin authentication (backend/src/routes/admin.auth.routes.ts)
+
+paths:
+  /api/student/google/authorize:
+    get:
+      tags: [Student SSO]
+      summary: Start Google Workspace SSO
+      description: |
+        Redirects (302) to Google's OAuth authorization endpoint with a signed `state`
+        JWT (10 minute expiry) so the callback can be verified. No authentication required.
+        Implemented as a GET route (see `backend/src/routes/student.routes.ts`, `/google/authorize`).
+      operationId: studentGoogleAuthorize
+      responses:
+        "302":
+          description: Redirect to Google OAuth. `Location` carries `state=<signed state JWT>`.
+          headers:
+            Location:
+              description: |
+                Google authorization URL:
+                `https://accounts.google.com/o/oauth2/v2/auth?client_id=...&redirect_uri=...&response_type=code&scope=openid%20email%20profile&hd=<GOOGLE_SSO_HD>&prompt=select_account&state=<signed JWT>`
+              schema:
+                type: string
+                format: uri
+
+  /api/student/google/callback:
+    get:
+      tags: [Student SSO]
+      summary: Handle the Google OAuth callback
+      description: |
+        Verifies the `state` JWT (signed against `STUDENT_JWT_SECRET`), exchanges `code`
+        for a Google id_token, checks the identity against the college domain
+        (`GOOGLE_SSO_HD`, `sasi.ac.in`), looks up the email in the student roster, and on
+        success mints a 12h student JWT and redirects (302) to `STUDENT_APP_LOGIN_URL`
+        with `?token=<jwt>`.
+      operationId: studentGoogleCallback
+      parameters:
+        - name: code
+          in: query
+          required: false
+          description: Authorization code returned by Google.
+          schema:
+            type: string
+        - name: state
+          in: query
+          required: false
+          description: Signed state JWT that must match the one from /google/authorize.
+          schema:
+            type: string
+      responses:
+        "302":
+          description: |
+            Success. Redirect to `STUDENT_APP_LOGIN_URL` (default `http://localhost:5173/login`)
+            with the minted student JWT appended as a `token` query parameter.
+          headers:
+            Location:
+              description: "<STUDENT_APP_LOGIN_URL>?token=<student JWT (12h)>"
+              schema:
+                type: string
+                format: uri
+        "400":
+          description: Request rejected before code exchange.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorBody"
+              examples:
+                INVALID_STATE:
+                  summary: state missing/expired
+                  value:
+                    error: INVALID_STATE
+                    message: State mismatch or expired. Try signing in again.
+                MISSING_CODE:
+                  summary: no code query param
+                  value:
+                    error: MISSING_CODE
+                    message: No authorization code returned.
+        "403":
+          description: Identity rejected by policy or roster.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorBody"
+              examples:
+                DOMAIN_FORBIDDEN:
+                  summary: email not in allowed college domain
+                  value:
+                    error: DOMAIN_FORBIDDEN
+                    message: Only sasi.ac.in college emails are allowed.
+                EMAIL_NOT_REGISTERED:
+                  summary: verified email not in the roster
+                  value:
+                    error: EMAIL_NOT_REGISTERED
+                    message: This college email is not registered in the roster. Contact your coordinators.
+        "500":
+          description: Code exchange or token verification failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorBody"
+              examples:
+                SSO_FAILED:
+                  summary: generic SSO failure
+                  value:
+                    error: SSO_FAILED
+                    message: Could not complete Google sign-in.
+
+  /api/student/me:
+    get:
+      tags: [Student]
+      summary: Get the current student profile and submission
+      description: |
+        Returns the authenticated student's profile plus their latest submission
+        (including the admin review). Requires `Authorization: Bearer <student JWT>`
+        (see `backend/src/middleware/studentAuth.ts`).
+      operationId: getStudentMe
+      security:
+        - StudentAuth: []
+      responses:
+        "200":
+          description: Student profile and latest submission (or null if never submitted).
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [student]
+                properties:
+                  student:
+                    $ref: "#/components/schemas/StudentProfile"
+        "401":
+          description: Missing or invalid student JWT.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorBody"
+              examples:
+                UNAUTHORIZED:
+                  summary: no Bearer token
+                  value:
+                    error: UNAUTHORIZED
+                    message: Student authentication required. Please log in.
+                INVALID_TOKEN:
+                  summary: expired or invalid token
+                  value:
+                    error: INVALID_TOKEN
+                    message: Your session has expired or is invalid. Please log in again.
+        "404":
+          description: Student record not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorBody"
+              examples:
+                NOT_FOUND:
+                  summary: student missing from DB
+                  value:
+                    error: NOT_FOUND
+                    message: Student account not found.
+        "500":
+          description: Failed to fetch the student profile.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorBody"
+              examples:
+                FAILED_TO_FETCH_PROFILE:
+                  summary: DB/query failure
+                  value:
+                    error: FAILED_TO_FETCH_PROFILE
+                    message: <server error message>
+
+  /api/student/submission:
+    post:
+      tags: [Student]
+      summary: Upload (or replace) the introduction video
+      description: |
+        Multipart upload of the self-introduction video for the current student.
+        Accepts exactly one file in a multipart `video` field. Allowed formats:
+        MP4, MOV, WebM; max size 25 MB (see `MAX_VIDEO_SIZE_MB` in
+        `backend/src/config/env.ts` and `backend/src/middleware/upload.ts`).
+
+        Resubmission deletes the previous Drive video and clears the previous admin
+        review. Requires `Authorization: Bearer <student JWT>`.
+      operationId: submitVideo
+      security:
+        - StudentAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [video]
+              properties:
+                video:
+                  type: string
+                  format: binary
+                  description: |
+                    The introduction video. MP4/MOV/WebM, up to 25 MB.
+                    Max of 1 file per request (multer `submissionUploadMiddleware`).
+      responses:
+        "201":
+          description: Submission created or updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, id, message]
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  id:
+                    type: string
+                    description: Submission id (cuid).
+                  message:
+                    type: string
+                    example: Your introduction video has been submitted successfully.
+        "400":
+          description: |
+            Validation or upload failure. Multer limits (file > 25 MB, > 1 file) surface
+            via the global error handler (see `backend/src/middleware/errorHandler.ts`).
+          content:
+            application/json:
+              oneOf:
+                - schema:
+                    $ref: "#/components/schemas/ErrorBody"
+                - schema:
+                    $ref: "#/components/schemas/FieldErrorBody"
+              examples:
+                VALIDATION_ERROR_MISSING:
+                  summary: no video file in the multipart body
+                  value:
+                    error: VALIDATION_ERROR
+                    field: video
+                    message: Self introduction video is required.
+                VALIDATION_ERROR_BAD_FORMAT:
+                  summary: unsupported format or magic bytes blocked
+                  value:
+                    error: VALIDATION_ERROR
+                    field: video
+                    message: Unsupported file format. Please upload MP4, MOV, or WebM video up to 25 MB.
+                FILE_TOO_LARGE:
+                  summary: multer LIMIT_FILE_SIZE
+                  value:
+                    error: FILE_TOO_LARGE
+                    message: One of your uploaded files exceeds the maximum allowed size limit.
+                UPLOAD_ERROR:
+                  summary: other multer error
+                  value:
+                    error: UPLOAD_ERROR
+                    message: <multer error message>
+        "401":
+          description: Missing or invalid student JWT.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorBody"
+              examples:
+                UNAUTHORIZED:
+                  summary: no Bearer token
+                  value:
+                    error: UNAUTHORIZED
+                    message: Student authentication required. Please log in.
+                INVALID_TOKEN:
+                  summary: expired or invalid token
+                  value:
+                    error: INVALID_TOKEN
+                    message: Your session has expired or is invalid. Please log in again.
+        "404":
+          description: Student record not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorBody"
+              examples:
+                NOT_FOUND:
+                  summary: student missing from DB
+                  value:
+                    error: NOT_FOUND
+                    message: Student account not found.
+        "500":
+          description: Drive upload or DB write failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorBody"
+              examples:
+                SUBMISSION_FAILED:
+                  summary: unexpected server error during upload
+                  value:
+                    error: SUBMISSION_FAILED
+                    message: An error occurred while uploading your submission. Please try again.
+
+  /api/student/submission/media/video:
+    get:
+      tags: [Student]
+      summary: Stream the student's own submission video
+      description: |
+        Proxies the latest submission's video from Google Drive (or mock storage) for the
+        authenticated student. On success the response body is the raw video bytes;
+        `Content-Type` is the Drive file's mime type (e.g. `video/mp4`), `Content-Length`
+        the byte size, and `Cache-Control: private, max-age=86400`. Requires
+        `Authorization: Bearer <student JWT>`.
+      operationId: streamSubmissionVideo
+      security:
+        - StudentAuth: []
+      responses:
+        "200":
+          description: Video streamed as the raw bytes.
+          headers:
+            Content-Type:
+              description: Mime type reported by Drive for the stored video.
+              schema:
+                type: string
+                example: video/mp4
+            Content-Length:
+              description: Byte size of the video, when known.
+              schema:
+                type: integer
+                format: int64
+            Cache-Control:
+              description: Set to `private, max-age=86400`.
+              schema:
+                type: string
+                example: private, max-age=86400
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "401":
+          description: Missing or invalid student JWT.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorBody"
+              examples:
+                UNAUTHORIZED:
+                  summary: no Bearer token
+                  value:
+                    error: UNAUTHORIZED
+                    message: Student authentication required. Please log in.
+                INVALID_TOKEN:
+                  summary: expired or invalid token
+                  value:
+                    error: INVALID_TOKEN
+                    message: Your session has expired or is invalid. Please log in again.
+        "404":
+          description: Student or video not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorBody"
+              examples:
+                NOT_FOUND:
+                  summary: student missing from DB
+                  value:
+                    error: NOT_FOUND
+                    message: Student account not found.
+                MEDIA_NOT_FOUND:
+                  summary: no submission video uploaded yet
+                  value:
+                    error: MEDIA_NOT_FOUND
+                    message: No video has been uploaded yet.
+        "500":
+          description: Failed to stream the video.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorBody"
+              examples:
+                MEDIA_STREAM_ERROR:
+                  summary: Drive read/proxy failure
+                  value:
+                    error: MEDIA_STREAM_ERROR
+                    message: Could not stream your video.
+
+  /admin/login:
+    post:
+      tags: [Admin]
+      summary: Admin login
+      description: |
+        Authenticates an admin by username (or email) + password (bcrypt-compared against
+        `AdminUser.passwordHash`). On success, mints a 12h admin JWT and sets it as an
+        httpOnly `SameSite=Strict` cookie (name `pc_admin_session` by default, see
+        `ADMIN_SESSION_COOKIE_NAME` in `backend/src/config/env.ts`; `secure` flag only in
+        production). Rate-limited to 10 attempts / 15 minutes per IP
+        (`adminLoginRateLimiter`, `backend/src/middleware/rateLimiter.ts`).
+      operationId: adminLogin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminLoginRequest"
+      responses:
+        "200":
+          description: Login succeeded; session cookie set.
+          headers:
+            Set-Cookie:
+              description: "`pc_admin_session=<jwt>; Path=/; HttpOnly; SameSite=Strict; Max-Age=43200` (plus `Secure` in production)."
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminLoginSuccess"
+        "400":
+          description: Missing username or password.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorBody"
+              examples:
+                MISSING_FIELDS:
+                  summary: username/password not provided
+                  value:
+                    error: MISSING_FIELDS
+                    message: Both username and password are required.
+        "401":
+          description: Unknown user or password mismatch.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorBody"
+              examples:
+                INVALID_CREDENTIALS:
+                  summary: bad username or password
+                  value:
+                    error: INVALID_CREDENTIALS
+                    message: Invalid username or password.
+        "429":
+          description: Rate limit exceeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorBody"
+              examples:
+                TOO_MANY_LOGIN_ATTEMPTS:
+                  summary: more than 10 attempts per 15 minutes
+                  value:
+                    error: TOO_MANY_LOGIN_ATTEMPTS
+                    message: Too many login attempts. Please wait 15 minutes before trying again.
+        "500":
+          description: Login failed due to a server-side error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorBody"
+              examples:
+                LOGIN_FAILED:
+                  summary: unexpected error
+                  value:
+                    error: LOGIN_FAILED
+                    message: An error occurred during login. Please try again.
+
+components:
+  securitySchemes:
+    StudentAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        Student JWT minted by GET /api/student/google/callback. Verified against
+        `STUDENT_JWT_SECRET`; 12h expiry. Payload: `{ studentId, rollNo, name, email }`
+        (see `backend/src/middleware/studentAuth.ts`).
+
+  schemas:
+    ErrorBody:
+      type: object
+      description: Uniform error envelope used by all route handlers.
+      required: [error, message]
+      properties:
+        error:
+          type: string
+          description: Machine-readable error code.
+          example: NOT_FOUND
+        message:
+          type: string
+          description: Human-readable error message.
+          example: Student account not found.
+
+    FieldErrorBody:
+      type: object
+      description: Error body variant that additionally names the offending form field (e.g. submission `video`).
+      required: [error, field, message]
+      properties:
+        error:
+          type: string
+          example: VALIDATION_ERROR
+        field:
+          type: string
+          description: Name of the form field that failed validation.
+          example: video
+        message:
+          type: string
+
+    StudentProfile:
+      type: object
+      description: |
+        `serializeStudentView` output (see `backend/src/routes/student.routes.ts`).
+        `submission` is the student's latest submission, or null if none exists.
+      required: [id, rollNo, name, year, section, branch, submission]
+      properties:
+        id:
+          type: string
+          description: Student id (cuid).
+        rollNo:
+          type: string
+          example: "2024IT101"
+        email:
+          type: string
+          format: email
+          nullable: true
+          description: Roster Google Workspace email; null if not yet registered.
+        name:
+          type: string
+          example: John Doe
+        year:
+          type: integer
+          description: 2, 3, or 4 (see `Student.year` in the Prisma schema).
+        section:
+          type: string
+          description: "Roster section (e.g. A, B)."
+          example: A
+        branch:
+          type: string
+          description: "Branch, defaults to IT."
+          example: IT
+        submission:
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/SubmissionView"
+      example:
+        id: clx0000000000000000000000
+        rollNo: "2024IT101"
+        email: 2024it101@sasi.ac.in
+        name: John Doe
+        year: 3
+        section: A
+        branch: IT
+        submission:
+          id: clx0000000000000000000001
+          status: SUBMITTED
+          submittedAt: "2026-09-20T10:00:00.000Z"
+          videoUploaded: true
+          reviewText: null
+          reviewPros: []
+          reviewCons: []
+          reviewedAt: null
+
+    SubmissionView:
+      type: object
+      description: |
+        Public submission summary built by `serializeStudentView`
+        (see `backend/src/routes/student.routes.ts`).
+      required: [id, status, submittedAt, videoUploaded]
+      properties:
+        id:
+          type: string
+          description: Submission id (cuid).
+        status:
+          $ref: "#/components/schemas/SubmissionStatus"
+        submittedAt:
+          type: string
+          format: date-time
+        videoUploaded:
+          type: boolean
+          description: True when `videoDriveId` is set.
+        reviewText:
+          type: string
+          nullable: true
+          description: Free-text admin feedback; null until reviewed.
+        reviewPros:
+          type: array
+          description: Positive hashtag keywords from the admin review.
+          items:
+            type: string
+        reviewCons:
+          type: array
+          description: Negative hashtag keywords from the admin review.
+          items:
+            type: string
+        reviewedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    SubmissionStatus:
+      type: string
+      description: Value of `Submission.status` (see `SubmissionStatus` enum in the Prisma schema).
+      enum: [SUBMITTED, UNDER_REVIEW, REVIEWED, WINNER, REJECTED]
+
+    AdminLoginRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+          description: "Admin username or registered email (lookup is case-insensitive)."
+          example: admin
+        password:
+          type: string
+          format: password
+          example: "s3cret"
+      example:
+        username: admin
+        password: s3cret
+
+    AdminLoginSuccess:
+      type: object
+      required: [success, user]
+      properties:
+        success:
+          type: boolean
+          example: true
+        user:
+          $ref: "#/components/schemas/AdminUserSummary"
+
+    AdminUserSummary:
+      type: object
+      description: Non-secret admin fields returned at login (`AdminUser` model, nulls possible per schema).
+      required: [id]
+      properties:
+        id:
+          type: string
+          description: Admin user id (cuid).
+        email:
+          type: string
+          format: email
+          nullable: true
+        username:
+          type: string
+          nullable: true
+      example:
+        id: clx0000000000000000000002
+        email: admin@club.internal
+        username: admin
