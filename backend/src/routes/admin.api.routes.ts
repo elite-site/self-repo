@@ -905,4 +905,270 @@ router.get('/activity-logs', async (req: Request, res: Response): Promise<void> 
   }
 });
 
+
+// ==========================================
+// MODERATION, VOTING, ANNOUNCEMENTS, SETTINGS, SKILLS
+// ==========================================
+
+router.get('/moderation/videos', async (req, res) => {
+  try {
+    const videos = await prisma.introVideo.findMany({
+      where: { status: { in: ['PENDING', 'UNDER_REVIEW'] } },
+      include: { student: true }
+    });
+    res.json(videos);
+  } catch (err: any) {
+    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+  }
+});
+
+router.get('/moderation/resumes', async (req, res) => {
+  try {
+    const resumes = await prisma.resume.findMany({
+      where: { status: { in: ['PENDING', 'UNDER_REVIEW'] } },
+      include: { student: true }
+    });
+    res.json(resumes);
+  } catch (err: any) {
+    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+  }
+});
+
+router.get('/moderation/achievements', async (req, res) => {
+  try {
+    const achievements = await prisma.achievement.findMany({
+      where: { status: 'PENDING' },
+      include: { student: true, category: true }
+    });
+    res.json(achievements);
+  } catch (err: any) {
+    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+  }
+});
+
+router.get('/moderation/certificates', async (req, res) => {
+  try {
+    const certificates = await prisma.certificate.findMany({
+      where: { status: 'PENDING' },
+      include: { student: true }
+    });
+    res.json(certificates);
+  } catch (err: any) {
+    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+  }
+});
+
+router.patch('/moderation/videos/:id', async (req, res) => {
+  try {
+    const { action, reason } = req.body;
+    const status = action === 'approve' ? 'APPROVED' : action === 'reject' ? 'REJECTED' : 'CHANGES_REQUESTED';
+    await prisma.introVideo.update({
+      where: { id: req.params.id },
+      data: { status, reviewNote: reason }
+    });
+    res.json({ message: 'Success' });
+  } catch (err: any) {
+    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+  }
+});
+
+router.patch('/moderation/resumes/:id', async (req, res) => {
+  try {
+    const { action, reason } = req.body;
+    const status = action === 'approve' ? 'APPROVED' : action === 'reject' ? 'REJECTED' : 'CHANGES_REQUESTED';
+    await prisma.resume.update({
+      where: { id: req.params.id },
+      data: { status, reviewNote: reason }
+    });
+    res.json({ message: 'Success' });
+  } catch (err: any) {
+    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+  }
+});
+
+router.patch('/moderation/achievements/:id', async (req, res) => {
+  try {
+    const { action, reason } = req.body;
+    const status = action === 'approve' ? 'APPROVED' : action === 'reject' ? 'REJECTED' : 'CHANGES_REQUESTED';
+    await prisma.achievement.update({
+      where: { id: req.params.id },
+      data: { status, reviewNote: reason }
+    });
+    res.json({ message: 'Success' });
+  } catch (err: any) {
+    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+  }
+});
+
+router.get('/voting', async (req, res) => {
+  try {
+    const campaigns = await prisma.votingCampaign.findMany();
+    res.json(campaigns);
+  } catch (err: any) {
+    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+  }
+});
+
+router.post('/voting', async (req, res) => {
+  try {
+    const { title, description, votingStart, votingEnd, startDate, endDate, eventId } = req.body;
+    const campaign = await prisma.votingCampaign.create({
+      data: {
+        title,
+        description,
+        startsAt: votingStart || startDate ? new Date(votingStart || startDate) : null,
+        endsAt: votingEnd || endDate ? new Date(votingEnd || endDate) : null,
+        eventId: eventId || null,
+        status: 'DRAFT'
+      }
+    });
+    res.status(201).json(campaign);
+  } catch (err: any) {
+    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+  }
+});
+
+router.patch('/voting/:id', async (req, res) => {
+  try {
+    const { status, title, description } = req.body;
+    const campaign = await prisma.votingCampaign.update({
+      where: { id: req.params.id },
+      data: { status, title, description }
+    });
+    res.json(campaign);
+  } catch (err: any) {
+    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+  }
+});
+
+router.get('/voting/:id/results', async (req, res) => {
+  try {
+    const votes = await prisma.vote.groupBy({
+      by: ['candidateId'],
+      where: { campaignId: req.params.id },
+      _count: { id: true }
+    });
+    res.json(votes);
+  } catch (err: any) {
+    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+  }
+});
+
+router.get('/announcements', async (req, res) => {
+  try {
+    const announcements = await prisma.announcement.findMany({ orderBy: { createdAt: 'desc' } });
+    res.json(announcements);
+  } catch (err: any) {
+    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+  }
+});
+
+router.post('/announcements', async (req, res) => {
+  try {
+    const { title, body, content, message, scheduledAt } = req.body;
+    const announcement = await prisma.announcement.create({
+      data: {
+        title,
+        message: body || content || message || '',
+        createdBy: (req as any).user?.username || 'admin',
+        scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
+        status: scheduledAt ? 'SCHEDULED' : 'PUBLISHED',
+        publishedAt: scheduledAt ? null : new Date()
+      }
+    });
+    // Create notifications for all students
+    const students = await prisma.student.findMany({ select: { id: true } });
+    if (students.length > 0) {
+      await prisma.notification.createMany({
+        data: students.map(s => ({
+          studentId: s.id,
+          title: `Announcement: ${title}`,
+          message: body || content || message || '',
+          type: 'ANNOUNCEMENT'
+        }))
+      });
+    }
+    res.status(201).json(announcement);
+  } catch (err: any) {
+    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+  }
+});
+
+router.get('/settings', async (req, res) => {
+  try {
+    const settings = await prisma.portalSettings.findMany();
+    res.json(settings);
+  } catch (err: any) {
+    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+  }
+});
+
+router.put('/settings', async (req, res) => {
+  try {
+    const { key, value, group } = req.body;
+    if (key) {
+      await prisma.portalSettings.upsert({
+        where: { key },
+        update: { value: String(value), group: group || 'general' },
+        create: { key, value: String(value), group: group || 'general' }
+      });
+    }
+    res.json({ message: 'Success' });
+  } catch (err: any) {
+    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+  }
+});
+
+router.get('/skills', async (req, res) => {
+  try {
+    const skills = await prisma.skill.findMany();
+    res.json(skills);
+  } catch (err: any) {
+    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+  }
+});
+
+router.post('/skills', async (req, res) => {
+  try {
+    const { name, category } = req.body;
+    const skill = await prisma.skill.create({
+      data: { name, category: category || 'GENERAL', isActive: true }
+    });
+    res.status(201).json(skill);
+  } catch (err: any) {
+    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+  }
+});
+
+router.delete('/skills/:id', async (req, res) => {
+  try {
+    await prisma.skill.delete({ where: { id: req.params.id } });
+    res.json({ message: 'Deleted' });
+  } catch (err: any) {
+    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+  }
+});
+
+router.get('/achievement-categories', async (req, res) => {
+  try {
+    const categories = await prisma.achievementCategory.findMany();
+    res.json(categories);
+  } catch (err: any) {
+    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+  }
+});
+
+router.post('/achievement-categories', async (req, res) => {
+  try {
+    const { name } = req.body;
+    const cat = await prisma.achievementCategory.create({
+      data: { name }
+    });
+    res.status(201).json(cat);
+  } catch (err: any) {
+    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+  }
+});
+
+
 export default router;

@@ -10,6 +10,22 @@ import { LoginPage } from './components/LoginPage';
 import { AdminStats, AdminUser, Submission } from './types';
 import { adminApi } from './services/api';
 
+// Pages
+import { Moderation } from './pages/Moderation';
+import { AdminEvents } from './pages/AdminEvents';
+import { EventRegistrations } from './pages/EventRegistrations';
+import { VotingManagement } from './pages/VotingManagement';
+import { VotingResults } from './pages/VotingResults';
+import { Communications } from './pages/Communications';
+import { EmailAutomation } from './pages/EmailAutomation';
+import { EmailHistory } from './pages/EmailHistory';
+import { Analytics } from './pages/Analytics';
+import { Exports } from './pages/Exports';
+import { Storage } from './pages/Storage';
+import { RolesPermissions } from './pages/RolesPermissions';
+import { AuditLogs } from './pages/AuditLogs';
+import { Settings } from './pages/Settings';
+
 export const App: React.FC = () => {
   const [user, setUser] = useState<AdminUser | null>(null);
   const [authChecking, setAuthChecking] = useState(true);
@@ -153,7 +169,21 @@ export const App: React.FC = () => {
             />
           )}
 
+          {activeTab === 'moderation' && <Moderation />}
+          {activeTab === 'events' && <AdminEvents />}
+          {activeTab === 'event-registrations' && <EventRegistrations />}
+          {activeTab === 'voting' && <VotingManagement />}
+          {activeTab === 'voting-results' && <VotingResults />}
+          {activeTab === 'communications' && <Communications />}
+          {activeTab === 'email-automation' && <EmailAutomation />}
+          {activeTab === 'email-history' && <EmailHistory />}
+          {activeTab === 'analytics' && <Analytics />}
+          {activeTab === 'exports' && <Exports />}
+          {activeTab === 'storage' && <Storage />}
+          {activeTab === 'roles' && <RolesPermissions />}
+          {activeTab === 'audit-logs' && <AuditLogs />}
           {activeTab === 'activity' && <ActivityLogView activeEventId={ACTIVE_EVENT_ID} />}
+          {activeTab === 'settings' && <Settings />}
         </main>
       </div>
 

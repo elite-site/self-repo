@@ -1,0 +1,108 @@
+import { Router, Request, Response } from 'express';
+import { prisma } from '../lib/prisma';
+
+const router = Router();
+
+router.get('/', async (req: Request, res: Response) => {
+  try {
+    const { search, year, section, skills } = req.query;
+    
+    const where: any = { profile: { isPublic: true } };
+    
+    if (year) where.year = parseInt(year as string);
+    if (section) where.section = String(section);
+    if (search) {
+      where.OR = [
+        { name: { contains: String(search), mode: 'insensitive' } },
+        { rollNo: { contains: String(search), mode: 'insensitive' } }
+      ];
+    }
+    if (skills) {
+      const skillsArray = Array.isArray(skills) ? skills : [skills];
+      where.profile = {
+        ...where.profile,
+        skills: { some: { skillId: { in: skillsArray as string[] } } }
+      };
+    }
+    
+    const students = await prisma.student.findMany({
+      where,
+      select: {
+        id: true,
+        rollNo: true,
+        name: true,
+        year: true,
+        section: true,
+        profile: {
+          select: {
+            photoUrl: true,
+            biography: true,
+            skills: { include: { skill: true } }
+          }
+        }
+      },
+      take: 50
+    });
+    
+    res.json(students);
+  } catch (err: any) {
+    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+  }
+});
+
+router.get('/:rollNo', async (req: Request, res: Response) => {
+  try {
+    const student = await prisma.student.findUnique({
+      where: { rollNo: req.params.rollNo },
+      include: {
+        profile: { include: { skills: { include: { skill: true } } } },
+        projects: { orderBy: { displayOrder: 'asc' } },
+        achievements: { where: { status: 'APPROVED' }, include: { category: true } },
+        certificates: { where: { status: 'APPROVED' } },
+        resumes: { where: { status: 'APPROVED' }, take: 1, orderBy: { submittedAt: 'desc' } }
+      }
+    });
+    if (!student || !student.profile?.isPublic) {
+      return res.status(404).json({ error: 'NOT_FOUND', message: 'Student not found or not public' });
+    }
+    res.json(student);
+  } catch (err: any) {
+    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+  }
+});
+
+router.get('/:rollNo/resume', async (req: Request, res: Response) => {
+  try {
+    const student = await prisma.student.findUnique({
+      where: { rollNo: req.params.rollNo },
+      include: {
+        profile: true,
+        resumes: { where: { status: 'APPROVED' }, take: 1, orderBy: { submittedAt: 'desc' } }
+      }
+    });
+    
+    if (!student || !student.profile?.isPublic || !student.resumes.length) {
+      return res.status(404).json({ error: 'NOT_FOUND', message: 'Resume not available' });
+    }
+    
+    const resume = student.resumes[0];
+    const resumeUrl = resume.driveFileId ? `/api/public/media/resume/${resume.driveFileId}` : '/mock-resume.pdf';
+    res.redirect(resumeUrl);
+  } catch (err: any) {
+    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+  }
+});
+
+router.get('/events', async (_req: Request, res: Response) => {
+  try {
+    const events = await prisma.event.findMany({
+      where: { status: 'OPEN' },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json(events);
+  } catch (err: any) {
+    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+  }
+});
+
+export default router;

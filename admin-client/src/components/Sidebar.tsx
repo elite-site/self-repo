@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Home,
   ClipboardList,
@@ -6,6 +6,21 @@ import {
   Clock,
   LogOut,
   UserRound,
+  ShieldCheck,
+  CalendarDays,
+  Vote,
+  BarChart3,
+  Download,
+  HardDrive,
+  Lock,
+  ScrollText,
+  Settings,
+  Megaphone,
+  Mail,
+  MailOpen,
+  ChevronDown,
+  ChevronRight,
+  Layers,
 } from 'lucide-react';
 import { AdminUser } from '../types';
 
@@ -15,7 +30,21 @@ export type AdminTab =
   | 'dashboard'
   | 'submissions'
   | 'students'
-  | 'activity';
+  | 'activity'
+  | 'moderation'
+  | 'events'
+  | 'event-registrations'
+  | 'voting'
+  | 'voting-results'
+  | 'communications'
+  | 'email-automation'
+  | 'email-history'
+  | 'analytics'
+  | 'exports'
+  | 'storage'
+  | 'roles'
+  | 'audit-logs'
+  | 'settings';
 
 interface SidebarProps {
   activeTab: AdminTab;
@@ -24,97 +53,144 @@ interface SidebarProps {
   onLogout: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({
-  activeTab,
-  onSelectTab,
-  user: _user,
-  onLogout,
-}) => {
-  const navItems = [
-    { id: 'dashboard' as AdminTab, label: 'Home', icon: Home },
-    { id: 'submissions' as AdminTab, label: 'Videos Submitted', icon: ClipboardList },
-    { id: 'students' as AdminTab, label: 'All Students', icon: Users },
-  ];
+interface NavGroup {
+  label: string;
+  items: { id: AdminTab; label: string; icon: React.FC<{ className?: string }> }[];
+}
+
+const navGroups: NavGroup[] = [
+  {
+    label: 'Overview',
+    items: [
+      { id: 'dashboard', label: 'Dashboard', icon: Home },
+    ],
+  },
+  {
+    label: 'Students',
+    items: [
+      { id: 'students', label: 'All Students', icon: Users },
+      { id: 'submissions', label: 'Video Submissions', icon: ClipboardList },
+      { id: 'moderation', label: 'Moderation Queue', icon: ShieldCheck },
+    ],
+  },
+  {
+    label: 'Events',
+    items: [
+      { id: 'events', label: 'Events', icon: CalendarDays },
+      { id: 'event-registrations', label: 'Registrations', icon: Layers },
+    ],
+  },
+  {
+    label: 'Voting',
+    items: [
+      { id: 'voting', label: 'Voting Management', icon: Vote },
+      { id: 'voting-results', label: 'Voting Results', icon: BarChart3 },
+    ],
+  },
+  {
+    label: 'Communications',
+    items: [
+      { id: 'communications', label: 'Announcements', icon: Megaphone },
+      { id: 'email-automation', label: 'Email Automation', icon: Mail },
+      { id: 'email-history', label: 'Email History', icon: MailOpen },
+    ],
+  },
+  {
+    label: 'Data',
+    items: [
+      { id: 'analytics', label: 'Analytics', icon: BarChart3 },
+      { id: 'exports', label: 'Exports', icon: Download },
+    ],
+  },
+  {
+    label: 'System',
+    items: [
+      { id: 'storage', label: 'Storage', icon: HardDrive },
+      { id: 'roles', label: 'Roles & Permissions', icon: Lock },
+      { id: 'audit-logs', label: 'Audit Logs', icon: ScrollText },
+      { id: 'activity', label: 'Activity Log', icon: Clock },
+      { id: 'settings', label: 'Settings', icon: Settings },
+    ],
+  },
+];
+
+export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab, onLogout }) => {
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+
+  const toggle = (label: string) =>
+    setCollapsed((c) => ({ ...c, [label]: !c[label] }));
 
   return (
-    <aside className="w-64 bg-white dark:bg-neutral-900 border-r border-neutral-200 dark:border-neutral-800 flex flex-col justify-between shrink-0 h-screen sticky top-0 text-left z-30 select-none transition-colors">
+    <aside className="w-60 bg-white dark:bg-neutral-900 border-r border-neutral-200 dark:border-neutral-800 flex flex-col shrink-0 h-screen sticky top-0 text-left z-30 select-none transition-colors">
       <div className="flex flex-col h-full overflow-y-auto">
-        {/* 1. BRAND HEADER */}
-        <div className="p-5 border-b border-neutral-100 dark:border-neutral-800 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-red-50 text-elite-red flex items-center justify-center font-bold shrink-0">
-            <UserRound className="w-5 h-5" />
+        {/* BRAND */}
+        <div className="p-4 border-b border-neutral-100 dark:border-neutral-800 flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-red-50 text-[#DC2626] flex items-center justify-center shrink-0">
+            <UserRound className="w-4 h-4" />
           </div>
           <div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-xl font-extrabold text-elite-red font-display tracking-tight">
-                IT-Associations
-              </span>
-            </div>
-            <div className="text-[10px] text-neutral-500 dark:text-neutral-400 font-semibold uppercase tracking-wider">
-              Department of Information Technology
-            </div>
+            <div className="text-sm font-extrabold text-[#DC2626] tracking-tight leading-tight">ELITE Portal</div>
+            <div className="text-[10px] text-neutral-400 font-semibold uppercase tracking-wider">Admin Control</div>
           </div>
         </div>
 
-        {/* 2. PROGRAM BANNER (single fixed program) */}
-        <div className="p-4 border-b border-neutral-100 dark:border-neutral-800">
-          <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1.5 px-1">
-            PROGRAM
-          </div>
-          <div className="w-full bg-elite-red text-white p-2.5 rounded-lg font-bold text-xs flex items-center gap-2 shadow-sm">
-            <span className="text-sm">👤</span>
-            <span className="truncate">Self Introduction</span>
-          </div>
-        </div>
-
-        {/* 3. MAIN NAVIGATION LINKS */}
-        <nav className="p-3 space-y-1 flex-1">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = activeTab === item.id;
+        {/* NAV GROUPS */}
+        <nav className="flex-1 p-2 space-y-0.5 overflow-y-auto">
+          {navGroups.map((group) => {
+            const isOpen = !collapsed[group.label];
+            const hasActive = group.items.some((i) => i.id === activeTab);
             return (
-              <button
-                key={item.id}
-                onClick={() => onSelectTab(item.id)}
-                className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                  isActive
-                    ? 'bg-red-50 dark:bg-red-950/40 text-elite-red font-bold border-l-4 border-elite-red pl-2.5'
-                    : 'text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100/70 dark:hover:bg-neutral-800/60'
-                }`}
-              >
-                <Icon className={`w-4 h-4 ${isActive ? 'text-elite-red' : 'text-neutral-500 dark:text-neutral-400'}`} />
-                <span>{item.label}</span>
-              </button>
+              <div key={group.label} className="mb-1">
+                <button
+                  onClick={() => toggle(group.label)}
+                  className="w-full flex items-center justify-between px-2 py-1.5 text-[10px] font-bold text-neutral-400 uppercase tracking-widest hover:text-neutral-600 transition-colors cursor-pointer"
+                >
+                  <span className={hasActive ? 'text-[#DC2626]' : ''}>{group.label}</span>
+                  {isOpen ? (
+                    <ChevronDown className="w-3 h-3" />
+                  ) : (
+                    <ChevronRight className="w-3 h-3" />
+                  )}
+                </button>
+                {isOpen && (
+                  <div className="space-y-0.5">
+                    {group.items.map((item) => {
+                      const Icon = item.icon;
+                      const isActive = activeTab === item.id;
+                      return (
+                        <button
+                          key={item.id}
+                          onClick={() => onSelectTab(item.id)}
+                          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                            isActive
+                              ? 'bg-red-50 dark:bg-red-950/40 text-[#DC2626] font-bold'
+                              : 'text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100/70 dark:hover:bg-neutral-800/60'
+                          }`}
+                        >
+                          <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-[#DC2626]' : 'text-neutral-400'}`} />
+                          <span>{item.label}</span>
+                          {isActive && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-[#DC2626]" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             );
           })}
-
-          <div className="my-2 border-t border-neutral-100 dark:border-neutral-800 pt-2" />
-
-          <button
-            onClick={() => onSelectTab('activity')}
-            className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-              activeTab === 'activity'
-                ? 'bg-red-50 dark:bg-red-950/40 text-elite-red font-bold border-l-4 border-elite-red pl-2.5'
-                : 'text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100/70 dark:hover:bg-neutral-800/60'
-            }`}
-          >
-            <Clock className={`w-4 h-4 ${activeTab === 'activity' ? 'text-elite-red' : 'text-neutral-500 dark:text-neutral-400'}`} />
-            <span>Activity Log</span>
-          </button>
         </nav>
 
-        {/* 4. FOOTER LOGOUT */}
-        <div className="p-4 border-t border-neutral-100 dark:border-neutral-800 bg-[#fafafa] dark:bg-neutral-900/60 space-y-3">
+        {/* FOOTER */}
+        <div className="p-3 border-t border-neutral-100 dark:border-neutral-800">
           <button
             onClick={onLogout}
-            className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-neutral-600 dark:text-neutral-300 hover:text-elite-red hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition-colors cursor-pointer"
+            className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-neutral-500 hover:text-[#DC2626] hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
           >
-            <LogOut className="w-4 h-4 text-elite-red" />
+            <LogOut className="w-3.5 h-3.5" />
             <span>Logout</span>
           </button>
-
-          <div className="text-[10px] text-neutral-400 dark:text-neutral-500 text-center font-mono">
-            © 2026 IT-Associations Self Introduction. All rights reserved.
+          <div className="text-[10px] text-neutral-400 text-center font-mono mt-2">
+            ELITE Admin v2.0
           </div>
         </div>
       </div>

@@ -2,32 +2,111 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================================
+   ELITE Academic Portal Design System — Admin Client CSS
+   Source: assests/.../DESIGN.md
+   Font: Inter (Google Fonts, loaded in index.html)
+   ============================================================ */
+
 @layer base {
   body {
-    @apply bg-white text-neutral-900 antialiased;
+    background-color: #F8FAFC;
+    color: #0F172A;
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 
-  input, select, textarea {
+  input, select, textarea, button {
     font-family: inherit;
+  }
+
+  *:focus-visible {
+    outline: 2px solid #0B192C;
+    outline-offset: 2px;
   }
 }
 
-/* Subtle clean scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+/* ── CSS custom properties ─────────────────────────────────── */
+:root {
+  --elite-navy:    #0B192C;
+  --elite-crimson: #DC2626;
+  --elite-blue:    #2563EB;
+  --elite-slate:   #64748B;
+
+  --surface-canvas: #F8FAFC;
+  --surface-card:   #FFFFFF;
+  --border-subtle:  #E2E8F0;
+  --border-strong:  #CBD5E1;
+
+  --text-primary:   #0F172A;
+  --text-secondary: #475569;
+  --text-muted:     #94A3B8;
+
+  --status-draft:    #64748B;
+  --status-pending:  #D97706;
+  --status-review:   #7C3AED;
+  --status-approved: #059669;
+  --status-rejected: #DC2626;
+  --status-changes:  #EA580C;
+
+  --shadow-card:       0 1px 2px 0 rgba(15, 23, 42, 0.04);
+  --shadow-card-hover: 0 4px 6px -1px rgba(15, 23, 42, 0.06), 0 2px 4px -2px rgba(15, 23, 42, 0.04);
+  --shadow-drawer:     0 20px 25px -5px rgba(15, 23, 42, 0.1);
+  --shadow-modal:      0 25px 50px -12px rgba(15, 23, 42, 0.25);
+  --modal-backdrop:    rgba(11, 25, 44, 0.4);
+
+  --dur-fast: 120ms;
+  --dur:      220ms;
+  --ease:     cubic-bezier(0.2, 0, 0, 1);
 }
 
-::-webkit-scrollbar-track {
-  background: #ffffff;
-}
+/* ── Scrollbar ─────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #F8FAFC; }
+::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
 
-::-webkit-scrollbar-thumb {
-  background: #e5e5e5;
-  border-radius: 3px;
-}
+/* ── Status badge component layer ──────────────────────────── */
+@layer components {
+  .elite-badge {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded text-label-sm font-label-sm;
+  }
+  .elite-badge--draft    { @apply bg-slate-100  text-status-draft;    }
+  .elite-badge--pending  { @apply bg-amber-50   text-status-pending;  }
+  .elite-badge--review   { @apply bg-purple-50  text-status-review;   }
+  .elite-badge--approved { @apply bg-emerald-50 text-status-approved; }
+  .elite-badge--rejected { @apply bg-red-50     text-status-rejected; }
+  .elite-badge--changes  { @apply bg-orange-50  text-status-changes;  }
 
-::-webkit-scrollbar-thumb:hover {
-  background: #cccccc;
+  .elite-card {
+    @apply bg-surface-card border border-border-subtle rounded-lg shadow-card;
+  }
+
+  .elite-btn-primary {
+    @apply inline-flex items-center gap-space-xs px-space-md py-space-sm
+           bg-primary text-on-primary font-label-lg text-label-lg
+           rounded hover:opacity-90 transition-opacity shadow-sm;
+  }
+
+  .elite-btn-accent {
+    @apply inline-flex items-center gap-space-xs px-space-md py-space-sm
+           bg-secondary text-on-secondary font-label-lg text-label-lg
+           rounded hover:opacity-90 transition-opacity shadow-sm;
+  }
+
+  .elite-btn-outline {
+    @apply inline-flex items-center gap-space-xs px-space-md py-space-sm
+           bg-surface-card border border-border-strong text-text-primary
+           font-label-lg text-label-lg rounded
+           hover:bg-surface-container-low transition-colors;
+  }
+
+  .elite-input {
+    @apply w-full bg-surface-card border border-border-strong rounded px-space-sm py-space-sm
+           text-body-md text-text-primary placeholder:text-text-muted
+           focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-0
+           transition-shadow;
+  }
 }

@@ -1,14 +1,34 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { KeyRound, UploadCloud, MessageSquare } from 'lucide-react';
+import { Routes, Route, Navigate, useNavigate, BrowserRouter } from 'react-router-dom';
+import { StudentSession } from './types';
+import { api, setStudentToken } from './services/api';
+
 import { Navbar } from './components/Navbar';
 import { HeroSection } from './components/HeroSection';
 import { StudentLogin } from './components/StudentLogin';
-import { StudentDashboard } from './components/StudentDashboard';
 import { AboutSidebar } from './components/AboutSidebar';
 import { GuidelinesSection } from './components/GuidelinesSection';
 import { Footer } from './components/Footer';
-import { StudentSession } from './types';
-import { api, setStudentToken } from './services/api';
+
+import { StudentLayout } from './components/layout/StudentLayout';
+
+// Pages
+import { DashboardPage } from './pages/DashboardPage';
+import { ProfilePage } from './pages/ProfilePage';
+import { EditProfilePage } from './pages/EditProfilePage';
+import { PortfolioPage } from './pages/PortfolioPage';
+import { VideoPage } from './pages/VideoPage';
+import { ResumePage } from './pages/ResumePage';
+import { EventsPage } from './pages/EventsPage';
+import { EventDetailPage } from './pages/EventDetailPage';
+import { RegistrationsPage } from './pages/RegistrationsPage';
+import { TeamsPage } from './pages/TeamsPage';
+import { VotingPage } from './pages/VotingPage';
+import { NotificationsPage } from './pages/NotificationsPage';
+
+import { StudentDirectoryPage } from './pages/public/StudentDirectoryPage';
+import { PublicStudentProfilePage } from './pages/public/PublicStudentProfilePage';
+import { PublicResumeViewerPage } from './pages/public/PublicResumeViewerPage';
 
 const SESSION_KEY = 'ita_student_session';
 
@@ -24,15 +44,50 @@ function loadSession(): StudentSession | null {
   }
 }
 
-export const App: React.FC = () => {
+const LandingPage = ({ session }: { session: StudentSession | null }) => {
+  if (session) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return (
+    <div className="min-h-screen bg-[#FAFAFA] text-neutral-900 flex flex-col justify-between">
+      <Navbar session={session} onLogout={() => {}} onNavigate={() => {}} />
+      <HeroSection />
+      <main id="main-content" className="max-w-7xl mx-auto px-6 sm:px-10 py-6 sm:py-10">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-start">
+          <div className="lg:col-span-7">
+            <div className="space-y-6 text-left">
+              <div>
+                <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-elite-black font-display leading-[1.08] mt-3">
+                  YOUR SPACE.<br /><span className="text-elite-red">YOUR VIDEO.</span>
+                </h2>
+              </div>
+            </div>
+          </div>
+          <div className="lg:col-span-5">
+            <StudentLogin />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start mt-10">
+          <div className="lg:col-span-8">
+            <AboutSidebar />
+          </div>
+        </div>
+      </main>
+      <GuidelinesSection />
+      <Footer />
+    </div>
+  );
+};
+
+const AuthWrapper: React.FC = () => {
   const [session, setSession] = useState<StudentSession | null>(null);
   const [authChecking, setAuthChecking] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const oauthToken = params.get('token');
     if (oauthToken) {
-      // Arrived back from the Google SSO redirect carrying our signed JWT.
       setStudentToken(oauthToken);
       api
         .getMe()
@@ -48,6 +103,7 @@ export const App: React.FC = () => {
         .finally(() => {
           window.history.replaceState({}, '', window.location.pathname);
           setAuthChecking(false);
+          navigate('/dashboard', { replace: true });
         });
       return;
     }
@@ -55,7 +111,6 @@ export const App: React.FC = () => {
     const stored = loadSession();
     if (stored) {
       setStudentToken(stored.token);
-      // Refresh the profile (re-fetches admin review status), keep stored as fallback.
       api
         .getMe()
         .then((res) => {
@@ -68,20 +123,14 @@ export const App: React.FC = () => {
         });
     }
     setAuthChecking(false);
-  }, []);
+  }, [navigate]);
 
   const handleLogout = useCallback(() => {
     setSession(null);
     localStorage.removeItem(SESSION_KEY);
     setStudentToken(null);
-  }, []);
-
-  const handleNavigate = (sectionId: string) => {
-    const el = document.getElementById(sectionId);
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  };
+    navigate('/', { replace: true });
+  }, [navigate]);
 
   if (authChecking) {
     return (
@@ -92,88 +141,43 @@ export const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA] text-neutral-900 flex flex-col justify-between">
-      <div>
-        <Navbar session={session} onLogout={handleLogout} onNavigate={handleNavigate} />
+    <Routes>
+      <Route path="/" element={<LandingPage session={session} />} />
+      <Route path="/students" element={<StudentDirectoryPage />} />
+      <Route path="/students/:rollNo" element={<PublicStudentProfilePage />} />
+      <Route path="/students/:rollNo/resume" element={<PublicResumeViewerPage />} />
 
-        {session ? (
-          <>
-            <main id="main-content" className="max-w-7xl mx-auto px-6 sm:px-10 py-8 sm:py-10">
-              <StudentDashboard initialStudent={session.student} onLogout={handleLogout} />
-            </main>
-            <GuidelinesSection />
-          </>
-        ) : (
-          <>
-            <HeroSection />
-            <main id="main-content" className="max-w-7xl mx-auto px-6 sm:px-10 py-6 sm:py-10">
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-start">
-                <div className="lg:col-span-7">
-                  <div className="space-y-6 text-left">
-                    <div>
-                      <div className="inline-flex items-center gap-2 text-xs font-bold font-mono tracking-widest text-elite-red uppercase">
-                        <span>Sign in to your portal</span>
-                        <span className="w-6 h-[2px] bg-elite-red inline-block" />
-                      </div>
-                      <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-elite-black font-display leading-[1.08] mt-3">
-                        YOUR SPACE.
-                        <br />
-                        <span className="text-elite-red">YOUR VIDEO.</span>
-                      </h2>
-                      <p className="text-sm sm:text-base text-elite-darkgray max-w-lg leading-relaxed font-normal mt-4">
-                        Sign in with your college email. You can then upload your introduction
-                        video, preview it, resubmit if you'd like, and read your coordinators'
-                        response once it has been reviewed.
-                      </p>
-                    </div>
+      {/* Protected Routes */}
+      <Route
+        element={
+          session ? (
+            <StudentLayout session={session} onLogout={handleLogout} />
+          ) : (
+            <Navigate to="/" replace />
+          )
+        }
+      >
+        <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/profile/edit" element={<EditProfilePage />} />
+        <Route path="/portfolio/*" element={<PortfolioPage />} />
+        <Route path="/video" element={<VideoPage />} />
+        <Route path="/resume" element={<ResumePage />} />
+        <Route path="/events" element={<EventsPage />} />
+        <Route path="/events/:id" element={<EventDetailPage />} />
+        <Route path="/registrations" element={<RegistrationsPage />} />
+        <Route path="/teams" element={<TeamsPage />} />
+        <Route path="/voting" element={<VotingPage />} />
+        <Route path="/notifications" element={<NotificationsPage />} />
+      </Route>
+    </Routes>
+  );
+};
 
-                    <div className="divide-y divide-neutral-100 border-y border-neutral-100">
-                      <div className="flex items-center gap-3.5 py-3.5">
-                        <div className="w-9 h-9 rounded-lg bg-red-50 text-elite-red flex items-center justify-center shrink-0">
-                          <KeyRound className="w-4 h-4" />
-                        </div>
-                        <div>
-                          <div className="text-xs font-bold text-elite-black uppercase tracking-wide">Sign in</div>
-                          <div className="text-[11px] text-neutral-500">Use your college email — no separate password needed.</div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3.5 py-3.5">
-                        <div className="w-9 h-9 rounded-lg bg-red-50 text-elite-red flex items-center justify-center shrink-0">
-                          <UploadCloud className="w-4 h-4" />
-                        </div>
-                        <div>
-                          <div className="text-xs font-bold text-elite-black uppercase tracking-wide">Upload your video</div>
-                          <div className="text-[11px] text-neutral-500">Preview it before sending, and resubmit any time.</div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3.5 py-3.5">
-                        <div className="w-9 h-9 rounded-lg bg-red-50 text-elite-red flex items-center justify-center shrink-0">
-                          <MessageSquare className="w-4 h-4" />
-                        </div>
-                        <div>
-                          <div className="text-xs font-bold text-elite-black uppercase tracking-wide">Get your response</div>
-                          <div className="text-[11px] text-neutral-500">Coordinators' feedback appears right in your portal.</div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div className="lg:col-span-5">
-                  <StudentLogin />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start mt-10">
-                <div className="lg:col-span-8">
-                  <AboutSidebar />
-                </div>
-              </div>
-            </main>
-            <GuidelinesSection />
-          </>
-        )}
-      </div>
-
-      <Footer />
-    </div>
+export const App: React.FC = () => {
+  return (
+    <BrowserRouter>
+      <AuthWrapper />
+    </BrowserRouter>
   );
 };

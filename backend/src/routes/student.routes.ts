@@ -311,4 +311,34 @@ router.get('/submission/media/video', requireStudentAuth, async (req: Request, r
   }
 });
 
+
+// --- Phase 3: Resume Routes ---
+router.get('/resume', requireStudentAuth, async (req, res) => {
+  try {
+    const resumes = await prisma.resume.findMany({
+      where: { studentId: (req as any).studentId },
+      orderBy: { submittedAt: 'desc' }
+    });
+    res.json(resumes);
+  } catch (err: any) {
+    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+  }
+});
+
+router.post('/resume', requireStudentAuth, async (req, res) => {
+  try {
+    const resume = await prisma.resume.create({
+      data: {
+        studentId: (req as any).studentId,
+        driveFileId: 'mock_resume_id',
+        filename: 'resume.pdf',
+        status: 'PENDING'
+      }
+    });
+    res.status(201).json(resume);
+  } catch (err: any) {
+    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+  }
+});
+
 export default router;

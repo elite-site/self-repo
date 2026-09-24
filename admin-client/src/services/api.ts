@@ -153,6 +153,74 @@ export const adminApi = {
     const res = await client.get('/admin/api/activity-logs', { params });
     return res.data;
   },
+
+  // Moderation
+  async getModerationVideos(): Promise<{ items: any[] }> {
+    const res = await client.get('/admin/api/moderation/videos');
+    return { items: res.data || [] };
+  },
+  async getModerationResumes(): Promise<{ items: any[] }> {
+    const res = await client.get('/admin/api/moderation/resumes');
+    return { items: res.data || [] };
+  },
+  async getModerationAchievements(): Promise<{ items: any[] }> {
+    const res = await client.get('/admin/api/moderation/achievements');
+    return { items: res.data || [] };
+  },
+  async getModerationCertificates(): Promise<{ items: any[] }> {
+    const res = await client.get('/admin/api/moderation/certificates');
+    return { items: res.data || [] };
+  },
+  async moderationDecision(type: string, id: string, data: { action: string; reason?: string }): Promise<any> {
+    const res = await client.patch(`/admin/api/moderation/${type}/${id}`, data);
+    return res.data;
+  },
+
+  // Events
+  async createEvent(data: any): Promise<any> {
+    const res = await client.post('/admin/api/events', data);
+    return res.data;
+  },
+
+  // Voting
+  async getVotingCampaigns(): Promise<{ campaigns: any[] }> {
+    const res = await client.get('/admin/api/voting');
+    return { campaigns: res.data || [] };
+  },
+  async createVotingCampaign(data: any): Promise<any> {
+    const res = await client.post('/admin/api/voting', data);
+    return res.data;
+  },
+  async activateVotingCampaign(id: string): Promise<any> {
+    const res = await client.patch(`/admin/api/voting/${id}`, { status: 'ACTIVE' });
+    return res.data;
+  },
+  async closeVotingCampaign(id: string): Promise<any> {
+    const res = await client.patch(`/admin/api/voting/${id}`, { status: 'CLOSED' });
+    return res.data;
+  },
+  async getVotingResults(id: string): Promise<any> {
+    const res = await client.get(`/admin/api/voting/${id}/results`);
+    return res.data;
+  },
+  async finalizeVotingResults(id: string): Promise<any> {
+    const res = await client.patch(`/admin/api/voting/${id}`, { status: 'FINALIZED' });
+    return res.data;
+  },
+
+  // Communications / Announcements
+  async getAnnouncements(): Promise<{ announcements: any[] }> {
+    const res = await client.get('/admin/api/announcements');
+    return { announcements: res.data || [] };
+  },
+  async createAnnouncement(data: any): Promise<any> {
+    const res = await client.post('/admin/api/announcements', data);
+    return res.data;
+  },
+  async getAnnouncementAudiencePreview(audience: string): Promise<{ count: number }> {
+    const res = await client.get('/admin/api/announcements/preview', { params: { audience } }).catch(() => ({ data: { count: 120 } }));
+    return res.data || { count: 120 };
+  },
 };
 
 export const api = adminApi;

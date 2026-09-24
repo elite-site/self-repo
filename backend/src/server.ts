@@ -8,9 +8,15 @@ import { errorHandler } from './middleware/errorHandler';
 import { prisma } from './lib/prisma';
 import { driveService } from './services/drive.service';
 import publicRoutes from './routes/public.routes';
+import publicStudentRoutes from './routes/public.students.routes';
 import studentRoutes from './routes/student.routes';
+import studentProfileRoutes from './routes/student.profile.routes';
+import studentPortfolioRoutes from './routes/student.portfolio.routes';
+import studentEventsRoutes from './routes/student.events.routes';
+import studentInteractionsRoutes from './routes/student.interactions.routes';
 import adminAuthRoutes from './routes/admin.auth.routes';
 import adminApiRoutes from './routes/admin.api.routes';
+import adminPortalRoutes from './routes/admin.portal.routes';
 
 const app = express();
 
@@ -72,17 +78,25 @@ app.get('/ready', async (_req, res) => {
     .json({ status: ready ? 'ok' : 'unready', ...probe, timestamp: new Date().toISOString() });
 });
 
-// 1. Public API routes (used by Netlify submission form)
+// 1. Public API routes (existing submission form + new public directory)
 app.use('/api', publicRoutes);
+app.use('/api/public/students', publicStudentRoutes);
 
-// 1b. Student portal API routes (login, profile, video upload/media)
-app.use('/api/student', studentRoutes);
+// 1b. Student portal API routes
+app.use('/api/student', studentRoutes);                         // existing: SSO, me, video upload
+app.use('/api/student/profile', studentProfileRoutes);          // Phase 1: profile
+app.use('/api/student/portfolio', studentPortfolioRoutes);      // Phase 2: projects/achievements/certs
+app.use('/api/student/events', studentEventsRoutes);            // Phase 4: events
+app.use('/api/student', studentInteractionsRoutes);             // Phase 5: voting, notifications, registrations, teams
 
 // 2. Admin Auth routes (login, logout, me)
 app.use('/admin', adminAuthRoutes);
 
-// 3. Admin API routes (stats, submissions, media proxy, email)
+// 3. Admin API routes — existing (stats, submissions, media proxy, email)
 app.use('/admin/api', adminApiRoutes);
+
+// 4. Admin Portal Management routes — Phase 7 (moderation, events, voting, RBAC, settings …)
+app.use('/admin/api/portal', adminPortalRoutes);
 
 // 4. Admin Frontend Static Serving (Served strictly by backend, never Netlify)
 const adminBuildPath = path.resolve(__dirname, '../public/admin');
