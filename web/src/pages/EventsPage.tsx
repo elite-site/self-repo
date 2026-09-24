@@ -17,7 +17,7 @@ export const EventsPage: React.FC = () => {
     setError(null);
     try {
       const [evData, regData] = await Promise.all([
-        api.getEvents(),
+        api.getEvents().catch(() => api.getPublicEvents()),
         api.getRegistrations().catch(() => []),
       ]);
       if (Array.isArray(evData)) setEvents(evData);

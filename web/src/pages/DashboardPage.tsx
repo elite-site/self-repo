@@ -121,7 +121,7 @@ export const DashboardPage: React.FC = () => {
     { label: 'Profile Photo', done: checkPhoto, link: '/profile/edit' },
     { label: 'Biography', done: checkBio, link: '/profile/edit' },
     { label: 'Technical Skills', done: checkSkills, link: '/profile/edit' },
-    { label: 'Intro Video', done: checkVideo, link: '/video' },
+    { label: 'Intro Video', done: checkVideo, link: '/intro-video' },
     { label: 'Resume', done: checkResume, link: '/resume' },
     { label: 'Projects', done: checkProjects, link: '/portfolio' },
   ];
@@ -310,7 +310,7 @@ export const DashboardPage: React.FC = () => {
             </div>
           </div>
           <Link
-            to="/video"
+            to="/intro-video"
             className="mt-4 flex items-center justify-between text-xs font-bold text-[#DC2626] hover:text-[#B5121B] pt-3 border-t border-neutral-100"
           >
             <span>{checkVideo ? 'Review Video' : 'Upload Video'}</span>
@@ -422,13 +422,27 @@ export const DashboardPage: React.FC = () => {
                   <p className="text-xs text-neutral-500">Upcoming hackathons, workshops & sessions</p>
                 </div>
               </div>
-              <Link
-                to="/events"
-                className="text-xs font-bold text-[#DC2626] hover:text-[#B5121B] flex items-center gap-1"
-              >
-                <span>Browse All</span>
-                <ChevronRight className="w-4 h-4" />
-              </Link>
+              <div className="flex items-center gap-3">
+                <Link
+                  to="/registrations"
+                  className="text-xs font-semibold text-neutral-600 hover:text-neutral-900 hidden sm:inline-block"
+                >
+                  My Registrations ({registrations.length})
+                </Link>
+                <Link
+                  to="/teams"
+                  className="text-xs font-semibold text-neutral-600 hover:text-neutral-900 hidden sm:inline-block"
+                >
+                  Teams
+                </Link>
+                <Link
+                  to="/events"
+                  className="text-xs font-bold text-[#DC2626] hover:text-[#B5121B] flex items-center gap-1"
+                >
+                  <span>Browse All</span>
+                  <ChevronRight className="w-4 h-4" />
+                </Link>
+              </div>
             </div>
 
             {eventsError ? (
@@ -474,7 +488,7 @@ export const DashboardPage: React.FC = () => {
                           {evt.date ? new Date(evt.date).toLocaleDateString() : 'TBA'}
                         </span>
                         <Link
-                          to={`/events`}
+                          to={`/events/${evt.id}`}
                           className="font-bold text-[#DC2626] hover:text-[#B5121B] flex items-center gap-0.5"
                         >
                           <span>{isRegistered ? 'View Status' : 'Register'}</span>
@@ -538,7 +552,7 @@ export const DashboardPage: React.FC = () => {
                       <p className="text-[11px] text-neutral-500 mt-0.5">{camp.description || 'Active election'}</p>
                     </div>
                     <Link
-                      to="/voting"
+                      to={`/voting/${camp.id}`}
                       className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition-colors shrink-0"
                     >
                       Cast Vote

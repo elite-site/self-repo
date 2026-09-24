@@ -6,7 +6,7 @@ const navItems = [
   { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
   { name: 'My Profile', path: '/profile', icon: User },
   { name: 'Portfolio', path: '/portfolio', icon: FolderOpen },
-  { name: 'Intro Video', path: '/video', icon: Video },
+  { name: 'Intro Video', path: '/intro-video', icon: Video },
   { name: 'Resume', path: '/resume', icon: FileText },
   { name: 'Events', path: '/events', icon: Calendar },
   { name: 'My Registrations', path: '/registrations', icon: ClipboardList },

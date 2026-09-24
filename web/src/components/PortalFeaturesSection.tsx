@@ -1,49 +1,56 @@
 import React from 'react';
-import { UserCheck, Briefcase, Award, Calendar, FileText, Vote } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { UserCheck, Briefcase, Award, Calendar, FileText, ArrowRight } from 'lucide-react';
 
 interface FeatureCard {
   title: string;
   description: string;
   icon: React.ReactNode;
   tag: string;
+  link: string;
+  actionText: string;
 }
 
 const FEATURES: FeatureCard[] = [
   {
     title: 'PROFILE',
-    description: 'Build your verified student profile.',
+    description: 'Build and explore verified student profiles.',
     icon: <UserCheck className="w-5 h-5 text-elite-red" />,
-    tag: 'Identity'
+    tag: 'Directory',
+    link: '/students',
+    actionText: 'Explore Directory'
   },
   {
     title: 'PORTFOLIO',
-    description: 'Showcase projects, skills, and work.',
+    description: 'Showcase projects, engineering skills, and technical work.',
     icon: <Briefcase className="w-5 h-5 text-elite-red" />,
-    tag: 'Work'
+    tag: 'Projects',
+    link: '/students',
+    actionText: 'View Showcase'
   },
   {
     title: 'ACHIEVEMENTS',
-    description: 'Highlight verified achievements and certificates.',
+    description: 'Highlight department-verified achievements and certificates.',
     icon: <Award className="w-5 h-5 text-elite-red" />,
-    tag: 'Recognition'
+    tag: 'Honors',
+    link: '/students',
+    actionText: 'View Achievements'
   },
   {
     title: 'EVENTS',
-    description: 'Discover and register for ELITE events.',
+    description: 'Discover and participate in upcoming ELITE events.',
     icon: <Calendar className="w-5 h-5 text-elite-red" />,
-    tag: 'Participation'
+    tag: 'Activities',
+    link: '/events',
+    actionText: 'Browse Events'
   },
   {
     title: 'RESUME',
-    description: 'Maintain your latest professional resume.',
+    description: 'Maintain and view professional single-page resumes.',
     icon: <FileText className="w-5 h-5 text-elite-red" />,
-    tag: 'Career'
-  },
-  {
-    title: 'VOTING',
-    description: 'Participate in eligible department voting.',
-    icon: <Vote className="w-5 h-5 text-elite-red" />,
-    tag: 'Governance'
+    tag: 'Career',
+    link: '/students',
+    actionText: 'Explore Resumes'
   }
 ];
 
@@ -65,31 +72,39 @@ export const PortalFeaturesSection: React.FC = () => {
           </p>
         </div>
 
-        {/* 6 Capabilities Grid */}
+        {/* Feature Cards Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
           {FEATURES.map((feat) => (
-            <div
+            <Link
               key={feat.title}
-              className="group p-6 sm:p-7 rounded-2xl bg-neutral-50 hover:bg-white border border-neutral-200/80 hover:border-neutral-300 hover:shadow-lg transition-all duration-200 text-left space-y-4"
+              to={feat.link}
+              className="group p-6 sm:p-7 rounded-2xl bg-neutral-50 hover:bg-white border border-neutral-200/80 hover:border-neutral-300 hover:shadow-lg transition-all duration-200 text-left flex flex-col justify-between space-y-4"
             >
-              <div className="flex items-center justify-between">
-                <div className="w-11 h-11 rounded-xl bg-red-50 group-hover:bg-red-100/70 border border-red-100 flex items-center justify-center transition-colors">
-                  {feat.icon}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="w-11 h-11 rounded-xl bg-red-50 group-hover:bg-red-100/70 border border-red-100 flex items-center justify-center transition-colors">
+                    {feat.icon}
+                  </div>
+                  <span className="text-[10px] font-mono uppercase font-semibold text-neutral-500 bg-neutral-200/60 px-2.5 py-0.5 rounded-full">
+                    {feat.tag}
+                  </span>
                 </div>
-                <span className="text-[10px] font-mono uppercase font-semibold text-neutral-500 bg-neutral-200/60 px-2.5 py-0.5 rounded-full">
-                  {feat.tag}
-                </span>
+
+                <div className="space-y-1.5">
+                  <h3 className="text-base font-bold text-elite-black font-display tracking-tight group-hover:text-elite-red transition-colors">
+                    {feat.title}
+                  </h3>
+                  <p className="text-xs sm:text-sm text-neutral-600 leading-relaxed font-normal">
+                    {feat.description}
+                  </p>
+                </div>
               </div>
 
-              <div className="space-y-1.5">
-                <h3 className="text-base font-bold text-elite-black font-display tracking-tight group-hover:text-elite-red transition-colors">
-                  {feat.title}
-                </h3>
-                <p className="text-xs sm:text-sm text-neutral-600 leading-relaxed font-normal">
-                  {feat.description}
-                </p>
+              <div className="pt-3 border-t border-neutral-100 flex items-center justify-between text-xs font-bold text-elite-red group-hover:translate-x-0.5 transition-transform">
+                <span>{feat.actionText}</span>
+                <ArrowRight className="w-3.5 h-3.5" />
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       </div>

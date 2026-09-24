@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Calendar, Tag, ArrowRight, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
 import { api } from '../services/api';
 
@@ -129,14 +130,13 @@ export const EliteEventsSection: React.FC = () => {
 
                   {/* Card Action */}
                   <div className="pt-5 mt-4 border-t border-neutral-200/70">
-                    <button
-                      type="button"
-                      onClick={scrollToLogin}
-                      className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-neutral-900 hover:bg-elite-red text-white text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
+                    <Link
+                      to={`/events/${evt.id}`}
+                      className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-neutral-900 hover:bg-elite-red text-white text-xs font-bold uppercase tracking-wider transition-colors"
                     >
-                      <span>Sign In to Participate</span>
+                      <span>View Event Details</span>
                       <ArrowRight className="w-3.5 h-3.5" />
-                    </button>
+                    </Link>
                   </div>
                 </div>
               );

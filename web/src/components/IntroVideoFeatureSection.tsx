@@ -1,12 +1,10 @@
 import React from 'react';
 import { Video, Clock, Mic, Sparkles, ArrowRight } from 'lucide-react';
+import { api } from '../services/api';
 
 export const IntroVideoFeatureSection: React.FC = () => {
-  const scrollToLogin = () => {
-    const el = document.getElementById('login-section');
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth' });
-    }
+  const handleSignIn = () => {
+    window.location.href = api.getOAuthAuthorizeUrl();
   };
 
   return (
@@ -67,7 +65,7 @@ export const IntroVideoFeatureSection: React.FC = () => {
             <div className="pt-2">
               <button
                 type="button"
-                onClick={scrollToLogin}
+                onClick={handleSignIn}
                 className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-elite-red hover:bg-[#B5121B] text-white font-bold text-xs uppercase tracking-wider shadow-sm transition-all cursor-pointer"
               >
                 <span>Student Sign In to Upload Video</span>

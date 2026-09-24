@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../../services/api';
 import { Project } from '../../types';
-import { Plus, Github, ExternalLink, Loader2, AlertCircle, Trash2, X, FolderGit2 } from 'lucide-react';
+import { Plus, Github, ExternalLink, Loader2, AlertCircle, Trash2, X, FolderGit2, Pencil } from 'lucide-react';
 
 export const ProjectsTab: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -10,6 +10,7 @@ export const ProjectsTab: React.FC = () => {
 
   // Modal State
   const [modalOpen, setModalOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [saving, setSaving] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
 
@@ -36,7 +37,8 @@ export const ProjectsTab: React.FC = () => {
     loadProjects();
   }, []);
 
-  const handleOpenModal = () => {
+  const handleOpenCreateModal = () => {
+    setEditingProject(null);
     setTitle('');
     setDescription('');
     setTechStackInput('');
@@ -46,7 +48,18 @@ export const ProjectsTab: React.FC = () => {
     setModalOpen(true);
   };
 
-  const handleCreateProject = async (e: React.FormEvent) => {
+  const handleOpenEditModal = (p: Project) => {
+    setEditingProject(p);
+    setTitle(p.title || '');
+    setDescription(p.description || '');
+    setTechStackInput(p.techStack?.join(', ') || '');
+    setGithubUrl(p.githubUrl || '');
+    setVideoUrl(p.videoUrl || '');
+    setModalError(null);
+    setModalOpen(true);
+  };
+
+  const handleSaveProject = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !description.trim()) return;
     setSaving(true);
@@ -57,18 +70,24 @@ export const ProjectsTab: React.FC = () => {
       .map((t) => t.trim())
       .filter(Boolean);
 
+    const payload = {
+      title: title.trim(),
+      description: description.trim(),
+      techStack,
+      githubUrl: githubUrl.trim() || undefined,
+      videoUrl: videoUrl.trim() || undefined,
+    };
+
     try {
-      await api.createProject({
-        title: title.trim(),
-        description: description.trim(),
-        techStack,
-        githubUrl: githubUrl.trim() || undefined,
-        videoUrl: videoUrl.trim() || undefined,
-      });
+      if (editingProject) {
+        await api.updateProject(editingProject.id, payload);
+      } else {
+        await api.createProject(payload);
+      }
       setModalOpen(false);
       loadProjects();
     } catch (err: any) {
-      setModalError(err.response?.data?.message || 'Failed to create project.');
+      setModalError(err.response?.data?.message || 'Failed to save project.');
     } finally {
       setSaving(false);
     }
@@ -101,7 +120,7 @@ export const ProjectsTab: React.FC = () => {
           <p className="text-xs text-neutral-500">Showcase technical builds, full-stack applications, and research code</p>
         </div>
         <button
-          onClick={handleOpenModal}
+          onClick={handleOpenCreateModal}
           disabled={projects.length >= 5}
           className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#DC2626] hover:bg-[#B5121B] disabled:opacity-40 text-white text-xs font-bold rounded-xl transition-all shadow-sm cursor-pointer"
         >
@@ -126,7 +145,7 @@ export const ProjectsTab: React.FC = () => {
             Upload your technical projects with GitHub links and tech stack tags to build your recruitment profile.
           </p>
           <button
-            onClick={handleOpenModal}
+            onClick={handleOpenCreateModal}
             className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#0B192C] hover:bg-neutral-800 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
@@ -155,6 +174,13 @@ export const ProjectsTab: React.FC = () => {
                     >
                       {p.status}
                     </span>
+                    <button
+                      onClick={() => handleOpenEditModal(p)}
+                      className="p-1 text-neutral-400 hover:text-[#0B192C] transition-colors cursor-pointer rounded"
+                      title="Edit project"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
                     <button
                       onClick={() => handleDelete(p.id)}
                       className="p-1 text-neutral-300 hover:text-red-600 transition-colors cursor-pointer rounded"
@@ -211,12 +237,14 @@ export const ProjectsTab: React.FC = () => {
         </div>
       )}
 
-      {/* ADD PROJECT MODAL */}
+      {/* ADD / EDIT PROJECT MODAL */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
           <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-neutral-200 animate-in fade-in zoom-in-95 duration-150 text-left">
             <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
-              <h3 className="text-base font-bold text-[#0B192C]">Add New Technical Project</h3>
+              <h3 className="text-base font-bold text-[#0B192C]">
+                {editingProject ? 'Edit Technical Project' : 'Add New Technical Project'}
+              </h3>
               <button
                 onClick={() => setModalOpen(false)}
                 className="p-1 text-neutral-400 hover:text-neutral-700 rounded-lg cursor-pointer"
@@ -225,7 +253,7 @@ export const ProjectsTab: React.FC = () => {
               </button>
             </div>
 
-            <form onSubmit={handleCreateProject} className="space-y-4 pt-4">
+            <form onSubmit={handleSaveProject} className="space-y-4 pt-4">
               {modalError && (
                 <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 shrink-0" />
@@ -307,7 +335,7 @@ export const ProjectsTab: React.FC = () => {
                   className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#DC2626] hover:bg-[#B5121B] text-white text-xs font-bold transition-all disabled:opacity-50 cursor-pointer shadow-sm"
                 >
                   {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
-                  <span>Save Project</span>
+                  <span>{editingProject ? 'Update Project' : 'Save Project'}</span>
                 </button>
               </div>
             </form>

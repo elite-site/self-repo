@@ -1,7 +1,20 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { Notification } from '../types';
-import { Bell, Loader2, Check, CheckCheck, AlertCircle, RefreshCw, Calendar, Award, Vote, Info } from 'lucide-react';
+import {
+  Bell,
+  Loader2,
+  Check,
+  CheckCheck,
+  AlertCircle,
+  RefreshCw,
+  Calendar,
+  Award,
+  Vote,
+  Info,
+  ChevronRight
+} from 'lucide-react';
 
 export const NotificationsPage: React.FC = () => {
   const [notifs, setNotifs] = useState<Notification[]>([]);
@@ -9,6 +22,7 @@ export const NotificationsPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<'ALL' | 'UNREAD' | 'EVENT' | 'ACADEMIC' | 'VOTING'>('ALL');
   const [markingAll, setMarkingAll] = useState(false);
+  const navigate = useNavigate();
 
   const loadNotifications = async () => {
     setLoading(true);
@@ -44,6 +58,33 @@ export const NotificationsPage: React.FC = () => {
       await api.markNotificationRead(id);
       setNotifs((prev) => prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)));
     } catch {}
+  };
+
+  const handleNotificationClick = (n: Notification) => {
+    if (!n.isRead) {
+      handleMarkSingleRead(n.id);
+    }
+
+    const msg = (n.message || '').toLowerCase();
+    const title = (n.title || '').toLowerCase();
+
+    if (n.type === 'EVENT' || msg.includes('event') || title.includes('event')) {
+      navigate('/events');
+    } else if (n.type === 'VOTING' || msg.includes('vote') || title.includes('vote') || msg.includes('election')) {
+      navigate('/voting');
+    } else if (msg.includes('team') || title.includes('team')) {
+      navigate('/teams');
+    } else if (msg.includes('registration') || title.includes('registration')) {
+      navigate('/registrations');
+    } else if (msg.includes('resume') || title.includes('resume')) {
+      navigate('/resume');
+    } else if (msg.includes('video') || title.includes('video')) {
+      navigate('/intro-video');
+    } else if (msg.includes('portfolio') || msg.includes('project') || msg.includes('achievement') || msg.includes('certificate')) {
+      navigate('/portfolio');
+    } else {
+      navigate('/profile');
+    }
   };
 
   const filteredNotifs = notifs.filter((n) => {
@@ -98,15 +139,24 @@ export const NotificationsPage: React.FC = () => {
             <button
               onClick={handleMarkAllRead}
               disabled={markingAll}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-neutral-200 hover:bg-neutral-100 text-xs font-bold text-neutral-700 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-neutral-200 hover:bg-neutral-100 text-xs font-bold text-neutral-700 transition-colors cursor-pointer disabled:opacity-50"
             >
-              {markingAll ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCheck className="w-4 h-4 text-neutral-500" />}
-              <span>Mark all read</span>
+              <CheckCheck className="w-3.5 h-3.5 text-neutral-500" />
+              <span>Mark All as Read</span>
             </button>
           )}
+
+          <button
+            onClick={loadNotifications}
+            className="p-2 border border-neutral-200 rounded-xl hover:bg-neutral-50 text-neutral-600 cursor-pointer"
+            title="Refresh notifications"
+          >
+            <RefreshCw className="w-4 h-4" />
+          </button>
         </div>
       </div>
 
+      {/* ERROR */}
       {error && (
         <div className="p-4 bg-red-50 border border-red-200 rounded-2xl text-red-800 text-xs flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -141,71 +191,60 @@ export const NotificationsPage: React.FC = () => {
       </div>
 
       {/* NOTIFICATIONS LIST */}
-      {filteredEventsListOrEmpty(filteredNotifs, handleMarkSingleRead, getTypeIcon)}
+      {filteredNotifs.length === 0 ? (
+        <div className="text-center py-20 px-4 bg-white border border-[#E2E8F0] rounded-2xl">
+          <Bell className="w-12 h-12 text-neutral-300 mx-auto mb-3" />
+          <h3 className="font-bold text-sm text-[#0B192C]">No notifications to display</h3>
+          <p className="text-xs text-neutral-400 mt-1 max-w-sm mx-auto">
+            You're all caught up! New updates from faculty, moderation, or event registrations will appear here.
+          </p>
+        </div>
+      ) : (
+        <div className="bg-white border border-[#E2E8F0] rounded-2xl overflow-hidden shadow-xs divide-y divide-neutral-100">
+          {filteredNotifs.map((n) => (
+            <div
+              key={n.id}
+              onClick={() => handleNotificationClick(n)}
+              className={`p-4 sm:p-5 flex items-start gap-4 transition-colors cursor-pointer group ${
+                !n.isRead ? 'bg-red-50/30 hover:bg-red-50/50' : 'hover:bg-neutral-50/80'
+              }`}
+            >
+              <div className="p-2.5 rounded-xl bg-white border border-neutral-200/80 shadow-2xs shrink-0 mt-0.5">
+                {getTypeIcon(n.type)}
+              </div>
+
+              <div className="flex-1 min-w-0 space-y-1">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-neutral-500 bg-neutral-100 px-2 py-0.5 rounded">
+                      {n.type}
+                    </span>
+                    <h4
+                      className={`text-xs sm:text-sm ${
+                        !n.isRead ? 'font-black text-[#0B192C]' : 'font-semibold text-neutral-700'
+                      }`}
+                    >
+                      {n.title}
+                    </h4>
+                  </div>
+                  <span className="text-[11px] font-mono text-neutral-400 shrink-0">
+                    {n.createdAt ? new Date(n.createdAt).toLocaleString() : 'Recent'}
+                  </span>
+                </div>
+
+                <p className="text-xs text-neutral-600 leading-relaxed">{n.message}</p>
+              </div>
+
+              <div className="shrink-0 flex items-center gap-2 pt-1">
+                {!n.isRead && (
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#DC2626] block" title="Unread" />
+                )}
+                <ChevronRight className="w-4 h-4 text-neutral-300 group-hover:text-[#0B192C] group-hover:translate-x-0.5 transition-all" />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
-
-function filteredEventsListOrEmpty(
-  notifs: Notification[],
-  handleMarkSingleRead: (id: string) => void,
-  getTypeIcon: (type: string) => React.ReactNode
-) {
-  if (notifs.length === 0) {
-    return (
-      <div className="text-center py-20 px-4 bg-white border border-[#E2E8F0] rounded-2xl">
-        <Bell className="w-12 h-12 text-neutral-300 mx-auto mb-3" />
-        <h3 className="font-bold text-sm text-[#0B192C]">No notifications to display</h3>
-        <p className="text-xs text-neutral-400 mt-1 max-w-sm mx-auto">
-          You're all caught up! New updates from faculty, moderation, or event registrations will appear here.
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="bg-white border border-[#E2E8F0] rounded-2xl overflow-hidden shadow-xs divide-y divide-neutral-100">
-      {notifs.map((n) => (
-        <div
-          key={n.id}
-          onClick={() => !n.isRead && handleMarkSingleRead(n.id)}
-          className={`p-4 sm:p-5 flex items-start gap-4 transition-colors cursor-pointer ${
-            !n.isRead ? 'bg-red-50/30 hover:bg-red-50/50' : 'hover:bg-neutral-50/80'
-          }`}
-        >
-          <div className="p-2.5 rounded-xl bg-white border border-neutral-200/80 shadow-2xs shrink-0 mt-0.5">
-            {getTypeIcon(n.type)}
-          </div>
-
-          <div className="flex-1 min-w-0 space-y-1">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-neutral-500 bg-neutral-100 px-2 py-0.5 rounded">
-                  {n.type}
-                </span>
-                <h4
-                  className={`text-xs sm:text-sm ${
-                    !n.isRead ? 'font-black text-[#0B192C]' : 'font-semibold text-neutral-700'
-                  }`}
-                >
-                  {n.title}
-                </h4>
-              </div>
-              <span className="text-[11px] font-mono text-neutral-400 shrink-0">
-                {n.createdAt ? new Date(n.createdAt).toLocaleString() : 'Recent'}
-              </span>
-            </div>
-
-            <p className="text-xs text-neutral-600 leading-relaxed">{n.message}</p>
-          </div>
-
-          {!n.isRead && (
-            <div className="shrink-0 pt-1">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#DC2626] block" title="Unread" />
-            </div>
-          )}
-        </div>
-      ))}
-    </div>
-  );
-}

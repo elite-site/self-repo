@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { MapPin, Mail, Globe, ShieldCheck } from 'lucide-react';
+import { api } from '../services/api';
 
 export const Footer: React.FC = () => {
   const scrollTo = (id: string) => {
@@ -64,18 +65,14 @@ export const Footer: React.FC = () => {
               <Link to="/students" className="hover:text-white transition-colors">Student Directory</Link>
             </li>
             <li>
-              <button onClick={() => scrollTo('events-section')} className="hover:text-white transition-colors cursor-pointer text-left">
-                Department Events
-              </button>
+              <Link to="/events" className="hover:text-white transition-colors">Department Events</Link>
             </li>
             <li>
-              <button onClick={() => scrollTo('about')} className="hover:text-white transition-colors cursor-pointer text-left">
-                About ELITE
-              </button>
-            </li>
-            <li>
-              <button onClick={() => scrollTo('guidelines')} className="hover:text-white transition-colors cursor-pointer text-left">
-                Portal Guidelines
+              <button
+                onClick={() => { window.location.href = api.getOAuthAuthorizeUrl(); }}
+                className="hover:text-white transition-colors cursor-pointer text-left text-elite-red font-bold"
+              >
+                Student Sign In
               </button>
             </li>
           </ul>

@@ -123,6 +123,7 @@ export const api = {
   async getPublicStudents(params?: any) { const res = await client.get('/public/students', { params }); return res.data; },
   async getPublicStudent(rollNo: string) { const res = await client.get(`/public/students/${rollNo}`); return res.data; },
   async getPublicEvents() { const res = await client.get('/public/events'); return res.data; },
+  async getPublicEvent(id: string) { const res = await client.get(`/public/events/${id}`); return res.data; },
 };
 
 export async function clearStudentToken() {

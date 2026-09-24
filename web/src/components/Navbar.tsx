@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Home, Users, Calendar, FileText, Mail, Menu, X, LogOut, ChevronDown, ArrowRight, LayoutDashboard } from 'lucide-react';
+import { Home, Users, Calendar, Menu, X, LogOut, ChevronDown, ArrowRight, LayoutDashboard } from 'lucide-react';
 import { StudentSession } from '../types';
+import { api } from '../services/api';
 
 interface NavbarProps {
   session?: StudentSession | null;
@@ -9,28 +10,11 @@ interface NavbarProps {
   onNavigate?: (sectionId: string) => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ session, onLogout, onNavigate }) => {
+export const Navbar: React.FC<NavbarProps> = ({ session, onLogout }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const chipRef = useRef<HTMLDivElement>(null);
-  const navigate = useNavigate();
   const location = useLocation();
-
-  const handleNavClick = (sectionId: string) => {
-    setMobileMenuOpen(false);
-    if (location.pathname !== '/') {
-      navigate('/#' + sectionId);
-      return;
-    }
-    if (onNavigate) {
-      onNavigate(sectionId);
-    } else {
-      const element = document.getElementById(sectionId);
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    }
-  };
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -55,6 +39,10 @@ export const Navbar: React.FC<NavbarProps> = ({ session, onLogout, onNavigate })
     setProfileOpen(false);
     setMobileMenuOpen(false);
     if (onLogout) onLogout();
+  };
+
+  const handleSignIn = () => {
+    window.location.href = api.getOAuthAuthorizeUrl();
   };
 
   return (
@@ -91,7 +79,7 @@ export const Navbar: React.FC<NavbarProps> = ({ session, onLogout, onNavigate })
           </div>
         </Link>
 
-        {/* CENTER: DESKTOP PUBLIC NAVIGATION */}
+        {/* CENTER: DESKTOP PUBLIC NAVIGATION (HOME, STUDENTS, EVENTS) */}
         <div className="hidden md:flex items-center gap-6 lg:gap-8 text-neutral-300 text-xs font-bold uppercase tracking-wider">
           <Link
             to="/"
@@ -113,48 +101,15 @@ export const Navbar: React.FC<NavbarProps> = ({ session, onLogout, onNavigate })
             <span>Students</span>
           </Link>
 
-          {session ? (
-            <Link
-              to="/events"
-              className={`flex items-center gap-1.5 hover:text-white transition-colors py-1 ${
-                location.pathname.startsWith('/events') ? 'text-white border-b-2 border-[#DC2626]' : ''
-              }`}
-            >
-              <Calendar className="w-3.5 h-3.5" />
-              <span>Events</span>
-            </Link>
-          ) : (
-            <button
-              onClick={() => handleNavClick('events-section')}
-              className="flex items-center gap-1.5 hover:text-white transition-colors cursor-pointer py-1"
-            >
-              <Calendar className="w-3.5 h-3.5" />
-              <span>Events</span>
-            </button>
-          )}
-
-          <button
-            onClick={() => handleNavClick('about')}
-            className="flex items-center gap-1.5 hover:text-white transition-colors cursor-pointer py-1"
+          <Link
+            to="/events"
+            className={`flex items-center gap-1.5 hover:text-white transition-colors py-1 ${
+              location.pathname.startsWith('/events') ? 'text-white border-b-2 border-[#DC2626]' : ''
+            }`}
           >
-            <span>About</span>
-          </button>
-
-          <button
-            onClick={() => handleNavClick('guidelines')}
-            className="flex items-center gap-1.5 hover:text-white transition-colors cursor-pointer py-1"
-          >
-            <FileText className="w-3.5 h-3.5" />
-            <span>Guidelines</span>
-          </button>
-
-          <button
-            onClick={() => handleNavClick('contact')}
-            className="flex items-center gap-1.5 hover:text-white transition-colors cursor-pointer py-1"
-          >
-            <Mail className="w-3.5 h-3.5" />
-            <span>Contact</span>
-          </button>
+            <Calendar className="w-3.5 h-3.5" />
+            <span>Events</span>
+          </Link>
         </div>
 
         {/* RIGHT: AUTH CTA / PROFILE CHIP */}
@@ -207,14 +162,7 @@ export const Navbar: React.FC<NavbarProps> = ({ session, onLogout, onNavigate })
             </div>
           ) : (
             <button
-              onClick={() => {
-                const el = document.getElementById('login-section');
-                if (el) {
-                  el.scrollIntoView({ behavior: 'smooth' });
-                } else {
-                  navigate('/#login-section');
-                }
-              }}
+              onClick={handleSignIn}
               className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#DC2626] hover:bg-[#B5121B] text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
             >
               <span>Student Sign In</span>
@@ -273,44 +221,15 @@ export const Navbar: React.FC<NavbarProps> = ({ session, onLogout, onNavigate })
             <Users className="w-4 h-4 text-[#DC2626]" />
             <span>Students Directory</span>
           </Link>
-          {session ? (
-            <Link
-              to="/events"
-              onClick={() => setMobileMenuOpen(false)}
-              className="w-full flex items-center gap-3 py-2 text-neutral-300 hover:text-white"
-            >
-              <Calendar className="w-4 h-4 text-[#DC2626]" />
-              <span>Events</span>
-            </Link>
-          ) : (
-            <button
-              onClick={() => handleNavClick('events-section')}
-              className="w-full flex items-center gap-3 py-2 text-left text-neutral-300 hover:text-white cursor-pointer"
-            >
-              <Calendar className="w-4 h-4 text-[#DC2626]" />
-              <span>Events</span>
-            </button>
-          )}
-          <button
-            onClick={() => handleNavClick('about')}
-            className="w-full flex items-center gap-3 py-2 text-left text-neutral-300 hover:text-white cursor-pointer"
+          <Link
+            to="/events"
+            onClick={() => setMobileMenuOpen(false)}
+            className="w-full flex items-center gap-3 py-2 text-neutral-300 hover:text-white"
           >
-            <span>About</span>
-          </button>
-          <button
-            onClick={() => handleNavClick('guidelines')}
-            className="w-full flex items-center gap-3 py-2 text-left text-neutral-300 hover:text-white cursor-pointer"
-          >
-            <FileText className="w-4 h-4 text-[#DC2626]" />
-            <span>Guidelines</span>
-          </button>
-          <button
-            onClick={() => handleNavClick('contact')}
-            className="w-full flex items-center gap-3 py-2 text-left text-neutral-300 hover:text-white cursor-pointer"
-          >
-            <Mail className="w-4 h-4 text-[#DC2626]" />
-            <span>Contact</span>
-          </button>
+            <Calendar className="w-4 h-4 text-[#DC2626]" />
+            <span>Events</span>
+          </Link>
+
           {session ? (
             <button
               onClick={handleLogout}
@@ -323,9 +242,9 @@ export const Navbar: React.FC<NavbarProps> = ({ session, onLogout, onNavigate })
             <button
               onClick={() => {
                 setMobileMenuOpen(false);
-                handleNavClick('login-section');
+                handleSignIn();
               }}
-              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#DC2626] text-white font-bold"
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#DC2626] text-white font-bold cursor-pointer"
             >
               <span>Student Sign In</span>
               <ArrowRight className="w-4 h-4" />

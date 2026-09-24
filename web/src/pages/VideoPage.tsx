@@ -13,7 +13,8 @@ import {
   Loader2,
   ThumbsUp,
   ThumbsDown,
-  RefreshCw
+  RefreshCw,
+  Download
 } from 'lucide-react';
 
 export const VideoPage: React.FC = () => {
@@ -183,14 +184,26 @@ export const VideoPage: React.FC = () => {
                 onChange={handleFileSelect}
                 className="hidden"
               />
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploading}
-                className="text-xs font-bold text-[#DC2626] hover:text-[#B5121B] flex items-center gap-1 cursor-pointer disabled:opacity-50"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span>{submission?.videoUploaded ? 'Upload New Take' : 'Upload Video'}</span>
-              </button>
+              <div className="flex items-center gap-3">
+                {videoUrl && (
+                  <a
+                    href={videoUrl}
+                    download="self-introduction.mp4"
+                    className="text-xs font-bold text-neutral-600 hover:text-[#0B192C] flex items-center gap-1 cursor-pointer bg-neutral-100 hover:bg-neutral-200 px-3 py-1.5 rounded-lg transition-colors"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Download</span>
+                  </a>
+                )}
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  className="text-xs font-bold text-[#DC2626] hover:text-[#B5121B] flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>{submission?.videoUploaded ? 'Upload New Take' : 'Upload Video'}</span>
+                </button>
+              </div>
             </div>
 
             {uploading ? (

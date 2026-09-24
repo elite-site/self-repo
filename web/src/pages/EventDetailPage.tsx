@@ -39,7 +39,7 @@ export const EventDetailPage: React.FC = () => {
 
     try {
       const [evData, regList] = await Promise.all([
-        api.getEvent(id),
+        api.getEvent(id).catch(() => api.getPublicEvent(id)),
         api.getRegistrations().catch(() => []),
       ]);
       setEvent(evData);
@@ -238,7 +238,14 @@ export const EventDetailPage: React.FC = () => {
                   </div>
                 ) : (
                   <button
-                    onClick={() => setModalOpen(true)}
+                    onClick={() => {
+                      const sessionData = localStorage.getItem('ita_student_session');
+                      if (!sessionData) {
+                        window.location.href = api.getOAuthAuthorizeUrl();
+                        return;
+                      }
+                      setModalOpen(true);
+                    }}
                     className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-[#DC2626] hover:bg-[#B5121B] text-white text-xs font-bold transition-all shadow-md cursor-pointer"
                   >
                     <span>Register Now</span>

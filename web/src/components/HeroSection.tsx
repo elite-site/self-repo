@@ -2,12 +2,11 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Users, ShieldCheck, Code, Calendar, Award, UserCheck, Sparkles } from 'lucide-react';
 
+import { api } from '../services/api';
+
 export const HeroSection: React.FC = () => {
-  const scrollToLogin = () => {
-    const el = document.getElementById('login-section');
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth' });
-    }
+  const handleSignIn = () => {
+    window.location.href = api.getOAuthAuthorizeUrl();
   };
 
   return (
@@ -47,7 +46,7 @@ export const HeroSection: React.FC = () => {
           <div className="flex flex-wrap items-center gap-4 pt-2">
             <button
               type="button"
-              onClick={scrollToLogin}
+              onClick={handleSignIn}
               className="inline-flex items-center gap-2.5 px-6 py-3 rounded-xl bg-elite-red hover:bg-[#B5121B] text-white font-bold text-sm tracking-wide shadow-md shadow-red-900/10 active:scale-[0.99] transition-all cursor-pointer"
             >
               <span>Student Sign In</span>

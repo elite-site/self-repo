@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../../services/api';
 import { Achievement } from '../../types';
-import { Plus, Trophy, Loader2, AlertCircle, Trash2, X, Calendar } from 'lucide-react';
+import { Plus, Trophy, Loader2, AlertCircle, Trash2, X, Calendar, Pencil } from 'lucide-react';
 
 export const AchievementsTab: React.FC = () => {
   const [achievements, setAchievements] = useState<Achievement[]>([]);
@@ -10,6 +10,7 @@ export const AchievementsTab: React.FC = () => {
 
   // Modal State
   const [modalOpen, setModalOpen] = useState(false);
+  const [editingAchievement, setEditingAchievement] = useState<Achievement | null>(null);
   const [saving, setSaving] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
 
@@ -35,7 +36,8 @@ export const AchievementsTab: React.FC = () => {
     loadAchievements();
   }, []);
 
-  const handleOpenModal = () => {
+  const handleOpenCreateModal = () => {
+    setEditingAchievement(null);
     setTitle('');
     setDescription('');
     setOrganization('');
@@ -44,23 +46,39 @@ export const AchievementsTab: React.FC = () => {
     setModalOpen(true);
   };
 
-  const handleCreateAchievement = async (e: React.FormEvent) => {
+  const handleOpenEditModal = (a: Achievement) => {
+    setEditingAchievement(a);
+    setTitle(a.title || '');
+    setDescription(a.description || '');
+    setOrganization(a.organization || '');
+    setDate(a.date ? new Date(a.date).toISOString().split('T')[0] : '');
+    setModalError(null);
+    setModalOpen(true);
+  };
+
+  const handleSaveAchievement = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
     setSaving(true);
     setModalError(null);
 
+    const payload = {
+      title: title.trim(),
+      description: description.trim(),
+      organization: organization.trim(),
+      date: date || new Date().toISOString(),
+    };
+
     try {
-      await api.createAchievement({
-        title: title.trim(),
-        description: description.trim(),
-        organization: organization.trim(),
-        date: date || new Date().toISOString(),
-      });
+      if (editingAchievement) {
+        await api.updateAchievement(editingAchievement.id, payload);
+      } else {
+        await api.createAchievement(payload);
+      }
       setModalOpen(false);
       loadAchievements();
     } catch (err: any) {
-      setModalError(err.response?.data?.message || 'Failed to add achievement.');
+      setModalError(err.response?.data?.message || 'Failed to save achievement.');
     } finally {
       setSaving(false);
     }
@@ -93,7 +111,7 @@ export const AchievementsTab: React.FC = () => {
           <p className="text-xs text-neutral-500">Record hackathon awards, academic distinctions, and competitions</p>
         </div>
         <button
-          onClick={handleOpenModal}
+          onClick={handleOpenCreateModal}
           className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#DC2626] hover:bg-[#B5121B] text-white text-xs font-bold rounded-xl transition-all shadow-sm cursor-pointer"
         >
           <Plus className="w-4 h-4" />
@@ -117,7 +135,7 @@ export const AchievementsTab: React.FC = () => {
             Add contest wins, hackathon certificates, coding competition ranks, or academic honors.
           </p>
           <button
-            onClick={handleOpenModal}
+            onClick={handleOpenCreateModal}
             className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#0B192C] hover:bg-neutral-800 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
@@ -149,24 +167,35 @@ export const AchievementsTab: React.FC = () => {
                 </div>
               </div>
 
-              <button
-                onClick={() => handleDelete(a.id)}
-                className="p-2 text-neutral-300 hover:text-red-600 transition-colors self-end sm:self-center cursor-pointer rounded-lg hover:bg-neutral-50"
-                title="Delete achievement"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
+              <div className="flex items-center gap-1 self-end sm:self-center">
+                <button
+                  onClick={() => handleOpenEditModal(a)}
+                  className="p-2 text-neutral-400 hover:text-[#0B192C] transition-colors cursor-pointer rounded-lg hover:bg-neutral-50"
+                  title="Edit achievement"
+                >
+                  <Pencil className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => handleDelete(a.id)}
+                  className="p-2 text-neutral-300 hover:text-red-600 transition-colors cursor-pointer rounded-lg hover:bg-neutral-50"
+                  title="Delete achievement"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           ))}
         </div>
       )}
 
-      {/* ADD ACHIEVEMENT MODAL */}
+      {/* ADD / EDIT ACHIEVEMENT MODAL */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
           <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-neutral-200 animate-in fade-in zoom-in-95 duration-150 text-left">
             <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
-              <h3 className="text-base font-bold text-[#0B192C]">Add Honor or Achievement</h3>
+              <h3 className="text-base font-bold text-[#0B192C]">
+                {editingAchievement ? 'Edit Honor or Achievement' : 'Add Honor or Achievement'}
+              </h3>
               <button
                 onClick={() => setModalOpen(false)}
                 className="p-1 text-neutral-400 hover:text-neutral-700 rounded-lg cursor-pointer"
@@ -175,7 +204,7 @@ export const AchievementsTab: React.FC = () => {
               </button>
             </div>
 
-            <form onSubmit={handleCreateAchievement} className="space-y-4 pt-4">
+            <form onSubmit={handleSaveAchievement} className="space-y-4 pt-4">
               {modalError && (
                 <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 shrink-0" />
@@ -241,7 +270,7 @@ export const AchievementsTab: React.FC = () => {
                   className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#DC2626] hover:bg-[#B5121B] text-white text-xs font-bold transition-all disabled:opacity-50 cursor-pointer shadow-sm"
                 >
                   {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
-                  <span>Save Achievement</span>
+                  <span>{editingAchievement ? 'Update Achievement' : 'Save Achievement'}</span>
                 </button>
               </div>
             </form>

@@ -256,7 +256,39 @@ router.get('/public/events', async (_req: Request, res: Response): Promise<void>
       where: { status: 'OPEN' },
       orderBy: { createdAt: 'desc' }
     });
-    res.json(events);
+    res.json(events.map(e => ({
+      ...e,
+      title: e.name,
+      date: e.createdAt,
+      type: 'GENERAL',
+      eligibility: `Year ${e.year || 'All'}`,
+      deadline: e.createdAt
+    })));
+  } catch (err: any) {
+    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+  }
+});
+
+// GET /api/public/events/:id - Public event detail
+router.get('/public/events/:id', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const event = await prisma.event.findUnique({
+      where: { id: req.params.id },
+      include: { formFields: { orderBy: { displayOrder: 'asc' } } }
+    });
+    if (!event) {
+      res.status(404).json({ error: 'NOT_FOUND', message: 'Event not found' });
+      return;
+    }
+    res.json({
+      ...event,
+      title: event.name,
+      date: event.createdAt,
+      type: 'GENERAL',
+      eligibility: `Year ${event.year || 'All'}`,
+      deadline: event.createdAt,
+      registrationFields: event.formFields
+    });
   } catch (err: any) {
     res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
   }

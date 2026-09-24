@@ -198,9 +198,39 @@ const AuthWrapper: React.FC = () => {
   return (
     <Routes>
       <Route path="/" element={<LandingPage session={session} />} />
-      <Route path="/students" element={<StudentDirectoryPage />} />
-      <Route path="/students/:rollNo" element={<PublicStudentProfilePage />} />
-      <Route path="/students/:rollNo/resume" element={<PublicResumeViewerPage />} />
+      <Route path="/students" element={<StudentDirectoryPage session={session} onLogout={handleLogout} />} />
+      <Route path="/students/:rollNo" element={<PublicStudentProfilePage session={session} onLogout={handleLogout} />} />
+      <Route path="/students/:rollNo/resume" element={<PublicResumeViewerPage session={session} onLogout={handleLogout} />} />
+
+      {/* Publicly accessible Events pages when unauthenticated */}
+      {!session && (
+        <>
+          <Route
+            path="/events"
+            element={
+              <div className="min-h-screen bg-[#FAFAFA] flex flex-col justify-between">
+                <Navbar session={session} onLogout={handleLogout} />
+                <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full flex-1">
+                  <EventsPage />
+                </main>
+                <Footer />
+              </div>
+            }
+          />
+          <Route
+            path="/events/:id"
+            element={
+              <div className="min-h-screen bg-[#FAFAFA] flex flex-col justify-between">
+                <Navbar session={session} onLogout={handleLogout} />
+                <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full flex-1">
+                  <EventDetailPage />
+                </main>
+                <Footer />
+              </div>
+            }
+          />
+        </>
+      )}
 
       {/* Protected Routes */}
       <Route
@@ -216,13 +246,15 @@ const AuthWrapper: React.FC = () => {
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/profile/edit" element={<EditProfilePage />} />
         <Route path="/portfolio/*" element={<PortfolioPage />} />
-        <Route path="/video" element={<VideoPage />} />
+        <Route path="/intro-video" element={<VideoPage />} />
+        <Route path="/video" element={<Navigate to="/intro-video" replace />} />
         <Route path="/resume" element={<ResumePage />} />
         <Route path="/events" element={<EventsPage />} />
         <Route path="/events/:id" element={<EventDetailPage />} />
         <Route path="/registrations" element={<RegistrationsPage />} />
         <Route path="/teams" element={<TeamsPage />} />
         <Route path="/voting" element={<VotingPage />} />
+        <Route path="/voting/:campaignId" element={<VotingPage />} />
         <Route path="/notifications" element={<NotificationsPage />} />
       </Route>
     </Routes>
