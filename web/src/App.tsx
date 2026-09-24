@@ -22,6 +22,7 @@ import { NotificationsPage } from './pages/NotificationsPage';
 import { HomePage } from './pages/public/HomePage';
 import { PublicStudentProfilePage } from './pages/public/PublicStudentProfilePage';
 import { PublicResumeViewerPage } from './pages/public/PublicResumeViewerPage';
+import { PublicThemeProvider, StudentThemeProvider } from './context/ThemeContext';
 
 const SESSION_KEY = 'ita_student_session';
 
@@ -100,17 +101,40 @@ const AuthWrapper: React.FC = () => {
 
   return (
     <Routes>
-      {/* Public Pages: Strictly Home and Student Details */}
-      <Route path="/" element={<HomePage session={session} onLogout={handleLogout} />} />
-      <Route path="/students/:rollNo" element={<PublicStudentProfilePage session={session} onLogout={handleLogout} />} />
-      <Route path="/students/:rollNo/resume" element={<PublicResumeViewerPage session={session} onLogout={handleLogout} />} />
+      {/* Public Pages: Strictly Home and Student Details (Isolated Public Theme) */}
+      <Route
+        path="/"
+        element={
+          <PublicThemeProvider>
+            <HomePage session={session} onLogout={handleLogout} />
+          </PublicThemeProvider>
+        }
+      />
+      <Route
+        path="/students/:rollNo"
+        element={
+          <PublicThemeProvider>
+            <PublicStudentProfilePage session={session} onLogout={handleLogout} />
+          </PublicThemeProvider>
+        }
+      />
+      <Route
+        path="/students/:rollNo/resume"
+        element={
+          <PublicThemeProvider>
+            <PublicResumeViewerPage session={session} onLogout={handleLogout} />
+          </PublicThemeProvider>
+        }
+      />
       <Route path="/students" element={<Navigate to="/" replace />} />
 
-      {/* Protected Student Portal Routes: Everything else requires login */}
+      {/* Protected Student Portal Routes: Isolated Student Theme */}
       <Route
         element={
           session ? (
-            <StudentLayout session={session} onLogout={handleLogout} />
+            <StudentThemeProvider>
+              <StudentLayout session={session} onLogout={handleLogout} />
+            </StudentThemeProvider>
           ) : (
             <Navigate to="/" replace />
           )

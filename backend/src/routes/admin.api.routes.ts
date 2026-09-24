@@ -35,26 +35,63 @@ router.get('/stats', async (req: Request, res: Response): Promise<void> => {
   try {
     const eventId = ((req.query.eventId as string) || ACTIVE_EVENT_ID).trim();
 
-    const [totalVideos, totalRated, videoGroups, ratingGroups, overTimeRows] =
-      await Promise.all([
-        prisma.submission.count({ where: { eventId, videoDriveId: { not: null } } }),
-        prisma.submission.count({ where: { eventId, rating: { not: null } } }),
-        prisma.submission.groupBy({
-          by: ['branch', 'section', 'year'],
-          where: { eventId, videoDriveId: { not: null } },
-          _count: { _all: true },
-        }),
-        prisma.submission.groupBy({
-          by: ['rating'],
-          where: { eventId, rating: { not: null } },
-          _count: { _all: true },
-        }),
-        prisma.submission.findMany({
-          where: { eventId, videoDriveId: { not: null } },
-          select: { submittedAt: true },
-          orderBy: { submittedAt: 'asc' },
-        }),
-      ]);
+    const [
+      totalVideos,
+      totalRated,
+      videoGroups,
+      ratingGroups,
+      overTimeRows,
+    ] = await Promise.all([
+      prisma.submission.count({ where: { eventId, videoDriveId: { not: null } } }),
+      prisma.submission.count({ where: { eventId, rating: { not: null } } }),
+      prisma.submission.groupBy({
+        by: ['branch', 'section', 'year'],
+        where: { eventId, videoDriveId: { not: null } },
+        _count: { _all: true },
+      }),
+      prisma.submission.groupBy({
+        by: ['rating'],
+        where: { eventId, rating: { not: null } },
+        _count: { _all: true },
+      }),
+      prisma.submission.findMany({
+        where: { eventId, videoDriveId: { not: null } },
+        select: { submittedAt: true },
+        orderBy: { submittedAt: 'asc' },
+      }),
+    ]);
+
+    const [
+      totalStudents,
+      totalProfiles,
+      totalProjects,
+      totalAchievements,
+      totalCertificates,
+      totalResumes,
+      totalEvents,
+      totalRegistrations,
+      totalCampaigns,
+      totalVotes,
+      pendingProjects,
+      pendingAchievements,
+      pendingCertificates,
+      pendingResumes,
+    ] = await Promise.all([
+      prisma.student.count().catch(() => 0),
+      prisma.studentProfile.count().catch(() => 0),
+      prisma.project.count().catch(() => 0),
+      prisma.achievement.count().catch(() => 0),
+      prisma.certificate.count().catch(() => 0),
+      prisma.resume.count().catch(() => 0),
+      prisma.event.count().catch(() => 0),
+      prisma.eventRegistration.count().catch(() => 0),
+      prisma.votingCampaign.count().catch(() => 0),
+      prisma.vote.count().catch(() => 0),
+      prisma.project.count({ where: { status: 'PENDING' } }).catch(() => 0),
+      prisma.achievement.count({ where: { status: 'PENDING' } }).catch(() => 0),
+      prisma.certificate.count({ where: { status: 'PENDING' } }).catch(() => 0),
+      prisma.resume.count({ where: { status: 'PENDING' } }).catch(() => 0),
+    ]);
 
     const formatYearLabel = (y: number | string): string => {
       const num = parseInt(String(y), 10);
@@ -65,22 +102,22 @@ router.get('/stats', async (req: Request, res: Response): Promise<void> => {
       return `${num}th Year`;
     };
 
-    const bySection = videoGroups
-      .map((g) => ({
+    const bySection = (videoGroups as any[])
+      .map((g: any) => ({
         label: `${formatYearLabel(g.year)} · ${(g.branch || 'IT').trim()}-${(g.section || '').trim()}`,
         year: g.year,
         branch: g.branch,
         section: g.section,
         submitted: g._count._all,
       }))
-      .sort((a, b) => {
+      .sort((a: any, b: any) => {
         if (a.year !== b.year) return a.year - b.year;
         if ((a.branch || '') !== (b.branch || '')) return (a.branch || '').localeCompare(b.branch || '');
         return (a.section || '').localeCompare(b.section || '');
       });
 
     const byYear: Record<string, number> = {};
-    videoGroups.forEach((g) => {
+    (videoGroups as any[]).forEach((g: any) => {
       const key = `Year ${g.year}`;
       byYear[key] = (byYear[key] || 0) + g._count._all;
     });
@@ -91,16 +128,30 @@ router.get('/stats', async (req: Request, res: Response): Promise<void> => {
     });
 
     const byRating: Record<string, number> = {};
-    ratingGroups.forEach((g) => {
+    (ratingGroups as any[]).forEach((g: any) => {
       if (g.rating) byRating[g.rating] = g._count._all;
     });
 
     const dateCounts: Record<string, number> = {};
-    overTimeRows.forEach((s) => {
+    (overTimeRows as any[]).forEach((s: any) => {
       const dateKey = s.submittedAt.toISOString().split('T')[0];
       dateCounts[dateKey] = (dateCounts[dateKey] || 0) + 1;
     });
     const overTime = Object.entries(dateCounts).map(([date, count]) => ({ date, count }));
+
+    const portal = {
+      totalStudents,
+      totalProfiles,
+      totalProjects,
+      totalAchievements,
+      totalCertificates,
+      totalResumes,
+      totalEvents,
+      totalRegistrations,
+      totalCampaigns,
+      totalVotes,
+      pendingModeration: (pendingProjects || 0) + (pendingAchievements || 0) + (pendingCertificates || 0) + (pendingResumes || 0),
+    };
 
     res.json({
       eventId,
@@ -112,6 +163,7 @@ router.get('/stats', async (req: Request, res: Response): Promise<void> => {
       byStatus,
       byRating,
       overTime,
+      portal,
     });
   } catch (err: any) {
     console.error('Error fetching admin stats:', err);

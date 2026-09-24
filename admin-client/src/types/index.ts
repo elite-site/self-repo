@@ -40,6 +40,20 @@ export interface SectionProgress {
   submitted: number;
 }
 
+export interface PortalStats {
+  totalStudents: number;
+  totalProfiles: number;
+  totalProjects: number;
+  totalAchievements: number;
+  totalCertificates: number;
+  totalResumes: number;
+  totalEvents: number;
+  totalRegistrations: number;
+  totalCampaigns: number;
+  totalVotes: number;
+  pendingModeration: number;
+}
+
 export interface AdminStats {
   eventId?: string;
   totalSubmissions: number;
@@ -50,6 +64,7 @@ export interface AdminStats {
   byStatus: Record<string, number>;
   byRating: Record<string, number>;
   overTime: Array<{ date: string; count: number }>;
+  portal?: PortalStats;
 }
 
 export interface SubmissionsResponse {

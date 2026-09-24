@@ -9,6 +9,7 @@ import { ActivityLogView } from './components/ActivityLogView';
 import { LoginPage } from './components/LoginPage';
 import { AdminStats, AdminUser, Submission } from './types';
 import { adminApi } from './services/api';
+import { useTheme } from './context/ThemeContext';
 
 // Pages
 import { Moderation } from './pages/Moderation';
@@ -28,6 +29,7 @@ import { Settings } from './pages/Settings';
 
 export const App: React.FC = () => {
   const [user, setUser] = useState<AdminUser | null>(null);
+  const { setAdminUser } = useTheme();
   const [authChecking, setAuthChecking] = useState(true);
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
   const [stats, setStats] = useState<AdminStats | null>(null);
@@ -42,17 +44,20 @@ export const App: React.FC = () => {
         const res = await adminApi.getMe();
         if (res.authenticated && res.user) {
           setUser(res.user);
+          setAdminUser(res.user);
         } else {
           setUser(null);
+          setAdminUser(null);
         }
       } catch {
         setUser(null);
+        setAdminUser(null);
       } finally {
         setAuthChecking(false);
       }
     }
     checkAuth();
-  }, []);
+  }, [setAdminUser]);
 
   // Fetch stats when user logged in
   const loadStats = async () => {
@@ -78,9 +83,11 @@ export const App: React.FC = () => {
     try {
       await adminApi.logout();
       setUser(null);
+      setAdminUser(null);
     } catch (err) {
       console.error('Logout failed', err);
       setUser(null);
+      setAdminUser(null);
     }
   };
 
@@ -96,7 +103,14 @@ export const App: React.FC = () => {
   }
 
   if (!user) {
-    return <LoginPage onLoginSuccess={(u) => setUser(u)} />;
+    return (
+      <LoginPage
+        onLoginSuccess={(u) => {
+          setUser(u);
+          setAdminUser(u);
+        }}
+      />
+    );
   }
 
   return (
