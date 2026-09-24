@@ -1,133 +1,632 @@
 import React, { useEffect, useState } from 'react';
-import { api } from '../services/api';
-import { StudentProfile, Notification, Event } from '../types';
-import { Video, FileText, Calendar, Bell, AlertCircle, CheckCircle, Clock } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import {
+  Video,
+  FileText,
+  FolderGit2,
+  Award,
+  Calendar,
+  Bell,
+  ArrowRight,
+  CheckCircle2,
+  Clock,
+  AlertCircle,
+  ExternalLink,
+  Sparkles,
+  ChevronRight,
+  Vote,
+  RefreshCw,
+  Plus
+} from 'lucide-react';
+import { api } from '../services/api';
+import { StudentProfile, Project, Event, EventRegistration, VotingCampaign, Notification } from '../types';
 
-export const DashboardPage = () => {
+export const DashboardPage: React.FC = () => {
   const [profile, setProfile] = useState<StudentProfile | null>(null);
+  const [resume, setResume] = useState<any | null>(null);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [achievements, setAchievements] = useState<any[]>([]);
+  const [certificates, setCertificates] = useState<any[]>([]);
+  const [events, setEvents] = useState<Event[]>([]);
+  const [registrations, setRegistrations] = useState<EventRegistration[]>([]);
+  const [votingCampaigns, setVotingCampaigns] = useState<VotingCampaign[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [eventsError, setEventsError] = useState<string | null>(null);
+  const [notifError, setNotifError] = useState<string | null>(null);
+  const [votingError, setVotingError] = useState<string | null>(null);
+
+  const loadData = async () => {
+    setLoading(true);
+    setProfileError(null);
+
+    // 1. Load Profile & Resume
+    try {
+      const pData = await api.getProfile();
+      setProfile(pData);
+    } catch (err: any) {
+      setProfileError('Failed to load profile details.');
+    }
+
+    try {
+      const rData = await api.getResume();
+      setResume(rData);
+    } catch {
+      // Resume may not exist yet
+    }
+
+    // 2. Load Portfolio items
+    try {
+      const projData = await api.getProjects();
+      if (Array.isArray(projData)) setProjects(projData);
+    } catch {}
+
+    try {
+      const achData = await api.getAchievements();
+      if (Array.isArray(achData)) setAchievements(achData);
+    } catch {}
+
+    try {
+      const certData = await api.getCertificates();
+      if (Array.isArray(certData)) setCertificates(certData);
+    } catch {}
+
+    // 3. Load Events & Registrations
+    try {
+      const evData = await api.getEvents();
+      if (Array.isArray(evData)) setEvents(evData);
+    } catch (err: any) {
+      setEventsError('Could not load department events.');
+    }
+
+    try {
+      const regData = await api.getRegistrations();
+      if (Array.isArray(regData)) setRegistrations(regData);
+    } catch {}
+
+    // 4. Load Voting Campaigns
+    try {
+      const vData = await api.getVotingCampaigns();
+      if (Array.isArray(vData)) setVotingCampaigns(vData);
+    } catch (err: any) {
+      setVotingError('Could not load voting campaigns.');
+    }
+
+    // 5. Load Notifications
+    try {
+      const nData = await api.getNotifications();
+      if (Array.isArray(nData)) setNotifications(nData);
+    } catch (err: any) {
+      setNotifError('Could not load notifications.');
+    }
+
+    setLoading(false);
+  };
 
   useEffect(() => {
-    api.getProfile()
-      .then(data => setProfile(data))
-      .catch(() => setError(true))
-      .finally(() => setLoading(false));
+    loadData();
   }, []);
 
-  if (loading) {
+  // Compute real profile completion
+  const checkPhoto = !!profile?.photoUrl;
+  const checkBio = !!(profile?.bio || (profile as any)?.biography);
+  const checkSkills = !!(profile?.skills && profile.skills.length > 0);
+  const checkVideo = !!(profile?.submission?.videoUrl || profile?.submission?.status === 'APPROVED');
+  const checkResume = !!(resume?.fileUrl || resume?.resumeDriveId);
+  const checkProjects = projects.length > 0;
+
+  const completionItems = [
+    { label: 'Profile Photo', done: checkPhoto, link: '/profile/edit' },
+    { label: 'Biography', done: checkBio, link: '/profile/edit' },
+    { label: 'Technical Skills', done: checkSkills, link: '/profile/edit' },
+    { label: 'Intro Video', done: checkVideo, link: '/video' },
+    { label: 'Resume', done: checkResume, link: '/resume' },
+    { label: 'Projects', done: checkProjects, link: '/portfolio' },
+  ];
+
+  const completedCount = completionItems.filter((i) => i.done).length;
+  const completionPercentage = Math.round((completedCount / completionItems.length) * 100);
+
+  if (loading && !profile) {
     return (
-      <div className="space-y-6 animate-pulse">
-        <div className="h-8 bg-slate-200 rounded w-1/4"></div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="col-span-2 space-y-6">
-            <div className="h-32 bg-slate-200 rounded"></div>
-            <div className="grid grid-cols-2 gap-6">
-              <div className="h-40 bg-slate-200 rounded"></div>
-              <div className="h-40 bg-slate-200 rounded"></div>
-            </div>
-          </div>
-          <div className="space-y-6">
-            <div className="h-64 bg-slate-200 rounded"></div>
-          </div>
+      <div className="space-y-6 animate-pulse select-none">
+        <div className="h-28 bg-slate-200 rounded-2xl w-full"></div>
+        <div className="h-20 bg-slate-200 rounded-2xl w-full"></div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-32 bg-slate-200 rounded-2xl"></div>
+          ))}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 h-72 bg-slate-200 rounded-2xl"></div>
+          <div className="h-72 bg-slate-200 rounded-2xl"></div>
         </div>
       </div>
     );
   }
-
-  if (error || !profile) {
-    return (
-      <div className="text-center py-10 bg-white rounded-lg shadow border border-[#E2E8F0]">
-        <AlertCircle className="w-10 h-10 text-elite-red mx-auto mb-3" />
-        <h2 className="text-lg font-bold text-[#0B192C]">Failed to load dashboard</h2>
-        <button onClick={() => window.location.reload()} className="mt-4 px-4 py-2 bg-elite-red text-white rounded-md text-sm">Retry</button>
-      </div>
-    );
-  }
-
-  const completionPoints = [
-    !!profile.photoUrl,
-    !!profile.bio,
-    (profile.skills && profile.skills.length > 0),
-    !!profile.githubUrl || !!profile.linkedinUrl,
-    false, // placeholder for video status
-    false, // placeholder for resume status
-  ];
-  const completion = Math.round((completionPoints.filter(Boolean).length / completionPoints.length) * 100);
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-[#0B192C]">Dashboard</h1>
-      
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="col-span-2 space-y-6">
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-[#E2E8F0]">
-            <h2 className="text-lg font-semibold text-[#0B192C] mb-4">Profile Completion</h2>
-            <div className="flex justify-between text-sm mb-1 text-slate-600">
-              <span>{completion}% Complete</span>
-              <span>{completion === 100 ? 'All done!' : 'Keep going!'}</span>
-            </div>
-            <div className="w-full bg-slate-100 rounded-full h-2.5">
-              <div className="bg-emerald-500 h-2.5 rounded-full transition-all duration-500" style={{ width: `${completion}%` }}></div>
-            </div>
+      {/* COMPACT INLINE ERROR BANNER IF PROFILE FAILED */}
+      {profileError && (
+        <div className="flex items-center justify-between p-4 bg-red-50 border border-red-200 rounded-2xl text-red-800 text-sm">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-red-600 shrink-0" />
+            <span>{profileError} Showing offline workspace shell.</span>
           </div>
+          <button
+            onClick={loadData}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>Try Again</span>
+          </button>
+        </div>
+      )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-[#E2E8F0] flex flex-col items-center text-center">
-              <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mb-3">
-                <Video className="w-6 h-6 text-slate-400" />
-              </div>
-              <h3 className="font-medium text-[#0B192C] mb-1">Intro Video</h3>
-              <p className="text-sm text-slate-500 mb-4">
-                <span className="inline-flex items-center gap-1.5 bg-slate-100 px-2 py-1 rounded text-xs font-medium text-slate-600">
-                  <Clock className="w-3.5 h-3.5"/> Missing
-                </span>
-              </p>
-              <Link to="/video" className="mt-auto w-full py-2 bg-slate-50 hover:bg-slate-100 text-sm font-medium rounded-md text-[#0B192C] transition-colors border border-[#E2E8F0]">Upload Video</Link>
+      {/* 1. WELCOME HEADER CARD */}
+      <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6 sm:p-8 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="flex items-start sm:items-center gap-4 sm:gap-5">
+          {profile?.photoUrl ? (
+            <img
+              src={profile.photoUrl}
+              alt={profile.name}
+              className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover border-2 border-red-100 shrink-0 shadow-sm"
+            />
+          ) : (
+            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-[#0B192C] text-white flex items-center justify-center font-black text-xl sm:text-2xl shrink-0 shadow-sm">
+              {profile?.name
+                ? profile.name
+                    .split(' ')
+                    .filter(Boolean)
+                    .slice(0, 2)
+                    .map((n) => n[0]?.toUpperCase())
+                    .join('')
+                : 'IT'}
             </div>
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-[#E2E8F0] flex flex-col items-center text-center">
-              <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mb-3">
-                <FileText className="w-6 h-6 text-slate-400" />
-              </div>
-              <h3 className="font-medium text-[#0B192C] mb-1">Resume</h3>
-              <p className="text-sm text-slate-500 mb-4">
-                <span className="inline-flex items-center gap-1.5 bg-slate-100 px-2 py-1 rounded text-xs font-medium text-slate-600">
-                  <Clock className="w-3.5 h-3.5"/> Missing
-                </span>
-              </p>
-              <Link to="/resume" className="mt-auto w-full py-2 bg-slate-50 hover:bg-slate-100 text-sm font-medium rounded-md text-[#0B192C] transition-colors border border-[#E2E8F0]">Upload Resume</Link>
+          )}
+          <div className="space-y-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-extrabold uppercase tracking-wider text-[#DC2626] bg-red-50 px-2.5 py-0.5 rounded-md">
+                Dept of Information Technology
+              </span>
+              <span className="text-xs font-mono text-neutral-500 bg-neutral-100 px-2.5 py-0.5 rounded-md font-semibold">
+                {profile?.rollNo || 'IT Student'}
+              </span>
             </div>
+            <h1 className="text-xl sm:text-2xl font-black text-[#0B192C] tracking-tight">
+              Welcome back, {profile?.name || 'Student'}
+            </h1>
+            <p className="text-xs sm:text-sm text-neutral-500 font-medium">
+              Year {profile?.year || '1'} · Section {profile?.section || 'A'} · {profile?.branch || 'IT'} · Sasi Institute of Tech & Eng
+            </p>
           </div>
         </div>
 
-        <div className="space-y-6">
-          <div className="bg-white rounded-lg shadow-sm border border-[#E2E8F0] flex flex-col">
-            <div className="p-4 border-b border-[#E2E8F0] flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-elite-red" />
-              <h2 className="font-semibold text-[#0B192C]">Upcoming Events</h2>
+        <div className="flex flex-wrap items-center gap-3 shrink-0">
+          <Link
+            to="/profile"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#CBD5E1] text-[#0B192C] hover:bg-neutral-50 text-xs font-bold transition-colors"
+          >
+            <span>View Profile</span>
+            <ExternalLink className="w-3.5 h-3.5 text-neutral-400" />
+          </Link>
+          <Link
+            to="/profile/edit"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#DC2626] hover:bg-[#B5121B] text-white text-xs font-bold transition-all shadow-sm"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Edit Profile</span>
+          </Link>
+        </div>
+      </div>
+
+      {/* 2. PROFILE COMPLETION PROGRESS */}
+      <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-bold text-[#0B192C]">Profile Strength & Readiness</h2>
+              <span className="text-xs font-black text-[#DC2626] bg-red-50 px-2 py-0.5 rounded-full">
+                {completionPercentage}% Complete
+              </span>
             </div>
-            <div className="p-4 flex-1">
-              <div className="text-sm text-slate-500 text-center py-6 flex flex-col items-center gap-2">
-                <Calendar className="w-8 h-8 text-slate-300" />
-                No upcoming events found.
+            <p className="text-xs text-neutral-500 mt-0.5">
+              {completionPercentage === 100
+                ? 'Your profile is 100% complete and fully ready for showcase!'
+                : 'Complete all sections to unlock maximum visibility in the student directory.'}
+            </p>
+          </div>
+          <span className="text-xs font-semibold text-neutral-400">
+            {completedCount} of {completionItems.length} sections done
+          </span>
+        </div>
+
+        {/* Progress Bar */}
+        <div className="w-full bg-neutral-100 rounded-full h-2.5 overflow-hidden">
+          <div
+            className={`h-2.5 rounded-full transition-all duration-700 ease-out ${
+              completionPercentage === 100
+                ? 'bg-emerald-500'
+                : completionPercentage >= 60
+                ? 'bg-blue-600'
+                : 'bg-[#DC2626]'
+            }`}
+            style={{ width: `${completionPercentage}%` }}
+          />
+        </div>
+
+        {/* Breakdown Chips */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 pt-1">
+          {completionItems.map((item) => (
+            <Link
+              key={item.label}
+              to={item.link}
+              className={`flex items-center gap-2 p-2 rounded-xl text-xs font-semibold transition-all border ${
+                item.done
+                  ? 'bg-emerald-50/60 border-emerald-200 text-emerald-800 hover:bg-emerald-100/60'
+                  : 'bg-neutral-50 border-neutral-200 text-neutral-600 hover:bg-neutral-100'
+              }`}
+            >
+              {item.done ? (
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              ) : (
+                <Clock className="w-4 h-4 text-neutral-400 shrink-0" />
+              )}
+              <span className="truncate">{item.label}</span>
+            </Link>
+          ))}
+        </div>
+      </div>
+
+      {/* 3. CORE SUMMARY KPI CARDS (4 Columns across desktop) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+        {/* Card 1: Intro Video */}
+        <div className="bg-white border border-[#E2E8F0] rounded-2xl p-5 shadow-sm flex flex-col justify-between hover:border-neutral-300 transition-all">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="w-10 h-10 rounded-xl bg-red-50 text-[#DC2626] flex items-center justify-center">
+                <Video className="w-5 h-5" />
               </div>
+              <span
+                className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                  profile?.submission?.status === 'APPROVED'
+                    ? 'bg-emerald-100 text-emerald-800'
+                    : profile?.submission?.status === 'SUBMITTED'
+                    ? 'bg-amber-100 text-amber-800'
+                    : 'bg-neutral-100 text-neutral-600'
+                }`}
+              >
+                {profile?.submission?.status || 'NOT SUBMITTED'}
+              </span>
             </div>
-            <Link to="/events" className="p-3 text-center border-t border-[#E2E8F0] text-sm text-elite-red hover:bg-red-50 font-medium transition-colors">View All Events</Link>
+            <div>
+              <h3 className="text-sm font-bold text-[#0B192C]">Introduction Video</h3>
+              <p className="text-xs text-neutral-500 mt-0.5">
+                {checkVideo ? 'Video recorded & on file.' : 'Department introduction video.'}
+              </p>
+            </div>
+          </div>
+          <Link
+            to="/video"
+            className="mt-4 flex items-center justify-between text-xs font-bold text-[#DC2626] hover:text-[#B5121B] pt-3 border-t border-neutral-100"
+          >
+            <span>{checkVideo ? 'Review Video' : 'Upload Video'}</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+
+        {/* Card 2: Resume */}
+        <div className="bg-white border border-[#E2E8F0] rounded-2xl p-5 shadow-sm flex flex-col justify-between hover:border-neutral-300 transition-all">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                <FileText className="w-5 h-5" />
+              </div>
+              <span
+                className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                  checkResume ? 'bg-emerald-100 text-emerald-800' : 'bg-neutral-100 text-neutral-600'
+                }`}
+              >
+                {checkResume ? 'ACTIVE' : 'MISSING'}
+              </span>
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-[#0B192C]">Professional Resume</h3>
+              <p className="text-xs text-neutral-500 mt-0.5">
+                {checkResume ? 'PDF ready for recruiter download.' : 'Upload your 1-page PDF resume.'}
+              </p>
+            </div>
+          </div>
+          <Link
+            to="/resume"
+            className="mt-4 flex items-center justify-between text-xs font-bold text-blue-600 hover:text-blue-700 pt-3 border-t border-neutral-100"
+          >
+            <span>{checkResume ? 'View Resume' : 'Upload Resume'}</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+
+        {/* Card 3: Projects */}
+        <div className="bg-white border border-[#E2E8F0] rounded-2xl p-5 shadow-sm flex flex-col justify-between hover:border-neutral-300 transition-all">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
+                <FolderGit2 className="w-5 h-5" />
+              </div>
+              <span className="text-xs font-mono font-bold text-purple-700 bg-purple-100 px-2 py-0.5 rounded-full">
+                {projects.length} Builds
+              </span>
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-[#0B192C]">Technical Projects</h3>
+              <p className="text-xs text-neutral-500 mt-0.5">
+                {projects.length === 0 ? 'No projects added yet.' : `${projects.length} project showcase entries.`}
+              </p>
+            </div>
+          </div>
+          <Link
+            to="/portfolio"
+            className="mt-4 flex items-center justify-between text-xs font-bold text-purple-600 hover:text-purple-700 pt-3 border-t border-neutral-100"
+          >
+            <span>Manage Projects</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+
+        {/* Card 4: Credentials */}
+        <div className="bg-white border border-[#E2E8F0] rounded-2xl p-5 shadow-sm flex flex-col justify-between hover:border-neutral-300 transition-all">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                <Award className="w-5 h-5" />
+              </div>
+              <span className="text-xs font-mono font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
+                {achievements.length + certificates.length} Badges
+              </span>
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-[#0B192C]">Honors & Certs</h3>
+              <p className="text-xs text-neutral-500 mt-0.5">
+                {achievements.length + certificates.length === 0
+                  ? 'No honors verified yet.'
+                  : `${achievements.length} achievements, ${certificates.length} certs.`}
+              </p>
+            </div>
+          </div>
+          <Link
+            to="/portfolio"
+            className="mt-4 flex items-center justify-between text-xs font-bold text-amber-600 hover:text-amber-700 pt-3 border-t border-neutral-100"
+          >
+            <span>View Credentials</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+      </div>
+
+      {/* 4. MAIN TWO-COLUMN WORKSPACE: LEFT 8 COLS, RIGHT 4 COLS */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* LEFT COLUMN: UPCOMING EVENTS & DEMOCRACY (8 cols) */}
+        <div className="lg:col-span-8 space-y-6">
+          {/* UPCOMING EVENTS CARD */}
+          <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6 shadow-sm space-y-5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-red-50 text-[#DC2626]">
+                  <Calendar className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-[#0B192C]">Department Events</h2>
+                  <p className="text-xs text-neutral-500">Upcoming hackathons, workshops & sessions</p>
+                </div>
+              </div>
+              <Link
+                to="/events"
+                className="text-xs font-bold text-[#DC2626] hover:text-[#B5121B] flex items-center gap-1"
+              >
+                <span>Browse All</span>
+                <ChevronRight className="w-4 h-4" />
+              </Link>
+            </div>
+
+            {eventsError ? (
+              <div className="p-4 bg-red-50 border border-red-100 rounded-xl text-xs text-red-700 flex items-center justify-between">
+                <span>{eventsError}</span>
+                <button onClick={loadData} className="font-bold underline cursor-pointer">
+                  Retry
+                </button>
+              </div>
+            ) : events.length === 0 ? (
+              <div className="text-center py-8 px-4 bg-neutral-50 rounded-xl border border-dashed border-neutral-200">
+                <Calendar className="w-8 h-8 text-neutral-400 mx-auto mb-2 opacity-60" />
+                <div className="text-xs font-bold text-neutral-700">No upcoming events scheduled</div>
+                <p className="text-[11px] text-neutral-400 mt-0.5">
+                  Check back soon for upcoming department competitions and hackathons.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                {events.slice(0, 4).map((evt) => {
+                  const isRegistered = registrations.some((r) => r.eventId === evt.id);
+                  return (
+                    <div
+                      key={evt.id}
+                      className="border border-[#E2E8F0] rounded-xl p-4 flex flex-col justify-between hover:border-neutral-300 transition-all bg-white"
+                    >
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[10px] font-bold text-[#DC2626] uppercase bg-red-50 px-2 py-0.5 rounded">
+                            {evt.type || 'Event'}
+                          </span>
+                          {isRegistered && (
+                            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full flex items-center gap-1">
+                              <CheckCircle2 className="w-3 h-3" /> Registered
+                            </span>
+                          )}
+                        </div>
+                        <h4 className="text-sm font-bold text-[#0B192C] leading-snug line-clamp-1">{evt.title}</h4>
+                        <p className="text-xs text-neutral-500 line-clamp-2">{evt.description || 'Department event.'}</p>
+                      </div>
+                      <div className="pt-3 mt-3 border-t border-neutral-100 flex items-center justify-between text-xs">
+                        <span className="text-neutral-400 text-[11px] font-mono">
+                          {evt.date ? new Date(evt.date).toLocaleDateString() : 'TBA'}
+                        </span>
+                        <Link
+                          to={`/events`}
+                          className="font-bold text-[#DC2626] hover:text-[#B5121B] flex items-center gap-0.5"
+                        >
+                          <span>{isRegistered ? 'View Status' : 'Register'}</span>
+                          <ChevronRight className="w-3 h-3" />
+                        </Link>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm border border-[#E2E8F0] flex flex-col">
-            <div className="p-4 border-b border-[#E2E8F0] flex items-center gap-2">
-              <Bell className="w-5 h-5 text-elite-red" />
-              <h2 className="font-semibold text-[#0B192C]">Recent Notifications</h2>
-            </div>
-            <div className="p-4 flex-1">
-              <div className="text-sm text-slate-500 text-center py-6 flex flex-col items-center gap-2">
-                <Bell className="w-8 h-8 text-slate-300" />
-                No new notifications.
+          {/* ACTIVE ELECTIONS / DEMOCRACY */}
+          <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6 shadow-sm space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-purple-50 text-purple-600">
+                  <Vote className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-[#0B192C]">Student Democracy & Voting</h2>
+                  <p className="text-xs text-neutral-500">Department council and representative elections</p>
+                </div>
               </div>
+              <Link
+                to="/voting"
+                className="text-xs font-bold text-purple-600 hover:text-purple-700 flex items-center gap-1"
+              >
+                <span>Voting Center</span>
+                <ChevronRight className="w-4 h-4" />
+              </Link>
             </div>
-            <Link to="/notifications" className="p-3 text-center border-t border-[#E2E8F0] text-sm text-elite-red hover:bg-red-50 font-medium transition-colors">View All</Link>
+
+            {votingError ? (
+              <div className="p-4 bg-red-50 border border-red-100 rounded-xl text-xs text-red-700 flex items-center justify-between">
+                <span>{votingError}</span>
+                <button onClick={loadData} className="font-bold underline cursor-pointer">
+                  Retry
+                </button>
+              </div>
+            ) : votingCampaigns.length === 0 ? (
+              <div className="p-4 bg-neutral-50 rounded-xl border border-neutral-200 text-xs text-neutral-500 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Vote className="w-4 h-4 text-neutral-400" />
+                  <span>No active voting campaigns at this time.</span>
+                </div>
+                <Link to="/voting" className="font-bold text-purple-600 hover:underline">
+                  Past results
+                </Link>
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                {votingCampaigns.map((camp) => (
+                  <div
+                    key={camp.id}
+                    className="p-4 rounded-xl border border-[#E2E8F0] flex items-center justify-between hover:border-neutral-300 transition-all bg-white"
+                  >
+                    <div>
+                      <h4 className="text-xs font-bold text-[#0B192C]">{camp.title}</h4>
+                      <p className="text-[11px] text-neutral-500 mt-0.5">{camp.description || 'Active election'}</p>
+                    </div>
+                    <Link
+                      to="/voting"
+                      className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition-colors shrink-0"
+                    >
+                      Cast Vote
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* RIGHT COLUMN: NOTIFICATIONS & QUICK ACTIONS (4 cols) */}
+        <div className="lg:col-span-4 space-y-6">
+          {/* NOTIFICATIONS INBOX PREVIEW */}
+          <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6 shadow-sm space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Bell className="w-5 h-5 text-[#DC2626]" />
+                <h2 className="text-sm font-bold text-[#0B192C]">Recent Alerts</h2>
+              </div>
+              <Link
+                to="/notifications"
+                className="text-xs font-semibold text-neutral-500 hover:text-[#0B192C]"
+              >
+                View all
+              </Link>
+            </div>
+
+            {notifError ? (
+              <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-xs text-red-700 flex items-center justify-between">
+                <span>{notifError}</span>
+                <button onClick={loadData} className="font-bold underline cursor-pointer">
+                  Retry
+                </button>
+              </div>
+            ) : notifications.length === 0 ? (
+              <div className="text-center py-6 px-4 bg-neutral-50 rounded-xl border border-neutral-100">
+                <Bell className="w-6 h-6 text-neutral-300 mx-auto mb-1.5" />
+                <div className="text-xs font-semibold text-neutral-600">You're all caught up!</div>
+                <p className="text-[11px] text-neutral-400 mt-0.5">No unread notifications.</p>
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                {notifications.slice(0, 4).map((n) => (
+                  <div
+                    key={n.id}
+                    className={`p-3 rounded-xl border text-left transition-colors ${
+                      !n.isRead
+                        ? 'bg-red-50/40 border-red-100'
+                        : 'bg-white border-neutral-100'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <h4 className="text-xs font-bold text-[#0B192C] line-clamp-1">{n.title}</h4>
+                      {!n.isRead && (
+                        <span className="w-2 h-2 rounded-full bg-[#DC2626] shrink-0 mt-1" />
+                      )}
+                    </div>
+                    <p className="text-[11px] text-neutral-600 mt-1 line-clamp-2">{n.message}</p>
+                    <span className="text-[10px] text-neutral-400 font-mono mt-1 block">
+                      {n.createdAt ? new Date(n.createdAt).toLocaleDateString() : 'Just now'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* QUICK ACTIONS & PUBLIC DIRECTORY */}
+          <div className="bg-gradient-to-br from-[#0B192C] to-[#1E293B] rounded-2xl p-6 text-white shadow-sm space-y-4 text-left">
+            <div className="space-y-1">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-red-400">
+                Department Showcase
+              </span>
+              <h3 className="text-base font-black">Student Public Directory</h3>
+              <p className="text-xs text-neutral-300 font-normal leading-relaxed">
+                Your portfolio is indexed on the official SASI IT student showcase directory for recruiters and faculty.
+              </p>
+            </div>
+            <div className="pt-2">
+              <Link
+                to={`/students/${profile?.rollNo || ''}`}
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-[#DC2626] hover:bg-[#B5121B] text-white text-xs font-bold transition-all shadow-md"
+              >
+                <span>View My Public Showcase</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </Link>
+            </div>
           </div>
         </div>
       </div>

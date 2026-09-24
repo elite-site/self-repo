@@ -32,6 +32,7 @@ export const requireStudentAuth = (req: Request, res: Response, next: NextFuncti
   try {
     const decoded = jwt.verify(token, env.STUDENT_JWT_SECRET) as StudentJwtPayload;
     req.student = decoded;
+    (req as any).studentId = decoded.studentId;
     next();
   } catch {
     res.status(401).json({

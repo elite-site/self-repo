@@ -10,8 +10,9 @@ router.use(requireStudentAuth);
 
 router.get('/', async (req: Request, res: Response) => {
   try {
+    const studentId = req.student?.studentId || (req as any).studentId;
     const student = await prisma.student.findUnique({
-      where: { id: (req as any).studentId },
+      where: { id: studentId },
       include: {
         profile: {
           include: {
@@ -24,33 +25,46 @@ router.get('/', async (req: Request, res: Response) => {
         }
       }
     });
-    if (!student) return res.status(404).json({ error: 'Not found' });
+    if (!student) return res.status(404).json({ error: 'NOT_FOUND', message: 'Student not found' });
+
+    const submission = await prisma.submission.findFirst({
+      where: { rollNo: student.rollNo },
+      orderBy: { submittedAt: 'desc' }
+    });
     
     res.json({
-      student: {
-        id: student.id,
-        rollNo: student.rollNo,
-        name: student.name,
-        year: student.year,
-        section: student.section,
-        branch: student.branch,
-        email: student.email
-      },
-      profile: student.profile ? {
-        biography: student.profile.biography,
-        photoDriveId: student.profile.photoDriveId,
-        photoUrl: student.profile.photoUrl,
-        githubUrl: student.profile.githubUrl,
-        linkedinUrl: student.profile.linkedinUrl,
-        portfolioUrl: student.profile.portfolioUrl,
-        skills: student.profile.skills.map(s => s.skill),
-        isPublic: student.profile.isPublic
-      } : { skills: [] },
+      id: student.id,
+      rollNo: student.rollNo,
+      name: student.name,
+      year: student.year,
+      section: student.section,
+      branch: student.branch,
+      email: student.email,
+      bio: student.profile?.biography || '',
+      biography: student.profile?.biography || '',
+      photoUrl: student.profile?.photoUrl || null,
+      photoDriveId: student.profile?.photoDriveId || null,
+      githubUrl: student.profile?.githubUrl || '',
+      linkedinUrl: student.profile?.linkedinUrl || '',
+      portfolioUrl: student.profile?.portfolioUrl || '',
+      skills: (student.profile?.skills || []).map(s => s.skill.name),
+      skillObjects: (student.profile?.skills || []).map(s => s.skill),
+      isPublic: student.profile?.isPublic || false,
+      submission: submission ? {
+        id: submission.id,
+        status: submission.status,
+        submittedAt: submission.submittedAt,
+        videoUploaded: Boolean(submission.videoDriveId),
+        reviewText: submission.reviewText || null,
+        reviewPros: submission.reviewPros || [],
+        reviewCons: submission.reviewCons || [],
+        reviewedAt: submission.reviewedAt || null,
+      } : null,
       changeRequests: student.changeRequests || []
     });
   } catch (err: any) {
     if (err.code === 'P2021' || err.message?.includes('does not exist')) {
-      return res.json({ data: {} });
+      return res.json({});
     }
     res.status(500).json({ error: 'Server error' });
   }
@@ -58,14 +72,16 @@ router.get('/', async (req: Request, res: Response) => {
 
 router.put('/', async (req: Request, res: Response) => {
   try {
-    const { biography, githubUrl, linkedinUrl, portfolioUrl } = req.body;
-    if (biography && biography.length > 300) {
+    const studentId = req.student?.studentId || (req as any).studentId;
+    const { biography, bio, githubUrl, linkedinUrl, portfolioUrl } = req.body;
+    const bioText = biography !== undefined ? biography : bio;
+    if (bioText && bioText.length > 300) {
       return res.status(400).json({ error: 'Biography max 300 chars' });
     }
     const profile = await prisma.studentProfile.upsert({
-      where: { studentId: (req as any).studentId },
-      update: { biography, githubUrl, linkedinUrl, portfolioUrl },
-      create: { studentId: (req as any).studentId, biography, githubUrl, linkedinUrl, portfolioUrl }
+      where: { studentId },
+      update: { biography: bioText, githubUrl, linkedinUrl, portfolioUrl },
+      create: { studentId, biography: bioText, githubUrl, linkedinUrl, portfolioUrl }
     });
     res.json(profile);
   } catch (err: any) {

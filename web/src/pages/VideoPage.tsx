@@ -1,109 +1,310 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { api } from '../services/api';
 import { StudentSubmission } from '../types';
-import { UploadCloud, AlertCircle, CheckCircle, Clock, Video as VideoIcon, RotateCcw, XCircle } from 'lucide-react';
+import {
+  UploadCloud,
+  AlertCircle,
+  CheckCircle2,
+  Clock,
+  Video as VideoIcon,
+  RotateCcw,
+  XCircle,
+  FileVideo,
+  Loader2,
+  ThumbsUp,
+  ThumbsDown,
+  RefreshCw
+} from 'lucide-react';
 
-export const VideoPage = () => {
+export const VideoPage: React.FC = () => {
   const [submission, setSubmission] = useState<StudentSubmission | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const loadSubmission = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await api.getMe();
+      if (data?.student?.submission) {
+        setSubmission(data.student.submission);
+        if (data.student.submission.videoUploaded) {
+          const url = await api.getVideoBlobUrl().catch(() => null);
+          if (url) setVideoUrl(url);
+        }
+      } else {
+        setSubmission(null);
+      }
+    } catch {
+      setError('Could not load introduction video status.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    // We assume getMe returns the submission info for now or we can use another endpoint.
-    // For now let's just simulate loading since API doesn't have getSubmission explicitly defined in types yet, 
-    // but the prompt says getMe returns reviewStatus.
-    api.getMe().then(async data => {
-      // simulate submission from data
-      if (data.reviewStatus && data.reviewStatus !== 'NONE') {
-        setSubmission({
-          id: '1',
-          studentId: data.student.rollNo,
-          status: data.reviewStatus,
-          submittedAt: new Date().toISOString(),
-          videoUploaded: true,
-          videoUrl: 'exists',
-          adminNotes: null,
-          reviewText: null,
-          reviewPros: [],
-          reviewCons: [],
-          reviewedAt: null,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        });
-        const url = await api.getVideoBlobUrl().catch(() => null);
-        if (url) setVideoUrl(url);
-      }
-    }).finally(() => setLoading(false));
+    loadSubmission();
   }, []);
 
-  if (loading) return <div className="p-8 text-center"><div className="w-8 h-8 border-4 border-elite-red border-t-transparent rounded-full animate-spin mx-auto"></div></div>;
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-  const StatusCard = () => {
-    if (!submission) {
-      return (
-        <div className="bg-slate-50 border border-slate-200 rounded-lg p-6 flex flex-col items-center text-center">
-          <UploadCloud className="w-10 h-10 text-slate-400 mb-3" />
-          <h3 className="font-semibold text-[#0B192C]">No Video Uploaded</h3>
-          <p className="text-sm text-slate-500 mb-4">You haven't uploaded your introduction video yet.</p>
-        </div>
-      );
+    if (!file.type.startsWith('video/')) {
+      setError('Please select a valid video file (MP4, WebM, MOV).');
+      return;
     }
-    
-    const colors: Record<string, string> = {
-      'DRAFT': 'bg-slate-100 text-slate-700 border-slate-200',
-      'PENDING': 'bg-amber-100 text-amber-800 border-amber-200',
-      'UNDER_REVIEW': 'bg-violet-100 text-violet-800 border-violet-200',
-      'APPROVED': 'bg-emerald-100 text-emerald-800 border-emerald-200',
-      'REJECTED': 'bg-red-100 text-red-800 border-red-200',
-      'CHANGES_REQUESTED': 'bg-orange-100 text-orange-800 border-orange-200'
-    };
-    
-    const icons: Record<string, any> = {
-      'DRAFT': Clock, 'PENDING': Clock, 'UNDER_REVIEW': Clock, 'APPROVED': CheckCircle, 'REJECTED': XCircle, 'CHANGES_REQUESTED': AlertCircle
-    };
-    
-    const Icon = icons[submission.status] || Clock;
 
+    if (file.size > 25 * 1024 * 1024) {
+      setError('Video file must be under 25MB.');
+      return;
+    }
+
+    setError(null);
+    setUploading(true);
+    setUploadProgress(0);
+    setUploadSuccess(false);
+
+    const formData = new FormData();
+    formData.append('video', file);
+
+    try {
+      await api.submitVideo(formData, (progressEvent) => {
+        if (progressEvent.total) {
+          const pct = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          setUploadProgress(pct);
+        }
+      });
+      setUploadSuccess(true);
+      await loadSubmission();
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to upload video. Please try again.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  if (loading) {
     return (
-      <div className={`border rounded-lg p-6 flex flex-col sm:flex-row gap-4 items-center justify-between ${colors[submission.status] || 'bg-slate-50'}`}>
-        <div className="flex items-center gap-4">
-          <div className="bg-white/50 p-3 rounded-full"><Icon className="w-6 h-6" /></div>
-          <div>
-            <h3 className="font-bold">Status: {submission.status.replace('_', ' ')}</h3>
-            <p className="text-sm opacity-80">Last updated: {new Date(submission.updatedAt || submission.submittedAt).toLocaleDateString()}</p>
-          </div>
-        </div>
-        {(submission.status === 'APPROVED' || submission.status === 'REJECTED') && (
-          <button className="px-4 py-2 bg-white text-sm font-medium rounded shadow-sm border border-black/10 hover:bg-slate-50">Replace Video</button>
-        )}
+      <div className="flex justify-center py-24">
+        <Loader2 className="w-8 h-8 animate-spin text-[#DC2626]" />
       </div>
     );
+  }
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'APPROVED':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+            <CheckCircle2 className="w-3.5 h-3.5" /> Approved
+          </span>
+        );
+      case 'SUBMITTED':
+      case 'PENDING':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">
+            <Clock className="w-3.5 h-3.5" /> Under Review
+          </span>
+        );
+      case 'CHANGES_REQUESTED':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-orange-100 text-orange-800 border border-orange-200">
+            <AlertCircle className="w-3.5 h-3.5" /> Re-upload Requested
+          </span>
+        );
+      case 'REJECTED':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-red-100 text-red-800 border border-red-200">
+            <XCircle className="w-3.5 h-3.5" /> Rejected
+          </span>
+        );
+      default:
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-neutral-100 text-neutral-600 border border-neutral-200">
+            Draft
+          </span>
+        );
+    }
   };
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold text-[#0B192C]">Introduction Video</h1>
-      <StatusCard />
-      
-      {submission?.adminNotes && (
-        <div className="bg-orange-50 border border-orange-200 p-4 rounded-lg">
-          <h4 className="font-bold text-orange-800 text-sm mb-1 flex items-center gap-2"><AlertCircle className="w-4 h-4"/> Feedback from Reviewer</h4>
-          <p className="text-orange-900 text-sm">{submission.adminNotes}</p>
+    <div className="space-y-6 text-left">
+      {/* HEADER */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-black text-[#0B192C]">Introduction Video</h1>
+          <p className="text-xs text-neutral-500">
+            Your 60–90 second professional department self-introduction video
+          </p>
+        </div>
+        {submission && (
+          <div className="flex items-center gap-2 shrink-0">
+            {getStatusBadge(submission.status)}
+          </div>
+        )}
+      </div>
+
+      {error && (
+        <div className="p-4 bg-red-50 border border-red-200 rounded-2xl text-red-800 text-xs flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
+            <span>{error}</span>
+          </div>
+          <button onClick={loadSubmission} className="font-bold underline cursor-pointer">
+            Retry
+          </button>
         </div>
       )}
 
-      {videoUrl ? (
-        <div className="bg-black rounded-xl overflow-hidden aspect-video border border-[#E2E8F0]">
-          <video src={videoUrl} controls className="w-full h-full object-contain" />
-        </div>
-      ) : (
-        <div className="border-2 border-dashed border-slate-300 bg-white rounded-xl p-10 flex flex-col items-center text-center justify-center min-h-[300px]">
-          <UploadCloud className="w-12 h-12 text-elite-red mb-4" />
-          <h3 className="font-semibold text-lg text-[#0B192C]">Upload your video</h3>
-          <p className="text-sm text-slate-500 max-w-md mt-2 mb-6">Drag and drop your MP4, MOV, or WEBM file here, or click to browse. Maximum file size is 25MB.</p>
-          <button className="px-6 py-2.5 bg-elite-red hover:bg-red-700 text-white font-medium rounded-lg shadow-sm transition-colors">Select File</button>
+      {uploadSuccess && (
+        <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl text-emerald-800 text-xs flex items-center gap-2">
+          <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+          <span>Video uploaded successfully and submitted for faculty moderation!</span>
         </div>
       )}
+
+      {/* MAIN TWO-COLUMN CONTENT */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* LEFT COLUMN: VIDEO PLAYER OR UPLOADER (8 COLS) */}
+        <div className="lg:col-span-8 space-y-6">
+          <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6 shadow-xs space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-bold text-[#0B192C]">Video Playback & Media</h2>
+              <input
+                type="file"
+                ref={fileInputRef}
+                accept="video/mp4,video/webm,video/quicktime"
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className="text-xs font-bold text-[#DC2626] hover:text-[#B5121B] flex items-center gap-1 cursor-pointer disabled:opacity-50"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>{submission?.videoUploaded ? 'Upload New Take' : 'Upload Video'}</span>
+              </button>
+            </div>
+
+            {uploading ? (
+              <div className="border-2 border-dashed border-red-200 bg-red-50/40 rounded-2xl p-12 text-center space-y-3">
+                <Loader2 className="w-10 h-10 animate-spin text-[#DC2626] mx-auto" />
+                <h3 className="text-sm font-bold text-[#0B192C]">Uploading video... {uploadProgress}%</h3>
+                <div className="w-64 max-w-full mx-auto bg-neutral-200 rounded-full h-2 overflow-hidden">
+                  <div className="bg-[#DC2626] h-2 rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
+                </div>
+                <p className="text-[11px] text-neutral-500">Do not close this window while the upload completes.</p>
+              </div>
+            ) : videoUrl ? (
+              <div className="bg-black rounded-2xl overflow-hidden aspect-video border border-neutral-800 shadow-inner">
+                <video src={videoUrl} controls className="w-full h-full object-contain" />
+              </div>
+            ) : (
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                className="border-2 border-dashed border-neutral-300 hover:border-[#DC2626] bg-neutral-50 hover:bg-red-50/20 rounded-2xl p-12 flex flex-col items-center text-center justify-center min-h-[300px] transition-all cursor-pointer group"
+              >
+                <div className="w-16 h-16 rounded-2xl bg-white border border-neutral-200 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform shadow-xs">
+                  <FileVideo className="w-8 h-8 text-[#DC2626]" />
+                </div>
+                <h3 className="font-bold text-base text-[#0B192C]">Upload your self-introduction video</h3>
+                <p className="text-xs text-neutral-500 max-w-sm mt-1.5 mb-6">
+                  Recommended format: MP4 or WebM, 1080p, well-lit, under 25MB. Introduce your name, branch, interests, and career ambitions.
+                </p>
+                <button
+                  type="button"
+                  className="px-6 py-2.5 bg-[#DC2626] hover:bg-[#B5121B] text-white text-xs font-bold rounded-xl shadow-xs transition-colors"
+                >
+                  Select Video File
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* RIGHT COLUMN: GUIDELINES & REVIEW FEEDBACK (4 COLS) */}
+        <div className="lg:col-span-4 space-y-6">
+          {/* REVIEW FEEDBACK (IF REVIEWED) */}
+          {submission && (submission.reviewText || submission.adminNotes || submission.reviewPros?.length || submission.reviewCons?.length) ? (
+            <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6 shadow-xs space-y-4">
+              <h2 className="text-sm font-bold text-[#0B192C]">Faculty Review Feedback</h2>
+
+              {submission.reviewText && (
+                <div className="p-3.5 bg-neutral-50 rounded-xl border border-neutral-100 text-xs text-neutral-700 italic">
+                  "{submission.reviewText}"
+                </div>
+              )}
+
+              {submission.adminNotes && (
+                <div className="p-3.5 bg-orange-50 rounded-xl border border-orange-200 text-xs text-orange-900">
+                  <span className="font-bold block mb-1">Reviewer Note:</span>
+                  {submission.adminNotes}
+                </div>
+              )}
+
+              {submission.reviewPros && submission.reviewPros.length > 0 && (
+                <div className="space-y-1.5">
+                  <span className="text-[11px] font-bold text-emerald-800 flex items-center gap-1">
+                    <ThumbsUp className="w-3.5 h-3.5" /> Strengths
+                  </span>
+                  <ul className="space-y-1">
+                    {submission.reviewPros.map((pro, i) => (
+                      <li key={i} className="text-xs text-neutral-600 pl-2 border-l-2 border-emerald-400">
+                        {pro}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {submission.reviewCons && submission.reviewCons.length > 0 && (
+                <div className="space-y-1.5 pt-2">
+                  <span className="text-[11px] font-bold text-amber-800 flex items-center gap-1">
+                    <ThumbsDown className="w-3.5 h-3.5" /> Suggestions
+                  </span>
+                  <ul className="space-y-1">
+                    {submission.reviewCons.map((con, i) => (
+                      <li key={i} className="text-xs text-neutral-600 pl-2 border-l-2 border-amber-400">
+                        {con}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          ) : null}
+
+          {/* RECORDING GUIDELINES */}
+          <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6 shadow-xs space-y-4 text-xs">
+            <h2 className="text-sm font-bold text-[#0B192C]">Recording Guidelines</h2>
+            <ul className="space-y-2.5 text-neutral-600">
+              <li className="flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                <span><strong>Duration:</strong> Between 60 and 90 seconds.</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                <span><strong>Framing:</strong> Landscape orientation, eye level, shoulders-up framing.</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                <span><strong>Audio:</strong> Quiet environment with clear voice projection.</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                <span><strong>Structure:</strong> Full Name & Roll Number → Technical Areas → Major Project → Career Ambitions.</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

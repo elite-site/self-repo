@@ -2,12 +2,28 @@ import axios from 'axios';
 import { StudentProfile } from '../types';
 
 let currentToken: string | null = null;
+try {
+  const raw = typeof window !== 'undefined' ? localStorage.getItem('ita_student_session') : null;
+  if (raw) {
+    const parsed = JSON.parse(raw);
+    if (parsed?.token) currentToken = parsed.token;
+  }
+} catch {}
 
 const client = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api',
 });
 
 client.interceptors.request.use((config) => {
+  if (!currentToken && typeof window !== 'undefined') {
+    try {
+      const raw = localStorage.getItem('ita_student_session');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed?.token) currentToken = parsed.token;
+      }
+    } catch {}
+  }
   if (currentToken) {
     config.headers.Authorization = `Bearer ${currentToken}`;
   }

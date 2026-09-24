@@ -1,72 +1,194 @@
 import React, { useEffect, useState } from 'react';
-import { api } from '../services/api';
-import { Event } from '../types';
 import { Link } from 'react-router-dom';
-import { Calendar, Search, MapPin, Clock, Loader2 } from 'lucide-react';
+import { api } from '../services/api';
+import { Event, EventRegistration } from '../types';
+import { Calendar, Search, Clock, Loader2, CheckCircle2, ChevronRight, AlertCircle, RefreshCw, Filter } from 'lucide-react';
 
-export const EventsPage = () => {
+export const EventsPage: React.FC = () => {
   const [events, setEvents] = useState<Event[]>([]);
+  const [registrations, setRegistrations] = useState<EventRegistration[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('All');
+  const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'All' | 'Open' | 'Registered'>('All');
   const [search, setSearch] = useState('');
 
+  const loadEventsData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [evData, regData] = await Promise.all([
+        api.getEvents(),
+        api.getRegistrations().catch(() => []),
+      ]);
+      if (Array.isArray(evData)) setEvents(evData);
+      if (Array.isArray(regData)) setRegistrations(regData);
+    } catch {
+      setError('Could not load department events. Please retry.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    api.getEvents().then(data => setEvents(data)).finally(() => setLoading(false));
+    loadEventsData();
   }, []);
 
-  if (loading) return <div className="flex justify-center p-8"><Loader2 className="w-8 h-8 animate-spin text-slate-400"/></div>;
+  const registeredEventIds = new Set(
+    registrations.filter((r) => r.status === 'REGISTERED').map((r) => r.eventId)
+  );
 
-  const filtered = events.filter(e => {
-    if (search && !e.title.toLowerCase().includes(search.toLowerCase())) return false;
-    // mock filters
+  const filteredEvents = events.filter((e) => {
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      const match =
+        e.title.toLowerCase().includes(q) ||
+        (e.description && e.description.toLowerCase().includes(q)) ||
+        (e.type && e.type.toLowerCase().includes(q));
+      if (!match) return false;
+    }
+
+    if (activeTab === 'Registered') {
+      return registeredEventIds.has(e.id);
+    }
+    if (activeTab === 'Open') {
+      return !registeredEventIds.has(e.id);
+    }
     return true;
   });
 
+  if (loading) {
+    return (
+      <div className="flex justify-center py-20">
+        <Loader2 className="w-8 h-8 animate-spin text-[#DC2626]" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <h1 className="text-2xl font-bold text-[#0B192C]">Events</h1>
-        <div className="flex bg-slate-100 p-1 rounded-lg">
-          {['All', 'Open', 'Registered', 'Completed'].map(f => (
-            <button key={f} onClick={() => setFilter(f)} className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${filter === f ? 'bg-white shadow text-[#0B192C]' : 'text-slate-500 hover:text-[#0B192C]'}`}>
-              {f}
+      {/* HEADER */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-black text-[#0B192C]">Department Events</h1>
+          <p className="text-xs text-neutral-500">
+            Competitions, technical symposiums, hackathons, and guest seminars
+          </p>
+        </div>
+
+        {/* TABS */}
+        <div className="flex bg-neutral-100 p-1 rounded-xl shrink-0">
+          {(['All', 'Open', 'Registered'] as const).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                activeTab === tab
+                  ? 'bg-white shadow-xs text-[#0B192C]'
+                  : 'text-neutral-500 hover:text-neutral-900'
+              }`}
+            >
+              {tab === 'Registered' ? `My Registrations (${registeredEventIds.size})` : tab}
             </button>
           ))}
         </div>
       </div>
 
+      {/* ERROR BANNER */}
+      {error && (
+        <div className="p-4 bg-red-50 border border-red-200 rounded-2xl text-red-800 text-xs flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
+            <span>{error}</span>
+          </div>
+          <button onClick={loadEventsData} className="font-bold underline cursor-pointer">
+            Retry
+          </button>
+        </div>
+      )}
+
+      {/* SEARCH BAR */}
       <div className="relative max-w-md">
-        <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
-        <input type="text" placeholder="Search events..." value={search} onChange={e => setSearch(e.target.value)} className="w-full pl-9 pr-4 py-2 border border-[#E2E8F0] rounded-lg text-sm focus:outline-none focus:border-elite-red" />
+        <Search className="w-4 h-4 absolute left-3.5 top-3 text-neutral-400" />
+        <input
+          type="text"
+          placeholder="Search by event title, keyword, or type..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full pl-10 pr-4 py-2 bg-white border border-[#CBD5E1] rounded-xl text-xs text-[#0B192C] focus:outline-none focus:border-[#DC2626] transition-colors"
+        />
       </div>
 
-      {filtered.length === 0 ? (
-        <div className="text-center py-16 bg-white border border-[#E2E8F0] rounded-xl">
-          <Calendar className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-          <h3 className="font-semibold text-[#0B192C]">No events found</h3>
+      {/* EVENTS GRID */}
+      {filteredEvents.length === 0 ? (
+        <div className="text-center py-16 px-4 bg-white border border-[#E2E8F0] rounded-2xl">
+          <Calendar className="w-12 h-12 text-neutral-300 mx-auto mb-3" />
+          <h3 className="font-bold text-sm text-[#0B192C]">No events found</h3>
+          <p className="text-xs text-neutral-400 mt-1 max-w-xs mx-auto">
+            {activeTab === 'Registered'
+              ? 'You have not registered for any events yet. Check out Open events to join!'
+              : 'There are currently no events matching your criteria.'}
+          </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filtered.map(e => (
-            <Link to={`/events/${e.id}`} key={e.id} className="bg-white border border-[#E2E8F0] rounded-xl overflow-hidden hover:shadow-md transition-shadow group flex flex-col">
-              <div className="h-32 bg-slate-100 p-4 flex flex-col justify-between">
-                <div className="flex justify-between items-start">
-                  <span className="bg-white px-2 py-1 rounded text-xs font-bold text-elite-red uppercase tracking-wide shadow-sm">{e.type}</span>
-                  <span className="bg-emerald-100 text-emerald-800 px-2 py-1 rounded text-xs font-bold shadow-sm">OPEN</span>
+          {filteredEvents.map((e) => {
+            const isRegistered = registeredEventIds.has(e.id);
+            return (
+              <Link
+                to={`/events/${e.id}`}
+                key={e.id}
+                className="bg-white border border-[#E2E8F0] rounded-2xl overflow-hidden hover:border-neutral-300 hover:shadow-md transition-all group flex flex-col justify-between text-left"
+              >
+                <div className="h-32 bg-gradient-to-br from-[#0B192C] to-[#1E293B] p-5 flex flex-col justify-between relative">
+                  <div className="flex justify-between items-start gap-2">
+                    <span className="bg-white/10 backdrop-blur-sm border border-white/20 text-white px-2.5 py-1 rounded-md text-[10px] font-extrabold uppercase tracking-wide">
+                      {e.type || 'General'}
+                    </span>
+                    {isRegistered ? (
+                      <span className="bg-emerald-500 text-white px-2.5 py-1 rounded-full text-[10px] font-bold shadow-xs flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3" /> Registered
+                      </span>
+                    ) : (
+                      <span className="bg-[#DC2626] text-white px-2.5 py-1 rounded-full text-[10px] font-bold shadow-xs">
+                        OPEN
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="text-white font-extrabold text-base leading-snug line-clamp-1 group-hover:text-red-200 transition-colors">
+                    {e.title}
+                  </h3>
                 </div>
-              </div>
-              <div className="p-5 flex-1 flex flex-col">
-                <h3 className="font-bold text-lg text-[#0B192C] group-hover:text-elite-red transition-colors mb-2">{e.title}</h3>
-                <div className="space-y-1.5 mb-4">
-                  <p className="text-sm text-slate-600 flex items-center gap-2"><Calendar className="w-4 h-4 text-slate-400"/> {new Date(e.date).toLocaleDateString()}</p>
-                  <p className="text-sm text-slate-600 flex items-center gap-2"><Clock className="w-4 h-4 text-slate-400"/> Deadline: {new Date(e.deadline).toLocaleDateString()}</p>
+
+                <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
+                  <div className="space-y-2">
+                    <p className="text-xs text-neutral-600 line-clamp-2 leading-relaxed">
+                      {e.description || 'Department competition or workshop.'}
+                    </p>
+                    <div className="space-y-1 pt-1 text-xs text-neutral-500">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-3.5 h-3.5 text-neutral-400" />
+                        <span>Date: {e.date ? new Date(e.date).toLocaleDateString() : 'TBA'}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-3.5 h-3.5 text-neutral-400" />
+                        <span>Deadline: {e.deadline ? new Date(e.deadline).toLocaleDateString() : 'TBA'}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-3 border-t border-neutral-100 flex items-center justify-between text-xs">
+                    <span className="text-[11px] font-semibold text-neutral-500">
+                      Eligibility: {e.eligibility || 'All IT Students'}
+                    </span>
+                    <span className="font-bold text-[#DC2626] group-hover:translate-x-0.5 transition-transform flex items-center gap-0.5">
+                      <span>{isRegistered ? 'View Status' : 'Details'}</span>
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </span>
+                  </div>
                 </div>
-                <div className="mt-auto pt-4 border-t border-slate-100">
-                  <p className="text-xs text-slate-500 font-medium">Eligibility: {e.eligibility}</p>
-                </div>
-              </div>
-            </Link>
-          ))}
+              </Link>
+            );
+          })}
         </div>
       )}
     </div>

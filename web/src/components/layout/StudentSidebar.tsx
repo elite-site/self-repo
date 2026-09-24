@@ -17,7 +17,7 @@ const navItems = [
 
 export const StudentSidebar: React.FC = () => {
   return (
-    <aside className="w-64 bg-white border-r border-[#E2E8F0] h-full hidden md:flex flex-col">
+    <aside className="w-64 bg-white border-r border-[#E2E8F0] h-full hidden md:flex flex-col shrink-0 select-none">
       <nav className="flex-1 overflow-y-auto py-4">
         <ul className="space-y-1 px-3">
           {navItems.map((item) => (
