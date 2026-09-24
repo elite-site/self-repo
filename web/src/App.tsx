@@ -5,10 +5,16 @@ import { api, setStudentToken } from './services/api';
 
 import { Navbar } from './components/Navbar';
 import { HeroSection } from './components/HeroSection';
+import { PortalFeaturesSection } from './components/PortalFeaturesSection';
+import { StudentShowcaseSection } from './components/StudentShowcaseSection';
+import { EliteEventsSection } from './components/EliteEventsSection';
+import { PortfolioArchitectureSection } from './components/PortfolioArchitectureSection';
+import { IntroVideoFeatureSection } from './components/IntroVideoFeatureSection';
 import { StudentLogin } from './components/StudentLogin';
 import { AboutSidebar } from './components/AboutSidebar';
 import { GuidelinesSection } from './components/GuidelinesSection';
 import { Footer } from './components/Footer';
+import { ShieldCheck, CheckCircle2 } from 'lucide-react';
 
 import { StudentLayout } from './components/layout/StudentLayout';
 
@@ -51,29 +57,78 @@ const LandingPage = ({ session }: { session: StudentSession | null }) => {
   return (
     <div className="min-h-screen bg-[#FAFAFA] text-neutral-900 flex flex-col justify-between">
       <Navbar session={session} onLogout={() => {}} onNavigate={() => {}} />
-      <HeroSection />
-      <main id="main-content" className="max-w-7xl mx-auto px-6 sm:px-10 py-6 sm:py-10">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-start">
-          <div className="lg:col-span-7">
-            <div className="space-y-6 text-left">
-              <div>
-                <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-elite-black font-display leading-[1.08] mt-3">
-                  YOUR SPACE.<br /><span className="text-elite-red">YOUR VIDEO.</span>
+      <main id="main-content">
+        {/* 1. HERO SECTION */}
+        <HeroSection />
+
+        {/* 2. CORE CAPABILITIES (6 Cards) */}
+        <PortalFeaturesSection />
+
+        {/* 3. STUDENT SHOWCASE (Real DB directory preview) */}
+        <StudentShowcaseSection />
+
+        {/* 4. ELITE EVENTS (Real DB events) */}
+        <EliteEventsSection />
+
+        {/* 5. PORTFOLIO ARCHITECTURE (Projects, Skills, Achievements, Certs, Resume) */}
+        <PortfolioArchitectureSection />
+
+        {/* 6. INTRO VIDEO FEATURE (60-90s authentic intro clip) */}
+        <IntroVideoFeatureSection />
+
+        {/* 7. STUDENT AUTHENTICATION / ACCESS SECTION */}
+        <section id="login-section" className="py-16 sm:py-20 bg-neutral-50 border-t border-neutral-200/80 text-left">
+          <div className="max-w-7xl mx-auto px-6 sm:px-10">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
+              <div className="lg:col-span-7 space-y-5">
+                <div className="inline-flex items-center gap-2 text-xs font-mono font-bold tracking-widest text-elite-red uppercase">
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <span>INSTITUTIONAL ACCESS</span>
+                </div>
+                <h2 className="text-3xl sm:text-4xl font-extrabold text-elite-black font-display tracking-tight leading-tight">
+                  Single Sign-On for IT Students
                 </h2>
+                <p className="text-sm sm:text-base text-neutral-600 leading-relaxed font-normal">
+                  Log in using your verified college Google email (@sasi.ac.in). Your account is pre-registered on the official department roster.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-neutral-700 pt-2 font-medium">
+                  <div className="flex items-center gap-2.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>Update your verified student profile</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>Curate projects, skills & certificates</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>Register for department events & teams</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>Cast votes in ELITE elections</span>
+                  </div>
+                </div>
+              </div>
+              <div className="lg:col-span-5">
+                <StudentLogin />
               </div>
             </div>
           </div>
-          <div className="lg:col-span-5">
-            <StudentLogin />
-          </div>
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start mt-10">
-          <div className="lg:col-span-8">
+        </section>
+
+        {/* 8. ABOUT ELITE */}
+        <section id="about" className="py-16 sm:py-20 bg-white border-t border-neutral-200/80">
+          <div className="max-w-7xl mx-auto px-6 sm:px-10">
             <AboutSidebar />
           </div>
-        </div>
+        </section>
+
+        {/* 9. STANDARDS & GUIDELINES */}
+        <GuidelinesSection />
       </main>
-      <GuidelinesSection />
+
+      {/* 10. FOOTER */}
       <Footer />
     </div>
   );

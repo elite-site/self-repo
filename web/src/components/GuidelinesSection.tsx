@@ -1,62 +1,61 @@
 import React from 'react';
-import { Video, ShieldCheck, Clock, FileCheck, MessageCircle } from 'lucide-react';
+import { ShieldCheck, Video, FileCheck, CheckCircle2 } from 'lucide-react';
 
 export const GuidelinesSection: React.FC = () => {
   return (
-    <section id="guidelines" aria-labelledby="guidelines-title" className="max-w-7xl mx-auto px-6 sm:px-10 py-12 border-t border-neutral-100 text-left">
-      <div className="space-y-6">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-red-50 text-elite-red flex items-center justify-center font-bold">
-            <FileCheck className="w-5 h-5" />
+    <section id="guidelines" aria-labelledby="guidelines-title" className="py-16 sm:py-20 bg-white border-t border-neutral-200/80 text-left">
+      <div className="max-w-7xl mx-auto px-6 sm:px-10 space-y-8">
+        <div className="space-y-2">
+          <div className="inline-flex items-center gap-2 text-xs font-mono font-bold tracking-widest text-elite-red uppercase">
+            <ShieldCheck className="w-3.5 h-3.5" />
+            <span>STANDARDS & POLICIES</span>
           </div>
-          <div>
-            <h2 id="guidelines-title" className="text-2xl font-extrabold text-elite-black font-display tracking-tight">
-              Self-Introduction Guidelines
-            </h2>
-            <p className="text-xs text-neutral-500">
-              Please review these guidelines prior to uploading your introduction clip.
-            </p>
-          </div>
+          <h2 id="guidelines-title" className="text-3xl sm:text-4xl font-extrabold text-elite-black font-display tracking-tight">
+            Portal Guidelines & Student Standards
+          </h2>
+          <p className="text-sm text-neutral-600 max-w-2xl leading-relaxed">
+            Key policies governing verified student profiles, portfolio reviews, video introductions, and department activities.
+          </p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="bg-neutral-50 border border-neutral-200/80 rounded-2xl p-5 space-y-2">
-            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-elite-black">
-              <Clock className="w-4 h-4 text-elite-red" />
-              <span>Clip Duration</span>
-            </div>
-            <p className="text-xs text-neutral-600 leading-relaxed">
-              Introduction clip should be between 1 to 3 minutes in length. A solo introduction with clear speech is preferred.
-            </p>
-          </div>
-
-          <div className="bg-neutral-50 border border-neutral-200/80 rounded-2xl p-5 space-y-2">
-            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-elite-black">
-              <Video className="w-4 h-4 text-elite-red" />
-              <span>Format & Quality</span>
-            </div>
-            <p className="text-xs text-neutral-600 leading-relaxed">
-              Video: MP4, MOV, WEBM (Max 25MB). Ensure clear audio and good lighting.
-            </p>
-          </div>
-
-          <div className="bg-neutral-50 border border-neutral-200/80 rounded-2xl p-5 space-y-2">
+          <div className="bg-neutral-50 border border-neutral-200/90 rounded-2xl p-6 space-y-3">
             <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-elite-black">
               <ShieldCheck className="w-4 h-4 text-elite-red" />
-              <span>One Entry Per Student</span>
+              <span>Profile Authenticity</span>
             </div>
             <p className="text-xs text-neutral-600 leading-relaxed">
-              Only one introduction video per roll number is accepted. Please double-check your details before submitting.
+              All profile information, project repositories, and technical skills must represent your genuine work and official college enrollment.
             </p>
           </div>
 
-          <div className="bg-elite-black text-white border border-neutral-800 rounded-2xl p-5 space-y-2">
-            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-white">
-              <MessageCircle className="w-4 h-4 text-elite-red" />
-              <span>A Natural Approach</span>
+          <div className="bg-neutral-50 border border-neutral-200/90 rounded-2xl p-6 space-y-3">
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-elite-black">
+              <Video className="w-4 h-4 text-elite-red" />
+              <span>Intro Video Standards</span>
             </div>
-            <p className="text-xs text-neutral-300 leading-relaxed">
-              Introduce yourself, share your interests and personality, and speak at your own pace. There is no fixed script — no rehearsed or AI-generated introduction.
+            <p className="text-xs text-neutral-600 leading-relaxed">
+              Introduction clips should run 60–90 seconds in MP4/WEBM format (max 25MB). Speak naturally with clear audio and good lighting.
+            </p>
+          </div>
+
+          <div className="bg-neutral-50 border border-neutral-200/90 rounded-2xl p-6 space-y-3">
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-elite-black">
+              <FileCheck className="w-4 h-4 text-elite-red" />
+              <span>Verification Audit</span>
+            </div>
+            <p className="text-xs text-neutral-600 leading-relaxed">
+              Achievements, certificates, and resumes undergo review by department coordinators before public directory endorsement.
+            </p>
+          </div>
+
+          <div className="bg-slate-900 text-white border border-slate-800 rounded-2xl p-6 space-y-3">
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-white">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+              <span>Code of Conduct</span>
+            </div>
+            <p className="text-xs text-slate-300 leading-relaxed">
+              Respectful collaboration in event teams, fair voting conduct, and adherence to SASI IT institutional ethics are required at all times.
             </p>
           </div>
         </div>

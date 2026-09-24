@@ -249,4 +249,17 @@ router.post(
   }
 );
 
+// GET /api/public/events - Public list of open events
+router.get('/public/events', async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const events = await prisma.event.findMany({
+      where: { status: 'OPEN' },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json(events);
+  } catch (err: any) {
+    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+  }
+});
+
 export default router;

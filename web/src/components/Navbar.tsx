@@ -113,15 +113,25 @@ export const Navbar: React.FC<NavbarProps> = ({ session, onLogout, onNavigate })
             <span>Students</span>
           </Link>
 
-          <Link
-            to="/events"
-            className={`flex items-center gap-1.5 hover:text-white transition-colors py-1 ${
-              location.pathname.startsWith('/events') ? 'text-white border-b-2 border-[#DC2626]' : ''
-            }`}
-          >
-            <Calendar className="w-3.5 h-3.5" />
-            <span>Events</span>
-          </Link>
+          {session ? (
+            <Link
+              to="/events"
+              className={`flex items-center gap-1.5 hover:text-white transition-colors py-1 ${
+                location.pathname.startsWith('/events') ? 'text-white border-b-2 border-[#DC2626]' : ''
+              }`}
+            >
+              <Calendar className="w-3.5 h-3.5" />
+              <span>Events</span>
+            </Link>
+          ) : (
+            <button
+              onClick={() => handleNavClick('events-section')}
+              className="flex items-center gap-1.5 hover:text-white transition-colors cursor-pointer py-1"
+            >
+              <Calendar className="w-3.5 h-3.5" />
+              <span>Events</span>
+            </button>
+          )}
 
           <button
             onClick={() => handleNavClick('about')}
@@ -263,14 +273,24 @@ export const Navbar: React.FC<NavbarProps> = ({ session, onLogout, onNavigate })
             <Users className="w-4 h-4 text-[#DC2626]" />
             <span>Students Directory</span>
           </Link>
-          <Link
-            to="/events"
-            onClick={() => setMobileMenuOpen(false)}
-            className="w-full flex items-center gap-3 py-2 text-neutral-300 hover:text-white"
-          >
-            <Calendar className="w-4 h-4 text-[#DC2626]" />
-            <span>Events</span>
-          </Link>
+          {session ? (
+            <Link
+              to="/events"
+              onClick={() => setMobileMenuOpen(false)}
+              className="w-full flex items-center gap-3 py-2 text-neutral-300 hover:text-white"
+            >
+              <Calendar className="w-4 h-4 text-[#DC2626]" />
+              <span>Events</span>
+            </Link>
+          ) : (
+            <button
+              onClick={() => handleNavClick('events-section')}
+              className="w-full flex items-center gap-3 py-2 text-left text-neutral-300 hover:text-white cursor-pointer"
+            >
+              <Calendar className="w-4 h-4 text-[#DC2626]" />
+              <span>Events</span>
+            </button>
+          )}
           <button
             onClick={() => handleNavClick('about')}
             className="w-full flex items-center gap-3 py-2 text-left text-neutral-300 hover:text-white cursor-pointer"
