@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Home, Users, Calendar, Menu, X, LogOut, ChevronDown, ArrowRight, LayoutDashboard } from 'lucide-react';
+import { Menu, X, LogOut, ChevronDown, ArrowRight, LayoutDashboard, User } from 'lucide-react';
 import { StudentSession } from '../types';
 import { api } from '../services/api';
 
@@ -78,39 +78,6 @@ export const Navbar: React.FC<NavbarProps> = ({ session, onLogout }) => {
             </div>
           </div>
         </Link>
-
-        {/* CENTER: DESKTOP PUBLIC NAVIGATION (HOME, STUDENTS, EVENTS) */}
-        <div className="hidden md:flex items-center gap-6 lg:gap-8 text-neutral-300 text-xs font-bold uppercase tracking-wider">
-          <Link
-            to="/"
-            className={`flex items-center gap-1.5 hover:text-white transition-colors py-1 ${
-              location.pathname === '/' ? 'text-white border-b-2 border-[#DC2626]' : ''
-            }`}
-          >
-            <Home className="w-3.5 h-3.5" />
-            <span>Home</span>
-          </Link>
-
-          <Link
-            to="/students"
-            className={`flex items-center gap-1.5 hover:text-white transition-colors py-1 ${
-              location.pathname.startsWith('/students') ? 'text-white border-b-2 border-[#DC2626]' : ''
-            }`}
-          >
-            <Users className="w-3.5 h-3.5" />
-            <span>Students</span>
-          </Link>
-
-          <Link
-            to="/events"
-            className={`flex items-center gap-1.5 hover:text-white transition-colors py-1 ${
-              location.pathname.startsWith('/events') ? 'text-white border-b-2 border-[#DC2626]' : ''
-            }`}
-          >
-            <Calendar className="w-3.5 h-3.5" />
-            <span>Events</span>
-          </Link>
-        </div>
 
         {/* RIGHT: AUTH CTA / PROFILE CHIP */}
         <div className="hidden md:flex items-center gap-4">
@@ -205,39 +172,32 @@ export const Navbar: React.FC<NavbarProps> = ({ session, onLogout }) => {
               </div>
             </div>
           )}
-          <Link
-            to="/"
-            onClick={() => setMobileMenuOpen(false)}
-            className="w-full flex items-center gap-3 py-2 text-neutral-300 hover:text-white"
-          >
-            <Home className="w-4 h-4 text-[#DC2626]" />
-            <span>Home</span>
-          </Link>
-          <Link
-            to="/students"
-            onClick={() => setMobileMenuOpen(false)}
-            className="w-full flex items-center gap-3 py-2 text-neutral-300 hover:text-white"
-          >
-            <Users className="w-4 h-4 text-[#DC2626]" />
-            <span>Students Directory</span>
-          </Link>
-          <Link
-            to="/events"
-            onClick={() => setMobileMenuOpen(false)}
-            className="w-full flex items-center gap-3 py-2 text-neutral-300 hover:text-white"
-          >
-            <Calendar className="w-4 h-4 text-[#DC2626]" />
-            <span>Events</span>
-          </Link>
-
           {session ? (
-            <button
-              onClick={handleLogout}
-              className="w-full flex items-center gap-3 py-2 text-left text-red-400 hover:text-red-300 cursor-pointer border-t border-neutral-800 pt-3"
-            >
-              <LogOut className="w-4 h-4" />
-              <span>Sign Out</span>
-            </button>
+            <>
+              <Link
+                to="/dashboard"
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-full flex items-center gap-3 py-2 text-neutral-300 hover:text-white"
+              >
+                <LayoutDashboard className="w-4 h-4 text-[#DC2626]" />
+                <span>Dashboard</span>
+              </Link>
+              <Link
+                to="/profile"
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-full flex items-center gap-3 py-2 text-neutral-300 hover:text-white"
+              >
+                <User className="w-4 h-4 text-[#DC2626]" />
+                <span>My Profile</span>
+              </Link>
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center gap-3 py-2 text-left text-red-400 hover:text-red-300 cursor-pointer border-t border-neutral-800 pt-3"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Sign Out</span>
+              </button>
+            </>
           ) : (
             <button
               onClick={() => {

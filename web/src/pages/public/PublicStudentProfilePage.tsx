@@ -66,10 +66,10 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
             The profile you are looking for either does not exist or has not enabled public directory visibility.
           </p>
           <Link
-            to="/students"
+            to="/"
             className="px-6 py-2.5 bg-neutral-900 hover:bg-neutral-800 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-colors"
           >
-            Back to Directory
+            Back to Home
           </Link>
         </div>
         <Footer />
@@ -100,11 +100,11 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
       <div className="bg-[#0B192C] pt-12 pb-28 text-white">
         <div className="max-w-6xl mx-auto px-6 sm:px-10">
           <Link
-            to="/students"
+            to="/"
             className="inline-flex items-center gap-2 text-slate-400 hover:text-white text-xs font-semibold uppercase tracking-wider transition-colors"
           >
             <ArrowLeft className="w-4 h-4 text-elite-red" />
-            <span>Back to Student Directory</span>
+            <span>Back to Home</span>
           </Link>
         </div>
       </div>
