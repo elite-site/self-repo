@@ -6,6 +6,15 @@ const client = axios.create({
   withCredentials: true,
 });
 
+// Automatically attach Bearer token if present in localStorage (cross-domain & iOS Safari support)
+client.interceptors.request.use((config) => {
+  const token = localStorage.getItem('student_token');
+  if (token) {
+    config.headers.set('Authorization', `Bearer ${token}`);
+  }
+  return config;
+});
+
 export interface UploadProgressInfo {
   loaded: number;
   total: number;
@@ -60,6 +69,11 @@ export const api = {
       xhr.withCredentials = true;                            // send session cookie
       xhr.setRequestHeader('Content-Type', file.type || 'video/mp4');
       xhr.setRequestHeader('X-Filename', encodeURIComponent(file.name));
+
+      const token = localStorage.getItem('student_token');
+      if (token) {
+        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+      }
 
       if (signal) {
         if (signal.aborted) {

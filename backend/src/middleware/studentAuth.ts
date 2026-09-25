@@ -20,7 +20,11 @@ declare global {
 }
 
 export const requireStudentAuth = (req: Request, res: Response, next: NextFunction): void => {
-  const token = req.cookies?.[STUDENT_SESSION_COOKIE_NAME] || null;
+  let token = req.cookies?.[STUDENT_SESSION_COOKIE_NAME] || null;
+
+  if (!token && req.headers.authorization?.startsWith('Bearer ')) {
+    token = req.headers.authorization.split(' ')[1].trim();
+  }
 
   if (!token) {
     res.status(401).json({

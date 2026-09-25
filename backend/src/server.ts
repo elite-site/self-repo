@@ -63,7 +63,10 @@ app.use(
       // Normalize incoming request origin (strip trailing slashes)
       const normalizedOrigin = origin.trim().replace(/\/$/, '');
 
-      if (allowedOrigins.includes(normalizedOrigin)) {
+      if (
+        allowedOrigins.includes(normalizedOrigin) ||
+        /^https:\/\/[a-z0-9-]+(\.netlify\.app|\.onrender\.com)$/i.test(normalizedOrigin)
+      ) {
         return callback(null, true);
       }
 
@@ -82,7 +85,7 @@ app.use(
   compression({
     level: 6,            // balance CPU cost vs. ratio
     threshold: 1024,     // only compress responses > 1 KB
-    filter: (req, res) => {
+    filter: (req: express.Request, res: express.Response) => {
       // Never compress streaming video responses — already compressed
       const ct = res.getHeader('Content-Type') as string | undefined;
       if (ct && ct.startsWith('video/')) return false;

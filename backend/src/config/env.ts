@@ -68,15 +68,13 @@ export const env = {
     ];
 
     const set = new Set<string>();
+    for (const d of defaults) {
+      set.add(d.trim().replace(/\/$/, ''));
+    }
     if (raw) {
       for (const item of raw.split(',')) {
         const trimmed = item.trim().replace(/\/$/, '');
         if (trimmed) set.add(trimmed);
-      }
-    }
-    if (nodeEnv !== 'production') {
-      for (const d of defaults) {
-        set.add(d.trim().replace(/\/$/, ''));
       }
     }
     return Array.from(set);

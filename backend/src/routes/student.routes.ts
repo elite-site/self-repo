@@ -116,14 +116,18 @@ router.get('/google/callback', studentLoginRateLimiter, async (req: Request, res
       status: 'SUCCESS',
     });
 
+    const isProduction = env.NODE_ENV === 'production';
     res.cookie(STUDENT_SESSION_COOKIE_NAME, token, {
       httpOnly: true,
-      secure: env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
       maxAge: 12 * 60 * 60 * 1000,
       path: '/',
     });
-    res.redirect(302, env.STUDENT_APP_LOGIN_URL);
+
+    const redirectBase = env.STUDENT_APP_LOGIN_URL;
+    const sep = redirectBase.includes('?') ? '&' : '?';
+    res.redirect(302, `${redirectBase}${sep}token=${encodeURIComponent(token)}`);
   } catch (err: any) {
     console.error('SSO callback error:', err);
     res.status(500).json({ error: 'SSO_FAILED', message: 'Could not complete Google sign-in.' });
@@ -132,10 +136,12 @@ router.get('/google/callback', studentLoginRateLimiter, async (req: Request, res
 
 // POST /api/student/logout — clear the session cookie.
 router.post('/logout', (_req: Request, res: Response): void => {
+  const isProduction = env.NODE_ENV === 'production';
   res.clearCookie(STUDENT_SESSION_COOKIE_NAME, {
     path: '/',
     httpOnly: true,
-    sameSite: 'strict',
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
   });
   res.json({ success: true });
 });

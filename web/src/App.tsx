@@ -32,6 +32,18 @@ const AuthWrapper: React.FC = () => {
 
   useEffect(() => {
     let cancelled = false;
+
+    // Capture token from Google OAuth callback redirect if passed in URL
+    const searchParams = new URLSearchParams(window.location.search);
+    const tokenFromUrl = searchParams.get('token');
+    if (tokenFromUrl) {
+      localStorage.setItem('student_token', tokenFromUrl);
+      searchParams.delete('token');
+      const cleanSearch = searchParams.toString();
+      const cleanUrl = window.location.pathname + (cleanSearch ? `?${cleanSearch}` : '') + window.location.hash;
+      window.history.replaceState({}, document.title, cleanUrl);
+    }
+
     api
       .getMe()
       .then((res) => {
@@ -40,6 +52,7 @@ const AuthWrapper: React.FC = () => {
       })
       .catch(() => {
         if (cancelled) return;
+        localStorage.removeItem('student_token');
         setSession(null);
       })
       .finally(() => {
@@ -54,6 +67,7 @@ const AuthWrapper: React.FC = () => {
     try {
       await api.logout();
     } catch {}
+    localStorage.removeItem('student_token');
     setSession(null);
     navigate('/', { replace: true });
   }, [navigate]);
@@ -77,6 +91,7 @@ const AuthWrapper: React.FC = () => {
           </PublicThemeProvider>
         }
       />
+      <Route path="/login" element={<Navigate to="/" replace />} />
       <Route
         path="/students/:rollNo"
         element={
