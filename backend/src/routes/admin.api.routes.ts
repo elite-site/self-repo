@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import ExcelJS from 'exceljs';
 import { requireAdminAuth } from '../middleware/auth';
+import { httpError } from "../middleware/apiError";
 import { prisma } from '../lib/prisma';
 import { driveService } from '../services/drive.service';
 import { RATINGS, RATING_LABELS, SUBMISSION_STATUSES } from '../config/constants';
@@ -17,7 +18,7 @@ router.use(requireAdminAuth);
 // ==========================================
 // 0. LIST EVENTS (GET /admin/api/events)
 // ==========================================
-router.get('/events', async (_req: Request, res: Response): Promise<void> => {
+router.get('/events', async (_req: Request, res: Response): Promise<Response | void> => {
   try {
     const events = await prisma.event.findMany({
       orderBy: { createdAt: 'asc' },
@@ -25,14 +26,14 @@ router.get('/events', async (_req: Request, res: Response): Promise<void> => {
     res.json({ events });
   } catch (err: any) {
     console.error('Error fetching events list:', err);
-    res.status(500).json({ error: 'FAILED_TO_FETCH_EVENTS', message: err.message });
+    return httpError(res, 500, err, "FAILED_TO_FETCH_EVENTS");
   }
 });
 
 // ==========================================
 // 1. STATS DASHBOARD (GET /admin/api/stats)
 // ==========================================
-router.get('/stats', async (req: Request, res: Response): Promise<void> => {
+router.get('/stats', async (req: Request, res: Response): Promise<Response | void> => {
   try {
     const eventId = ((req.query.eventId as string) || ACTIVE_EVENT_ID).trim();
 
@@ -168,14 +169,14 @@ router.get('/stats', async (req: Request, res: Response): Promise<void> => {
     });
   } catch (err: any) {
     console.error('Error fetching admin stats:', err);
-    res.status(500).json({ error: 'FAILED_TO_FETCH_STATS', message: err.message });
+    return httpError(res, 500, err, "FAILED_TO_FETCH_STATS");
   }
 });
 
 // ==================================================
 // 2. SUBMISSIONS LIST & SEARCH (GET /admin/api/submissions)
 // ==================================================
-router.get('/submissions', async (req: Request, res: Response): Promise<void> => {
+router.get('/submissions', async (req: Request, res: Response): Promise<Response | void> => {
   try {
     const eventId = ((req.query.eventId as string) || ACTIVE_EVENT_ID).trim();
     const page = Math.max(1, parseInt((req.query.page as string) || '1', 10));
@@ -248,7 +249,7 @@ router.get('/submissions', async (req: Request, res: Response): Promise<void> =>
     });
   } catch (err: any) {
     console.error('Error fetching submissions list:', err);
-    res.status(500).json({ error: 'FAILED_TO_FETCH_SUBMISSIONS', message: err.message });
+    return httpError(res, 500, err, "FAILED_TO_FETCH_SUBMISSIONS");
   }
 });
 
@@ -257,7 +258,7 @@ router.get('/submissions', async (req: Request, res: Response): Promise<void> =>
 // Full IT-Department roster imported from the XLSX sheet,
 // joined with each student's upload status + review info.
 // ======================================================
-router.get('/students', async (req: Request, res: Response): Promise<void> => {
+router.get('/students', async (req: Request, res: Response): Promise<Response | void> => {
   try {
     const eventId = ((req.query.eventId as string) || ACTIVE_EVENT_ID).trim();
     const page = Math.max(1, parseInt((req.query.page as string) || '1', 10));
@@ -279,86 +280,111 @@ router.get('/students', async (req: Request, res: Response): Promise<void> => {
       ];
     }
 
-    const [students, submissions] = await Promise.all([
+    // Filter by upload status directly in DB when possible
+    // (avoids loading the entire roster into memory)
+    if (uploaded === 'yes') {
+      whereClause.resumes = undefined; // not needed
+      // students whose rollNo appears in submissions with a videoDriveId
+      whereClause.introVideos = { some: { driveFileId: { not: null } } };
+    } else if (uploaded === 'no') {
+      whereClause.introVideos = { none: { driveFileId: { not: null } } };
+    }
+
+    // Fetch paginated students with their latest submission in one query
+    const [total, students] = await Promise.all([
+      prisma.student.count({ where: whereClause }),
       prisma.student.findMany({
         where: whereClause,
         orderBy: [{ year: 'asc' }, { section: 'asc' }, { rollNo: 'asc' }],
-      }),
-      prisma.submission.findMany({
-        where: { eventId },
-        orderBy: { submittedAt: 'desc' },
+        skip,
+        take: limit,
+        select: {
+          id: true,
+          rollNo: true,
+          name: true,
+          year: true,
+          section: true,
+          branch: true,
+          status: true,
+          graduatedAt: true,
+        },
       }),
     ]);
 
+    // Batch-fetch submissions for just the page of students (not all students)
+    const rollNos = students.map((s) => s.rollNo);
+    const submissions = rollNos.length
+      ? await prisma.submission.findMany({
+          where: { eventId, rollNo: { in: rollNos } },
+          orderBy: { submittedAt: 'desc' },
+          select: {
+            id: true,
+            rollNo: true,
+            year: true,
+            section: true,
+            status: true,
+            submittedAt: true,
+            videoDriveId: true,
+            reviewText: true,
+            reviewPros: true,
+            reviewCons: true,
+            reviewedAt: true,
+          },
+        })
+      : [];
+
     // Join submissions by roll number (latest wins per student)
-    const submissionByRoll = new Map<string, typeof submissions[number] | null>();
+    const submissionByRoll = new Map<string, typeof submissions[number]>();
     for (const sub of submissions) {
       const key = `${sub.rollNo}|${sub.year}|${sub.section}`;
-      if (!submissionByRoll.has(key)) {
-        submissionByRoll.set(key, sub);
-      }
+      if (!submissionByRoll.has(key)) submissionByRoll.set(key, sub);
     }
 
-    // 'uploaded' filter applied post-join
-    const rows = students
-      .map((student) => {
-        const key = `${student.rollNo}|${student.year}|${student.section}`;
-        const submission = submissionByRoll.get(key) || null;
-        return {
-          id: student.id,
-          rollNo: student.rollNo,
-          name: student.name,
-          year: student.year,
-          section: student.section,
-          branch: student.branch,
-          hasUploaded: Boolean(submission?.videoDriveId),
-          submission: submission
-            ? {
-                id: submission.id,
-                status: submission.status,
-                submittedAt: submission.submittedAt,
-                videoDriveId: submission.videoDriveId,
-                reviewText: submission.reviewText,
-                reviewPros: submission.reviewPros,
-                reviewCons: submission.reviewCons,
-                reviewedAt: submission.reviewedAt,
-              }
-            : null,
-        };
-      })
-      .filter((row): any => {
-        if (uploaded === 'yes') return row.hasUploaded;
-        if (uploaded === 'no') return !row.hasUploaded;
-        return true;
-      });
-
-    const total = rows.length;
-    const totalPages = Math.max(1, Math.ceil(total / limit));
-    const paginated = rows.slice(skip, skip + limit);
+    const rows = students.map((student) => {
+      const key = `${student.rollNo}|${student.year}|${student.section}`;
+      const submission = submissionByRoll.get(key) || null;
+      return {
+        ...student,
+        hasUploaded: Boolean(submission?.videoDriveId),
+        submission: submission
+          ? {
+              id: submission.id,
+              status: submission.status,
+              submittedAt: submission.submittedAt,
+              videoDriveId: submission.videoDriveId,
+              reviewText: submission.reviewText,
+              reviewPros: submission.reviewPros,
+              reviewCons: submission.reviewCons,
+              reviewedAt: submission.reviewedAt,
+            }
+          : null,
+      };
+    });
 
     res.json({
       eventId,
-      data: paginated,
+      data: rows,
       pagination: {
         page,
         limit,
         total,
-        totalPages,
-        rosterTotal: students.length,
+        totalPages: Math.max(1, Math.ceil(total / limit)),
+        rosterTotal: total,
       },
     });
   } catch (err: any) {
     console.error('Error fetching student roster:', err);
-    res.status(500).json({ error: 'FAILED_TO_FETCH_STUDENTS', message: err.message });
+    return httpError(res, 500, err, 'FAILED_TO_FETCH_STUDENTS');
   }
 });
+
 
 // ======================================================
 // 3.5 STUDENT ROSTER EXCEL EXPORT (GET /admin/api/students/export)
 // Full roster dump from the parent database: every student with
 // their complete submission + review information, as an .xlsx file.
 // ======================================================
-router.get('/students/export', async (req: Request, res: Response): Promise<void> => {
+router.get('/students/export', async (req: Request, res: Response): Promise<Response | void> => {
   try {
     const eventId = ((req.query.eventId as string) || ACTIVE_EVENT_ID).trim();
     const event = await prisma.event.findUnique({ where: { id: eventId } });
@@ -478,14 +504,14 @@ router.get('/students/export', async (req: Request, res: Response): Promise<void
     res.end();
   } catch (err: any) {
     console.error('Error exporting student roster:', err);
-    res.status(500).json({ error: 'STUDENTS_EXPORT_FAILED', message: err.message });
+    return httpError(res, 500, err, "STUDENTS_EXPORT_FAILED");
   }
 });
 
 // ======================================================
 // 4. SUBMISSION DETAIL (GET /admin/api/submissions/:id)
 // ======================================================
-router.get('/submissions/:id', async (req: Request, res: Response): Promise<void> => {
+router.get('/submissions/:id', async (req: Request, res: Response): Promise<Response | void> => {
   try {
     const submission = await prisma.submission.findUnique({
       where: { id: req.params.id },
@@ -499,58 +525,80 @@ router.get('/submissions/:id', async (req: Request, res: Response): Promise<void
     res.json(submission);
   } catch (err: any) {
     console.error('Error fetching submission detail:', err);
-    res.status(500).json({ error: 'FAILED_TO_FETCH_SUBMISSION', message: err.message });
+    return httpError(res, 500, err, "FAILED_TO_FETCH_SUBMISSION");
   }
 });
 
 // =========================================================================
 // 4. SECURE MEDIA PROXY (GET /admin/api/submissions/:id/media/:fileKey)
+// Supports HTTP Range requests so the admin video player can seek.
 // =========================================================================
-router.get('/submissions/:id/media/:fileKey', async (req: Request, res: Response): Promise<void> => {
+router.get('/submissions/:id/media/:fileKey', async (req: Request, res: Response): Promise<Response | void> => {
   try {
     const { id, fileKey } = req.params;
-    const submission = await prisma.submission.findUnique({ where: { id } });
-
-    if (!submission) {
-      res.status(404).json({ error: 'NOT_FOUND', message: 'Submission not found' });
-      return;
-    }
 
     if (fileKey !== 'video') {
       res.status(404).json({ error: 'MEDIA_NOT_FOUND', message: `Media ${fileKey} is not available for this portal.` });
       return;
     }
 
-    const driveFileId = submission.videoDriveId;
+    const submission = await prisma.submission.findUnique({
+      where: { id },
+      select: { videoDriveId: true, driveFolderPath: true },
+    });
 
+    if (!submission) {
+      res.status(404).json({ error: 'NOT_FOUND', message: 'Submission not found' });
+      return;
+    }
+
+    const driveFileId = submission.videoDriveId;
     if (!driveFileId) {
       res.status(404).json({ error: 'MEDIA_NOT_FOUND', message: `Media ${fileKey} not present for this submission.` });
+      return;
+    }
+
+    const etag = `"${driveFileId}"`;
+    if (req.headers['if-none-match'] === etag) {
+      res.status(304).end();
       return;
     }
 
     const { stream, mimeType, size } = await driveService.streamDriveFile(driveFileId, submission.driveFolderPath);
 
     res.setHeader('Content-Type', mimeType);
-    if (size) res.setHeader('Content-Length', size.toString());
-    res.setHeader('Cache-Control', 'no-cache, must-revalidate');
-    res.setHeader('ETag', `"${driveFileId}"`);
+    res.setHeader('Accept-Ranges', 'bytes');
+    res.setHeader('Cache-Control', 'private, max-age=300');
+    res.setHeader('ETag', etag);
 
-    if (req.headers['if-none-match'] === `"${driveFileId}"`) {
-      res.status(304).end();
-      return;
+    if (size !== undefined) {
+      const rangeHeader = req.headers.range;
+      if (rangeHeader) {
+        const [startStr, endStr] = rangeHeader.replace(/bytes=/, '').split('-');
+        const start = parseInt(startStr, 10) || 0;
+        const end = endStr ? Math.min(parseInt(endStr, 10), size - 1) : size - 1;
+        const chunkSize = end - start + 1;
+        res.setHeader('Content-Range', `bytes ${start}-${end}/${size}`);
+        res.setHeader('Content-Length', chunkSize);
+        res.status(206);
+      } else {
+        res.setHeader('Content-Length', size);
+        res.status(200);
+      }
     }
 
     stream.pipe(res);
   } catch (err: any) {
     console.error('Error proxying media:', err);
-    res.status(500).json({ error: 'MEDIA_STREAM_ERROR', message: 'Could not stream media file.' });
+    if (!res.headersSent) return httpError(res, 500, err, 'MEDIA_STREAM_ERROR');
   }
 });
+
 
 // ==============================================================
 // 5. SET PERFORMANCE RATING (PATCH /admin/api/submissions/:id/rating)
 // ==============================================================
-router.patch('/submissions/:id/rating', async (req: Request, res: Response): Promise<void> => {
+router.patch('/submissions/:id/rating', async (req: Request, res: Response): Promise<Response | void> => {
   try {
     const { rating } = req.body;
 
@@ -583,7 +631,7 @@ router.patch('/submissions/:id/rating', async (req: Request, res: Response): Pro
     res.json({ success: true, submission: updated });
   } catch (err: any) {
     console.error('Error updating rating:', err);
-    res.status(500).json({ error: 'FAILED_TO_UPDATE_RATING', message: err.message });
+    return httpError(res, 500, err, "FAILED_TO_UPDATE_RATING");
   }
 });
 
@@ -592,7 +640,7 @@ router.patch('/submissions/:id/rating', async (req: Request, res: Response): Pro
 // Saves free-text feedback + pros/cons hashtag keywords. The student sees
 // this response on their portal after sending.
 // ==============================================================
-router.patch('/submissions/:id/review', async (req: Request, res: Response): Promise<void> => {
+router.patch('/submissions/:id/review', async (req: Request, res: Response): Promise<Response | void> => {
   try {
     const { reviewText, pros, cons } = req.body;
 
@@ -648,14 +696,14 @@ router.patch('/submissions/:id/review', async (req: Request, res: Response): Pro
     res.json({ success: true, submission: updated });
   } catch (err: any) {
     console.error('Error updating review:', err);
-    res.status(500).json({ error: 'FAILED_TO_UPDATE_REVIEW', message: err.message });
+    return httpError(res, 500, err, "FAILED_TO_UPDATE_REVIEW");
   }
 });
 
 // ==============================================================
 // 7. UPDATE STATUS (PATCH /admin/api/submissions/:id/status)
 // ==============================================================
-router.patch('/submissions/:id/status', async (req: Request, res: Response): Promise<void> => {
+router.patch('/submissions/:id/status', async (req: Request, res: Response): Promise<Response | void> => {
   try {
     const { status } = req.body;
 
@@ -682,7 +730,7 @@ router.patch('/submissions/:id/status', async (req: Request, res: Response): Pro
     res.json({ success: true, submission: updated });
   } catch (err: any) {
     console.error('Error updating status:', err);
-    res.status(500).json({ error: 'FAILED_TO_UPDATE_STATUS', message: err.message });
+    return httpError(res, 500, err, "FAILED_TO_UPDATE_STATUS");
   }
 });
 
@@ -690,7 +738,7 @@ router.patch('/submissions/:id/status', async (req: Request, res: Response): Pro
 // 7. DELETE ONLY THE VIDEO (DELETE /admin/api/submissions/:id/video)
 // Removes the video file so the student can upload a replacement.
 // ==============================================================
-router.delete('/submissions/:id/video', async (req: Request, res: Response): Promise<void> => {
+router.delete('/submissions/:id/video', async (req: Request, res: Response): Promise<Response | void> => {
   try {
     const { id } = req.params;
     const submission = await prisma.submission.findUnique({ where: { id } });
@@ -742,14 +790,14 @@ router.delete('/submissions/:id/video', async (req: Request, res: Response): Pro
     });
   } catch (err: any) {
     console.error('Error deleting video:', err);
-    res.status(500).json({ error: 'VIDEO_DELETE_FAILED', message: err.message });
+    return httpError(res, 500, err, "VIDEO_DELETE_FAILED");
   }
 });
 
 // ==============================================================
 // 8. EXCEL EXPORT (GET /admin/api/export/excel)
 // ==============================================================
-router.get('/export/excel', async (req: Request, res: Response): Promise<void> => {
+router.get('/export/excel', async (req: Request, res: Response): Promise<Response | void> => {
   try {
     const eventId = ((req.query.eventId as string) || ACTIVE_EVENT_ID).trim();
     const event = await prisma.event.findUnique({ where: { id: eventId } });
@@ -831,14 +879,14 @@ router.get('/export/excel', async (req: Request, res: Response): Promise<void> =
     res.end();
   } catch (err: any) {
     console.error('Error exporting Excel report:', err);
-    res.status(500).json({ error: 'EXCEL_EXPORT_FAILED', message: err.message });
+    return httpError(res, 500, err, "EXCEL_EXPORT_FAILED");
   }
 });
 
 // ==============================================================
 // 9. DELETE SUBMISSION & DRIVE FILES (DELETE /admin/api/submissions/:id)
 // ==============================================================
-router.delete('/submissions/:id', async (req: Request, res: Response): Promise<void> => {
+router.delete('/submissions/:id', async (req: Request, res: Response): Promise<Response | void> => {
   try {
     const { id } = req.params;
     const submission = await prisma.submission.findUnique({ where: { id } });
@@ -870,14 +918,14 @@ router.delete('/submissions/:id', async (req: Request, res: Response): Promise<v
     });
   } catch (err: any) {
     console.error('Error deleting submission:', err);
-    res.status(500).json({ error: 'DELETE_FAILED', message: err.message });
+    return httpError(res, 500, err, "DELETE_FAILED");
   }
 });
 
 // ==============================================================
 // 14. ACTIVITY & AUDIT LOGS (GET /admin/api/activity-logs)
 // ==============================================================
-router.get('/activity-logs', async (req: Request, res: Response): Promise<void> => {
+router.get('/activity-logs', async (req: Request, res: Response): Promise<Response | void> => {
   try {
     const eventId = (req.query.eventId as string) || 'all';
     const category = (req.query.category as string) || 'ALL';
@@ -972,7 +1020,7 @@ router.get('/activity-logs', async (req: Request, res: Response): Promise<void> 
     });
   } catch (err: any) {
     console.error('Error fetching activity logs:', err);
-    res.status(500).json({ error: 'FAILED_TO_FETCH_ACTIVITY_LOGS', message: err.message });
+    return httpError(res, 500, err, "FAILED_TO_FETCH_ACTIVITY_LOGS");
   }
 });
 
@@ -995,7 +1043,7 @@ router.get('/moderation/videos', async (req, res) => {
       fileUrl: v.driveFileId ? `/api/public/media/video/${v.driveFileId}` : null,
     })));
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    return httpError(res, 500, err, "SERVER_ERROR");
   }
 });
 
@@ -1013,7 +1061,7 @@ router.get('/moderation/resumes', async (req, res) => {
       fileUrl: r.driveFileId ? `/api/public/media/resume/${r.driveFileId}` : null,
     })));
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    return httpError(res, 500, err, "SERVER_ERROR");
   }
 });
 
@@ -1040,7 +1088,7 @@ router.get('/moderation/achievements', async (req, res) => {
       };
     }));
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    return httpError(res, 500, err, "SERVER_ERROR");
   }
 });
 
@@ -1059,7 +1107,7 @@ router.get('/moderation/certificates', async (req, res) => {
       fileUrl: c.fileDriveId ? `/api/public/media/certificate/${c.fileDriveId}` : null
     })));
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    return httpError(res, 500, err, "SERVER_ERROR");
   }
 });
 
@@ -1073,7 +1121,7 @@ router.patch('/moderation/videos/:id', async (req, res) => {
     });
     res.json({ message: 'Success' });
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    return httpError(res, 500, err, "SERVER_ERROR");
   }
 });
 
@@ -1087,7 +1135,7 @@ router.patch('/moderation/resumes/:id', async (req, res) => {
     });
     res.json({ message: 'Success' });
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    return httpError(res, 500, err, "SERVER_ERROR");
   }
 });
 
@@ -1101,7 +1149,7 @@ router.patch('/moderation/achievements/:id', async (req, res) => {
     });
     res.json({ message: 'Success', achievement: updated });
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    return httpError(res, 500, err, "SERVER_ERROR");
   }
 });
 
@@ -1110,7 +1158,7 @@ router.get('/voting', async (req, res) => {
     const campaigns = await prisma.votingCampaign.findMany();
     res.json(campaigns);
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    return httpError(res, 500, err, "SERVER_ERROR");
   }
 });
 
@@ -1129,7 +1177,7 @@ router.post('/voting', async (req, res) => {
     });
     res.status(201).json(campaign);
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    return httpError(res, 500, err, "SERVER_ERROR");
   }
 });
 
@@ -1142,7 +1190,7 @@ router.patch('/voting/:id', async (req, res) => {
     });
     res.json(campaign);
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    return httpError(res, 500, err, "SERVER_ERROR");
   }
 });
 
@@ -1155,7 +1203,7 @@ router.get('/voting/:id/results', async (req, res) => {
     });
     res.json(votes);
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    return httpError(res, 500, err, "SERVER_ERROR");
   }
 });
 
@@ -1164,7 +1212,7 @@ router.get('/announcements', async (req, res) => {
     const announcements = await prisma.announcement.findMany({ orderBy: { createdAt: 'desc' } });
     res.json(announcements);
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    return httpError(res, 500, err, "SERVER_ERROR");
   }
 });
 
@@ -1207,7 +1255,7 @@ router.post('/announcements', async (req, res) => {
 
     res.status(201).json(announcement);
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    return httpError(res, 500, err, "SERVER_ERROR");
   }
 });
 
@@ -1247,7 +1295,7 @@ router.get('/settings', async (req, res) => {
     const settings = await prisma.portalSettings.findMany();
     res.json(settings);
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    return httpError(res, 500, err, "SERVER_ERROR");
   }
 });
 
@@ -1263,7 +1311,7 @@ router.put('/settings', async (req, res) => {
     }
     res.json({ message: 'Success' });
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    return httpError(res, 500, err, "SERVER_ERROR");
   }
 });
 
@@ -1272,7 +1320,7 @@ router.get('/skills', async (req, res) => {
     const skills = await prisma.skill.findMany();
     res.json(skills);
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    return httpError(res, 500, err, "SERVER_ERROR");
   }
 });
 
@@ -1284,7 +1332,7 @@ router.post('/skills', async (req, res) => {
     });
     res.status(201).json(skill);
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    return httpError(res, 500, err, "SERVER_ERROR");
   }
 });
 
@@ -1293,7 +1341,7 @@ router.delete('/skills/:id', async (req, res) => {
     await prisma.skill.delete({ where: { id: req.params.id } });
     res.json({ message: 'Deleted' });
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    return httpError(res, 500, err, "SERVER_ERROR");
   }
 });
 
@@ -1302,7 +1350,7 @@ router.get('/achievement-categories', async (req, res) => {
     const categories = await prisma.achievementCategory.findMany();
     res.json(categories);
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    return httpError(res, 500, err, "SERVER_ERROR");
   }
 });
 
@@ -1314,7 +1362,7 @@ router.post('/achievement-categories', async (req, res) => {
     });
     res.status(201).json(cat);
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    return httpError(res, 500, err, "SERVER_ERROR");
   }
 });
 
@@ -1322,7 +1370,7 @@ router.post('/achievement-categories', async (req, res) => {
 // EVENT REGISTRATIONS & TEAM ADMINISTRATION (ADM-08 & ADM-09)
 // ==========================================
 
-router.get('/registrations', async (req: Request, res: Response): Promise<void> => {
+router.get('/registrations', async (req: Request, res: Response): Promise<Response | void> => {
   try {
     const eventId = req.query.eventId ? String(req.query.eventId).trim() : undefined;
     const status = req.query.status ? String(req.query.status).trim() : undefined;
@@ -1454,11 +1502,11 @@ router.get('/registrations', async (req: Request, res: Response): Promise<void> 
     });
   } catch (err: any) {
     console.error('Error fetching registrations:', err);
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    return httpError(res, 500, err, "SERVER_ERROR");
   }
 });
 
-router.get('/registrations/export', async (req: Request, res: Response): Promise<void> => {
+router.get('/registrations/export', async (req: Request, res: Response): Promise<Response | void> => {
   try {
     const eventId = req.query.eventId ? String(req.query.eventId).trim() : undefined;
     const status = req.query.status ? String(req.query.status).trim() : undefined;
@@ -1536,11 +1584,11 @@ router.get('/registrations/export', async (req: Request, res: Response): Promise
     res.end();
   } catch (err: any) {
     console.error('Error exporting registrations:', err);
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    return httpError(res, 500, err, "SERVER_ERROR");
   }
 });
 
-router.get('/registrations/:id', async (req: Request, res: Response): Promise<void> => {
+router.get('/registrations/:id', async (req: Request, res: Response): Promise<Response | void> => {
   try {
     const reg = await prisma.eventRegistration.findUnique({
       where: { id: req.params.id },
@@ -1592,11 +1640,11 @@ router.get('/registrations/:id', async (req: Request, res: Response): Promise<vo
     });
   } catch (err: any) {
     console.error('Error fetching registration detail:', err);
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    return httpError(res, 500, err, "SERVER_ERROR");
   }
 });
 
-router.patch('/registrations/:id/status', async (req: Request, res: Response): Promise<void> => {
+router.patch('/registrations/:id/status', async (req: Request, res: Response): Promise<Response | void> => {
   try {
     const { status, note } = req.body;
     const allowed = ['PENDING', 'CONFIRMED', 'CANCELLED', 'REJECTED', 'WAITLISTED'];
@@ -1638,11 +1686,11 @@ router.patch('/registrations/:id/status', async (req: Request, res: Response): P
     res.json({ success: true, registration: updated });
   } catch (err: any) {
     console.error('Error updating registration status:', err);
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    return httpError(res, 500, err, "SERVER_ERROR");
   }
 });
 
-router.delete('/registrations/:id', async (req: Request, res: Response): Promise<void> => {
+router.delete('/registrations/:id', async (req: Request, res: Response): Promise<Response | void> => {
   try {
     const reg = await prisma.eventRegistration.findUnique({
       where: { id: req.params.id },
@@ -1674,12 +1722,12 @@ router.delete('/registrations/:id', async (req: Request, res: Response): Promise
     res.json({ success: true, message: 'Registration deleted successfully' });
   } catch (err: any) {
     console.error('Error deleting registration:', err);
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    return httpError(res, 500, err, "SERVER_ERROR");
   }
 });
 
 // Teams management (ADM-09)
-router.get('/teams', async (req: Request, res: Response): Promise<void> => {
+router.get('/teams', async (req: Request, res: Response): Promise<Response | void> => {
   try {
     const eventId = req.query.eventId ? String(req.query.eventId).trim() : undefined;
     const status = req.query.status ? String(req.query.status).trim() : undefined;
@@ -1743,11 +1791,11 @@ router.get('/teams', async (req: Request, res: Response): Promise<void> => {
     res.json({ teams: enriched });
   } catch (err: any) {
     console.error('Error fetching teams:', err);
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    return httpError(res, 500, err, "SERVER_ERROR");
   }
 });
 
-router.patch('/teams/:id/status', async (req: Request, res: Response): Promise<void> => {
+router.patch('/teams/:id/status', async (req: Request, res: Response): Promise<Response | void> => {
   try {
     const { status } = req.body;
     const allowed = ['FORMING', 'ACTIVE', 'COMPLETE', 'REJECTED'];
@@ -1776,11 +1824,11 @@ router.patch('/teams/:id/status', async (req: Request, res: Response): Promise<v
     res.json({ success: true, team });
   } catch (err: any) {
     console.error('Error updating team status:', err);
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    return httpError(res, 500, err, "SERVER_ERROR");
   }
 });
 
-router.post('/teams/:id/members/remove', async (req: Request, res: Response): Promise<void> => {
+router.post('/teams/:id/members/remove', async (req: Request, res: Response): Promise<Response | void> => {
   try {
     const { studentId, reason } = req.body;
     if (!studentId) {
@@ -1829,7 +1877,7 @@ router.post('/teams/:id/members/remove', async (req: Request, res: Response): Pr
     res.json({ success: true, message: 'Member removed from team successfully' });
   } catch (err: any) {
     console.error('Error removing team member:', err);
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    return httpError(res, 500, err, "SERVER_ERROR");
   }
 });
 
@@ -1837,7 +1885,7 @@ router.post('/teams/:id/members/remove', async (req: Request, res: Response): Pr
 // STORAGE MANAGEMENT (Storage.tsx)
 // ==========================================
 
-router.get('/storage', async (_req: Request, res: Response): Promise<void> => {
+router.get('/storage', async (_req: Request, res: Response): Promise<Response | void> => {
   try {
     const [
       submissionVideos,
@@ -1896,11 +1944,11 @@ router.get('/storage', async (_req: Request, res: Response): Promise<void> => {
     });
   } catch (err: any) {
     console.error('Error fetching storage stats:', err);
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    return httpError(res, 500, err, "SERVER_ERROR");
   }
 });
 
-router.post('/storage/clear-cache', async (_req: Request, res: Response): Promise<void> => {
+router.post('/storage/clear-cache', async (_req: Request, res: Response): Promise<Response | void> => {
   try {
     const deleted = await prisma.driveFolderCache.deleteMany();
     await ActivityService.log({
@@ -1912,7 +1960,7 @@ router.post('/storage/clear-cache', async (_req: Request, res: Response): Promis
     });
     res.json({ success: true, message: `Purged ${deleted.count} cache entries.` });
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    return httpError(res, 500, err, "SERVER_ERROR");
   }
 });
 
@@ -1920,7 +1968,7 @@ router.post('/storage/clear-cache', async (_req: Request, res: Response): Promis
 // EMAIL AUTOMATIONS & HISTORY
 // ==========================================
 
-router.get('/email/automations', async (_req: Request, res: Response): Promise<void> => {
+router.get('/email/automations', async (_req: Request, res: Response): Promise<Response | void> => {
   try {
     let automations = await prisma.emailAutomation.findMany({
       include: {
@@ -2002,11 +2050,11 @@ router.get('/email/automations', async (_req: Request, res: Response): Promise<v
     res.json({ automations });
   } catch (err: any) {
     console.error('Error fetching email automations:', err);
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    return httpError(res, 500, err, "SERVER_ERROR");
   }
 });
 
-router.post('/email/automations', async (req: Request, res: Response): Promise<void> => {
+router.post('/email/automations', async (req: Request, res: Response): Promise<Response | void> => {
   try {
     const { name, trigger, description, templateId, targetYear, targetSection, targetAll } = req.body;
     const automation = await prisma.emailAutomation.create({
@@ -2024,11 +2072,11 @@ router.post('/email/automations', async (req: Request, res: Response): Promise<v
     });
     res.status(201).json(automation);
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    return httpError(res, 500, err, "SERVER_ERROR");
   }
 });
 
-router.patch('/email/automations/:id/toggle', async (req: Request, res: Response): Promise<void> => {
+router.patch('/email/automations/:id/toggle', async (req: Request, res: Response): Promise<Response | void> => {
   try {
     const current = await prisma.emailAutomation.findUnique({ where: { id: req.params.id } });
     if (!current) {
@@ -2043,11 +2091,11 @@ router.patch('/email/automations/:id/toggle', async (req: Request, res: Response
     });
     res.json({ success: true, automation: updated });
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    return httpError(res, 500, err, "SERVER_ERROR");
   }
 });
 
-router.post('/email/automations/:id/run', async (req: Request, res: Response): Promise<void> => {
+router.post('/email/automations/:id/run', async (req: Request, res: Response): Promise<Response | void> => {
   try {
     const auto = await prisma.emailAutomation.findUnique({
       where: { id: req.params.id },
@@ -2084,11 +2132,11 @@ router.post('/email/automations/:id/run', async (req: Request, res: Response): P
 
     res.json({ success: true, run });
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    return httpError(res, 500, err, "SERVER_ERROR");
   }
 });
 
-router.get('/email/history', async (_req: Request, res: Response): Promise<void> => {
+router.get('/email/history', async (_req: Request, res: Response): Promise<Response | void> => {
   try {
     const [automationRuns, emailLogs] = await Promise.all([
       prisma.emailAutomationRun.findMany({
@@ -2104,18 +2152,18 @@ router.get('/email/history', async (_req: Request, res: Response): Promise<void>
     ]);
     res.json({ automationRuns, emailLogs });
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    return httpError(res, 500, err, "SERVER_ERROR");
   }
 });
 
-router.get('/email/templates', async (_req: Request, res: Response): Promise<void> => {
+router.get('/email/templates', async (_req: Request, res: Response): Promise<Response | void> => {
   try {
     const templates = await prisma.emailTemplate.findMany({
       orderBy: { createdAt: 'desc' },
     });
     res.json({ templates });
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    return httpError(res, 500, err, "SERVER_ERROR");
   }
 });
 
@@ -2123,7 +2171,7 @@ router.get('/email/templates', async (_req: Request, res: Response): Promise<voi
 // EXPORTS CONSOLE
 // ==========================================
 
-router.get('/activity-logs/export', async (_req: Request, res: Response): Promise<void> => {
+router.get('/activity-logs/export', async (_req: Request, res: Response): Promise<Response | void> => {
   try {
     const logs = await prisma.activityLog.findMany({
       orderBy: { createdAt: 'desc' },
@@ -2173,7 +2221,7 @@ router.get('/activity-logs/export', async (_req: Request, res: Response): Promis
     res.end();
   } catch (err: any) {
     console.error('Error exporting activity logs:', err);
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    return httpError(res, 500, err, "SERVER_ERROR");
   }
 });
 
@@ -2181,7 +2229,7 @@ router.get('/activity-logs/export', async (_req: Request, res: Response): Promis
 // ROLES & PERMISSIONS
 // ==========================================
 
-router.get('/roles', async (_req: Request, res: Response): Promise<void> => {
+router.get('/roles', async (_req: Request, res: Response): Promise<Response | void> => {
   try {
     let roles = await prisma.role.findMany({
       include: {
@@ -2211,11 +2259,11 @@ router.get('/roles', async (_req: Request, res: Response): Promise<void> => {
 
     res.json({ roles, admins });
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    return httpError(res, 500, err, "SERVER_ERROR");
   }
 });
 
-router.post('/roles/assign', async (req: Request, res: Response): Promise<void> => {
+router.post('/roles/assign', async (req: Request, res: Response): Promise<Response | void> => {
   try {
     const { adminId, roleId } = req.body;
     if (!adminId || !roleId) {
@@ -2229,7 +2277,7 @@ router.post('/roles/assign', async (req: Request, res: Response): Promise<void> 
     });
     res.json({ success: true, assignment });
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    return httpError(res, 500, err, "SERVER_ERROR");
   }
 });
 

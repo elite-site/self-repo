@@ -46,12 +46,16 @@ describe('student google oauth', () => {
     expect(() => jwt.verify(state!, env.STUDENT_JWT_SECRET)).not.toThrow();
   });
 
-  it('callback redirects with a token for a known college email', async () => {
+  it('callback redirects to the student app with an httpOnly session cookie', async () => {
     const res = await request(app)
       .get('/api/student/google/callback')
       .query({ code: 'c1', state: goodState });
     expect(res.status).toBe(302);
-    expect(res.headers.location).toMatch(/token=/);
+    const setCookie = res.headers['set-cookie'] as unknown as string[] | undefined;
+    expect(setCookie).toBeDefined();
+    expect(setCookie!.some((c) => c.includes('pc_student_session='))).toBe(true);
+    expect(setCookie!.some((c) => c.includes('HttpOnly'))).toBe(true);
+    expect(res.headers.location).not.toMatch(/token=/);
     expect(prisma.student.findUnique).toHaveBeenCalledWith({ where: { email: 'aakhila251201@sasi.ac.in' } });
   });
 

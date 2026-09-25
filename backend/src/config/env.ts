@@ -4,9 +4,19 @@ import path from 'path';
 // Load environment variables from backend/.env
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
+const nodeEnv = process.env.NODE_ENV || 'development';
+
+// Secrets that must be explicitly overridden (not missing, not the dev fallback) in production
+const PROD_VALUE_CHECKS = [
+  { name: 'DATABASE_URL', value: process.env.DATABASE_URL, fallback: 'postgresql://postgres:postgres@localhost:5432/photoclub?schema=public' },
+  { name: 'JWT_SECRET', value: process.env.JWT_SECRET, fallback: 'dev_secret_photoclub_change_in_production' },
+  { name: 'STUDENT_JWT_SECRET', value: process.env.STUDENT_JWT_SECRET, fallback: 'student_jwt_secret_change_in_production' },
+  { name: 'ADMIN_DEFAULT_PASSWORD', value: process.env.ADMIN_DEFAULT_PASSWORD, fallback: 'AdminPassword123!' },
+];
+
 export const env = {
   PORT: parseInt(process.env.PORT || '5001', 10),
-  NODE_ENV: process.env.NODE_ENV || 'development',
+  NODE_ENV: nodeEnv,
   DATABASE_URL: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/photoclub?schema=public',
   DIRECT_URL: process.env.DIRECT_URL || process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/photoclub?schema=public',
   JWT_SECRET: process.env.JWT_SECRET || 'dev_secret_photoclub_change_in_production',
@@ -64,8 +74,10 @@ export const env = {
         if (trimmed) set.add(trimmed);
       }
     }
-    for (const d of defaults) {
-      set.add(d.trim().replace(/\/$/, ''));
+    if (nodeEnv !== 'production') {
+      for (const d of defaults) {
+        set.add(d.trim().replace(/\/$/, ''));
+      }
     }
     return Array.from(set);
   })(),
@@ -75,3 +87,13 @@ export const env = {
   ADMIN_DEFAULT_EMAIL: process.env.ADMIN_DEFAULT_EMAIL || 'admin@club.internal',
   ADMIN_DEFAULT_PASSWORD: process.env.ADMIN_DEFAULT_PASSWORD || 'AdminPassword123!',
 };
+
+// Production fail-fast: refuse to boot with missing or dev-fallback production secrets
+if (nodeEnv === 'production') {
+  const failures = PROD_VALUE_CHECKS
+    .filter(({ value, fallback }) => !value || value === fallback)
+    .map(({ name }) => name);
+  if (failures.length > 0) {
+    throw new Error(`Refusing to start in production: missing or default secrets: ${failures.join(', ')}`);
+  }
+}

@@ -177,14 +177,9 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ initialStude
     setSuccessMessage(null);
     setUploadProgress(0);
 
-    const formData = new FormData();
-    formData.append('video', selectedFile);
-
     try {
-      const res = await api.submitVideo(formData, (e) => {
-        if (e.total) {
-          setUploadProgress(Math.round((e.loaded * 100) / e.total));
-        }
+      const res = await api.submitVideoStream(selectedFile, (info) => {
+        setUploadProgress(info.pct);
       });
       setSuccessMessage(res.message || 'Your video was uploaded successfully.');
       

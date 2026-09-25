@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Routes, Route, Navigate, useNavigate, BrowserRouter } from 'react-router-dom';
 import { StudentSession } from './types';
-import { api, setStudentToken } from './services/api';
+import { api } from './services/api';
 
 import { StudentLayout } from './components/layout/StudentLayout';
 
@@ -25,70 +25,36 @@ import { PublicStudentProfilePage } from './pages/public/PublicStudentProfilePag
 import { PublicResumeViewerPage } from './pages/public/PublicResumeViewerPage';
 import { PublicThemeProvider, StudentThemeProvider } from './context/ThemeContext';
 
-const SESSION_KEY = 'ita_student_session';
-
-function loadSession(): StudentSession | null {
-  try {
-    const raw = localStorage.getItem(SESSION_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as StudentSession;
-    if (!parsed?.token || !parsed?.student) return null;
-    return parsed;
-  } catch {
-    return null;
-  }
-}
-
 const AuthWrapper: React.FC = () => {
   const [session, setSession] = useState<StudentSession | null>(null);
   const [authChecking, setAuthChecking] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const oauthToken = params.get('token');
-    if (oauthToken) {
-      setStudentToken(oauthToken);
-      api
-        .getMe()
-        .then((res) => {
-          const sess: StudentSession = { token: oauthToken, student: res.student };
-          setSession(sess);
-          localStorage.setItem(SESSION_KEY, JSON.stringify(sess));
-        })
-        .catch(() => {
-          localStorage.removeItem(SESSION_KEY);
-          setStudentToken(null);
-        })
-        .finally(() => {
-          window.history.replaceState({}, '', window.location.pathname);
-          setAuthChecking(false);
-          navigate('/dashboard', { replace: true });
-        });
-      return;
-    }
+    let cancelled = false;
+    api
+      .getMe()
+      .then((res) => {
+        if (cancelled) return;
+        setSession({ student: res.student });
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setSession(null);
+      })
+      .finally(() => {
+        if (!cancelled) setAuthChecking(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
-    const stored = loadSession();
-    if (stored) {
-      setStudentToken(stored.token);
-      api
-        .getMe()
-        .then((res) => {
-          const updated: StudentSession = { token: stored.token, student: res.student };
-          setSession(updated);
-          localStorage.setItem(SESSION_KEY, JSON.stringify(updated));
-        })
-        .catch(() => {
-          setSession(stored);
-        });
-    }
-    setAuthChecking(false);
-  }, [navigate]);
-
-  const handleLogout = useCallback(() => {
+  const handleLogout = useCallback(async () => {
+    try {
+      await api.logout();
+    } catch {}
     setSession(null);
-    localStorage.removeItem(SESSION_KEY);
-    setStudentToken(null);
     navigate('/', { replace: true });
   }, [navigate]);
 

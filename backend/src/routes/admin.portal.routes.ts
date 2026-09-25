@@ -311,7 +311,7 @@ router.get('/events/:id/registrations', async (req: Request, res: Response) => {
             members: {
               include: {
                 student: {
-                  select: { id: true, rollNo: true, name: true, email: true, year: true, section: true },
+                  select: { id: true, rollNo: true, name: true, email: true, year: true, section: true, status: true, graduatedAt: true },
                 },
               },
             },
@@ -496,7 +496,7 @@ router.get('/voting/:id/results', async (req: Request, res: Response) => {
     const studentIds = campaign.candidates.map((c) => c.studentId);
     const students = await prisma.student.findMany({
       where: { id: { in: studentIds } },
-      select: { id: true, name: true, rollNo: true, year: true, section: true },
+      select: { id: true, name: true, rollNo: true, year: true, section: true, status: true, graduatedAt: true },
     });
     const studentMap = new Map(students.map((s) => [s.id, s]));
 

@@ -19,22 +19,33 @@ import {
 
 export const NotificationsPage: React.FC = () => {
   const [notifs, setNotifs] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<'ALL' | 'UNREAD' | 'EVENT' | 'ACADEMIC' | 'VOTING'>('ALL');
   const [markingAll, setMarkingAll] = useState(false);
   const navigate = useNavigate();
 
-  const loadNotifications = async () => {
-    setLoading(true);
-    setError(null);
+  const loadNotifications = async (silent = false) => {
+    if (!silent) {
+      setLoading(true);
+      setError(null);
+    }
     try {
-      const data = await api.getNotifications();
-      if (Array.isArray(data)) setNotifs(data);
+      const data: any = await api.getNotifications({ limit: 20 });
+      if (data && Array.isArray(data.items)) {
+        setNotifs(data.items);
+        setUnreadCount(typeof data.unreadCount === 'number' ? data.unreadCount : 0);
+        setHasMore(Boolean(data.hasMore));
+      } else {
+        setError('Could not load notifications.');
+      }
     } catch {
       setError('Could not load notifications.');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -42,11 +53,27 @@ export const NotificationsPage: React.FC = () => {
     loadNotifications();
   }, []);
 
+  const handleLoadMore = async () => {
+    setLoadingMore(true);
+    try {
+      const data: any = await api.getNotifications({ limit: 20, offset: notifs.length });
+      if (data && Array.isArray(data.items)) {
+        setNotifs((prev) => [...prev, ...data.items]);
+        setUnreadCount(typeof data.unreadCount === 'number' ? data.unreadCount : unreadCount);
+        setHasMore(Boolean(data.hasMore));
+      }
+    } catch {
+      setError('Could not load more notifications.');
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
   const handleMarkAllRead = async () => {
     setMarkingAll(true);
     try {
       await api.markAllNotificationsRead();
-      setNotifs((prev) => prev.map((n) => ({ ...n, isRead: true })));
+      await loadNotifications(true);
     } catch {
       alert('Failed to mark all as read.');
     } finally {
@@ -57,7 +84,7 @@ export const NotificationsPage: React.FC = () => {
   const handleMarkSingleRead = async (id: string) => {
     try {
       await api.markNotificationRead(id);
-      setNotifs((prev) => prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)));
+      await loadNotifications(true);
     } catch {}
   };
 
@@ -75,8 +102,6 @@ export const NotificationsPage: React.FC = () => {
     if (activeFilter !== 'ALL') return n.type === activeFilter;
     return true;
   });
-
-  const unreadCount = notifs.filter((n) => !n.isRead).length;
 
   if (loading) {
     return (
@@ -130,7 +155,7 @@ export const NotificationsPage: React.FC = () => {
           )}
 
           <button
-            onClick={loadNotifications}
+            onClick={() => loadNotifications()}
             className="p-2 border border-neutral-200 rounded-xl hover:bg-neutral-50 text-neutral-600 cursor-pointer"
             title="Refresh notifications"
           >
@@ -146,7 +171,7 @@ export const NotificationsPage: React.FC = () => {
             <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
             <span>{error}</span>
           </div>
-          <button onClick={loadNotifications} className="font-bold underline cursor-pointer">
+          <button onClick={() => loadNotifications()} className="font-bold underline cursor-pointer">
             Retry
           </button>
         </div>
@@ -226,6 +251,24 @@ export const NotificationsPage: React.FC = () => {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* LOAD MORE */}
+      {hasMore && (
+        <div className="text-center pt-1">
+          <button
+            onClick={handleLoadMore}
+            disabled={loadingMore}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-[#CBD5E1] text-xs font-bold text-neutral-600 hover:bg-neutral-50 transition-colors cursor-pointer disabled:opacity-50"
+          >
+            {loadingMore ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <ChevronRight className="w-3.5 h-3.5 rotate-90" />
+            )}
+            <span>{loadingMore ? 'Loading...' : 'Load More'}</span>
+          </button>
         </div>
       )}
     </div>

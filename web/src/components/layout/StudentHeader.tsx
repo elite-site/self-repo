@@ -44,12 +44,11 @@ export const StudentHeader: React.FC<StudentHeaderProps> = ({ session, onLogout 
   const pageInfo = pageTitles[currentPath] || { title: 'Student Portal', subtitle: 'Information Technology' };
 
   const loadNotifications = () => {
-    api.getNotifications()
-      .then((data: any[]) => {
-        if (Array.isArray(data)) {
-          setNotifications(data);
-          const unread = data.filter((n) => !n.isRead && n.status !== 'READ').length;
-          setUnreadCount(unread);
+    api.getNotifications({ limit: 10 })
+      .then((data: any) => {
+        if (data && Array.isArray(data.items)) {
+          setNotifications(data.items);
+          setUnreadCount(typeof data.unreadCount === 'number' ? data.unreadCount : 0);
         }
       })
       .catch(() => {});

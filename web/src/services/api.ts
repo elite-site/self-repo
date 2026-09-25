@@ -1,38 +1,18 @@
 import axios from 'axios';
 import { StudentProfile } from '../types';
 
-let currentToken: string | null = null;
-try {
-  const raw = typeof window !== 'undefined' ? localStorage.getItem('ita_student_session') : null;
-  if (raw) {
-    const parsed = JSON.parse(raw);
-    if (parsed?.token) currentToken = parsed.token;
-  }
-} catch {}
-
 const client = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api',
+  withCredentials: true,
 });
 
-client.interceptors.request.use((config) => {
-  if (!currentToken && typeof window !== 'undefined') {
-    try {
-      const raw = localStorage.getItem('ita_student_session');
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (parsed?.token) currentToken = parsed.token;
-      }
-    } catch {}
-  }
-  if (currentToken) {
-    config.headers.Authorization = `Bearer ${currentToken}`;
-  }
-  return config;
-});
-
-export const setStudentToken = (token: string | null) => {
-  currentToken = token;
-};
+export interface UploadProgressInfo {
+  loaded: number;
+  total: number;
+  pct: number;
+  speedBytesPerSec: number;
+  estimatedRemainingSec: number | null;
+}
 
 export const api = {
   // Original methods
@@ -43,12 +23,105 @@ export const api = {
     const res = await client.get('/student/me');
     return res.data;
   },
+  async logout(): Promise<{ success: boolean }> {
+    const res = await client.post('/student/logout');
+    return res.data;
+  },
   async submitVideo(formData: FormData, onUploadProgress?: (ev: any) => void): Promise<{ success: boolean; id: string; message?: string }> {
     const res = await client.post('/student/submission', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
       onUploadProgress,
     });
     return res.data;
+  },
+
+  /**
+   * Streaming video upload — sends the File object as a raw binary body
+   * (Content-Type: video/mp4) directly to the backend streaming endpoint.
+   *
+   * The backend pipes the incoming request stream straight through to Google
+   * Drive with zero in-memory buffering, so this works reliably even when
+   * Render has a tight memory limit and the video is up to 25 MB.
+   *
+   * Uses XHR with upload.onprogress to report byte-level progress, speed,
+   * and ETA. Also supports AbortSignal so uploads can be cancelled cleanly.
+   */
+  submitVideoStream(
+    file: File,
+    onProgress?: (progress: UploadProgressInfo) => void,
+    signal?: AbortSignal,
+  ): Promise<{ success: boolean; id: string; message?: string }> {
+    return new Promise((resolve, reject) => {
+      const base = (client.defaults.baseURL ?? 'http://localhost:5001/api')
+        .replace(/\/api\/?$/, '');
+
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', `${base}/api/student/submission/video-stream`);
+      xhr.withCredentials = true;                            // send session cookie
+      xhr.setRequestHeader('Content-Type', file.type || 'video/mp4');
+      xhr.setRequestHeader('X-Filename', encodeURIComponent(file.name));
+
+      if (signal) {
+        if (signal.aborted) {
+          reject(new Error('Upload was cancelled.'));
+          return;
+        }
+        signal.addEventListener('abort', () => xhr.abort());
+      }
+
+      let lastTime = Date.now();
+      let lastLoaded = 0;
+      let currentSpeed = 0;
+
+      if (onProgress) {
+        xhr.upload.addEventListener('progress', (e) => {
+          if (e.lengthComputable) {
+            const now = Date.now();
+            const timeDiff = (now - lastTime) / 1000;
+            if (timeDiff >= 0.25 || e.loaded === e.total) {
+              const bytesDiff = e.loaded - lastLoaded;
+              if (timeDiff > 0) {
+                currentSpeed = bytesDiff / timeDiff;
+              }
+              lastTime = now;
+              lastLoaded = e.loaded;
+            }
+
+            const remainingBytes = Math.max(0, e.total - e.loaded);
+            const estimatedRemainingSec =
+              currentSpeed > 50000 ? Math.ceil(remainingBytes / currentSpeed) : null;
+
+            onProgress({
+              loaded: e.loaded,
+              total: e.total,
+              pct: Math.min(100, Math.round((e.loaded * 100) / e.total)),
+              speedBytesPerSec: currentSpeed,
+              estimatedRemainingSec,
+            });
+          }
+        });
+      }
+
+      xhr.addEventListener('load', () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try { resolve(JSON.parse(xhr.responseText)); }
+          catch { reject(new Error('Invalid response from server')); }
+        } else {
+          try {
+            const body = JSON.parse(xhr.responseText);
+            reject(new Error(body?.message ?? `Upload failed (${xhr.status})`));
+          } catch {
+            reject(new Error(`Upload failed with status ${xhr.status}`));
+          }
+        }
+      });
+
+      xhr.addEventListener('error', () => reject(new Error('Network error — check your connection and try again.')));
+      xhr.addEventListener('abort', () => reject(new Error('Upload was cancelled.')));
+
+      // Send the File object directly — browser sets Content-Length automatically
+      xhr.send(file);
+    });
   },
   async getVideoBlobUrl(): Promise<string> {
     const res = await client.get(`/student/submission/media/video?t=${Date.now()}`, { responseType: 'blob' });
@@ -132,7 +205,3 @@ export const api = {
   async getPublicEvents() { const res = await client.get('/public/events'); return res.data; },
   async getPublicEvent(id: string) { const res = await client.get(`/public/events/${id}`); return res.data; },
 };
-
-export async function clearStudentToken() {
-  setStudentToken(null);
-}

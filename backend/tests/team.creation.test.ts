@@ -70,7 +70,7 @@ describe('Team Creation API (POST /api/student/teams)', () => {
   it('rejects creation when team name is missing or blank', async () => {
     const res = await request(app)
       .post('/api/student/teams')
-      .set('Authorization', `Bearer ${token}`)
+      .set('Cookie', `pc_student_session=${token}`)
       .send({ name: '   ', eventId: 'event-1' });
 
     expect(res.status).toBe(400);
@@ -107,7 +107,7 @@ describe('Team Creation API (POST /api/student/teams)', () => {
 
     const res = await request(app)
       .post('/api/student/teams')
-      .set('Authorization', `Bearer ${token}`)
+      .set('Cookie', `pc_student_session=${token}`)
       .send({ name: 'Alpha Squad', eventId: 'event-1' });
 
     expect(res.status).toBe(201);
@@ -149,7 +149,7 @@ describe('Team Creation API (POST /api/student/teams)', () => {
 
     const res = await request(app)
       .post('/api/student/teams')
-      .set('Authorization', `Bearer ${token}`)
+      .set('Cookie', `pc_student_session=${token}`)
       .send({ name: 'Beta Builders' }); // No eventId in body
 
     expect(res.status).toBe(201);
@@ -173,7 +173,7 @@ describe('Team Creation API (POST /api/student/teams)', () => {
 
     const res = await request(app)
       .post('/api/student/teams')
-      .set('Authorization', `Bearer ${token}`)
+      .set('Cookie', `pc_student_session=${token}`)
       .send({ name: 'Solo Coders' }); // No eventId provided, and no open event in DB
 
     expect(res.status).toBe(400);
@@ -188,7 +188,7 @@ describe('Team Creation API (POST /api/student/teams)', () => {
 
     const res = await request(app)
       .post('/api/student/teams')
-      .set('Authorization', `Bearer ${token}`)
+      .set('Cookie', `pc_student_session=${token}`)
       .send({ name: 'Nonexistent Team', eventId: 'nonexistent-event-id' });
 
     expect(res.status).toBe(404);

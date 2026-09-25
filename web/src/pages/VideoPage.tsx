@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { api } from '../services/api';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { api, UploadProgressInfo } from '../services/api';
 import { StudentSubmission } from '../types';
 import {
   UploadCloud,
@@ -14,8 +14,29 @@ import {
   ThumbsUp,
   ThumbsDown,
   RefreshCw,
-  Download
+  Download,
+  Zap,
+  X,
+  Gauge,
+  Info
 } from 'lucide-react';
+
+interface UploadStats {
+  loadedMb: number;
+  totalMb: number;
+  speedFormatted: string;
+  etaFormatted: string | null;
+  phase: 'uploading' | 'confirming';
+}
+
+interface VideoMeta {
+  durationSec: number | null;
+  durationFormatted: string | null;
+  resolutionFormatted: string | null;
+  sizeMb: number;
+  isLarge: boolean;
+  durationNotice: string | null;
+}
 
 export const VideoPage: React.FC = () => {
   const [submission, setSubmission] = useState<StudentSubmission | null>(null);
@@ -23,11 +44,37 @@ export const VideoPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadStats, setUploadStats] = useState<UploadStats | null>(null);
+  const [videoMeta, setVideoMeta] = useState<VideoMeta | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Track object URLs so we can revoke them on unmount / re-upload (memory leak prevention)
+  const objectUrlRef = useRef<string | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
-  const loadSubmission = async (isInitial = true) => {
+  // Revoke any previously created blob URLs to free memory
+  const setVideoUrlSafe = (url: string | null) => {
+    if (objectUrlRef.current && objectUrlRef.current !== url) {
+      URL.revokeObjectURL(objectUrlRef.current);
+    }
+    objectUrlRef.current = url;
+    setVideoUrl(url);
+  };
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (objectUrlRef.current) {
+        URL.revokeObjectURL(objectUrlRef.current);
+      }
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
+
+  const loadSubmission = useCallback(async (isInitial = true) => {
     if (isInitial && !submission) setLoading(true);
     setError(null);
     try {
@@ -37,7 +84,7 @@ export const VideoPage: React.FC = () => {
         if (data.student.submission.videoUploaded) {
           api.getVideoBlobUrl()
             .then((url) => {
-              if (url) setVideoUrl(url);
+              if (url) setVideoUrlSafe(url);
             })
             .catch(() => null);
         }
@@ -49,11 +96,92 @@ export const VideoPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     loadSubmission(true);
-  }, []);
+  }, [loadSubmission]);
+
+  // Fast in-browser inspection of video file without any heavy dependencies
+  const inspectVideoFile = (file: File): Promise<VideoMeta> => {
+    return new Promise((resolve) => {
+      const sizeMb = parseFloat((file.size / (1024 * 1024)).toFixed(1));
+      const isLarge = sizeMb > 15;
+
+      const tempVideo = document.createElement('video');
+      tempVideo.preload = 'metadata';
+      const tempUrl = URL.createObjectURL(file);
+      tempVideo.src = tempUrl;
+
+      const timeout = setTimeout(() => {
+        URL.revokeObjectURL(tempUrl);
+        resolve({
+          durationSec: null,
+          durationFormatted: null,
+          resolutionFormatted: null,
+          sizeMb,
+          isLarge,
+          durationNotice: null,
+        });
+      }, 2000);
+
+      tempVideo.onloadedmetadata = () => {
+        clearTimeout(timeout);
+        URL.revokeObjectURL(tempUrl);
+        const durationSec = Math.round(tempVideo.duration || 0);
+        const mins = Math.floor(durationSec / 60);
+        const secs = durationSec % 60;
+        const durationFormatted = mins > 0 ? `${mins}m ${secs < 10 ? '0' : ''}${secs}s` : `${secs}s`;
+
+        let resolutionFormatted = null;
+        if (tempVideo.videoHeight) {
+          resolutionFormatted = `${tempVideo.videoHeight}p`;
+        }
+
+        let durationNotice: string | null = null;
+        if (durationSec > 0 && durationSec < 55) {
+          durationNotice = `Video duration is ${durationFormatted} (recommended is 60–90 seconds).`;
+        } else if (durationSec > 95) {
+          durationNotice = `Video duration is ${durationFormatted} (longer than recommended 90s).`;
+        }
+
+        resolve({
+          durationSec,
+          durationFormatted,
+          resolutionFormatted,
+          sizeMb,
+          isLarge,
+          durationNotice,
+        });
+      };
+
+      tempVideo.onerror = () => {
+        clearTimeout(timeout);
+        URL.revokeObjectURL(tempUrl);
+        resolve({
+          durationSec: null,
+          durationFormatted: null,
+          resolutionFormatted: null,
+          sizeMb,
+          isLarge,
+          durationNotice: null,
+        });
+      };
+    });
+  };
+
+  const handleCancelUpload = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setUploading(false);
+    setUploadProgress(0);
+    setUploadStats(null);
+    setError('Upload cancelled.');
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -72,21 +200,52 @@ export const VideoPage: React.FC = () => {
     setError(null);
     setUploading(true);
     setUploadProgress(0);
+    setUploadStats(null);
     setUploadSuccess(false);
 
+    // Inspect file resolution & duration in browser
+    const meta = await inspectVideoFile(file);
+    setVideoMeta(meta);
+
+    // Create a local preview URL immediately so the student sees their video
+    // while it uploads in the background
     const localUrl = URL.createObjectURL(file);
-    const formData = new FormData();
-    formData.append('video', file);
+    abortControllerRef.current = new AbortController();
 
     try {
-      const res = await api.submitVideo(formData, (progressEvent) => {
-        if (progressEvent.total) {
-          const pct = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          setUploadProgress(pct);
-        }
-      });
+      // Stream the raw file directly to the backend — no FormData wrapper.
+      // The backend pipes it straight to Google Drive with zero RAM buffering.
+      const res = await api.submitVideoStream(
+        file,
+        (info: UploadProgressInfo) => {
+          setUploadProgress(info.pct);
+          const loadedMb = parseFloat((info.loaded / (1024 * 1024)).toFixed(1));
+          const totalMb = parseFloat((info.total / (1024 * 1024)).toFixed(1));
+          const speedMb = info.speedBytesPerSec / (1024 * 1024);
+          const speedFormatted =
+            speedMb >= 0.1
+              ? `${speedMb.toFixed(1)} MB/s`
+              : `${Math.max(1, Math.round(info.speedBytesPerSec / 1024))} KB/s`;
+
+          const etaFormatted =
+            info.estimatedRemainingSec !== null
+              ? info.estimatedRemainingSec > 60
+                ? `~${Math.ceil(info.estimatedRemainingSec / 60)} min left`
+                : `~${info.estimatedRemainingSec}s left`
+              : null;
+
+          setUploadStats({
+            loadedMb,
+            totalMb,
+            speedFormatted,
+            etaFormatted,
+            phase: info.pct >= 100 ? 'confirming' : 'uploading',
+          });
+        },
+        abortControllerRef.current.signal,
+      );
+
       setUploadSuccess(true);
-      // Immediately reflect submission in UI without waiting for Google Drive re-download
       setSubmission((prev) => ({
         id: res.id || prev?.id || 'submission',
         status: 'SUBMITTED',
@@ -97,13 +256,22 @@ export const VideoPage: React.FC = () => {
         reviewCons: [],
         reviewedAt: null,
       }));
-      setVideoUrl(localUrl);
-      // Silently sync server state
+      // Show local preview immediately; revoke old URL to free memory
+      setVideoUrlSafe(localUrl);
+      // Silently sync server state in the background
       loadSubmission(false);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to upload video. Please try again.');
+      URL.revokeObjectURL(localUrl); // clean up unused preview URL on error
+      if (err.name === 'AbortError' || err.message?.includes('cancelled')) {
+        setError('Upload cancelled.');
+      } else {
+        setError(err.message || 'Failed to upload video. Please try again.');
+      }
     } finally {
       setUploading(false);
+      abortControllerRef.current = null;
+      // Reset file input so the same file can be re-selected after an error
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
@@ -224,17 +392,105 @@ export const VideoPage: React.FC = () => {
             </div>
 
             {uploading ? (
-              <div className="border-2 border-dashed border-red-200 bg-red-50/40 rounded-2xl p-12 text-center space-y-3">
-                <Loader2 className="w-10 h-10 animate-spin text-[#DC2626] mx-auto" />
-                <h3 className="text-sm font-bold text-[#0B192C]">Uploading video... {uploadProgress}%</h3>
-                <div className="w-64 max-w-full mx-auto bg-neutral-200 rounded-full h-2 overflow-hidden">
-                  <div className="bg-[#DC2626] h-2 rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
+              <div className="border-2 border-dashed border-red-200 bg-red-50/40 rounded-2xl p-8 sm:p-12 text-center space-y-4">
+                <div className="relative w-16 h-16 mx-auto flex items-center justify-center">
+                  <div className="w-16 h-16 rounded-full border-4 border-red-100 border-t-[#DC2626] animate-spin" />
+                  <span className="absolute text-xs font-black text-[#0B192C]">{uploadProgress}%</span>
                 </div>
-                <p className="text-[11px] text-neutral-500">Do not close this window while the upload completes.</p>
+
+                <div>
+                  <h3 className="text-sm font-bold text-[#0B192C]">
+                    {uploadStats?.phase === 'confirming'
+                      ? 'Finalizing submission with Google Drive...'
+                      : 'Streaming video to Google Drive...'}
+                  </h3>
+                  <p className="text-[11px] text-neutral-500 mt-0.5">
+                    Zero server buffering • Direct parallel pipeline to cloud storage
+                  </p>
+                </div>
+
+                {/* Progress Bar */}
+                <div className="w-80 max-w-full mx-auto space-y-2">
+                  <div className="w-full bg-neutral-200 rounded-full h-2.5 overflow-hidden p-0.5">
+                    <div
+                      className="bg-gradient-to-r from-red-600 to-red-500 h-full rounded-full transition-all duration-200 ease-out"
+                      style={{ width: `${uploadProgress}%` }}
+                    />
+                  </div>
+
+                  {/* Live Metrics Row */}
+                  {uploadStats && (
+                    <div className="flex items-center justify-between text-[11px] text-neutral-600 px-0.5">
+                      <span>{uploadStats.loadedMb} / {uploadStats.totalMb} MB</span>
+                      <div className="flex items-center gap-2.5">
+                        {uploadStats.speedFormatted && (
+                          <span className="font-semibold text-neutral-700">⚡ {uploadStats.speedFormatted}</span>
+                        )}
+                        {uploadStats.etaFormatted && (
+                          <span className="text-neutral-500">⏱️ {uploadStats.etaFormatted}</span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Video Meta Badges */}
+                {videoMeta && (
+                  <div className="flex flex-wrap items-center justify-center gap-2 pt-1 text-[11px]">
+                    <span className="px-2 py-0.5 rounded-md bg-white border border-neutral-200 font-medium text-neutral-700">
+                      File: {videoMeta.sizeMb} MB
+                    </span>
+                    {videoMeta.durationFormatted && (
+                      <span className="px-2 py-0.5 rounded-md bg-white border border-neutral-200 font-medium text-neutral-700">
+                        Duration: {videoMeta.durationFormatted}
+                      </span>
+                    )}
+                    {videoMeta.resolutionFormatted && (
+                      <span className="px-2 py-0.5 rounded-md bg-white border border-neutral-200 font-medium text-neutral-700">
+                        Resolution: {videoMeta.resolutionFormatted}
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {/* Duration notice if outside 60-90s */}
+                {videoMeta?.durationNotice && (
+                  <div className="max-w-md mx-auto p-2 bg-blue-50 border border-blue-200 rounded-xl text-[11px] text-blue-800 text-left flex items-start gap-1.5">
+                    <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                    <span>{videoMeta.durationNotice}</span>
+                  </div>
+                )}
+
+                {/* Wi-Fi Optimization Notice if file is large */}
+                {videoMeta?.isLarge && (
+                  <div className="max-w-md mx-auto p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-[11px] text-amber-800 text-left flex items-start gap-2">
+                    <Zap className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                    <span>
+                      <strong>Fast Upload Tip:</strong> This video is {videoMeta.sizeMb} MB. Recording at 720p HD (~8–12 MB) uploads up to 2× faster on campus Wi-Fi!
+                    </span>
+                  </div>
+                )}
+
+                {/* Cancel Button */}
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={handleCancelUpload}
+                    className="text-xs font-semibold text-neutral-500 hover:text-red-600 transition-colors inline-flex items-center gap-1 cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" /> Cancel Upload
+                  </button>
+                </div>
               </div>
             ) : videoUrl ? (
               <div className="bg-black rounded-2xl overflow-hidden aspect-video border border-neutral-800 shadow-inner">
-                <video src={videoUrl} controls className="w-full h-full object-contain" />
+                <video
+                  src={videoUrl}
+                  controls
+                  playsInline
+                  preload="metadata"
+                  className="w-full h-full object-contain"
+                />
               </div>
             ) : (
               <div
@@ -246,7 +502,7 @@ export const VideoPage: React.FC = () => {
                 </div>
                 <h3 className="font-bold text-base text-[#0B192C]">Upload your self-introduction video</h3>
                 <p className="text-xs text-neutral-500 max-w-sm mt-1.5 mb-6">
-                  Recommended format: MP4 or WebM, 1080p, well-lit, under 25MB. Introduce your name, branch, interests, and career ambitions.
+                  Recommended: MP4 or WebM, 720p/1080p, 60–90 seconds, under 25MB. Introduce your name, branch, interests, and career ambitions.
                 </p>
                 <button
                   type="button"
@@ -318,6 +574,10 @@ export const VideoPage: React.FC = () => {
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                 <span><strong>Duration:</strong> Between 60 and 90 seconds.</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <Zap className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                <span><strong>Speed Tip:</strong> Record in <strong>720p (HD) at 30fps</strong> for the fastest upload. A 90s video will be only ~8–12 MB and upload in under 20 seconds!</span>
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />

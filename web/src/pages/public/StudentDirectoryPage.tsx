@@ -11,6 +11,14 @@ interface StudentDirectoryProps {
   onLogout?: () => void;
 }
 
+type StatusFilter = 'ALL' | 'ACTIVE' | 'GRADUATED';
+
+const STATUS_FILTERS = [
+  { value: 'ALL', label: 'All' },
+  { value: 'ACTIVE', label: 'Active' },
+  { value: 'GRADUATED', label: 'Alumni' },
+] as const;
+
 export const StudentDirectoryPage: React.FC<StudentDirectoryProps> = ({ session, onLogout }) => {
   const [students, setStudents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -18,12 +26,15 @@ export const StudentDirectoryPage: React.FC<StudentDirectoryProps> = ({ session,
   const [yearFilter, setYearFilter] = useState('ALL');
   const [sectionFilter, setSectionFilter] = useState('ALL');
   const [skillFilter, setSkillFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
   const [sortBy, setSortBy] = useState<'latest' | 'name'>('latest');
 
   const loadStudents = async () => {
     setLoading(true);
     try {
-      const data = await api.getPublicStudents();
+      const data = await api.getPublicStudents({
+        status: statusFilter === 'ALL' ? undefined : statusFilter,
+      });
       if (Array.isArray(data)) setStudents(data);
     } catch {
       setStudents([]);
@@ -34,7 +45,7 @@ export const StudentDirectoryPage: React.FC<StudentDirectoryProps> = ({ session,
 
   useEffect(() => {
     loadStudents();
-  }, []);
+  }, [statusFilter]);
 
   const filtered = students.filter((s) => {
     // Search by name or roll number
@@ -81,10 +92,11 @@ export const StudentDirectoryPage: React.FC<StudentDirectoryProps> = ({ session,
     setYearFilter('ALL');
     setSectionFilter('ALL');
     setSkillFilter('');
+    setStatusFilter('ALL');
     setSortBy('latest');
   };
 
-  const hasActiveFilters = search || yearFilter !== 'ALL' || sectionFilter !== 'ALL' || skillFilter;
+  const hasActiveFilters = search || yearFilter !== 'ALL' || sectionFilter !== 'ALL' || skillFilter || statusFilter !== 'ALL';
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col font-sans text-left">
@@ -125,6 +137,32 @@ export const StudentDirectoryPage: React.FC<StudentDirectoryProps> = ({ session,
                     Reset
                   </button>
                 )}
+              </div>
+
+              <div>
+                <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                  Student Status
+                </div>
+                <div className="grid grid-cols-3 gap-1.5" role="group" aria-label="Student status">
+                  {STATUS_FILTERS.map((option) => {
+                    const isActive = statusFilter === option.value;
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        aria-pressed={isActive}
+                        onClick={() => setStatusFilter(option.value)}
+                        className={`min-h-10 px-2 py-2 rounded-xl border text-[11px] font-bold transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-elite-red focus:ring-offset-2 ${
+                          isActive
+                            ? 'bg-[#0B192C] text-white border-[#0B192C]'
+                            : 'bg-neutral-50 text-slate-600 border-[#E2E8F0] hover:bg-neutral-100'
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               {/* Year Filter */}
@@ -249,14 +287,16 @@ export const StudentDirectoryPage: React.FC<StudentDirectoryProps> = ({ session,
                 {sorted.map((s) => {
                   const photoUrl = s.profile?.photoUrl || s.photoUrl;
                   const skillsList = s.profile?.skills || s.skills || [];
-                  const initials = (s.name || '')
-                    .split(' ')
-                    .filter(Boolean)
-                    .slice(0, 2)
-                    .map((w: string) => w[0]?.toUpperCase())
-                    .join('');
+                   const initials = (s.name || '')
+                     .split(' ')
+                     .filter(Boolean)
+                     .slice(0, 2)
+                     .map((w: string) => w[0]?.toUpperCase())
+                     .join('');
+                   const graduationYear =
+                     typeof s.graduatedAt === 'string' ? s.graduatedAt.match(/^\d{4}/)?.[0] : undefined;
 
-                  return (
+                   return (
                     <Link
                       to={`/students/${s.rollNo}`}
                       key={s.id || s.rollNo}

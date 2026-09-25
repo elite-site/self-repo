@@ -5,10 +5,11 @@ const router = Router();
 
 router.get('/', async (req: Request, res: Response) => {
   try {
-    const { search, year, section, skills } = req.query;
+    const { search, year, section, skills, status } = req.query;
     
     const where: any = { profile: { isPublic: true } };
     
+    if (status === 'ACTIVE' || status === 'GRADUATED') where.status = status;
     if (year) where.year = parseInt(year as string);
     if (section) where.section = String(section);
     if (search) {
@@ -33,6 +34,8 @@ router.get('/', async (req: Request, res: Response) => {
         name: true,
         year: true,
         section: true,
+        status: true,
+        graduatedAt: true,
         profile: {
           select: {
             photoUrl: true,

@@ -9,6 +9,8 @@ export interface StudentJwtPayload {
   email?: string;
 }
 
+export const STUDENT_SESSION_COOKIE_NAME = 'pc_student_session';
+
 declare global {
   namespace Express {
     interface Request {
@@ -18,8 +20,7 @@ declare global {
 }
 
 export const requireStudentAuth = (req: Request, res: Response, next: NextFunction): void => {
-  const header = req.headers.authorization || '';
-  const token = header.startsWith('Bearer ') ? header.slice(7) : null;
+  const token = req.cookies?.[STUDENT_SESSION_COOKIE_NAME] || null;
 
   if (!token) {
     res.status(401).json({

@@ -1,5 +1,6 @@
 import { google, drive_v3 } from 'googleapis';
 import { Readable } from 'stream';
+import https from 'https';
 import fs from 'fs';
 import path from 'path';
 import { env } from '../config/env';
@@ -36,6 +37,10 @@ class DriveService {
   private isMock = false;
   private mockBaseDir = path.resolve(__dirname, '../../storage/mock-drive');
 
+  // Stored so createResumableUploadSession() can get a fresh access token
+  private oauthClient: InstanceType<typeof google.auth.OAuth2> | null = null;
+  private serviceAccountAuth: InstanceType<typeof google.auth.GoogleAuth> | null = null;
+
   constructor() {
     this.init();
   }
@@ -57,6 +62,7 @@ class DriveService {
           refresh_token: env.GOOGLE_OAUTH_REFRESH_TOKEN,
         });
         this.drive = google.drive({ version: 'v3', auth: oauth2Client });
+        this.oauthClient = oauth2Client;   // ← store for token refresh
         this.isMock = false;
         console.log('✅ Google Drive API initialized with OAuth 2.0 Refresh Token (Workspace Account)');
       } catch (err) {
@@ -79,6 +85,7 @@ class DriveService {
           scopes: ['https://www.googleapis.com/auth/drive'],
         });
         this.drive = google.drive({ version: 'v3', auth });
+        this.serviceAccountAuth = auth;    // ← store for token refresh
         this.isMock = false;
         console.log('✅ Google Drive API initialized with Service Account');
       } catch (err) {
@@ -93,6 +100,14 @@ class DriveService {
     if (this.isMock && !fs.existsSync(this.mockBaseDir)) {
       fs.mkdirSync(this.mockBaseDir, { recursive: true });
     }
+  }
+
+  /**
+   * Whether this service is in mock (local) mode.
+   * Used by callers to decide between direct-upload and server-upload flows.
+   */
+  public get isUsingMock(): boolean {
+    return this.isMock;
   }
 
   /**
@@ -351,6 +366,190 @@ class DriveService {
   }
 
   /**
+   * Creates a Google Drive resumable upload session.
+   *
+   * The returned URL is a pre-authorized session URI that the **browser** (or any
+   * client) can PUT the file body to directly — bypassing Render entirely.
+   * The URL is valid for 7 days and requires no Authorization header from the
+   * client; the session itself is the credential.
+   *
+   * Returns `null` when running in mock/local mode — callers must fall back to
+   * the regular server-upload endpoint in that case.
+   *
+   * @param fileName       - desired filename in Drive (e.g. "21A91A0501_RaviKumar.mp4")
+   * @param mimeType       - video MIME type (e.g. "video/mp4")
+   * @param fileSize       - exact byte size of the file
+   * @param parentFolderId - the Drive folder to place the file in
+   */
+  public async createResumableUploadSession(
+    fileName: string,
+    mimeType: string,
+    fileSize: number,
+    parentFolderId: string,
+  ): Promise<string | null> {
+    if (this.isMock || !this.drive) return null;
+
+    // Obtain a fresh access token from whichever auth method is configured
+    let accessToken: string;
+    try {
+      if (this.oauthClient) {
+        const result = await this.oauthClient.getAccessToken();
+        if (!result.token) throw new Error('OAuth2 returned empty token');
+        accessToken = result.token;
+      } else if (this.serviceAccountAuth) {
+        const token = await this.serviceAccountAuth.getAccessToken();
+        if (!token) throw new Error('Service account returned empty token');
+        accessToken = token as string;
+      } else {
+        return null;
+      }
+    } catch (err) {
+      console.warn('[Drive] Could not obtain access token for resumable upload session:', err);
+      return null;
+    }
+
+    // Step 1: Initiate a resumable upload session — Drive returns a Location URL.
+    // No file bytes are sent here; we only describe the file metadata.
+    const initUrl =
+      `https://www.googleapis.com/upload/drive/v3/files` +
+      `?uploadType=resumable&supportsAllDrives=true&fields=id,name,mimeType`;
+
+    const resp = await fetch(initUrl, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json; charset=UTF-8',
+        'X-Upload-Content-Type': mimeType,
+        'X-Upload-Content-Length': String(fileSize),
+      },
+      body: JSON.stringify({
+        name: fileName,
+        parents: [parentFolderId],
+      }),
+    });
+
+    if (!resp.ok) {
+      const body = await resp.text().catch(() => '');
+      throw new Error(
+        `[Drive] Resumable session init failed (${resp.status}): ${body.slice(0, 200)}`,
+      );
+    }
+
+    const sessionUrl = resp.headers.get('location');
+    if (!sessionUrl) {
+      throw new Error('[Drive] No Location header returned from resumable upload init');
+    }
+
+    return sessionUrl;
+  }
+
+  /**
+   * Reachability probe used by /ready: verifies the Drive root folder exists and
+   * is not trashed (no-op for the local mock storage).
+   */
+
+  /**
+   * Pipes a Node.js Readable stream (the browser's upload) directly into a
+   * Google Drive resumable upload session — **zero RAM buffering in Render**.
+   *
+   * How it works:
+   *   Browser → [TCP] → Render (req stream) → [TCP] → googleapis.com (drive session PUT)
+   *
+   * Data flows through Render only at the OS socket-buffer level (~64 KB chunks),
+   * so 200 students uploading 25 MB videos simultaneously won't cause an OOM crash.
+   *
+   * @param sessionUrl    Drive resumable session URL (null = mock/dev mode)
+   * @param contentType   MIME type of the file (e.g. "video/mp4")
+   * @param contentLength Exact byte count — MUST match the actual stream length
+   * @param inputStream   Source stream (Express `req` object)
+   * @param mockMeta      Only used in mock mode for local storage naming
+   * @returns             Google Drive file ID of the newly uploaded file
+   */
+  public async streamUploadToDrive(
+    sessionUrl: string | null,
+    contentType: string,
+    contentLength: number,
+    inputStream: Readable,
+    mockMeta?: { relativePath: string; fileName: string },
+  ): Promise<string> {
+    // ── Mock / dev mode ───────────────────────────────────────────────────────
+    if (!sessionUrl || this.isMock) {
+      // Collect into a buffer — only runs locally, memory is not a concern
+      const chunks: Buffer[] = [];
+      for await (const chunk of inputStream) {
+        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+      }
+      const buffer = Buffer.concat(chunks);
+
+      const relPath = mockMeta?.relativePath ?? 'stream-uploads';
+      const fileName = mockMeta?.fileName ?? `video_${Date.now()}.mp4`;
+      const dirPath = path.join(this.mockBaseDir, relPath);
+      fs.mkdirSync(dirPath, { recursive: true });
+      fs.writeFileSync(path.join(dirPath, fileName), buffer);
+
+      const mockId = `mock_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      fs.writeFileSync(
+        path.join(dirPath, `${mockId}.meta.json`),
+        JSON.stringify({ id: mockId, name: fileName, mimeType: contentType, size: buffer.length }),
+      );
+      return mockId;
+    }
+
+    // ── Live mode: stream → Drive with no in-memory buffer ───────────────────
+    const driveUrl = new URL(sessionUrl);
+    return new Promise<string>((resolve, reject) => {
+      const driveReq = https.request(
+        {
+          hostname: driveUrl.hostname,
+          port: 443,
+          path: driveUrl.pathname + driveUrl.search,
+          method: 'PUT',
+          headers: {
+            'Content-Type': contentType,
+            'Content-Length': contentLength, // Drive requires exact length for single-shot PUT
+          },
+        },
+        (driveRes) => {
+          let body = '';
+          driveRes.on('data', (chunk) => { body += String(chunk); });
+          driveRes.on('end', () => {
+            const status = driveRes.statusCode ?? 0;
+            if (status < 200 || status >= 300) {
+              return reject(
+                new Error(`[Drive] Session PUT failed (HTTP ${status}): ${body.slice(0, 300)}`),
+              );
+            }
+            try {
+              const parsed = JSON.parse(body) as { id?: string };
+              if (!parsed.id) return reject(new Error('[Drive] Response JSON has no id field'));
+              resolve(parsed.id);
+            } catch {
+              reject(new Error(`[Drive] Could not parse response: ${body.slice(0, 100)}`));
+            }
+          });
+        },
+      );
+
+      driveReq.on('error', (err) =>
+        reject(new Error(`[Drive] Pipe error: ${err.message}`)),
+      );
+
+      // The magic line — pipe without buffering
+      inputStream.pipe(driveReq);
+      inputStream.on('error', (err) => {
+        driveReq.destroy(err);
+        reject(err);
+      });
+      inputStream.on('close', () => {
+        if (!(inputStream as any).complete && !(inputStream as any).readableEnded) {
+          driveReq.destroy(new Error('Client aborted upload stream'));
+          reject(new Error('Upload interrupted: connection closed'));
+        }
+      });
+    });
+  }
+
+  /**
    * Reachability probe used by /ready: verifies the Drive root folder exists and
    * is not trashed (no-op for the local mock storage).
    */
@@ -370,11 +569,17 @@ class DriveService {
   }
 
   /**
-   * Proxy/Stream a Drive file to the client for admin media viewing
+   * Proxy/Stream a Drive file to the client for admin media viewing.
+   * @param fileId       - Google Drive file ID
+   * @param relativePath - optional path hint used by the mock storage backend
+   * @param rangeHeader  - optional HTTP Range header from the client request
+   *                       (e.g. "bytes=0-1048576"). Passed through so callers can
+   *                       set Content-Range headers even if the full stream is used.
    */
   public async streamDriveFile(
     fileId: string,
-    relativePath?: string
+    relativePath?: string,
+    rangeHeader?: string,
   ): Promise<{ stream: Readable; mimeType: string; size?: number }> {
     if (this.isMock || !this.drive) {
       // Find file in mock directory

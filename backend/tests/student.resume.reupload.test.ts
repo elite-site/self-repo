@@ -84,7 +84,7 @@ describe('Resume and Intro Video Reupload Persistence & Cache Invalidation', () 
 
       const res = await request(app)
         .post('/api/student/resume')
-        .set('Authorization', `Bearer ${token}`)
+        .set('Cookie', `pc_student_session=${token}`)
         .attach('resume', Buffer.from('%PDF-1.4 mock content A'), 'resume_v1.pdf');
 
       expect(res.status).toBe(201);
@@ -130,7 +130,7 @@ describe('Resume and Intro Video Reupload Persistence & Cache Invalidation', () 
 
       const res = await request(app)
         .post('/api/student/resume')
-        .set('Authorization', `Bearer ${token}`)
+        .set('Cookie', `pc_student_session=${token}`)
         .attach('resume', Buffer.from('%PDF-1.4 mock content B'), 'resume_v2.pdf');
 
       expect(res.status).toBe(201);
@@ -165,7 +165,7 @@ describe('Resume and Intro Video Reupload Persistence & Cache Invalidation', () 
 
       const res = await request(app)
         .get('/api/student/resume')
-        .set('Authorization', `Bearer ${token}`);
+        .set('Cookie', `pc_student_session=${token}`);
 
       expect(res.status).toBe(200);
       expect(res.body).toHaveLength(1);
@@ -212,7 +212,7 @@ describe('Resume and Intro Video Reupload Persistence & Cache Invalidation', () 
 
       const res = await request(app)
         .post('/api/student/submission')
-        .set('Authorization', `Bearer ${token}`)
+        .set('Cookie', `pc_student_session=${token}`)
         .attach('video', Buffer.from('000000186674797069736f6d000000006d703432', 'hex'), 'intro.mp4');
 
       expect(res.status).toBe(201);
@@ -259,7 +259,7 @@ describe('Resume and Intro Video Reupload Persistence & Cache Invalidation', () 
 
       const res = await request(app)
         .get('/api/student/submission/media/video')
-        .set('Authorization', `Bearer ${token}`);
+        .set('Cookie', `pc_student_session=${token}`);
 
       expect(res.status).toBe(200);
       expect(res.headers['cache-control']).toContain('no-cache');

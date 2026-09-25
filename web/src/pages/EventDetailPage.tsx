@@ -66,6 +66,16 @@ export const EventDetailPage: React.FC = () => {
     }
   };
 
+  const requireSession = async (): Promise<boolean> => {
+    try {
+      await api.getMe();
+      return true;
+    } catch {
+      window.location.href = api.getOAuthAuthorizeUrl();
+      return false;
+    }
+  };
+
   useEffect(() => {
     loadEventAndReg(true);
   }, [id]);
@@ -284,12 +294,9 @@ export const EventDetailPage: React.FC = () => {
                   </div>
                 ) : (
                   <button
-                    onClick={() => {
-                      const sessionData = localStorage.getItem('ita_student_session');
-                      if (!sessionData) {
-                        window.location.href = api.getOAuthAuthorizeUrl();
-                        return;
-                      }
+                    onClick={async () => {
+                      const authed = await requireSession();
+                      if (!authed) return;
                       setModalOpen(true);
                     }}
                     className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-[#DC2626] hover:bg-[#B5121B] text-white text-xs font-bold transition-all shadow-md cursor-pointer"
@@ -319,12 +326,9 @@ export const EventDetailPage: React.FC = () => {
 
               <button
                 type="button"
-                onClick={() => {
-                  const sessionData = localStorage.getItem('ita_student_session');
-                  if (!sessionData) {
-                    window.location.href = api.getOAuthAuthorizeUrl();
-                    return;
-                  }
+                onClick={async () => {
+                  const authed = await requireSession();
+                  if (!authed) return;
                   setTeamName('');
                   setTeamError(null);
                   setTeamSuccess(null);

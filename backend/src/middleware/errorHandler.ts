@@ -20,6 +20,9 @@ export function errorHandler(err: any, _req: Request, res: Response, _next: Next
 
   res.status(500).json({
     error: 'INTERNAL_SERVER_ERROR',
-    message: err?.message || 'An unexpected error occurred. Please try again later.',
+    message:
+      process.env.NODE_ENV === 'production'
+        ? 'An unexpected error occurred. Please try again later.'
+        : err?.message || 'An unexpected error occurred. Please try again later.',
   });
 }

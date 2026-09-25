@@ -31,7 +31,7 @@ export async function importRoster(xlsxPath: string): Promise<number> {
     return s.trim();
   };
 
-  let imported = 0;
+  const rows: RosterRow[] = [];
   for (let r = 2; r <= ws.actualRowCount; r++) {
     const row = ws.getRow(r);
 
@@ -48,30 +48,50 @@ export async function importRoster(xlsxPath: string): Promise<number> {
     } as RosterRow);
 
     if (!parsed.rollNo || !parsed.name) continue;
-
-    const existing = await prisma.student.findUnique({ where: { rollNo: parsed.rollNo } });
-
-    await prisma.student.upsert({
-      where: { rollNo: parsed.rollNo },
-      update: {
-        name: parsed.name,
-        year: parsed.year,
-        section: parsed.section,
-        branch: parsed.branch,
-        // Only ever write an email forward; a blank cell never wipes a real one.
-        ...(parsed.email ? { email: parsed.email } : existing?.email ? { email: existing.email } : { email: null }),
-      },
-      create: {
-        rollNo: parsed.rollNo,
-        name: parsed.name,
-        year: parsed.year,
-        section: parsed.section,
-        branch: parsed.branch,
-        email: parsed.email,
-      },
-    });
-    imported += 1;
+    rows.push(parsed);
   }
+
+  const rollNos = [...new Set(rows.map((row) => row.rollNo))];
+  const existingStudents = await prisma.student.findMany({
+    where: { rollNo: { in: rollNos } },
+  });
+  const existingByRollNo = new Map(existingStudents.map((student) => [student.rollNo, student] as const));
+
+  let nextRow = 0;
+  let imported = 0;
+  // Bound concurrent upserts to eight workers.
+  const workers = Array.from({ length: Math.min(8, rows.length) }, async () => {
+    while (true) {
+      const rowIndex = nextRow;
+      nextRow += 1;
+      if (rowIndex >= rows.length) return;
+
+      const parsed = rows[rowIndex];
+      const existing = existingByRollNo.get(parsed.rollNo);
+
+      await prisma.student.upsert({
+        where: { rollNo: parsed.rollNo },
+        update: {
+          name: parsed.name,
+          year: parsed.year,
+          section: parsed.section,
+          branch: parsed.branch,
+          // Only ever write an email forward; a blank cell never wipes a real one.
+          ...(parsed.email ? { email: parsed.email } : existing?.email ? { email: existing.email } : { email: null }),
+        },
+        create: {
+          rollNo: parsed.rollNo,
+          name: parsed.name,
+          year: parsed.year,
+          section: parsed.section,
+          branch: parsed.branch,
+          email: parsed.email,
+        },
+      });
+      imported += 1;
+    }
+  });
+  await Promise.all(workers);
   return imported;
 }
 

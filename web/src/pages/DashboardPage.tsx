@@ -82,7 +82,7 @@ export const DashboardPage: React.FC = () => {
     if (vResult.status === 'fulfilled' && Array.isArray(vResult.value)) setVotingCampaigns(vResult.value);
     else setVotingError('Could not load voting campaigns.');
 
-    if (nResult.status === 'fulfilled' && Array.isArray(nResult.value)) setNotifications(nResult.value);
+    if (nResult.status === 'fulfilled' && Array.isArray(nResult.value?.items)) setNotifications(nResult.value.items);
     else setNotifError('Could not load notifications.');
 
     setLoading(false);

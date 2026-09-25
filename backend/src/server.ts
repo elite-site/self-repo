@@ -2,14 +2,17 @@ import dns from 'dns';
 dns.setDefaultResultOrder('ipv4first');
 
 import express from 'express';
+import helmet from 'helmet';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
+import compression from 'compression';
 import path from 'path';
 import fs from 'fs';
 import { env } from './config/env';
 import { errorHandler } from './middleware/errorHandler';
 import { prisma } from './lib/prisma';
 import { driveService } from './services/drive.service';
+import { generalApiRateLimiter } from './middleware/rateLimiter';
 import publicRoutes from './routes/public.routes';
 import publicStudentRoutes from './routes/public.students.routes';
 import studentRoutes from './routes/student.routes';
@@ -25,6 +28,26 @@ const app = express();
 
 // Trust proxy for secure cookies on Render/Railway
 app.set('trust proxy', 1);
+
+// Security headers
+app.use(
+  helmet({
+    crossOriginEmbedderPolicy: false,
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+        imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
+        mediaSrc: ["'self'", 'blob:'],
+        connectSrc: ["'self'", 'https:'],
+        fontSrc: ["'self'", 'data:', 'https://fonts.gstatic.com'],
+        frameAncestors: ["'none'"],
+      },
+    },
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+  })
+);
 
 // Configure CORS for Netlify frontend & local development
 const allowedOrigins = env.ALLOWED_ORIGINS;
@@ -52,8 +75,29 @@ app.use(
 );
 
 app.use(cookieParser());
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Gzip/Brotli compress all JSON/text responses — reduces payload 60-80%,
+// critical when 200 concurrent students poll the dashboard simultaneously.
+app.use(
+  compression({
+    level: 6,            // balance CPU cost vs. ratio
+    threshold: 1024,     // only compress responses > 1 KB
+    filter: (req, res) => {
+      // Never compress streaming video responses — already compressed
+      const ct = res.getHeader('Content-Type') as string | undefined;
+      if (ct && ct.startsWith('video/')) return false;
+      return compression.filter(req, res);
+    },
+  })
+);
+
+// JSON body size: 1 MB is plenty for profile/portfolio updates.
+// Multipart (video/photo) bypasses this via multer.
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+
+// General rate limiter on all /api student-facing routes
+app.use('/api', generalApiRateLimiter);
 
 // Healthcheck
 app.get('/health', (_req, res) => {

@@ -28,11 +28,12 @@ export interface StudentProfile {
   githubUrl?: string;
   linkedinUrl?: string;
   portfolioUrl?: string;
+  status?: 'ACTIVE' | 'GRADUATED';
+  graduatedAt?: string | null;
   submission?: StudentSubmission | null;
 }
 
 export interface StudentSession {
-  token: string;
   student: StudentProfile;
 }
 

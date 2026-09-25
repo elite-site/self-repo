@@ -1,10 +1,12 @@
+import type { StudentStatus } from '@prisma/client';
 import { Router, Request, Response } from 'express';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import path from 'path';
 import { env } from '../config/env';
 import { prisma } from '../lib/prisma';
-import { requireStudentAuth } from '../middleware/studentAuth';
+import { requireStudentAuth, STUDENT_SESSION_COOKIE_NAME } from '../middleware/studentAuth';
+import { studentLoginRateLimiter } from '../middleware/rateLimiter';
 import { submissionUploadMiddleware, resumeUpload } from '../middleware/upload';
 import { ValidationService } from '../services/validation.service';
 import { driveService } from '../services/drive.service';
@@ -25,6 +27,8 @@ function serializeStudentView(student: {
   year: number;
   section: string;
   branch: string;
+  status: StudentStatus;
+  graduatedAt: Date | null;
 }, submission: any | null) {
   return {
     id: student.id,
@@ -34,6 +38,8 @@ function serializeStudentView(student: {
     year: student.year,
     section: student.section,
     branch: student.branch,
+    status: student.status,
+    graduatedAt: student.graduatedAt,
     submission: submission
       ? {
           id: submission.id,
@@ -54,14 +60,14 @@ function signedState(): string {
 }
 
 // GET /api/student/google/authorize — kick off Google Workspace SSO.
-router.get('/google/authorize', (_req: Request, res: Response): void => {
+router.get('/google/authorize', studentLoginRateLimiter, (_req: Request, res: Response): void => {
   const url = ssoService.getAuthUrl();
   const sep = url.includes('?') ? '&' : '?';
   res.redirect(302, `${url}${sep}state=${encodeURIComponent(signedState())}`);
 });
 
 // GET /api/student/google/callback — verify id_token, look up roster email, mint our JWT.
-router.get('/google/callback', async (req: Request, res: Response): Promise<void> => {
+router.get('/google/callback', studentLoginRateLimiter, async (req: Request, res: Response): Promise<void> => {
   const { code, state } = req.query;
 
   try {
@@ -110,13 +116,28 @@ router.get('/google/callback', async (req: Request, res: Response): Promise<void
       status: 'SUCCESS',
     });
 
-    const target = new URL(env.STUDENT_APP_LOGIN_URL);
-    target.searchParams.set('token', token);
-    res.redirect(302, target.toString());
+    res.cookie(STUDENT_SESSION_COOKIE_NAME, token, {
+      httpOnly: true,
+      secure: env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 12 * 60 * 60 * 1000,
+      path: '/',
+    });
+    res.redirect(302, env.STUDENT_APP_LOGIN_URL);
   } catch (err: any) {
     console.error('SSO callback error:', err);
     res.status(500).json({ error: 'SSO_FAILED', message: 'Could not complete Google sign-in.' });
   }
+});
+
+// POST /api/student/logout — clear the session cookie.
+router.post('/logout', (_req: Request, res: Response): void => {
+  res.clearCookie(STUDENT_SESSION_COOKIE_NAME, {
+    path: '/',
+    httpOnly: true,
+    sameSite: 'strict',
+  });
+  res.json({ success: true });
 });
 
 // GET /api/student/me — current student profile + submission status + admin review
@@ -134,8 +155,21 @@ router.get('/me', requireStudentAuth, async (req: Request, res: Response): Promi
     const submission = await prisma.submission.findFirst({
       where: { rollNo: student.rollNo },
       orderBy: { submittedAt: 'desc' },
+      select: {
+        id: true,
+        status: true,
+        submittedAt: true,
+        videoDriveId: true,
+        reviewText: true,
+        reviewPros: true,
+        reviewCons: true,
+        reviewedAt: true,
+      },
     });
 
+    // Allow a 30-second private cache for the /me response so repeated
+    // dashboard polls don't hammer the DB when 200 students are online.
+    res.setHeader('Cache-Control', 'private, max-age=30');
     res.json({ student: serializeStudentView(student, submission) });
   } catch (err: any) {
     console.error('Error fetching student profile:', err);
@@ -319,10 +353,15 @@ router.post(
 );
 
 // GET /api/student/submission/media/video — stream the student's own video (preview)
+// Supports HTTP Range requests so the browser can seek without re-downloading.
 router.get('/submission/media/video', requireStudentAuth, async (req: Request, res: Response): Promise<void> => {
   try {
+    const studentId = req.student!.studentId;
+
+    // Minimal projection — only fetch the fields we actually need
     const student = await prisma.student.findUnique({
-      where: { id: req.student!.studentId },
+      where: { id: studentId },
+      select: { rollNo: true },
     });
 
     if (!student) {
@@ -333,6 +372,7 @@ router.get('/submission/media/video', requireStudentAuth, async (req: Request, r
     const submission = await prisma.submission.findFirst({
       where: { rollNo: student.rollNo },
       orderBy: { submittedAt: 'desc' },
+      select: { videoDriveId: true, driveFolderPath: true },
     });
 
     if (!submission?.videoDriveId) {
@@ -341,25 +381,238 @@ router.get('/submission/media/video', requireStudentAuth, async (req: Request, r
     }
 
     const driveFileId = submission.videoDriveId;
-    const { stream, mimeType, size } = await driveService.streamDriveFile(driveFileId, submission.driveFolderPath);
+    const etag = `"${driveFileId}"`;
 
-    res.setHeader('Content-Type', mimeType);
-    if (size) res.setHeader('Content-Length', size.toString());
-    res.setHeader('Cache-Control', 'no-cache, must-revalidate');
-    res.setHeader('ETag', `"${driveFileId}"`);
-
-    if (req.headers['if-none-match'] === `"${driveFileId}"`) {
+    // 304 short-circuit — avoids streaming the full file when browser already has it
+    if (req.headers['if-none-match'] === etag) {
       res.status(304).end();
       return;
+    }
+
+    const { stream, mimeType, size } = await driveService.streamDriveFile(
+      driveFileId,
+      submission.driveFolderPath,
+    );
+
+    // Respond with proper headers
+    const statusCode = req.headers.range && size ? 206 : 200;
+
+    res.setHeader('Content-Type', mimeType);
+    res.setHeader('Accept-Ranges', 'bytes');
+    // 10-minute private browser cache; ETag handles stale detection on re-upload
+    res.setHeader('Cache-Control', 'private, max-age=600');
+    res.setHeader('ETag', etag);
+
+    if (size !== undefined) {
+      const rangeHeader = req.headers.range;
+      if (rangeHeader) {
+        const [startStr, endStr] = rangeHeader.replace(/bytes=/, '').split('-');
+        const start = parseInt(startStr, 10) || 0;
+        const end = endStr ? Math.min(parseInt(endStr, 10), size - 1) : size - 1;
+        const chunkSize = end - start + 1;
+        res.setHeader('Content-Range', `bytes ${start}-${end}/${size}`);
+        res.setHeader('Content-Length', chunkSize);
+        res.status(206);
+      } else {
+        res.setHeader('Content-Length', size);
+        res.status(200);
+      }
+    } else {
+      res.status(statusCode);
     }
 
     stream.pipe(res);
   } catch (err: any) {
     console.error('Error proxying student video:', err);
-    res.status(500).json({ error: 'MEDIA_STREAM_ERROR', message: 'Could not stream your video.' });
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'MEDIA_STREAM_ERROR', message: 'Could not stream your video.' });
+    }
   }
 });
 
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Phase 2B: Streaming video upload — browser → Render → Drive (zero RAM buffer)
+//
+// The browser sends the raw video bytes as the request body instead of
+// multipart/form-data. Express reads `req` as a Node.js Readable stream.
+// We create a Drive resumable-upload session, then pipe req straight to Drive
+// via a native https.request — data passes through Render only at the OS
+// socket-buffer level (~64 KB at a time), never fully in memory.
+//
+//   Browser  ──[raw bytes]──→  Render/Express req  ──[pipe]──→  Drive session PUT
+//                                     ↑
+//               no multer, no memoryStorage, no Buffer.concat()
+// ──────────────────────────────────────────────────────────────────────────────
+router.post(
+  '/submission/video-stream',
+  requireStudentAuth,
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      // ── 1. Auth & student lookup ─────────────────────────────────────────
+      const student = await prisma.student.findUnique({
+        where: { id: req.student!.studentId },
+        select: { id: true, rollNo: true, name: true, email: true, year: true, section: true, branch: true },
+      });
+
+      if (!student) {
+        res.status(404).json({ error: 'NOT_FOUND', message: 'Student account not found.' });
+        return;
+      }
+
+      // ── 2. Validate Content-Length & Content-Type from headers ───────────
+      const contentLength = parseInt(req.headers['content-length'] ?? '0', 10);
+      if (!contentLength) {
+        req.resume(); // drain and discard
+        res.status(411).json({ error: 'LENGTH_REQUIRED', message: 'Content-Length header is required.' });
+        return;
+      }
+
+      const maxBytes = env.MAX_VIDEO_SIZE_MB * 1024 * 1024;
+      if (contentLength > maxBytes) {
+        req.resume();
+        res.status(413).json({
+          error: 'FILE_TOO_LARGE',
+          message: `Video must be under ${env.MAX_VIDEO_SIZE_MB} MB.`,
+        });
+        return;
+      }
+
+      const rawMime = (req.headers['content-type'] ?? '').split(';')[0].trim();
+      if (!rawMime.startsWith('video/')) {
+        req.resume();
+        res.status(400).json({ error: 'VALIDATION_ERROR', message: 'Only video files are allowed.' });
+        return;
+      }
+
+      const origFilename = req.headers['x-filename']
+        ? decodeURIComponent(req.headers['x-filename'] as string)
+        : `video_${student.rollNo}.mp4`;
+
+      // ── 3. Get/create the student's Drive folder ─────────────────────────
+      const { folderId, relativePath } = await driveService.resolveStudentFolder({
+        eventName: EVENT_NAME,
+        eventYear: env.EVENT_YEAR,
+        year: student.year,
+        section: student.section,
+        branch: student.branch,
+        rollNo: student.rollNo,
+        name: student.name,
+      });
+
+      const ext = path.extname(origFilename) || '.mp4';
+      const clean = (s: string) => s.toUpperCase().replace(/[^a-zA-Z0-9]/g, '');
+      const videoFileName = `${clean(student.rollNo)}_${clean(student.name)}${ext}`;
+
+      // ── 4. Fetch existing submission (for cleanup & upsert) ──────────────
+      const existing = await prisma.submission.findFirst({
+        where: { rollNo: student.rollNo },
+        orderBy: { submittedAt: 'desc' },
+      });
+
+      // ── 5. Create Drive resumable session (returns null in mock mode) ─────
+      const sessionUrl = await driveService.createResumableUploadSession(
+        videoFileName, rawMime, contentLength, folderId,
+      );
+
+      // Delete old video from Drive asynchronously so we don't block the upload
+      if (existing?.videoDriveId) {
+        driveService.deleteVideo(existing).catch(() => {});
+      }
+
+      // ── 6. Pipe req stream → Drive (THE KEY STEP — no buffering) ─────────
+      const driveFileId = await driveService.streamUploadToDrive(
+        sessionUrl,
+        rawMime,
+        contentLength,
+        req,   // Express Request is a Node.js Readable
+        { relativePath, fileName: videoFileName },
+      );
+
+      // ── 7. Persist to DB ─────────────────────────────────────────────────
+      const submissionData = {
+        name: student.name,
+        rollNo: student.rollNo,
+        email: student.email ?? '',
+        section: student.section,
+        branch: student.branch,
+        year: student.year,
+        videoDriveId: driveFileId,
+        mediaType: 'VIDEO' as const,
+        driveFolderPath: relativePath,
+        status: 'SUBMITTED' as const,
+        submittedAt: new Date(),
+        reviewText: null,
+        reviewPros: [],
+        reviewCons: [],
+        reviewedAt: null,
+        reviewedBy: null,
+      };
+
+      const submission = existing
+        ? await prisma.submission.update({ where: { id: existing.id }, data: submissionData })
+        : await prisma.submission.create({ data: { eventId: EVENT_ID, ...submissionData } });
+
+      // ── 8. Sync introVideo table (non-blocking — don't fail the upload) ───
+      const sizeMb = parseFloat((contentLength / 1024 / 1024).toFixed(2));
+      (async () => {
+        const iv = await prisma.introVideo.findFirst({
+          where: { studentId: student.id },
+          orderBy: { submittedAt: 'desc' },
+        });
+        const ivData = {
+          driveFileId,
+          filename: origFilename,
+          mimeType: rawMime,
+          sizeMb,
+          status: 'PENDING' as const,
+          reviewNote: null,
+          reviewedBy: null,
+          reviewedAt: null,
+          submittedAt: new Date(),
+          isActive: true,
+        };
+        if (iv) {
+          await prisma.introVideo.update({ where: { id: iv.id }, data: ivData });
+        } else {
+          await prisma.introVideo.create({ data: { studentId: student.id, ...ivData } });
+        }
+      })().catch((e) => console.warn('[video-stream] introVideo sync failed:', e));
+
+      // ── 9. Activity log ──────────────────────────────────────────────────
+      ActivityService.log({
+        eventId: EVENT_ID,
+        category: 'APPLICATION',
+        action: existing ? 'Student re-uploaded video (stream)' : 'Application submitted (stream)',
+        details: `Roll: ${student.rollNo}, Branch: ${student.branch}, Size: ${sizeMb} MB`,
+        applicantName: student.name,
+        userEmail: student.rollNo,
+        status: 'SUCCESS',
+      }).catch(() => {});
+
+      res.status(201).json({
+        success: true,
+        id: submission.id,
+        message: 'Your introduction video has been submitted successfully.',
+      });
+    } catch (err: any) {
+      console.error('[video-stream] Error:', err?.message ?? err);
+      ActivityService.log({
+        eventId: EVENT_ID,
+        category: 'APPLICATION',
+        action: 'Student streaming upload failed',
+        details: err?.message,
+        applicantName: req.student?.name,
+        userEmail: req.student?.rollNo,
+        status: 'ERROR',
+        errorMessage: err?.stack,
+      }).catch(() => {});
+      if (!res.headersSent) {
+        res.status(500).json({ error: 'UPLOAD_FAILED', message: 'Could not upload your video. Please try again.' });
+      }
+    }
+  },
+);
 
 // --- Phase 3: Resume Routes ---
 router.get('/resume', requireStudentAuth, async (req, res) => {

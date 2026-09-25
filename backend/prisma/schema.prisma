@@ -45,6 +45,11 @@ enum ActivityStatus {
   INFO
 }
 
+enum StudentStatus {
+  ACTIVE
+  GRADUATED
+}
+
 // ── New enums added for full portal ────────────────────────────────
 
 enum ContentStatus {
@@ -89,9 +94,9 @@ enum VotingCampaignStatus {
 }
 
 enum VotingRule {
-  ONE_TOTAL          // one vote across the entire campaign
-  ONE_PER_CANDIDATE  // one vote per candidate (multi-select)
-  FIXED_COUNT        // exactly N candidates must be selected
+  ONE_TOTAL // one vote across the entire campaign
+  ONE_PER_CANDIDATE // one vote per candidate (multi-select)
+  FIXED_COUNT // exactly N candidates must be selected
 }
 
 enum NotificationType {
@@ -199,38 +204,38 @@ model Event {
 }
 
 model Submission {
-  id              String            @id @default(cuid())
-  eventId         String            @default("self-introduction-2026")
-  event           Event             @relation(fields: [eventId], references: [id])
-  name            String
-  rollNo          String
-  section         String
-  branch          String
-  year            Int
-  email           String
-  phoneNo         String?
+  id      String  @id @default(cuid())
+  eventId String  @default("self-introduction-2026")
+  event   Event   @relation(fields: [eventId], references: [id])
+  name    String
+  rollNo  String
+  section String
+  branch  String
+  year    Int
+  email   String
+  phoneNo String?
 
-  photo1DriveId   String?
-  photo2DriveId   String?
-  photo3DriveId   String?
-  videoDriveId    String?
-  audioDriveId    String?
-  mediaType       String?
+  photo1DriveId String?
+  photo2DriveId String?
+  photo3DriveId String?
+  videoDriveId  String?
+  audioDriveId  String?
+  mediaType     String?
 
   driveFolderPath String
-  status          SubmissionStatus  @default(SUBMITTED)
+  status          SubmissionStatus @default(SUBMITTED)
 
-  rating          SubmissionRating?
-  ratedAt         DateTime?
+  rating  SubmissionRating?
+  ratedAt DateTime?
 
-  reviewText      String?
-  reviewPros      String[]          @default([])
-  reviewCons      String[]          @default([])
-  reviewedAt      DateTime?
-  reviewedBy      String?
+  reviewText String?
+  reviewPros String[]  @default([])
+  reviewCons String[]  @default([])
+  reviewedAt DateTime?
+  reviewedBy String?
 
-  submittedAt     DateTime          @default(now())
-  updatedAt       DateTime          @default(now()) @updatedAt
+  submittedAt DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
 
   @@unique([eventId, rollNo, year, branch, section])
   @@index([eventId, rollNo])
@@ -250,33 +255,35 @@ model AdminUser {
 }
 
 model Student {
-  id        String   @id @default(cuid())
-  rollNo    String   @unique
-  email     String?  @unique
-  name      String
-  year      Int
-  section   String
-  branch    String   @default("IT")
-  createdAt DateTime @default(now())
+  id          String        @id @default(cuid())
+  rollNo      String        @unique
+  email       String?       @unique
+  name        String
+  year        Int
+  status      StudentStatus @default(ACTIVE)
+  graduatedAt DateTime?
+  section     String
+  branch      String        @default("IT")
+  createdAt   DateTime      @default(now())
 
   // Relations to new portal models (all optional, created lazily on first login)
-  profile        StudentProfile?
-  introVideos    IntroVideo[]
-  resumes        Resume[]
-  projects       Project[]
-  achievements   Achievement[]
-  certificates   Certificate[]
-  registrations  EventRegistration[]
+  profile         StudentProfile?
+  introVideos     IntroVideo[]
+  resumes         Resume[]
+  projects        Project[]
+  achievements    Achievement[]
+  certificates    Certificate[]
+  registrations   EventRegistration[]
   teamMemberships TeamMember[]
   teamInvitations TeamInvitation[]    @relation("InvitedStudent")
-  votescast      Vote[]
-  notifications  Notification[]
-  changeRequests ChangeRequest[]
-  skillRequests  SkillRequest[]
+  votescast       Vote[]
+  notifications   Notification[]
+  changeRequests  ChangeRequest[]
+  skillRequests   SkillRequest[]
 
-  @@unique([rollNo, year, section])
   @@index([name])
   @@index([section, year])
+  @@index([status])
 }
 
 model EmailLog {
@@ -318,16 +325,16 @@ model ActivityLog {
 // ── Student Profile ─────────────────────────────────────────
 
 model StudentProfile {
-  id           String   @id @default(cuid())
-  studentId    String   @unique
-  student      Student  @relation(fields: [studentId], references: [id])
+  id        String  @id @default(cuid())
+  studentId String  @unique
+  student   Student @relation(fields: [studentId], references: [id])
 
-  biography    String?  @db.VarChar(300)
-  photoDriveId String?  // Google Drive file ID of profile photo
-  photoUrl     String?  // cached public URL
-  photoOffsetX Float?   @default(0)  // crop X offset (0-100%)
-  photoOffsetY Float?   @default(0)  // crop Y offset (0-100%)
-  photoZoom    Float?   @default(1)  // crop zoom level
+  biography    String? @db.VarChar(300)
+  photoDriveId String? // Google Drive file ID of profile photo
+  photoUrl     String? // cached public URL
+  photoOffsetX Float?  @default(0) // crop X offset (0-100%)
+  photoOffsetY Float?  @default(0) // crop Y offset (0-100%)
+  photoZoom    Float?  @default(1) // crop zoom level
 
   // Professional links
   githubUrl    String?
@@ -335,13 +342,13 @@ model StudentProfile {
   portfolioUrl String?
 
   // Skills (many-to-many via join table)
-  skills       StudentSkill[]
+  skills StudentSkill[]
 
   // Visibility
-  isPublic     Boolean  @default(false)
+  isPublic Boolean @default(false)
 
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([isPublic])
 }
@@ -349,11 +356,11 @@ model StudentProfile {
 // ── Skills ──────────────────────────────────────────────────
 
 model Skill {
-  id          String         @id @default(cuid())
-  name        String         @unique
-  category    String?        // e.g. "Programming", "Design", "Soft Skills"
-  isActive    Boolean        @default(true)
-  createdAt   DateTime       @default(now())
+  id        String   @id @default(cuid())
+  name      String   @unique
+  category  String? // e.g. "Programming", "Design", "Soft Skills"
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
 
   studentSkills StudentSkill[]
 }
@@ -369,41 +376,41 @@ model StudentSkill {
 }
 
 model SkillRequest {
-  id          String              @id @default(cuid())
-  studentId   String
-  student     Student             @relation(fields: [studentId], references: [id])
-  skillName   String
-  reason      String?
-  category    String?
-  status      ChangeRequestStatus @default(PENDING)
-  reviewedBy  String?
-  reviewNote  String?
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
+  id         String              @id @default(cuid())
+  studentId  String
+  student    Student             @relation(fields: [studentId], references: [id])
+  skillName  String
+  reason     String?
+  category   String?
+  status     ChangeRequestStatus @default(PENDING)
+  reviewedBy String?
+  reviewNote String?
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
 }
 
 // ── Projects ────────────────────────────────────────────────
 
 model Project {
-  id           String        @id @default(cuid())
-  studentId    String
-  student      Student       @relation(fields: [studentId], references: [id])
+  id        String  @id @default(cuid())
+  studentId String
+  student   Student @relation(fields: [studentId], references: [id])
 
-  title        String
-  description  String?       @db.Text
-  technologies String[]      @default([])
-  githubUrl    String?
+  title         String
+  description   String?  @db.Text
+  technologies  String[] @default([])
+  githubUrl     String?
   driveVideoUrl String?
-  displayOrder Int           @default(0)
+  displayOrder  Int      @default(0)
 
-  status       ContentStatus @default(APPROVED) // most projects auto-approved
-  reviewNote   String?
-  reviewedBy   String?
-  reviewedAt   DateTime?
+  status     ContentStatus @default(APPROVED) // most projects auto-approved
+  reviewNote String?
+  reviewedBy String?
+  reviewedAt DateTime?
 
-  isPublic     Boolean       @default(true)
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  isPublic  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([studentId, displayOrder])
 }
@@ -411,38 +418,38 @@ model Project {
 // ── Achievements ────────────────────────────────────────────
 
 model AchievementCategory {
-  id           String        @id @default(cuid())
-  name         String        @unique
-  requiresProof Boolean      @default(false)
-  requiresReview Boolean     @default(true)
-  isActive     Boolean       @default(true)
-  createdAt    DateTime      @default(now())
+  id             String   @id @default(cuid())
+  name           String   @unique
+  requiresProof  Boolean  @default(false)
+  requiresReview Boolean  @default(true)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
 
   achievements Achievement[]
 }
 
 model Achievement {
-  id           String               @id @default(cuid())
-  studentId    String
-  student      Student              @relation(fields: [studentId], references: [id])
-  categoryId   String?
-  category     AchievementCategory? @relation(fields: [categoryId], references: [id])
+  id         String               @id @default(cuid())
+  studentId  String
+  student    Student              @relation(fields: [studentId], references: [id])
+  categoryId String?
+  category   AchievementCategory? @relation(fields: [categoryId], references: [id])
 
   title        String
-  description  String?             @db.Text
+  description  String?   @db.Text
   organization String?
   achievedAt   DateTime?
-  proofDriveId String?             // proof file uploaded to Drive
-  proofUrl     String?             // verification proof URL or external credential link
+  proofDriveId String? // proof file uploaded to Drive
+  proofUrl     String? // verification proof URL or external credential link
 
-  status       ContentStatus       @default(PENDING)
-  reviewNote   String?
-  reviewedBy   String?
-  reviewedAt   DateTime?
+  status     ContentStatus @default(PENDING)
+  reviewNote String?
+  reviewedBy String?
+  reviewedAt DateTime?
 
-  isPublic     Boolean             @default(false)
-  createdAt    DateTime            @default(now())
-  updatedAt    DateTime            @updatedAt
+  isPublic  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([studentId])
   @@index([status])
@@ -451,23 +458,23 @@ model Achievement {
 // ── Certificates ────────────────────────────────────────────
 
 model Certificate {
-  id           String        @id @default(cuid())
-  studentId    String
-  student      Student       @relation(fields: [studentId], references: [id])
+  id        String  @id @default(cuid())
+  studentId String
+  student   Student @relation(fields: [studentId], references: [id])
 
-  title        String
-  issuer       String?
-  issuedAt     DateTime?
-  fileDriveId  String?       // certificate file on Drive
+  title       String
+  issuer      String?
+  issuedAt    DateTime?
+  fileDriveId String? // certificate file on Drive
 
-  status       ContentStatus @default(PENDING)
-  reviewNote   String?
-  reviewedBy   String?
-  reviewedAt   DateTime?
+  status     ContentStatus @default(PENDING)
+  reviewNote String?
+  reviewedBy String?
+  reviewedAt DateTime?
 
-  isPublic     Boolean       @default(false)
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  isPublic  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([studentId])
 }
@@ -475,23 +482,23 @@ model Certificate {
 // ── Intro Video ─────────────────────────────────────────────
 
 model IntroVideo {
-  id           String        @id @default(cuid())
-  studentId    String
-  student      Student       @relation(fields: [studentId], references: [id])
+  id        String  @id @default(cuid())
+  studentId String
+  student   Student @relation(fields: [studentId], references: [id])
 
-  driveFileId  String?
-  mimeType     String?
-  sizeMb       Float?
-  filename     String?
+  driveFileId String?
+  mimeType    String?
+  sizeMb      Float?
+  filename    String?
 
-  status       ContentStatus @default(PENDING)
-  reviewNote   String?
-  reviewedBy   String?
-  reviewedAt   DateTime?
+  status     ContentStatus @default(PENDING)
+  reviewNote String?
+  reviewedBy String?
+  reviewedAt DateTime?
 
-  isActive     Boolean       @default(true) // only one active at a time
-  submittedAt  DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  isActive    Boolean  @default(true) // only one active at a time
+  submittedAt DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@index([studentId, isActive])
 }
@@ -499,23 +506,23 @@ model IntroVideo {
 // ── Resume ──────────────────────────────────────────────────
 
 model Resume {
-  id           String        @id @default(cuid())
-  studentId    String
-  student      Student       @relation(fields: [studentId], references: [id])
+  id        String  @id @default(cuid())
+  studentId String
+  student   Student @relation(fields: [studentId], references: [id])
 
-  driveFileId  String?
-  filename     String?
-  sizeMb       Float?
+  driveFileId String?
+  filename    String?
+  sizeMb      Float?
 
-  status       ContentStatus @default(PENDING)
-  reviewNote   String?
-  reviewedBy   String?
-  reviewedAt   DateTime?
+  status     ContentStatus @default(PENDING)
+  reviewNote String?
+  reviewedBy String?
+  reviewedAt DateTime?
 
-  isActive     Boolean       @default(true) // one active resume at a time
-  isPublic     Boolean       @default(false)
-  submittedAt  DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  isActive    Boolean  @default(true) // one active resume at a time
+  isPublic    Boolean  @default(false)
+  submittedAt DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@index([studentId, isActive])
 }
@@ -523,36 +530,36 @@ model Resume {
 // ── Academic Change Requests ─────────────────────────────────
 
 model ChangeRequest {
-  id            String              @id @default(cuid())
-  studentId     String
-  student       Student             @relation(fields: [studentId], references: [id])
+  id        String  @id @default(cuid())
+  studentId String
+  student   Student @relation(fields: [studentId], references: [id])
 
-  fieldName     String              // e.g. "name", "rollNo", "section"
-  currentValue  String
+  fieldName      String // e.g. "name", "rollNo", "section"
+  currentValue   String
   requestedValue String
-  reason        String?             @db.Text
+  reason         String? @db.Text
 
-  status        ChangeRequestStatus @default(PENDING)
-  reviewedBy    String?
-  reviewNote    String?
-  reviewedAt    DateTime?
+  status     ChangeRequestStatus @default(PENDING)
+  reviewedBy String?
+  reviewNote String?
+  reviewedAt DateTime?
 
-  createdAt     DateTime            @default(now())
-  updatedAt     DateTime            @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // ── Event Registration ───────────────────────────────────────
 
 model RegistrationFormField {
-  id          String   @id @default(cuid())
-  eventId     String
-  event       Event    @relation(fields: [eventId], references: [id])
+  id      String @id @default(cuid())
+  eventId String
+  event   Event  @relation(fields: [eventId], references: [id])
 
-  label       String
-  fieldType   String   // "text" | "number" | "phone" | "select" | "multi-select" | "checkbox" | "textarea" | "student_id"
-  isRequired  Boolean  @default(false)
-  options     String[] @default([]) // for select/multi-select
-  displayOrder Int     @default(0)
+  label        String
+  fieldType    String // "text" | "number" | "phone" | "select" | "multi-select" | "checkbox" | "textarea" | "student_id"
+  isRequired   Boolean  @default(false)
+  options      String[] @default([]) // for select/multi-select
+  displayOrder Int      @default(0)
 
   answers RegistrationAnswer[]
 
@@ -560,17 +567,17 @@ model RegistrationFormField {
 }
 
 model EventRegistration {
-  id        String             @id @default(cuid())
+  id        String  @id @default(cuid())
   eventId   String
-  event     Event              @relation(fields: [eventId], references: [id])
+  event     Event   @relation(fields: [eventId], references: [id])
   studentId String
-  student   Student            @relation(fields: [studentId], references: [id])
+  student   Student @relation(fields: [studentId], references: [id])
 
-  status    RegistrationStatus @default(PENDING)
-  teamId    String?
-  team      Team?              @relation(fields: [teamId], references: [id])
+  status RegistrationStatus @default(PENDING)
+  teamId String?
+  team   Team?              @relation(fields: [teamId], references: [id])
 
-  answers   RegistrationAnswer[]
+  answers RegistrationAnswer[]
 
   registeredAt DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -586,7 +593,7 @@ model RegistrationAnswer {
   fieldId        String
   field          RegistrationFormField @relation(fields: [fieldId], references: [id])
 
-  value          String?               @db.Text
+  value String? @db.Text
 
   @@unique([registrationId, fieldId])
 }
@@ -594,16 +601,16 @@ model RegistrationAnswer {
 // ── Teams ────────────────────────────────────────────────────
 
 model Team {
-  id        String      @id @default(cuid())
-  eventId   String
-  event     Event       @relation(fields: [eventId], references: [id])
+  id      String @id @default(cuid())
+  eventId String
+  event   Event  @relation(fields: [eventId], references: [id])
 
-  name      String
-  leaderId  String      // studentId of team leader
-  status    TeamStatus  @default(FORMING)
+  name     String
+  leaderId String // studentId of team leader
+  status   TeamStatus @default(FORMING)
 
-  members      TeamMember[]
-  invitations  TeamInvitation[]
+  members       TeamMember[]
+  invitations   TeamInvitation[]
   registrations EventRegistration[]
 
   createdAt DateTime @default(now())
@@ -613,28 +620,28 @@ model Team {
 }
 
 model TeamMember {
-  id        String   @id @default(cuid())
+  id        String  @id @default(cuid())
   teamId    String
-  team      Team     @relation(fields: [teamId], references: [id])
+  team      Team    @relation(fields: [teamId], references: [id])
   studentId String
-  student   Student  @relation(fields: [studentId], references: [id])
+  student   Student @relation(fields: [studentId], references: [id])
 
-  joinedAt  DateTime @default(now())
+  joinedAt DateTime @default(now())
 
   @@unique([teamId, studentId])
 }
 
 model TeamInvitation {
-  id          String           @id @default(cuid())
-  teamId      String
-  team        Team             @relation(fields: [teamId], references: [id])
-  studentId   String
-  student     Student          @relation(fields: [studentId], references: [id], "InvitedStudent")
+  id        String  @id @default(cuid())
+  teamId    String
+  team      Team    @relation(fields: [teamId], references: [id])
+  studentId String
+  student   Student @relation(fields: [studentId], references: [id], "InvitedStudent")
 
   status      InvitationStatus @default(PENDING)
   declineNote String?
 
-  invitedAt   DateTime         @default(now())
+  invitedAt   DateTime  @default(now())
   respondedAt DateTime?
 
   @@unique([teamId, studentId])
@@ -643,14 +650,14 @@ model TeamInvitation {
 // ── Voting ───────────────────────────────────────────────────
 
 model VotingCampaign {
-  id          String               @id @default(cuid())
-  eventId     String?
-  event       Event?               @relation(fields: [eventId], references: [id])
+  id      String  @id @default(cuid())
+  eventId String?
+  event   Event?  @relation(fields: [eventId], references: [id])
 
   title       String
   description String?              @db.Text
   rule        VotingRule           @default(ONE_TOTAL)
-  fixedCount  Int?                 // used when rule = FIXED_COUNT
+  fixedCount  Int? // used when rule = FIXED_COUNT
   status      VotingCampaignStatus @default(DRAFT)
 
   startsAt    DateTime?
@@ -666,15 +673,15 @@ model VotingCampaign {
   candidates VotingCandidate[]
   votes      Vote[]
 
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model VotingCandidate {
   id         String         @id @default(cuid())
   campaignId String
   campaign   VotingCampaign @relation(fields: [campaignId], references: [id])
-  studentId  String         // the student being voted for
+  studentId  String // the student being voted for
 
   displayOrder Int @default(0)
 
@@ -692,7 +699,7 @@ model Vote {
   voterId     String
   voter       Student         @relation(fields: [voterId], references: [id])
 
-  castAt      DateTime @default(now())
+  castAt DateTime @default(now())
 
   @@unique([campaignId, voterId])
   @@index([campaignId, voterId])
@@ -701,18 +708,18 @@ model Vote {
 // ── Notifications ────────────────────────────────────────────
 
 model Notification {
-  id         String             @id @default(cuid())
-  studentId  String
-  student    Student            @relation(fields: [studentId], references: [id])
+  id        String  @id @default(cuid())
+  studentId String
+  student   Student @relation(fields: [studentId], references: [id])
 
-  type       NotificationType   @default(SYSTEM)
-  title      String
-  message    String             @db.Text
-  actionUrl  String?
+  type      NotificationType @default(SYSTEM)
+  title     String
+  message   String           @db.Text
+  actionUrl String?
 
-  status     NotificationStatus @default(UNREAD)
-  createdAt  DateTime           @default(now())
-  readAt     DateTime?
+  status    NotificationStatus @default(UNREAD)
+  createdAt DateTime           @default(now())
+  readAt    DateTime?
 
   @@index([studentId, status])
   @@index([studentId, createdAt])
@@ -721,40 +728,40 @@ model Notification {
 // ── Announcements ────────────────────────────────────────────
 
 model Announcement {
-  id          String               @id @default(cuid())
-  title       String
-  message     String               @db.Text
-  priority    String               @default("normal")  // "low" | "normal" | "high"
-  status      AnnouncementStatus   @default(DRAFT)
+  id       String             @id @default(cuid())
+  title    String
+  message  String             @db.Text
+  priority String             @default("normal") // "low" | "normal" | "high"
+  status   AnnouncementStatus @default(DRAFT)
 
   // Audience targeting
-  targetYear    Int?    // null = all years
+  targetYear    Int? // null = all years
   targetSection String? // null = all sections
   targetAll     Boolean @default(true)
 
   publishedAt DateTime?
   scheduledAt DateTime?
-  createdBy   String    // admin username
+  createdBy   String // admin username
 
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // ── Email Automation ─────────────────────────────────────────
 
 model EmailTemplate {
-  id          String          @id @default(cuid())
+  id          String           @id @default(cuid())
   name        String
   subject     String
-  body        String          @db.Text  // HTML or markdown
-  variables   String[]        @default([]) // e.g. ["{{student_name}}", "{{event_name}}"]
+  body        String           @db.Text // HTML or markdown
+  variables   String[]         @default([]) // e.g. ["{{student_name}}", "{{event_name}}"]
   fromAddress String?
   status      AutomationStatus @default(DRAFT)
 
   automations EmailAutomation[]
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model EmailAutomation {
@@ -764,68 +771,68 @@ model EmailAutomation {
   description String?
   status      AutomationStatus  @default(DRAFT)
 
-  templateId  String
-  template    EmailTemplate     @relation(fields: [templateId], references: [id])
+  templateId String
+  template   EmailTemplate @relation(fields: [templateId], references: [id])
 
   // Audience targeting
   targetYear    Int?
   targetSection String?
   targetAll     Boolean @default(true)
 
-  lastRunAt   DateTime?
-  nextRunAt   DateTime?
+  lastRunAt DateTime?
+  nextRunAt DateTime?
 
-  history     EmailAutomationRun[]
+  history EmailAutomationRun[]
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model EmailAutomationRun {
-  id            String          @id @default(cuid())
-  automationId  String
-  automation    EmailAutomation @relation(fields: [automationId], references: [id])
+  id           String          @id @default(cuid())
+  automationId String
+  automation   EmailAutomation @relation(fields: [automationId], references: [id])
 
   recipientCount Int     @default(0)
   sentCount      Int     @default(0)
   failedCount    Int     @default(0)
-  status         String  // "success" | "partial" | "failed"
+  status         String // "success" | "partial" | "failed"
   errorMessage   String?
 
-  runAt     DateTime @default(now())
+  runAt DateTime @default(now())
 }
 
 // ── RBAC ─────────────────────────────────────────────────────
 
 model Role {
-  id          String           @id @default(cuid())
-  name        String           @unique
+  id          String  @id @default(cuid())
+  name        String  @unique
   description String?
-  isSystem    Boolean          @default(false) // system roles can't be deleted
+  isSystem    Boolean @default(false) // system roles can't be deleted
 
   permissions RolePermission[]
   assignments RoleAssignment[]
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model RolePermission {
-  id       String          @id @default(cuid())
-  roleId   String
-  role     Role            @relation(fields: [roleId], references: [id])
-  module   PortalModule
-  action   PermissionAction
+  id     String           @id @default(cuid())
+  roleId String
+  role   Role             @relation(fields: [roleId], references: [id])
+  module PortalModule
+  action PermissionAction
 
   @@unique([roleId, module, action])
 }
 
 model RoleAssignment {
-  id       String    @id @default(cuid())
-  adminId  String
-  admin    AdminUser @relation(fields: [adminId], references: [id])
-  roleId   String
-  role     Role      @relation(fields: [roleId], references: [id])
+  id      String    @id @default(cuid())
+  adminId String
+  admin   AdminUser @relation(fields: [adminId], references: [id])
+  roleId  String
+  role    Role      @relation(fields: [roleId], references: [id])
 
   assignedAt DateTime @default(now())
 

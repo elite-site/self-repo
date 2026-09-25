@@ -73,7 +73,7 @@ describe('Student Profile Data Persistence', () => {
       // Simulate the payload sent from frontend with new bio and linkedinUrl
       const res = await request(app)
         .put('/api/student/profile')
-        .set('Authorization', `Bearer ${token}`)
+        .set('Cookie', `pc_student_session=${token}`)
         .send({
           biography: 'Old bio that was in profile', // from stale spread
           bio: 'Newly edited bio', // user edited field
@@ -131,7 +131,7 @@ describe('Student Profile Data Persistence', () => {
 
       const res = await request(app)
         .get('/api/student/profile')
-        .set('Authorization', `Bearer ${token}`);
+        .set('Cookie', `pc_student_session=${token}`);
 
       expect(res.status).toBe(200);
       expect(res.body.bio).toBe('Newly edited bio');
@@ -165,7 +165,7 @@ describe('Student Profile Data Persistence', () => {
 
       const res = await request(app)
         .put('/api/student/profile/skills')
-        .set('Authorization', `Bearer ${token}`)
+        .set('Cookie', `pc_student_session=${token}`)
         .send({
           skillNames: ['TypeScript', 'Next.js'],
         });
@@ -198,7 +198,7 @@ describe('Student Profile Data Persistence', () => {
 
       const res = await request(app)
         .post('/api/student/portfolio/achievements')
-        .set('Authorization', `Bearer ${token}`)
+        .set('Cookie', `pc_student_session=${token}`)
         .send({
           title: 'Smart India Hackathon 1st Place',
           description: 'Built AI-powered drone vision system',
