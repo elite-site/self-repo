@@ -11,6 +11,8 @@ export const TeamsPage: React.FC = () => {
   // Create Team Modal
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [teamName, setTeamName] = useState('');
+  const [events, setEvents] = useState<any[]>([]);
+  const [selectedEventId, setSelectedEventId] = useState<string>('');
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
 
@@ -26,12 +28,19 @@ export const TeamsPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const [tData, iData] = await Promise.all([
+      const [tData, iData, eData] = await Promise.all([
         api.getMyTeams().catch(() => []),
         api.getTeamInvitations().catch(() => []),
+        api.getEvents().catch(() => []),
       ]);
       if (Array.isArray(tData)) setTeams(tData);
       if (Array.isArray(iData)) setInvitations(iData);
+      if (Array.isArray(eData)) {
+        setEvents(eData);
+        if (eData.length > 0) {
+          setSelectedEventId(prev => prev || eData[0].id);
+        }
+      }
     } catch {
       setError('Could not load teams information.');
     } finally {
@@ -45,12 +54,12 @@ export const TeamsPage: React.FC = () => {
 
   const handleCreateTeam = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!teamName.trim()) return;
+    if (!teamName.trim() || !selectedEventId) return;
     setCreating(true);
     setCreateError(null);
 
     try {
-      await api.createTeam({ name: teamName.trim() });
+      await api.createTeam({ name: teamName.trim(), eventId: selectedEventId });
       setCreateModalOpen(false);
       setTeamName('');
       loadTeamsData();
@@ -122,14 +131,29 @@ export const TeamsPage: React.FC = () => {
           onClick={() => {
             setTeamName('');
             setCreateError(null);
+            if (events.length > 0 && !selectedEventId) {
+              setSelectedEventId(events[0].id);
+            }
             setCreateModalOpen(true);
           }}
-          className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-[#DC2626] hover:bg-[#B5121B] text-white text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer shrink-0"
+          disabled={events.length === 0}
+          title={events.length === 0 ? 'No active event available to create a team for.' : undefined}
+          className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-[#DC2626] hover:bg-[#B5121B] text-white text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Plus className="w-4 h-4" />
           <span>Create New Team</span>
         </button>
       </div>
+
+      {events.length === 0 && !loading && (
+        <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl text-amber-800 text-xs flex items-center gap-2.5">
+          <AlertCircle className="w-4 h-4 shrink-0 text-amber-600" />
+          <div>
+            <span className="font-bold block">Team Creation Disabled</span>
+            <span>No active event available to create a team for. Team creation will become available when an event opens.</span>
+          </div>
+        </div>
+      )}
 
       {error && (
         <div className="p-4 bg-red-50 border border-red-200 rounded-2xl text-red-800 text-xs flex items-center justify-between">
@@ -198,13 +222,23 @@ export const TeamsPage: React.FC = () => {
               onClick={() => {
                 setTeamName('');
                 setCreateError(null);
+                if (events.length > 0 && !selectedEventId) {
+                  setSelectedEventId(events[0].id);
+                }
                 setCreateModalOpen(true);
               }}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#0B192C] hover:bg-neutral-800 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer"
+              disabled={events.length === 0}
+              title={events.length === 0 ? 'No active event available to create a team for.' : undefined}
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#0B192C] hover:bg-neutral-800 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Create Your First Team</span>
             </button>
+            {events.length === 0 && (
+              <p className="text-[11px] text-amber-700 mt-2 font-medium">
+                No active event available to create a team for.
+              </p>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -288,6 +322,36 @@ export const TeamsPage: React.FC = () => {
                 </div>
               )}
 
+              {events.length === 0 && (
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-amber-600" />
+                  <span>No active event available to create a team for.</span>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-bold text-[#0B192C] mb-1">Target Event *</label>
+                {events.length === 0 ? (
+                  <div className="p-2.5 bg-neutral-100 rounded-xl text-xs text-neutral-500">
+                    No active event available to create a team for.
+                  </div>
+                ) : (
+                  <select
+                    value={selectedEventId}
+                    onChange={(e) => setSelectedEventId(e.target.value)}
+                    required
+                    className="w-full p-2.5 bg-white border border-[#CBD5E1] rounded-xl text-xs focus:outline-none focus:border-[#DC2626]"
+                  >
+                    <option value="" disabled>Select an event</option>
+                    {events.map((ev) => (
+                      <option key={ev.id} value={ev.id}>
+                        {ev.title || ev.name} ({ev.year || 2026})
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
               <div>
                 <label className="block text-xs font-bold text-[#0B192C] mb-1">Team Name *</label>
                 <input
@@ -310,8 +374,8 @@ export const TeamsPage: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  disabled={creating || !teamName.trim()}
-                  className="px-5 py-2.5 rounded-xl bg-[#DC2626] hover:bg-[#B5121B] text-white text-xs font-bold transition-all disabled:opacity-50 cursor-pointer shadow-xs"
+                  disabled={creating || !teamName.trim() || !selectedEventId || events.length === 0}
+                  className="px-5 py-2.5 rounded-xl bg-[#DC2626] hover:bg-[#B5121B] text-white text-xs font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shadow-xs"
                 >
                   {creating ? 'Creating...' : 'Create Team'}
                 </button>

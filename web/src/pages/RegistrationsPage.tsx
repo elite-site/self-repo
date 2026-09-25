@@ -10,31 +10,36 @@ export const RegistrationsPage: React.FC = () => {
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const loadRegistrations = async () => {
-    setLoading(true);
+  const loadRegistrations = async (isInitial = true) => {
+    if (isInitial && regs.length === 0) setLoading(true);
     setError(null);
     try {
       const data = await api.getRegistrations();
       if (Array.isArray(data)) setRegs(data);
     } catch {
-      setError('Could not load registrations. Please retry.');
+      if (regs.length === 0) setError('Could not load registrations. Please retry.');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadRegistrations();
+    loadRegistrations(true);
   }, []);
 
   const handleCancel = async (id: string) => {
     if (!window.confirm('Are you sure you want to cancel this event registration?')) return;
     setCancellingId(id);
+    // Optimistic status update
+    setRegs((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, status: 'CANCELLED' } : r))
+    );
     try {
       await api.cancelRegistration(id);
-      loadRegistrations();
+      loadRegistrations(false);
     } catch {
       alert('Failed to cancel registration.');
+      loadRegistrations(false);
     } finally {
       setCancellingId(null);
     }
@@ -72,7 +77,7 @@ export const RegistrationsPage: React.FC = () => {
             <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
             <span>{error}</span>
           </div>
-          <button onClick={loadRegistrations} className="font-bold underline cursor-pointer">
+          <button onClick={() => loadRegistrations(true)} className="font-bold underline cursor-pointer">
             Retry
           </button>
         </div>
@@ -118,14 +123,14 @@ export const RegistrationsPage: React.FC = () => {
                     <td className="p-4 sm:px-6">
                       <span
                         className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold inline-block ${
-                          r.status === 'REGISTERED'
+                          r.status === 'REGISTERED' || r.status === 'CONFIRMED'
                             ? 'bg-emerald-100 text-emerald-800'
                             : r.status === 'CANCELLED'
                             ? 'bg-neutral-100 text-neutral-600'
                             : 'bg-amber-100 text-amber-800'
                         }`}
                       >
-                        {r.status}
+                        {r.status === 'CONFIRMED' ? 'REGISTERED' : r.status}
                       </span>
                     </td>
                     <td className="p-4 sm:px-6 text-right">

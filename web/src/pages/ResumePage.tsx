@@ -82,6 +82,7 @@ export const ResumePage: React.FC = () => {
     );
   }
 
+  const hasValidFile = Boolean(resumeData && resumeData.driveFileId);
   const fileUrl = resumeData?.fileUrl || (resumeData?.driveFileId ? `/api/public/media/resume/${resumeData.driveFileId}` : null);
 
   return (
@@ -95,17 +96,19 @@ export const ResumePage: React.FC = () => {
           </p>
         </div>
 
-        {resumeData && (
+        {hasValidFile && (
           <div className="flex items-center gap-3 shrink-0">
             <span
               className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
                 resumeData.status === 'APPROVED'
                   ? 'bg-emerald-100 text-emerald-800'
+                  : resumeData.status === 'REJECTED'
+                  ? 'bg-red-100 text-red-800'
                   : 'bg-amber-100 text-amber-800'
               }`}
             >
               {resumeData.status === 'APPROVED' ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Clock className="w-3.5 h-3.5" />}
-              <span>{resumeData.status || 'Verified'}</span>
+              <span>{resumeData.status || 'Under Review'}</span>
             </span>
 
             <input
@@ -127,6 +130,18 @@ export const ResumePage: React.FC = () => {
         )}
       </div>
 
+      {resumeData && resumeData.status === 'REJECTED' && (
+        <div className="p-4 bg-red-50 border border-red-200 rounded-2xl text-red-800 text-xs flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
+            <div>
+              <span className="font-bold">Resume Returned by Administrator: </span>
+              <span>{resumeData.reviewNote || 'Please upload a revised, single-page PDF document.'}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {error && (
         <div className="p-4 bg-red-50 border border-red-200 rounded-2xl text-red-800 text-xs flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -147,7 +162,7 @@ export const ResumePage: React.FC = () => {
       )}
 
       {/* VIEWER OR UPLOADER */}
-      {!resumeData ? (
+      {!hasValidFile ? (
         <div
           onClick={() => fileInputRef.current?.click()}
           className="border-2 border-dashed border-neutral-300 hover:border-[#DC2626] bg-white rounded-2xl p-16 flex flex-col items-center text-center justify-center min-h-[350px] transition-all cursor-pointer group"

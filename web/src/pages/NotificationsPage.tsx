@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { Notification } from '../types';
+import { getNotificationDestination } from '../utils/notificationRouting';
 import {
   Bell,
   Loader2,
@@ -65,26 +66,8 @@ export const NotificationsPage: React.FC = () => {
       handleMarkSingleRead(n.id);
     }
 
-    const msg = (n.message || '').toLowerCase();
-    const title = (n.title || '').toLowerCase();
-
-    if (n.type === 'EVENT' || msg.includes('event') || title.includes('event')) {
-      navigate('/events');
-    } else if (n.type === 'VOTING' || msg.includes('vote') || title.includes('vote') || msg.includes('election')) {
-      navigate('/voting');
-    } else if (msg.includes('team') || title.includes('team')) {
-      navigate('/teams');
-    } else if (msg.includes('registration') || title.includes('registration')) {
-      navigate('/registrations');
-    } else if (msg.includes('resume') || title.includes('resume')) {
-      navigate('/resume');
-    } else if (msg.includes('video') || title.includes('video')) {
-      navigate('/intro-video');
-    } else if (msg.includes('portfolio') || msg.includes('project') || msg.includes('achievement') || msg.includes('certificate')) {
-      navigate('/portfolio');
-    } else {
-      navigate('/profile');
-    }
+    const destination = getNotificationDestination(n);
+    navigate(destination);
   };
 
   const filteredNotifs = notifs.filter((n) => {

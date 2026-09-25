@@ -1,7 +1,23 @@
 import { Router, Request, Response } from 'express';
 import { requireStudentAuth } from '../middleware/studentAuth';
 import { prisma } from '../lib/prisma';
-import { certificateUpload } from '../middleware/upload';
+import { certificateUpload, proofUpload } from '../middleware/upload';
+
+const handleProofUpload = (req: Request, res: Response, next: any) => {
+  const contentType = req.headers['content-type'] || '';
+  if (contentType.includes('multipart/form-data')) {
+    return proofUpload(req, res, (err: any) => {
+      if (err) return res.status(400).json({ error: 'UPLOAD_ERROR', message: err.message });
+      if (req.files) {
+        const files = req.files as Record<string, Express.Multer.File[]>;
+        const f = files['proof']?.[0] || files['file']?.[0];
+        if (f) (req as any).file = f;
+      }
+      next();
+    });
+  }
+  next();
+};
 
 const router = Router();
 router.use(requireStudentAuth);
@@ -128,55 +144,114 @@ router.get('/achievements', async (req: Request, res: Response) => {
     res.json(achievements.map(a => ({
       ...a,
       date: a.achievedAt,
-      organizationName: a.organization
+      organizationName: a.organization,
+      proofUrl: a.proofUrl || (a.proofDriveId ? `/api/public/media/achievement/${a.proofDriveId}` : null)
     })));
   } catch (err: any) {
     res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
   }
 });
 
-router.post('/achievements', async (req: Request, res: Response) => {
+router.post('/achievements', handleProofUpload, async (req: Request, res: Response) => {
   try {
     const studentId = (req as any).studentId;
-    const { title, description, date, achievedAt, organization, organizationName, categoryId, status } = req.body;
-    
+    let {
+      title,
+      description,
+      date,
+      achievedAt,
+      organization,
+      organizationName,
+      categoryId,
+      proofUrl,
+      certificateUrl,
+      proofDriveId
+    } = req.body;
+
+    if (!title || !title.trim()) {
+      return res.status(400).json({ error: 'INVALID_INPUT', message: 'Title is required' });
+    }
+
+    let finalProofDriveId = proofDriveId || null;
+    let finalProofUrl = proofUrl || certificateUrl || null;
+
+    if ((req as any).file) {
+      finalProofDriveId = finalProofDriveId || 'drive_proof_' + Date.now();
+      if (!finalProofUrl) {
+        finalProofUrl = `/api/public/media/achievement/${finalProofDriveId}`;
+      }
+    }
+
     const achievement = await prisma.achievement.create({
       data: {
         studentId,
-        title,
-        description,
+        title: title.trim(),
+        description: description ? description.trim() : null,
         achievedAt: date || achievedAt ? new Date(date || achievedAt) : new Date(),
         organization: organization || organizationName || null,
         categoryId: categoryId || null,
-        status: status || 'PENDING'
-      }
+        proofDriveId: finalProofDriveId,
+        proofUrl: finalProofUrl,
+        status: 'PENDING' // always default to PENDING on creation
+      },
+      include: { category: true }
     });
+
     res.status(201).json({
       ...achievement,
       date: achievement.achievedAt,
-      organizationName: achievement.organization
+      organizationName: achievement.organization,
+      proofUrl: achievement.proofUrl || (achievement.proofDriveId ? `/api/public/media/achievement/${achievement.proofDriveId}` : null)
     });
   } catch (err: any) {
     res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
   }
 });
 
-router.put('/achievements/:id', async (req: Request, res: Response) => {
+router.put('/achievements/:id', handleProofUpload, async (req: Request, res: Response) => {
   try {
     const studentId = (req as any).studentId;
-    const { title, description, date, achievedAt, organization, organizationName, categoryId, status } = req.body;
-    
+    let {
+      title,
+      description,
+      date,
+      achievedAt,
+      organization,
+      organizationName,
+      categoryId,
+      status,
+      proofUrl,
+      certificateUrl,
+      proofDriveId
+    } = req.body;
+
+    let finalProofDriveId = proofDriveId !== undefined ? proofDriveId : undefined;
+    let finalProofUrl = (proofUrl !== undefined || certificateUrl !== undefined)
+      ? (proofUrl || certificateUrl)
+      : undefined;
+
+    if ((req as any).file) {
+      finalProofDriveId = 'drive_proof_' + Date.now();
+      finalProofUrl = `/api/public/media/achievement/${finalProofDriveId}`;
+    }
+
+    const updateData: any = {};
+    if (title !== undefined) updateData.title = title.trim();
+    if (description !== undefined) updateData.description = description ? description.trim() : null;
+    if (date || achievedAt) updateData.achievedAt = new Date(date || achievedAt);
+    if (organization !== undefined || organizationName !== undefined) {
+      updateData.organization = organization || organizationName || null;
+    }
+    if (categoryId !== undefined) updateData.categoryId = categoryId || null;
+    if (finalProofDriveId !== undefined) updateData.proofDriveId = finalProofDriveId;
+    if (finalProofUrl !== undefined) updateData.proofUrl = finalProofUrl;
+    if (status !== undefined) updateData.status = status;
+
     const updated = await prisma.achievement.updateMany({
       where: { id: req.params.id, studentId },
-      data: {
-        title,
-        description,
-        achievedAt: date || achievedAt ? new Date(date || achievedAt) : undefined,
-        organization: organization || organizationName || undefined,
-        categoryId: categoryId || undefined,
-        status: status || undefined
-      }
+      data: updateData
     });
+
     if (updated.count === 0) return res.status(404).json({ error: 'NOT_FOUND', message: 'Not found' });
     res.json({ message: 'Updated successfully' });
   } catch (err: any) {

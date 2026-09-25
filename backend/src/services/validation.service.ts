@@ -16,13 +16,15 @@ export class ValidationService {
     'image/webp',
   ];
 
-  private static readonly ALLOWED_VIDEO_MIMES = [
+  public static readonly ALLOWED_VIDEO_MIMES = [
     'video/mp4',
     'video/quicktime',
     'video/webm',
+    'video/x-matroska',
+    'video/matroska',
   ];
 
-  private static readonly ALLOWED_AUDIO_MIMES = [
+  public static readonly ALLOWED_AUDIO_MIMES = [
     'audio/mpeg',
     'audio/mp3',
     'audio/wav',
@@ -108,44 +110,33 @@ export class ValidationService {
     }
 
     const ext = fileName.split('.').pop()?.toLowerCase() || '';
-    const ALLOWED_VIDEO_EXTS = ['mp4', 'mov', 'webm'];
-    const BLOCKED_MIMES = [
-      'image/jpeg', 'image/png', 'image/gif', 'image/webp',
-      'application/pdf', 'application/zip', 'application/x-msdownload',
-      'application/x-executable', 'application/x-rar', 'text/html', 'text/plain'
-    ];
+    const ALLOWED_VIDEO_EXTS = ['mp4', 'mov', 'webm', 'mkv'];
 
     if (!ALLOWED_VIDEO_EXTS.includes(ext)) {
       return {
         valid: false,
-        error: `Unsupported file format. Please upload MP4, MOV, or WebM video up to ${env.MAX_VIDEO_SIZE_MB} MB.`,
+        error: `Unsupported file format. Please upload MP4, MOV, WebM, or MKV video up to ${env.MAX_VIDEO_SIZE_MB} MB.`,
       };
     }
 
     try {
       const type = await FileType.fromBuffer(fileBuffer);
 
-      // Security check: Reject if magic bytes reveal a blocked non-video format
-      if (type && (BLOCKED_MIMES.includes(type.mime) || type.mime.startsWith('image/'))) {
+      if (!type || !this.ALLOWED_VIDEO_MIMES.includes(type.mime as any)) {
         return {
           valid: false,
-          error: `Unsupported file format. Please upload MP4, MOV, or WebM video up to ${env.MAX_VIDEO_SIZE_MB} MB.`,
+          error: `Unsupported file format. Please upload MP4, MOV, WebM, or MKV video up to ${env.MAX_VIDEO_SIZE_MB} MB. Detected: ${type?.mime || 'unknown'}`,
         };
       }
 
-      let detectedMime = 'video/mp4';
-      if (ext === 'mp4') detectedMime = 'video/mp4';
-      else if (ext === 'mov') detectedMime = 'video/quicktime';
-      else if (ext === 'webm') detectedMime = 'video/webm';
-
       return {
         valid: true,
-        detectedMime,
+        detectedMime: type.mime,
       };
     } catch {
       return {
-        valid: true,
-        detectedMime: `video/${ext}`,
+        valid: false,
+        error: `Unsupported file format. Please upload MP4, MOV, WebM, or MKV video up to ${env.MAX_VIDEO_SIZE_MB} MB.`,
       };
     }
   }
@@ -169,46 +160,32 @@ export class ValidationService {
 
     const ext = fileName.split('.').pop()?.toLowerCase() || '';
     const ALLOWED_AUDIO_EXTS = ['mp3', 'wav', 'm4a', 'aac', 'ogg'];
-    const BLOCKED_MIMES = [
-      'image/jpeg', 'image/png', 'image/gif', 'image/webp',
-      'application/pdf', 'application/zip', 'application/x-msdownload',
-      'application/x-executable', 'application/x-rar', 'text/html', 'text/plain'
-    ];
 
     if (!ALLOWED_AUDIO_EXTS.includes(ext)) {
       return {
         valid: false,
-        error: 'Unsupported file format. Please upload MP3, WAV, M4A, AAC, OGG audio up to 10 MB, ',
+        error: 'Unsupported file format. Please upload MP3, WAV, M4A, AAC, OGG audio up to 10 MB.',
       };
     }
 
     try {
       const type = await FileType.fromBuffer(fileBuffer);
 
-      // Security check: Reject if magic bytes reveal a blocked non-audio format (image, PDF, Zip, EXE, etc.)
-      if (type && (BLOCKED_MIMES.includes(type.mime) || type.mime.startsWith('image/'))) {
+      if (!type || !this.ALLOWED_AUDIO_MIMES.includes(type.mime as any)) {
         return {
           valid: false,
-          error: 'Unsupported file format. Please upload MP3, WAV, M4A, AAC, OGG audio up to 10 MB, ',
+          error: `Unsupported file format. Please upload MP3, WAV, M4A, AAC, OGG audio up to 10 MB. Detected: ${type?.mime || 'unknown'}`,
         };
       }
 
-      // Map extension to proper audio MIME type
-      let detectedMime = 'audio/mpeg';
-      if (ext === 'mp3') detectedMime = 'audio/mpeg';
-      else if (ext === 'wav') detectedMime = 'audio/wav';
-      else if (ext === 'm4a') detectedMime = 'audio/mp4';
-      else if (ext === 'aac') detectedMime = 'audio/aac';
-      else if (ext === 'ogg') detectedMime = 'audio/ogg';
-
       return {
         valid: true,
-        detectedMime,
+        detectedMime: type.mime,
       };
     } catch {
       return {
-        valid: true,
-        detectedMime: `audio/${ext}`,
+        valid: false,
+        error: 'Unsupported file format. Please upload MP3, WAV, M4A, AAC, OGG audio up to 10 MB.',
       };
     }
   }

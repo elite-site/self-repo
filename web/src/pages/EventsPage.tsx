@@ -12,8 +12,8 @@ export const EventsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'All' | 'Open' | 'Registered'>('All');
   const [search, setSearch] = useState('');
 
-  const loadEventsData = async () => {
-    setLoading(true);
+  const loadEventsData = async (isInitial = true) => {
+    if (isInitial && events.length === 0) setLoading(true);
     setError(null);
     try {
       const [evData, regData] = await Promise.all([
@@ -23,18 +23,20 @@ export const EventsPage: React.FC = () => {
       if (Array.isArray(evData)) setEvents(evData);
       if (Array.isArray(regData)) setRegistrations(regData);
     } catch {
-      setError('Could not load department events. Please retry.');
+      if (events.length === 0) setError('Could not load department events. Please retry.');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadEventsData();
+    loadEventsData(true);
   }, []);
 
   const registeredEventIds = new Set(
-    registrations.filter((r) => r.status === 'REGISTERED').map((r) => r.eventId)
+    registrations
+      .filter((r) => r.status === 'REGISTERED' || r.status === 'CONFIRMED')
+      .map((r) => r.eventId)
   );
 
   const filteredEvents = events.filter((e) => {
@@ -100,7 +102,7 @@ export const EventsPage: React.FC = () => {
             <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
             <span>{error}</span>
           </div>
-          <button onClick={loadEventsData} className="font-bold underline cursor-pointer">
+          <button onClick={() => loadEventsData(true)} className="font-bold underline cursor-pointer">
             Retry
           </button>
         </div>

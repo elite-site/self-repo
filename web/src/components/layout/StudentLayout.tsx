@@ -22,7 +22,7 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({ session, onLogout 
           </div>
         </main>
       </div>
-      <MobileBottomNav />
+      <MobileBottomNav onLogout={onLogout} />
     </div>
   );
 };

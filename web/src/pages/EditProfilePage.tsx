@@ -125,14 +125,18 @@ export const EditProfilePage: React.FC = () => {
     setSuccess(false);
 
     try {
-      await api.updateProfile({
-        ...profile,
-        bio: bio.trim(),
-        githubUrl: githubUrl.trim(),
-        linkedinUrl: linkedinUrl.trim(),
-        portfolioUrl: portfolioUrl.trim(),
-        skills,
-      });
+      // Save profile fields and skills in parallel
+      // Do NOT spread ...profile — it includes `biography` with the old value
+      // which causes the backend to use the stale value instead of the new `bio`.
+      await Promise.all([
+        api.updateProfile({
+          bio: bio.trim(),
+          githubUrl: githubUrl.trim(),
+          linkedinUrl: linkedinUrl.trim(),
+          portfolioUrl: portfolioUrl.trim(),
+        }),
+        api.updateSkills(skills),
+      ]);
       setSuccess(true);
       setTimeout(() => {
         navigate('/profile');

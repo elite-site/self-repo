@@ -57,7 +57,7 @@ router.get('/:rollNo', async (req: Request, res: Response) => {
       include: {
         profile: { include: { skills: { include: { skill: true } } } },
         projects: { orderBy: { displayOrder: 'asc' } },
-        achievements: { where: { status: 'APPROVED' }, include: { category: true } },
+        achievements: { where: { status: { in: ['APPROVED', 'PENDING'] } }, include: { category: true }, orderBy: { achievedAt: 'desc' } },
         certificates: { where: { status: 'APPROVED' } },
         resumes: { where: { status: 'APPROVED' }, take: 1, orderBy: { submittedAt: 'desc' } }
       }
@@ -65,7 +65,14 @@ router.get('/:rollNo', async (req: Request, res: Response) => {
     if (!student || !student.profile?.isPublic) {
       return res.status(404).json({ error: 'NOT_FOUND', message: 'Student not found or not public' });
     }
-    res.json(student);
+    const studentWithProofs = {
+      ...student,
+      achievements: student.achievements.map((a: any) => ({
+        ...a,
+        proofUrl: a.proofUrl || (a.proofDriveId ? `/api/public/media/achievement/${a.proofDriveId}` : null)
+      }))
+    };
+    res.json(studentWithProofs);
   } catch (err: any) {
     res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
   }

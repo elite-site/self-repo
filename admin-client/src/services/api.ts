@@ -2,7 +2,18 @@ import axios from 'axios';
 import {
   AdminStats,
   AdminUser,
+  AnalyticsResponse,
+  EmailAutomationItem,
+  EmailHistoryResponse,
+  EmailTemplateItem,
   EventItem,
+  RegistrationItem,
+  RegistrationsResponse,
+  RegistrationTeam,
+  RoleItem,
+  RolesResponse,
+  SettingsResponse,
+  StorageStatsResponse,
   StudentsResponse,
   Submission,
   SubmissionRating,
@@ -122,8 +133,9 @@ export const adminApi = {
     return res.data;
   },
 
-  getMediaUrl(submissionId: string, fileKey: 'video'): string {
-    return `/admin/api/submissions/${submissionId}/media/${fileKey}`;
+  getMediaUrl(submissionId: string, fileKey: 'video', version?: string): string {
+    const base = `/admin/api/submissions/${submissionId}/media/${fileKey}`;
+    return version ? `${base}?v=${encodeURIComponent(version)}` : base;
   },
 
   // Activity logs
@@ -220,6 +232,186 @@ export const adminApi = {
   async getAnnouncementAudiencePreview(audience: string): Promise<{ count: number }> {
     const res = await client.get('/admin/api/announcements/preview', { params: { audience } }).catch(() => ({ data: { count: 120 } }));
     return res.data || { count: 120 };
+  },
+
+  // Event Registrations (ADM-08)
+  async getRegistrations(params: {
+    eventId?: string;
+    status?: string;
+    year?: number;
+    section?: string;
+    team?: string;
+    search?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<RegistrationsResponse> {
+    const res = await client.get('/admin/api/registrations', { params });
+    return res.data;
+  },
+
+  async getRegistration(id: string): Promise<RegistrationItem> {
+    const res = await client.get(`/admin/api/registrations/${id}`);
+    return res.data;
+  },
+
+  async updateRegistrationStatus(
+    id: string,
+    status: string,
+    note?: string
+  ): Promise<{ success: boolean; registration: RegistrationItem }> {
+    const res = await client.patch(`/admin/api/registrations/${id}/status`, { status, note });
+    return res.data;
+  },
+
+  async deleteRegistration(id: string): Promise<{ success: boolean; message: string }> {
+    const res = await client.delete(`/admin/api/registrations/${id}`);
+    return res.data;
+  },
+
+  getRegistrationsExportUrl(params?: {
+    eventId?: string;
+    status?: string;
+    year?: number;
+    section?: string;
+  }): string {
+    const query = new URLSearchParams();
+    if (params?.eventId) query.append('eventId', params.eventId);
+    if (params?.status) query.append('status', params.status);
+    if (params?.year) query.append('year', String(params.year));
+    if (params?.section) query.append('section', params.section);
+    return `/admin/api/registrations/export?${query.toString()}`;
+  },
+
+  // Team Administration (ADM-09)
+  async getTeams(params?: {
+    eventId?: string;
+    status?: string;
+    search?: string;
+  }): Promise<{ teams: RegistrationTeam[] }> {
+    const res = await client.get('/admin/api/teams', { params });
+    return res.data;
+  },
+
+  async updateTeamStatus(
+    id: string,
+    status: string
+  ): Promise<{ success: boolean; team: RegistrationTeam }> {
+    const res = await client.patch(`/admin/api/teams/${id}/status`, { status });
+    return res.data;
+  },
+
+  async removeTeamMember(
+    teamId: string,
+    studentId: string,
+    reason?: string
+  ): Promise<{ success: boolean; message: string }> {
+    const res = await client.post(`/admin/api/teams/${teamId}/members/remove`, { studentId, reason });
+    return res.data;
+  },
+
+  // Analytics
+  async getAnalytics(): Promise<AnalyticsResponse> {
+    const res = await client.get('/admin/api/portal/analytics');
+    return res.data;
+  },
+
+  // Storage
+  async getStorageStats(): Promise<StorageStatsResponse> {
+    const res = await client.get('/admin/api/storage');
+    return res.data;
+  },
+
+  async clearStorageCache(): Promise<{ success: boolean; message: string }> {
+    const res = await client.post('/admin/api/storage/clear-cache');
+    return res.data;
+  },
+
+  // Email Automation
+  async getEmailAutomations(): Promise<{ automations: EmailAutomationItem[] }> {
+    const res = await client.get('/admin/api/email/automations');
+    return res.data;
+  },
+
+  async createEmailAutomation(data: any): Promise<EmailAutomationItem> {
+    const res = await client.post('/admin/api/email/automations', data);
+    return res.data;
+  },
+
+  async toggleEmailAutomation(id: string): Promise<{ success: boolean; automation: EmailAutomationItem }> {
+    const res = await client.patch(`/admin/api/email/automations/${id}/toggle`);
+    return res.data;
+  },
+
+  async runEmailAutomation(id: string): Promise<{ success: boolean; run: any }> {
+    const res = await client.post(`/admin/api/email/automations/${id}/run`);
+    return res.data;
+  },
+
+  async getEmailHistory(): Promise<EmailHistoryResponse> {
+    const res = await client.get('/admin/api/email/history');
+    return res.data;
+  },
+
+  async getEmailTemplates(): Promise<{ templates: EmailTemplateItem[] }> {
+    const res = await client.get('/admin/api/email/templates');
+    return res.data;
+  },
+
+  // Roles & Permissions
+  async getRoles(): Promise<RolesResponse> {
+    const res = await client.get('/admin/api/roles');
+    return res.data;
+  },
+
+  async createRole(data: { name: string; description?: string }): Promise<RoleItem> {
+    const res = await client.post('/admin/api/portal/roles', data);
+    return res.data;
+  },
+
+  async updateRole(id: string, data: { description?: string }): Promise<RoleItem> {
+    const res = await client.put(`/admin/api/portal/roles/${id}`, data);
+    return res.data;
+  },
+
+  async assignRole(adminId: string, roleId: string): Promise<{ success: boolean; assignment: any }> {
+    const res = await client.post('/admin/api/roles/assign', { adminId, roleId });
+    return res.data;
+  },
+
+  // Settings
+  async getSettings(): Promise<SettingsResponse> {
+    const res = await client.get('/admin/api/portal/settings');
+    return res.data;
+  },
+
+  async updateSettings(data: Record<string, any>): Promise<{ success: boolean; message: string }> {
+    const res = await client.put('/admin/api/portal/settings', data);
+    return res.data;
+  },
+
+  // Export URLs
+  getSubmissionsExportUrl(eventId?: string): string {
+    return `/admin/api/submissions/export?eventId=${encodeURIComponent(eventId || '')}`;
+  },
+
+  getActivityLogsExportUrl(): string {
+    return '/admin/api/activity-logs/export';
+  },
+
+  // Academic Change Requests
+  async getChangeRequests(): Promise<any[]> {
+    const res = await client.get('/admin/api/portal/change-requests');
+    return res.data;
+  },
+
+  async approveChangeRequest(id: string): Promise<{ success: boolean; changeRequest: any }> {
+    const res = await client.post(`/admin/api/portal/change-requests/${id}/approve`);
+    return res.data;
+  },
+
+  async rejectChangeRequest(id: string, reason?: string): Promise<{ success: boolean; changeRequest: any }> {
+    const res = await client.post(`/admin/api/portal/change-requests/${id}/reject`, { reason });
+    return res.data;
   },
 };
 

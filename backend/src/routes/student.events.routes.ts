@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { requireStudentAuth } from '../middleware/studentAuth';
 import { prisma } from '../lib/prisma';
+import { ActivityService } from '../services/activity.service';
 
 const router = Router();
 router.use(requireStudentAuth);
@@ -34,8 +35,13 @@ router.get('/', async (req: Request, res: Response) => {
 
 router.get('/:id', async (req: Request, res: Response) => {
   try {
-    const event = await prisma.event.findUnique({
-      where: { id: req.params.id },
+    const event = await prisma.event.findFirst({
+      where: {
+        OR: [
+          { id: req.params.id },
+          { slug: req.params.id }
+        ]
+      },
       include: { formFields: { orderBy: { displayOrder: 'asc' } } }
     });
     if (!event) return res.status(404).json({ error: 'NOT_FOUND', message: 'Event not found' });
@@ -56,24 +62,91 @@ router.get('/:id', async (req: Request, res: Response) => {
 router.post('/:id/register', async (req: Request, res: Response) => {
   try {
     const studentId = (req as any).studentId || req.student?.studentId;
-    const eventId = req.params.id;
-    const { teamId, answers } = req.body;
-    
-    const registration = await prisma.eventRegistration.create({
-      data: {
+    const eventIdParam = req.params.id;
+    const { teamId, answers, status: reqStatus } = req.body;
+
+    if (!studentId) {
+      return res.status(401).json({ error: 'UNAUTHORIZED', message: 'Authentication required' });
+    }
+
+    const event = await prisma.event.findFirst({
+      where: {
+        OR: [
+          { id: eventIdParam },
+          { slug: eventIdParam }
+        ]
+      }
+    });
+    if (!event) {
+      return res.status(404).json({ error: 'NOT_FOUND', message: 'Event not found' });
+    }
+
+    const eventId = event.id;
+    const validStatuses = ['PENDING', 'CONFIRMED'] as const;
+    const targetStatus = (reqStatus && validStatuses.includes(reqStatus))
+      ? reqStatus
+      : 'CONFIRMED';
+
+    const answersData = answers ? (
+      Array.isArray(answers)
+        ? answers.map((a: any) => ({ fieldId: a.fieldId, value: String(a.value ?? '') }))
+        : Object.entries(answers).map(([fieldId, value]: any) => ({ fieldId, value: String(value ?? '') }))
+    ) : [];
+
+    const registration = await prisma.eventRegistration.upsert({
+      where: {
+        eventId_studentId: {
+          eventId,
+          studentId,
+        }
+      },
+      update: {
+        status: targetStatus,
+        teamId: teamId !== undefined ? teamId : undefined,
+        ...(answersData.length > 0 ? {
+          answers: {
+            deleteMany: {},
+            create: answersData,
+          }
+        } : {})
+      },
+      create: {
         eventId,
         studentId,
-        teamId,
-        status: 'CONFIRMED',
+        teamId: teamId || null,
+        status: targetStatus,
         answers: {
-          create: answers ? Object.entries(answers).map(([fieldId, value]: any) => ({
-            fieldId,
-            value: String(value)
-          })) : []
+          create: answersData
+        }
+      },
+      include: {
+        event: true,
+        student: true,
+        team: true,
+        answers: {
+          include: {
+            field: true
+          }
         }
       }
     });
-    res.status(201).json(registration);
+
+    await ActivityService.log({
+      eventId,
+      category: 'APPLICATION',
+      action: `Student registered for event: ${event.name}`,
+      details: `Student ${registration.student?.name || studentId} registered with status ${targetStatus}`,
+      applicantName: registration.student?.name || undefined,
+      userEmail: registration.student?.email || undefined,
+      status: 'SUCCESS'
+    });
+
+    res.status(201).json({
+      ...registration,
+      eventTitle: registration.event?.name || event.name,
+      status: registration.status,
+      registeredAt: registration.registeredAt,
+    });
   } catch (err: any) {
     res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
   }

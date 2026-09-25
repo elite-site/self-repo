@@ -38,69 +38,50 @@ export const DashboardPage: React.FC = () => {
   const [notifError, setNotifError] = useState<string | null>(null);
   const [votingError, setVotingError] = useState<string | null>(null);
 
-  const loadData = async () => {
-    setLoading(true);
+  const loadData = async (isInitial = true) => {
+    if (isInitial && !profile) setLoading(true);
     setProfileError(null);
 
-    // 1. Load Profile & Resume
-    try {
-      const pData = await api.getProfile();
-      setProfile(pData);
-    } catch (err: any) {
-      setProfileError('Failed to load profile details.');
-    }
+    const [
+      pResult,
+      rResult,
+      projResult,
+      achResult,
+      certResult,
+      evResult,
+      regResult,
+      vResult,
+      nResult,
+    ] = await Promise.allSettled([
+      api.getProfile(),
+      api.getResume(),
+      api.getProjects(),
+      api.getAchievements(),
+      api.getCertificates(),
+      api.getEvents(),
+      api.getRegistrations(),
+      api.getVotingCampaigns(),
+      api.getNotifications(),
+    ]);
 
-    try {
-      const rData = await api.getResume();
-      setResume(rData);
-    } catch {
-      // Resume may not exist yet
-    }
+    if (pResult.status === 'fulfilled') setProfile(pResult.value);
+    else setProfileError('Failed to load profile details.');
 
-    // 2. Load Portfolio items
-    try {
-      const projData = await api.getProjects();
-      if (Array.isArray(projData)) setProjects(projData);
-    } catch {}
+    if (rResult.status === 'fulfilled') setResume(rResult.value);
+    if (projResult.status === 'fulfilled' && Array.isArray(projResult.value)) setProjects(projResult.value);
+    if (achResult.status === 'fulfilled' && Array.isArray(achResult.value)) setAchievements(achResult.value);
+    if (certResult.status === 'fulfilled' && Array.isArray(certResult.value)) setCertificates(certResult.value);
 
-    try {
-      const achData = await api.getAchievements();
-      if (Array.isArray(achData)) setAchievements(achData);
-    } catch {}
+    if (evResult.status === 'fulfilled' && Array.isArray(evResult.value)) setEvents(evResult.value);
+    else setEventsError('Could not load department events.');
 
-    try {
-      const certData = await api.getCertificates();
-      if (Array.isArray(certData)) setCertificates(certData);
-    } catch {}
+    if (regResult.status === 'fulfilled' && Array.isArray(regResult.value)) setRegistrations(regResult.value);
 
-    // 3. Load Events & Registrations
-    try {
-      const evData = await api.getEvents();
-      if (Array.isArray(evData)) setEvents(evData);
-    } catch (err: any) {
-      setEventsError('Could not load department events.');
-    }
+    if (vResult.status === 'fulfilled' && Array.isArray(vResult.value)) setVotingCampaigns(vResult.value);
+    else setVotingError('Could not load voting campaigns.');
 
-    try {
-      const regData = await api.getRegistrations();
-      if (Array.isArray(regData)) setRegistrations(regData);
-    } catch {}
-
-    // 4. Load Voting Campaigns
-    try {
-      const vData = await api.getVotingCampaigns();
-      if (Array.isArray(vData)) setVotingCampaigns(vData);
-    } catch (err: any) {
-      setVotingError('Could not load voting campaigns.');
-    }
-
-    // 5. Load Notifications
-    try {
-      const nData = await api.getNotifications();
-      if (Array.isArray(nData)) setNotifications(nData);
-    } catch (err: any) {
-      setNotifError('Could not load notifications.');
-    }
+    if (nResult.status === 'fulfilled' && Array.isArray(nResult.value)) setNotifications(nResult.value);
+    else setNotifError('Could not load notifications.');
 
     setLoading(false);
   };
@@ -113,8 +94,9 @@ export const DashboardPage: React.FC = () => {
   const checkPhoto = !!profile?.photoUrl;
   const checkBio = !!(profile?.bio || (profile as any)?.biography);
   const checkSkills = !!(profile?.skills && profile.skills.length > 0);
-  const checkVideo = !!(profile?.submission?.videoUrl || profile?.submission?.status === 'APPROVED');
-  const checkResume = !!(resume?.fileUrl || resume?.resumeDriveId);
+  const checkVideo = !!(profile?.submission?.videoUploaded || profile?.submission?.videoUrl || profile?.submission?.status === 'APPROVED' || profile?.submission?.status === 'SUBMITTED');
+  const activeResume = Array.isArray(resume) ? (resume.length > 0 ? resume[0] : null) : resume;
+  const checkResume = !!(activeResume?.driveFileId || activeResume?.fileUrl);
   const checkProjects = projects.length > 0;
 
   const completionItems = [
@@ -157,7 +139,7 @@ export const DashboardPage: React.FC = () => {
             <span>{profileError} Showing offline workspace shell.</span>
           </div>
           <button
-            onClick={loadData}
+            onClick={() => loadData(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer"
           >
             <RefreshCw className="w-3.5 h-3.5" />
@@ -448,7 +430,7 @@ export const DashboardPage: React.FC = () => {
             {eventsError ? (
               <div className="p-4 bg-red-50 border border-red-100 rounded-xl text-xs text-red-700 flex items-center justify-between">
                 <span>{eventsError}</span>
-                <button onClick={loadData} className="font-bold underline cursor-pointer">
+                <button onClick={() => loadData(true)} className="font-bold underline cursor-pointer">
                   Retry
                 </button>
               </div>
@@ -526,7 +508,7 @@ export const DashboardPage: React.FC = () => {
             {votingError ? (
               <div className="p-4 bg-red-50 border border-red-100 rounded-xl text-xs text-red-700 flex items-center justify-between">
                 <span>{votingError}</span>
-                <button onClick={loadData} className="font-bold underline cursor-pointer">
+                <button onClick={() => loadData(true)} className="font-bold underline cursor-pointer">
                   Retry
                 </button>
               </div>
@@ -584,7 +566,7 @@ export const DashboardPage: React.FC = () => {
             {notifError ? (
               <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-xs text-red-700 flex items-center justify-between">
                 <span>{notifError}</span>
-                <button onClick={loadData} className="font-bold underline cursor-pointer">
+                <button onClick={() => loadData(true)} className="font-bold underline cursor-pointer">
                   Retry
                 </button>
               </div>

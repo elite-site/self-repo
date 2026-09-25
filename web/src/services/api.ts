@@ -51,7 +51,7 @@ export const api = {
     return res.data;
   },
   async getVideoBlobUrl(): Promise<string> {
-    const res = await client.get('/student/submission/media/video', { responseType: 'blob' });
+    const res = await client.get(`/student/submission/media/video?t=${Date.now()}`, { responseType: 'blob' });
     return URL.createObjectURL(res.data as Blob);
   },
 
@@ -69,7 +69,11 @@ export const api = {
     return res.data;
   },
   async submitChangeRequest(data: any) {
-    const res = await client.post('/student/change-request', data);
+    const res = await client.post('/student/profile/change-request', data);
+    return res.data;
+  },
+  async updateSkills(skillNames: string[]) {
+    const res = await client.put('/student/profile/skills', { skillNames });
     return res.data;
   },
 

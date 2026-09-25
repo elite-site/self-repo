@@ -15,10 +15,10 @@ interface Campaign {
 
 const StatusBadge = ({ status }: { status: string }) => {
   const map: Record<string, { label: string; cls: string; icon: React.FC<{ className?: string }> }> = {
-    DRAFT: { label: 'Draft', cls: 'bg-slate-50 text-slate-600 border-slate-200', icon: () => <span className="w-2 h-2 rounded-full bg-slate-400 inline-block mr-1" /> },
-    ACTIVE: { label: 'Active', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: () => <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block mr-1 animate-pulse" /> },
-    CLOSED: { label: 'Closed', cls: 'bg-amber-50 text-amber-700 border-amber-200', icon: () => <span className="w-2 h-2 rounded-full bg-amber-400 inline-block mr-1" /> },
-    FINALIZED: { label: 'Finalized', cls: 'bg-blue-50 text-blue-700 border-blue-200', icon: () => <CheckCircle className="w-3 h-3 mr-1" /> },
+    DRAFT: { label: 'Draft', cls: 'bg-slate-50 dark:bg-slate-900/50 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800', icon: () => <span className="w-2 h-2 rounded-full bg-slate-400 inline-block mr-1" /> },
+    ACTIVE: { label: 'Active', cls: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800', icon: () => <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block mr-1 animate-pulse" /> },
+    CLOSED: { label: 'Closed', cls: 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800', icon: () => <span className="w-2 h-2 rounded-full bg-amber-400 inline-block mr-1" /> },
+    FINALIZED: { label: 'Finalized', cls: 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800', icon: () => <CheckCircle className="w-3 h-3 mr-1" /> },
   };
   const s = map[status] ?? map.DRAFT;
   const Icon = s.icon;
@@ -154,12 +154,12 @@ export const VotingManagement: React.FC = () => {
   return (
     <div className="space-y-6">
       {showCreate && <CreateCampaignWizard onClose={() => setShowCreate(false)} onCreated={fetchCampaigns} />}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between pb-2 border-b border-neutral-200 dark:border-neutral-800">
         <div className="flex items-center gap-3">
           <Vote className="w-6 h-6 text-[#DC2626]" />
           <div>
-            <h1 className="text-xl font-extrabold text-[#0B192C]">Voting Management</h1>
-            <p className="text-xs text-neutral-500">Create and manage voting campaigns</p>
+            <h1 className="text-xl font-extrabold text-[#0B192C] dark:text-white">Voting Management</h1>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400">Create and manage voting campaigns</p>
           </div>
         </div>
         <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 px-4 py-2 bg-[#DC2626] text-white rounded-lg text-xs font-bold hover:bg-red-700 cursor-pointer">
@@ -168,30 +168,30 @@ export const VotingManagement: React.FC = () => {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center h-48 bg-white rounded-2xl border border-[#E2E8F0]">
+        <div className="flex items-center justify-center h-48 bg-white dark:bg-neutral-900 rounded-2xl border border-[#E2E8F0] dark:border-neutral-800">
           <Loader2 className="w-7 h-7 animate-spin text-[#DC2626]" />
         </div>
       ) : error ? (
-        <div className="flex flex-col items-center gap-2 justify-center h-48 bg-white rounded-2xl border border-red-100">
+        <div className="flex flex-col items-center gap-2 justify-center h-48 bg-white dark:bg-neutral-900 rounded-2xl border border-red-200 dark:border-red-900/50">
           <AlertCircle className="w-8 h-8 text-red-400" />
-          <p className="text-sm text-neutral-500">{error}</p>
+          <p className="text-sm text-neutral-500 dark:text-neutral-400">{error}</p>
         </div>
       ) : campaigns.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-48 bg-white rounded-2xl border border-[#E2E8F0] gap-3">
-          <Vote className="w-10 h-10 text-neutral-200" />
-          <p className="text-sm font-semibold text-neutral-500">No campaigns yet</p>
+        <div className="flex flex-col items-center justify-center h-48 bg-white dark:bg-neutral-900 rounded-2xl border border-[#E2E8F0] dark:border-neutral-800 gap-3">
+          <Vote className="w-10 h-10 text-neutral-200 dark:text-neutral-700" />
+          <p className="text-sm font-semibold text-neutral-500 dark:text-neutral-400">No campaigns yet</p>
         </div>
       ) : (
         <div className="grid gap-4">
           {campaigns.map((c) => (
-            <div key={c.id} className="bg-white rounded-2xl border border-[#E2E8F0] p-5 flex items-center gap-6">
+            <div key={c.id} className="bg-white dark:bg-neutral-900 rounded-2xl border border-[#E2E8F0] dark:border-neutral-800 p-5 flex items-center gap-6 shadow-sm">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-3 mb-1">
-                  <h3 className="text-sm font-extrabold text-[#0B192C] truncate">{c.title}</h3>
+                  <h3 className="text-sm font-extrabold text-[#0B192C] dark:text-white truncate">{c.title}</h3>
                   <StatusBadge status={c.status} />
                 </div>
-                {c.eventTitle && <p className="text-xs text-neutral-400 mb-2">Event: {c.eventTitle}</p>}
-                <div className="flex items-center gap-4 text-xs text-neutral-500">
+                {c.eventTitle && <p className="text-xs text-neutral-400 dark:text-neutral-500 mb-2">Event: {c.eventTitle}</p>}
+                <div className="flex items-center gap-4 text-xs text-neutral-500 dark:text-neutral-400">
                   <span className="flex items-center gap-1"><Vote className="w-3.5 h-3.5" /> {c.totalVotes} votes</span>
                   <span className="flex items-center gap-1"><BarChart3 className="w-3.5 h-3.5" /> {c.candidateCount} candidates</span>
                   {c.votingStart && <span>Opens: {new Date(c.votingStart).toLocaleString()}</span>}

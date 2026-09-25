@@ -294,4 +294,31 @@ router.get('/public/events/:id', async (req: Request, res: Response): Promise<vo
   }
 });
 
+// GET /api/public/media/:type/:fileId - Public streaming proxy for photos, resumes, certificates, and videos
+router.get('/public/media/:type/:fileId', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { fileId } = req.params;
+    if (!fileId) {
+      res.status(400).json({ error: 'MISSING_FILE_ID', message: 'File ID is required' });
+      return;
+    }
+
+    const { stream, mimeType, size } = await driveService.streamDriveFile(fileId);
+
+    res.setHeader('Content-Type', mimeType);
+    if (size) res.setHeader('Content-Length', size.toString());
+    res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+    res.setHeader('ETag', `"${fileId}"`);
+
+    if (req.headers['if-none-match'] === `"${fileId}"`) {
+      res.status(304).end();
+      return;
+    }
+
+    stream.pipe(res);
+  } catch (err: any) {
+    res.status(404).json({ error: 'MEDIA_NOT_FOUND', message: 'Requested media could not be found or loaded.' });
+  }
+});
+
 export default router;

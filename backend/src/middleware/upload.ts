@@ -33,3 +33,23 @@ export const certificateUpload = multer({
     else cb(new Error('Only PDF, JPG, PNG allowed'));
   }
 }).single('file');
+
+export const resumeUpload = upload.fields([
+  { name: 'resume', maxCount: 1 },
+  { name: 'file', maxCount: 1 },
+]);
+
+export const proofUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 15 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (['application/pdf', 'image/jpeg', 'image/png', 'image/webp'].includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only PDF, JPG, PNG, and WebP allowed'));
+    }
+  }
+}).fields([
+  { name: 'file', maxCount: 1 },
+  { name: 'proof', maxCount: 1 },
+]);

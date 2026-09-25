@@ -187,23 +187,28 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ initialStude
         }
       });
       setSuccessMessage(res.message || 'Your video was uploaded successfully.');
-      clearPreview();
-
-      const updated = await refreshStudent();
-      if (updated?.submission?.videoUploaded) {
-        const url = await api.getVideoBlobUrl();
-        setVideoUrl((prev) => {
-          if (prev && prev !== url) URL.revokeObjectURL(prev);
-          return url;
-        });
+      
+      const localUrl = previewUrlRef.current;
+      if (localUrl) {
+        setVideoUrl(localUrl);
         setVideoError(false);
-      } else {
-        setVideoUrl((prev) => {
-          if (prev) URL.revokeObjectURL(prev);
-          return null;
-        });
       }
       setActiveTab('response');
+      clearPreview();
+
+      refreshStudent().then((updated) => {
+        if (updated?.submission?.videoUploaded && !localUrl) {
+          api.getVideoBlobUrl()
+            .then((url) => {
+              setVideoUrl((prev) => {
+                if (prev && prev !== url) URL.revokeObjectURL(prev);
+                return url;
+              });
+              setVideoError(false);
+            })
+            .catch(() => null);
+        }
+      });
     } catch (err: any) {
       const msg =
         err?.response?.data?.field === 'video'

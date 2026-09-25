@@ -1,11 +1,11 @@
+import React from 'react';
+import { StudentsTable } from '../components/StudentsTable';
+import { ACTIVE_EVENT_ID } from '../components/Sidebar';
 
-export const Students = () => {
+export const Students: React.FC = () => {
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Students</h1>
-      <div className="bg-white rounded-lg shadow-sm border border-neutral-200 p-6">
-        <p className="text-neutral-500">This module is currently under construction or connecting to the 501 fallback API.</p>
-      </div>
+    <div className="space-y-6">
+      <StudentsTable activeEventId={ACTIVE_EVENT_ID} onSelectSubmission={() => {}} />
     </div>
   );
 };

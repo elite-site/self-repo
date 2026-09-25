@@ -20,11 +20,11 @@ interface EventItem {
 
 const StatusBadge = ({ status }: { status: string }) => {
   const map: Record<string, string> = {
-    DRAFT: 'bg-slate-50 text-slate-600 border-slate-200',
-    PUBLISHED: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    OPEN: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    CLOSED: 'bg-slate-50 text-slate-500 border-slate-200',
-    ARCHIVED: 'bg-neutral-50 text-neutral-400 border-neutral-200',
+    DRAFT: 'bg-slate-50 dark:bg-slate-900/50 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800',
+    PUBLISHED: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800',
+    OPEN: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800',
+    CLOSED: 'bg-slate-50 dark:bg-slate-900/50 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-800',
+    ARCHIVED: 'bg-neutral-50 dark:bg-neutral-900/50 text-neutral-400 dark:text-neutral-500 border-neutral-200 dark:border-neutral-800',
   };
   return (
     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${map[status] ?? 'bg-slate-50 text-slate-600 border-slate-200'}`}>
@@ -241,12 +241,12 @@ export const AdminEvents: React.FC = () => {
     <div className="space-y-6">
       {showCreate && <CreateEventWizard onClose={() => setShowCreate(false)} onCreated={fetchEvents} />}
 
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between pb-2 border-b border-neutral-200 dark:border-neutral-800">
         <div className="flex items-center gap-3">
           <CalendarDays className="w-6 h-6 text-[#DC2626]" />
           <div>
-            <h1 className="text-xl font-extrabold text-[#0B192C]">Events</h1>
-            <p className="text-xs text-neutral-500">Manage all department events</p>
+            <h1 className="text-xl font-extrabold text-[#0B192C] dark:text-white">Events</h1>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400">Manage all department events</p>
           </div>
         </div>
         <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 px-4 py-2 bg-[#DC2626] text-white rounded-lg text-xs font-bold hover:bg-red-700 cursor-pointer">
@@ -255,43 +255,43 @@ export const AdminEvents: React.FC = () => {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center h-48 bg-white rounded-2xl border border-[#E2E8F0]">
+        <div className="flex items-center justify-center h-48 bg-white dark:bg-neutral-900 rounded-2xl border border-[#E2E8F0] dark:border-neutral-800">
           <Loader2 className="w-7 h-7 animate-spin text-[#DC2626]" />
         </div>
       ) : error ? (
-        <div className="flex flex-col items-center justify-center h-48 bg-white rounded-2xl border border-red-100 gap-3">
+        <div className="flex flex-col items-center justify-center h-48 bg-white dark:bg-neutral-900 rounded-2xl border border-red-200 dark:border-red-900/50 gap-3">
           <AlertCircle className="w-8 h-8 text-red-400" />
-          <p className="text-sm text-neutral-500">{error}</p>
+          <p className="text-sm text-neutral-500 dark:text-neutral-400">{error}</p>
           <button onClick={fetchEvents} className="text-xs text-[#DC2626] font-semibold hover:underline cursor-pointer">Retry</button>
         </div>
       ) : events.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-48 bg-white rounded-2xl border border-[#E2E8F0] gap-3">
-          <CalendarDays className="w-10 h-10 text-neutral-200" />
-          <p className="text-sm font-semibold text-neutral-500">No events yet</p>
+        <div className="flex flex-col items-center justify-center h-48 bg-white dark:bg-neutral-900 rounded-2xl border border-[#E2E8F0] dark:border-neutral-800 gap-3">
+          <CalendarDays className="w-10 h-10 text-neutral-200 dark:text-neutral-700" />
+          <p className="text-sm font-semibold text-neutral-500 dark:text-neutral-400">No events yet</p>
           <button onClick={() => setShowCreate(true)} className="text-xs text-[#DC2626] font-semibold hover:underline cursor-pointer">Create your first event</button>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-[#E2E8F0] overflow-hidden">
+        <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-[#E2E8F0] dark:border-neutral-800 overflow-hidden shadow-sm">
           <table className="w-full text-sm">
-            <thead className="bg-[#F8FAFC] border-b border-[#E2E8F0]">
+            <thead className="bg-[#F8FAFC] dark:bg-neutral-800/80 border-b border-[#E2E8F0] dark:border-neutral-700">
               <tr>
                 {['Event', 'Type', 'Event Date', 'Registration', 'Registrations', 'Status', 'Actions'].map(h => (
-                  <th key={h} className="text-left px-4 py-3 text-xs font-bold text-neutral-500 uppercase tracking-wide">{h}</th>
+                  <th key={h} className="text-left px-4 py-3 text-xs font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wide">{h}</th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#E2E8F0]">
+            <tbody className="divide-y divide-[#E2E8F0] dark:divide-neutral-800">
               {events.map((ev) => (
-                <tr key={ev.id} className="hover:bg-[#F8FAFC] transition-colors">
-                  <td className="px-4 py-3 font-semibold text-[#0B192C]">{ev.title}</td>
-                  <td className="px-4 py-3 text-xs text-neutral-500">{ev.type}</td>
-                  <td className="px-4 py-3 text-xs text-neutral-600">{ev.eventDate ? new Date(ev.eventDate).toLocaleDateString() : '—'}</td>
-                  <td className="px-4 py-3 text-xs text-neutral-600">
+                <tr key={ev.id} className="hover:bg-[#F8FAFC] dark:hover:bg-neutral-800/50 transition-colors">
+                  <td className="px-4 py-3 font-semibold text-[#0B192C] dark:text-white">{ev.title}</td>
+                  <td className="px-4 py-3 text-xs text-neutral-500 dark:text-neutral-400">{ev.type}</td>
+                  <td className="px-4 py-3 text-xs text-neutral-600 dark:text-neutral-300">{ev.eventDate ? new Date(ev.eventDate).toLocaleDateString() : '—'}</td>
+                  <td className="px-4 py-3 text-xs text-neutral-600 dark:text-neutral-300">
                     {ev.registrationStart ? new Date(ev.registrationStart).toLocaleDateString() : '—'} →{' '}
                     {ev.registrationEnd ? new Date(ev.registrationEnd).toLocaleDateString() : '—'}
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-1 text-xs font-semibold text-neutral-700">
+                    <div className="flex items-center gap-1 text-xs font-semibold text-neutral-700 dark:text-neutral-300">
                       <Users className="w-3.5 h-3.5 text-neutral-400" />
                       {ev.registrationCount}
                     </div>
@@ -299,10 +299,10 @@ export const AdminEvents: React.FC = () => {
                   <td className="px-4 py-3"><StatusBadge status={ev.status} /></td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1">
-                      <button title="Edit" className="p-1.5 hover:bg-neutral-100 rounded-lg cursor-pointer"><Pencil className="w-3.5 h-3.5 text-neutral-400" /></button>
-                      <button title="Duplicate" className="p-1.5 hover:bg-neutral-100 rounded-lg cursor-pointer"><Copy className="w-3.5 h-3.5 text-neutral-400" /></button>
-                      <button title="View" className="p-1.5 hover:bg-neutral-100 rounded-lg cursor-pointer"><Eye className="w-3.5 h-3.5 text-neutral-400" /></button>
-                      <button title="Archive" className="p-1.5 hover:bg-neutral-100 rounded-lg cursor-pointer"><Archive className="w-3.5 h-3.5 text-neutral-400" /></button>
+                      <button title="Edit" className="p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg cursor-pointer"><Pencil className="w-3.5 h-3.5 text-neutral-400" /></button>
+                      <button title="Duplicate" className="p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg cursor-pointer"><Copy className="w-3.5 h-3.5 text-neutral-400" /></button>
+                      <button title="View" className="p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg cursor-pointer"><Eye className="w-3.5 h-3.5 text-neutral-400" /></button>
+                      <button title="Archive" className="p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg cursor-pointer"><Archive className="w-3.5 h-3.5 text-neutral-400" /></button>
                     </div>
                   </td>
                 </tr>

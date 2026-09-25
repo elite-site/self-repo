@@ -1,10 +1,11 @@
 import { Router, Request, Response } from 'express';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
+import path from 'path';
 import { env } from '../config/env';
 import { prisma } from '../lib/prisma';
 import { requireStudentAuth } from '../middleware/studentAuth';
-import { submissionUploadMiddleware } from '../middleware/upload';
+import { submissionUploadMiddleware, resumeUpload } from '../middleware/upload';
 import { ValidationService } from '../services/validation.service';
 import { driveService } from '../services/drive.service';
 import { ActivityService } from '../services/activity.service';
@@ -239,6 +240,47 @@ router.post(
         ? await prisma.submission.update({ where: { id: existing.id }, data })
         : await prisma.submission.create({ data: { eventId: EVENT_ID, ...data } });
 
+      // Also keep prisma.introVideo in sync so Admin Moderation queue and student queries immediately reflect the video
+      try {
+        const existingIntroVideo = await prisma.introVideo.findFirst({
+          where: { studentId: student.id },
+          orderBy: { submittedAt: 'desc' },
+        });
+
+        if (existingIntroVideo) {
+          await prisma.introVideo.update({
+            where: { id: existingIntroVideo.id },
+            data: {
+              driveFileId: uploadResult.videoDriveId || null,
+              filename: videoFile.originalname,
+              mimeType: videoFile.mimetype,
+              sizeMb: parseFloat((videoFile.size / (1024 * 1024)).toFixed(2)),
+              status: 'PENDING',
+              reviewNote: null,
+              reviewedBy: null,
+              reviewedAt: null,
+              submittedAt: new Date(),
+              isActive: true,
+            },
+          });
+        } else {
+          await prisma.introVideo.create({
+            data: {
+              studentId: student.id,
+              driveFileId: uploadResult.videoDriveId || null,
+              filename: videoFile.originalname,
+              mimeType: videoFile.mimetype,
+              sizeMb: parseFloat((videoFile.size / (1024 * 1024)).toFixed(2)),
+              status: 'PENDING',
+              submittedAt: new Date(),
+              isActive: true,
+            },
+          });
+        }
+      } catch (introVideoErr) {
+        console.warn('Could not sync introVideo table:', introVideoErr);
+      }
+
       await ActivityService.log({
         eventId: EVENT_ID,
         category: 'APPLICATION',
@@ -303,7 +345,14 @@ router.get('/submission/media/video', requireStudentAuth, async (req: Request, r
 
     res.setHeader('Content-Type', mimeType);
     if (size) res.setHeader('Content-Length', size.toString());
-    res.setHeader('Cache-Control', 'private, max-age=86400');
+    res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+    res.setHeader('ETag', `"${driveFileId}"`);
+
+    if (req.headers['if-none-match'] === `"${driveFileId}"`) {
+      res.status(304).end();
+      return;
+    }
+
     stream.pipe(res);
   } catch (err: any) {
     console.error('Error proxying student video:', err);
@@ -319,25 +368,101 @@ router.get('/resume', requireStudentAuth, async (req, res) => {
       where: { studentId: (req as any).studentId },
       orderBy: { submittedAt: 'desc' }
     });
-    res.json(resumes);
+    res.json(resumes.map(r => ({
+      ...r,
+      fileUrl: r.driveFileId ? `/api/public/media/resume/${r.driveFileId}` : null
+    })));
   } catch (err: any) {
     res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
   }
 });
 
-router.post('/resume', requireStudentAuth, async (req, res) => {
+router.post('/resume', requireStudentAuth, resumeUpload, async (req: Request, res: Response): Promise<void> => {
   try {
-    const resume = await prisma.resume.create({
-      data: {
-        studentId: (req as any).studentId,
-        driveFileId: 'mock_resume_id',
-        filename: 'resume.pdf',
-        status: 'PENDING'
-      }
+    const studentId = (req as any).studentId;
+    const resumeFile = req.file || (req.files as any)?.resume?.[0] || (req.files as any)?.file?.[0];
+
+    if (!resumeFile) {
+      res.status(400).json({ error: 'VALIDATION_ERROR', message: 'Resume PDF document is required.' });
+      return;
+    }
+
+    const student = await prisma.student.findUnique({
+      where: { id: studentId },
     });
-    res.status(201).json(resume);
+
+    if (!student) {
+      res.status(404).json({ error: 'NOT_FOUND', message: 'Student account not found.' });
+      return;
+    }
+
+    // Clean up existing resume file on Drive if present
+    const existingResume = await prisma.resume.findFirst({
+      where: { studentId },
+      orderBy: { submittedAt: 'desc' },
+    });
+
+    if (existingResume?.driveFileId) {
+      try {
+        await driveService.cleanupFailedUpload([existingResume.driveFileId]);
+      } catch (e) {
+        console.warn('Failed to delete old resume from Drive:', e);
+      }
+    }
+
+    // Upload new resume to Drive or mock storage
+    const ext = path.extname(resumeFile.originalname) || '.pdf';
+    const cleanRollNo = student.rollNo.toUpperCase().replace(/[^a-zA-Z0-9]/g, '');
+    const cleanName = student.name.replace(/[^a-zA-Z0-9]/g, '');
+    const fileName = `Resume_${cleanRollNo}_${cleanName}${ext}`;
+    const relativePath = `Resumes/${student.year}-${student.section}/${cleanRollNo}_${cleanName}`;
+
+    const driveFileId = await driveService.uploadFile(
+      {
+        buffer: resumeFile.buffer,
+        originalname: resumeFile.originalname,
+        mimetype: resumeFile.mimetype || 'application/pdf',
+        size: resumeFile.size,
+      },
+      fileName,
+      env.GOOGLE_DRIVE_ROOT_FOLDER_ID || 'root',
+      relativePath
+    );
+
+    const sizeMb = parseFloat((resumeFile.size / (1024 * 1024)).toFixed(2));
+
+    const resume = existingResume
+      ? await prisma.resume.update({
+          where: { id: existingResume.id },
+          data: {
+            driveFileId,
+            filename: resumeFile.originalname,
+            sizeMb,
+            status: 'PENDING',
+            reviewNote: null,
+            reviewedBy: null,
+            reviewedAt: null,
+            submittedAt: new Date(),
+          },
+        })
+      : await prisma.resume.create({
+          data: {
+            studentId,
+            driveFileId,
+            filename: resumeFile.originalname,
+            sizeMb,
+            status: 'PENDING',
+            submittedAt: new Date(),
+          },
+        });
+
+    res.status(201).json({
+      ...resume,
+      fileUrl: `/api/public/media/resume/${resume.driveFileId}`,
+    });
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error('Error uploading resume:', err);
+    res.status(500).json({ error: 'SERVER_ERROR', message: err.message || 'Failed to upload resume document.' });
   }
 });
 

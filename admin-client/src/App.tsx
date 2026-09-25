@@ -93,10 +93,10 @@ export const App: React.FC = () => {
 
   if (authChecking) {
     return (
-      <div className="min-h-screen bg-[#fafafa] flex items-center justify-center">
+      <div className="min-h-screen bg-[#fafafa] dark:bg-neutral-950 flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-2 border-elite-red border-t-transparent rounded-full animate-spin" />
-          <span className="text-xs text-neutral-500 font-medium">Verifying organizer session...</span>
+          <span className="text-xs text-neutral-500 dark:text-neutral-400 font-medium">Verifying organizer session...</span>
         </div>
       </div>
     );
@@ -156,6 +156,8 @@ export const App: React.FC = () => {
         <AdminHeader
           user={user}
           onToggleMobileSidebar={() => setMobileSidebarOpen(!mobileSidebarOpen)}
+          onLogout={handleLogout}
+          onNavigateTab={(tab) => setActiveTab(tab)}
         />
 
         {/* MAIN WORKSPACE VIEW */}

@@ -125,7 +125,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab, onLogo
       <div className="flex flex-col h-full overflow-y-auto">
         {/* BRAND */}
         <div className="p-4 border-b border-neutral-100 dark:border-neutral-800 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-red-50 text-[#DC2626] flex items-center justify-center shrink-0">
+          <div className="w-9 h-9 rounded-xl bg-red-50 dark:bg-red-950/40 text-[#DC2626] flex items-center justify-center shrink-0 border border-red-100 dark:border-red-900/40">
             <UserRound className="w-4 h-4" />
           </div>
           <div>
@@ -143,7 +143,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab, onLogo
               <div key={group.label} className="mb-1">
                 <button
                   onClick={() => toggle(group.label)}
-                  className="w-full flex items-center justify-between px-2 py-1.5 text-[10px] font-bold text-neutral-400 uppercase tracking-widest hover:text-neutral-600 transition-colors cursor-pointer"
+                  className="w-full flex items-center justify-between px-2 py-1.5 text-[10px] font-bold text-neutral-400 dark:text-neutral-400 uppercase tracking-widest hover:text-neutral-600 dark:hover:text-neutral-200 transition-colors cursor-pointer"
                 >
                   <span className={hasActive ? 'text-[#DC2626]' : ''}>{group.label}</span>
                   {isOpen ? (
@@ -184,12 +184,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab, onLogo
         <div className="p-3 border-t border-neutral-100 dark:border-neutral-800">
           <button
             onClick={onLogout}
-            className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-neutral-500 hover:text-[#DC2626] hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+            className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-neutral-500 dark:text-neutral-400 hover:text-[#DC2626] dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition-colors cursor-pointer"
           >
             <LogOut className="w-3.5 h-3.5" />
             <span>Logout</span>
           </button>
-          <div className="text-[10px] text-neutral-400 text-center font-mono mt-2">
+          <div className="text-[10px] text-neutral-400 dark:text-neutral-500 text-center font-mono mt-2">
             ELITE Admin v2.0
           </div>
         </div>

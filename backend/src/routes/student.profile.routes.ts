@@ -44,6 +44,9 @@ router.get('/', async (req: Request, res: Response) => {
       biography: student.profile?.biography || '',
       photoUrl: student.profile?.photoUrl || null,
       photoDriveId: student.profile?.photoDriveId || null,
+      photoOffsetX: student.profile?.photoOffsetX ?? 0,
+      photoOffsetY: student.profile?.photoOffsetY ?? 0,
+      photoZoom: student.profile?.photoZoom ?? 1,
       githubUrl: student.profile?.githubUrl || '',
       linkedinUrl: student.profile?.linkedinUrl || '',
       portfolioUrl: student.profile?.portfolioUrl || '',
@@ -74,14 +77,24 @@ router.put('/', async (req: Request, res: Response) => {
   try {
     const studentId = req.student?.studentId || (req as any).studentId;
     const { biography, bio, githubUrl, linkedinUrl, portfolioUrl } = req.body;
-    const bioText = biography !== undefined ? biography : bio;
+    // Prefer `bio` over `biography` — the edit form sends `bio` explicitly,
+    // but `...profile` spread also includes `biography` with the OLD value.
+    const bioText = bio !== undefined ? bio : (biography !== undefined ? biography : undefined);
     if (bioText && bioText.length > 300) {
       return res.status(400).json({ error: 'Biography max 300 chars' });
     }
+
+    // Build update data — only include fields that were actually sent
+    const updateData: any = {};
+    if (bioText !== undefined) updateData.biography = bioText;
+    if (githubUrl !== undefined) updateData.githubUrl = githubUrl;
+    if (linkedinUrl !== undefined) updateData.linkedinUrl = linkedinUrl;
+    if (portfolioUrl !== undefined) updateData.portfolioUrl = portfolioUrl;
+
     const profile = await prisma.studentProfile.upsert({
       where: { studentId },
-      update: { biography: bioText, githubUrl, linkedinUrl, portfolioUrl },
-      create: { studentId, biography: bioText, githubUrl, linkedinUrl, portfolioUrl }
+      update: updateData,
+      create: { studentId, biography: bioText || '', githubUrl: githubUrl || '', linkedinUrl: linkedinUrl || '', portfolioUrl: portfolioUrl || '' }
     });
     res.json(profile);
   } catch (err: any) {
@@ -93,6 +106,13 @@ router.put('/', async (req: Request, res: Response) => {
 router.post('/photo', profilePhotoUpload, async (req: Request, res: Response) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No file' });
+    const studentId = req.student?.studentId || (req as any).studentId;
+
+    // Parse crop/adjust metadata from form body
+    const photoOffsetX = req.body.photoOffsetX != null ? parseFloat(req.body.photoOffsetX) : undefined;
+    const photoOffsetY = req.body.photoOffsetY != null ? parseFloat(req.body.photoOffsetY) : undefined;
+    const photoZoom = req.body.photoZoom != null ? parseFloat(req.body.photoZoom) : undefined;
+
     let driveFileId = 'mock_drive_id';
     let photoUrl = 'mock_url';
     try {
@@ -103,19 +123,29 @@ router.post('/photo', profilePhotoUpload, async (req: Request, res: Response) =>
           mimetype: req.file.mimetype,
           size: req.file.size,
         },
-        `photo_${(req as any).studentId}_${Date.now()}.${req.file.originalname.split('.').pop() || 'jpg'}`,
+        `photo_${studentId}_${Date.now()}.${req.file.originalname.split('.').pop() || 'jpg'}`,
         env.GOOGLE_DRIVE_ROOT_FOLDER_ID || 'root',
         'profiles'
       );
       photoUrl = `/api/public/media/photo/${driveFileId}`;
     } catch(e) { } // Ignore drive errors
 
+    const updateData: any = { photoDriveId: driveFileId, photoUrl };
+    if (photoOffsetX !== undefined && !isNaN(photoOffsetX)) updateData.photoOffsetX = photoOffsetX;
+    if (photoOffsetY !== undefined && !isNaN(photoOffsetY)) updateData.photoOffsetY = photoOffsetY;
+    if (photoZoom !== undefined && !isNaN(photoZoom)) updateData.photoZoom = photoZoom;
+
     const profile = await prisma.studentProfile.upsert({
-      where: { studentId: (req as any).studentId },
-      update: { photoDriveId: driveFileId, photoUrl },
-      create: { studentId: (req as any).studentId, photoDriveId: driveFileId, photoUrl }
+      where: { studentId },
+      update: updateData,
+      create: { studentId, ...updateData }
     });
-    res.json({ photoUrl: profile.photoUrl || photoUrl });
+    res.json({
+      photoUrl: profile.photoUrl || photoUrl,
+      photoOffsetX: profile.photoOffsetX,
+      photoOffsetY: profile.photoOffsetY,
+      photoZoom: profile.photoZoom
+    });
   } catch (err: any) {
     if (err.code === 'P2021' || err.message?.includes('does not exist')) return res.json({ photoUrl: 'mock_url' });
     res.status(500).json({ error: 'Server error' });
@@ -134,18 +164,56 @@ router.get('/skills', async (req: Request, res: Response) => {
 
 router.put('/skills', async (req: Request, res: Response) => {
   try {
-    const { skillIds } = req.body;
+    const studentId = (req as any).studentId;
+    const { skillIds, skillNames } = req.body;
+
+    // Ensure profile exists
     const profile = await prisma.studentProfile.upsert({
-      where: { studentId: (req as any).studentId },
+      where: { studentId },
       update: {},
-      create: { studentId: (req as any).studentId }
+      create: { studentId }
     });
+
+    // Resolve skill IDs — accept either skillIds directly or skillNames to resolve
+    let resolvedIds: string[] = [];
+
+    if (Array.isArray(skillIds) && skillIds.length > 0) {
+      resolvedIds = skillIds;
+    } else if (Array.isArray(skillNames) && skillNames.length > 0) {
+      // Look up existing skills by name
+      const existingSkills = await prisma.skill.findMany({
+        where: { name: { in: skillNames } }
+      });
+      const existingMap = new Map(existingSkills.map(s => [s.name, s.id]));
+
+      // Create missing skills
+      const missingNames = skillNames.filter((n: string) => !existingMap.has(n));
+      if (missingNames.length > 0) {
+        await prisma.skill.createMany({
+          data: missingNames.map((name: string) => ({ name, isActive: true })),
+          skipDuplicates: true
+        });
+        // Re-fetch to get IDs of newly created skills
+        const newSkills = await prisma.skill.findMany({
+          where: { name: { in: missingNames } }
+        });
+        newSkills.forEach(s => existingMap.set(s.name, s.id));
+      }
+
+      resolvedIds = skillNames
+        .map((n: string) => existingMap.get(n))
+        .filter((id: string | undefined): id is string => !!id);
+    }
+
+    // Replace all student skills
     await prisma.studentSkill.deleteMany({ where: { profileId: profile.id } });
-    if (skillIds && skillIds.length > 0) {
+    if (resolvedIds.length > 0) {
       await prisma.studentSkill.createMany({
-        data: skillIds.map((id: string) => ({ profileId: profile.id, skillId: id }))
+        data: resolvedIds.map((id: string) => ({ profileId: profile.id, skillId: id })),
+        skipDuplicates: true
       });
     }
+
     const skills = await prisma.studentSkill.findMany({
       where: { profileId: profile.id },
       include: { skill: true }

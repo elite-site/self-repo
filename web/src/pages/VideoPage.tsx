@@ -27,29 +27,32 @@ export const VideoPage: React.FC = () => {
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const loadSubmission = async () => {
-    setLoading(true);
+  const loadSubmission = async (isInitial = true) => {
+    if (isInitial && !submission) setLoading(true);
     setError(null);
     try {
       const data = await api.getMe();
       if (data?.student?.submission) {
         setSubmission(data.student.submission);
         if (data.student.submission.videoUploaded) {
-          const url = await api.getVideoBlobUrl().catch(() => null);
-          if (url) setVideoUrl(url);
+          api.getVideoBlobUrl()
+            .then((url) => {
+              if (url) setVideoUrl(url);
+            })
+            .catch(() => null);
         }
       } else {
         setSubmission(null);
       }
     } catch {
-      setError('Could not load introduction video status.');
+      if (isInitial) setError('Could not load introduction video status.');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadSubmission();
+    loadSubmission(true);
   }, []);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -71,18 +74,32 @@ export const VideoPage: React.FC = () => {
     setUploadProgress(0);
     setUploadSuccess(false);
 
+    const localUrl = URL.createObjectURL(file);
     const formData = new FormData();
     formData.append('video', file);
 
     try {
-      await api.submitVideo(formData, (progressEvent) => {
+      const res = await api.submitVideo(formData, (progressEvent) => {
         if (progressEvent.total) {
           const pct = Math.round((progressEvent.loaded * 100) / progressEvent.total);
           setUploadProgress(pct);
         }
       });
       setUploadSuccess(true);
-      await loadSubmission();
+      // Immediately reflect submission in UI without waiting for Google Drive re-download
+      setSubmission((prev) => ({
+        id: res.id || prev?.id || 'submission',
+        status: 'SUBMITTED',
+        submittedAt: new Date().toISOString(),
+        videoUploaded: true,
+        reviewText: null,
+        reviewPros: [],
+        reviewCons: [],
+        reviewedAt: null,
+      }));
+      setVideoUrl(localUrl);
+      // Silently sync server state
+      loadSubmission(false);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to upload video. Please try again.');
     } finally {
@@ -157,7 +174,7 @@ export const VideoPage: React.FC = () => {
             <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
             <span>{error}</span>
           </div>
-          <button onClick={loadSubmission} className="font-bold underline cursor-pointer">
+          <button onClick={() => loadSubmission(true)} className="font-bold underline cursor-pointer">
             Retry
           </button>
         </div>

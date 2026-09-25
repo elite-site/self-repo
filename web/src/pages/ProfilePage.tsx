@@ -61,7 +61,8 @@ export const ProfilePage: React.FC = () => {
 
     try {
       const rData = await api.getResume();
-      setResume(rData);
+      const activeResume = Array.isArray(rData) ? (rData.length > 0 ? rData[0] : null) : rData;
+      setResume(activeResume);
     } catch {}
 
     try {
@@ -569,10 +570,10 @@ export const ProfilePage: React.FC = () => {
                 </div>
               </div>
               <Link
-                to="/video"
+                to="/intro-video"
                 className="px-3 py-1.5 rounded-lg bg-white border border-neutral-200 hover:bg-neutral-50 text-xs font-bold text-[#0B192C] transition-colors"
               >
-                {profile?.submission?.videoUrl ? 'View' : 'Upload'}
+                {profile?.submission?.videoUploaded ? 'View / Replace' : 'Upload'}
               </Link>
             </div>
 
@@ -585,7 +586,7 @@ export const ProfilePage: React.FC = () => {
                 <div>
                   <h4 className="text-xs font-bold text-[#0B192C]">PDF Resume</h4>
                   <span className="text-[10px] text-neutral-500">
-                    {resume?.fileUrl ? 'Verified Document' : 'Pending upload'}
+                    {(resume?.fileUrl || resume?.driveFileId) ? 'Uploaded Document' : 'Pending upload'}
                   </span>
                 </div>
               </div>
@@ -593,7 +594,7 @@ export const ProfilePage: React.FC = () => {
                 to="/resume"
                 className="px-3 py-1.5 rounded-lg bg-white border border-neutral-200 hover:bg-neutral-50 text-xs font-bold text-[#0B192C] transition-colors"
               >
-                {resume?.fileUrl ? 'View' : 'Upload'}
+                {(resume?.fileUrl || resume?.driveFileId) ? 'View / Replace' : 'Upload'}
               </Link>
             </div>
           </div>

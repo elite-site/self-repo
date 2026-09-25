@@ -1,6 +1,7 @@
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 generator client {
@@ -324,6 +325,9 @@ model StudentProfile {
   biography    String?  @db.VarChar(300)
   photoDriveId String?  // Google Drive file ID of profile photo
   photoUrl     String?  // cached public URL
+  photoOffsetX Float?   @default(0)  // crop X offset (0-100%)
+  photoOffsetY Float?   @default(0)  // crop Y offset (0-100%)
+  photoZoom    Float?   @default(1)  // crop zoom level
 
   // Professional links
   githubUrl    String?
@@ -429,6 +433,7 @@ model Achievement {
   organization String?
   achievedAt   DateTime?
   proofDriveId String?             // proof file uploaded to Drive
+  proofUrl     String?             // verification proof URL or external credential link
 
   status       ContentStatus       @default(PENDING)
   reviewNote   String?
@@ -689,6 +694,7 @@ model Vote {
 
   castAt      DateTime @default(now())
 
+  @@unique([campaignId, voterId])
   @@index([campaignId, voterId])
 }
 

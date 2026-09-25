@@ -81,7 +81,7 @@ export interface EventRegistration {
   id: string;
   eventId: string;
   eventTitle: string;
-  status: 'REGISTERED' | 'WAITLISTED' | 'CANCELLED';
+  status: 'REGISTERED' | 'CONFIRMED' | 'PENDING' | 'WAITLISTED' | 'CANCELLED' | 'REJECTED';
   registeredAt: string;
 }
 
@@ -103,7 +103,13 @@ export interface VotingCampaign {
   id: string;
   title: string;
   description: string;
-  endDate: string;
+  endDate?: string;
+  endsAt?: string;
+  startsAt?: string;
+  startDate?: string;
+  status?: string;
+  candidates?: VotingCandidate[];
+  event?: any;
 }
 
 export interface VotingCandidate {
@@ -118,9 +124,14 @@ export interface VotingCandidate {
 
 export interface Notification {
   id: string;
-  type: 'ACADEMIC' | 'EVENT' | 'VOTING' | 'SYSTEM';
+  type: string;
   title: string;
   message: string;
   isRead: boolean;
+  status?: string;
+  actionUrl?: string | null;
+  entityType?: string | null;
+  entityId?: string | null;
   createdAt: string;
 }
+

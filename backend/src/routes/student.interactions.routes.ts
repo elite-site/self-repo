@@ -1,17 +1,25 @@
 import { Router, Request, Response } from 'express';
 import { requireStudentAuth } from '../middleware/studentAuth';
 import { prisma } from '../lib/prisma';
+import { ActivityService } from '../services/activity.service';
 
 const router = Router();
 router.use(requireStudentAuth);
 
 // --- Voting ---
 
-router.get('/voting', async (_req: Request, res: Response) => {
+router.get('/voting', async (req: Request, res: Response) => {
   try {
+    const studentId = (req as any).studentId || req.student?.studentId;
+    const includeQuery: any = { candidates: true, event: true };
+    if (studentId) {
+      includeQuery.votes = { where: { voterId: studentId }, select: { id: true } };
+    }
+
     const campaigns = await prisma.votingCampaign.findMany({
-      where: { status: 'ACTIVE' },
-      include: { candidates: true }
+      where: { status: { in: ['ACTIVE', 'SCHEDULED'] } },
+      include: includeQuery,
+      orderBy: { createdAt: 'desc' }
     });
 
     const allStudentIds = campaigns.flatMap(c => c.candidates.map(cand => cand.studentId));
@@ -21,13 +29,36 @@ router.get('/voting', async (_req: Request, res: Response) => {
     });
     const studentMap = new Map(students.map(s => [s.id, s]));
 
-    const result = campaigns.map(c => ({
-      ...c,
-      candidates: c.candidates.map(cand => ({
-        ...cand,
-        student: studentMap.get(cand.studentId) || null
-      }))
-    }));
+    const now = new Date();
+    const result = campaigns.map(c => {
+      const startsAt = c.startsAt ? new Date(c.startsAt) : null;
+      const endsAt = c.endsAt ? new Date(c.endsAt) : null;
+      const notStarted = c.status === 'SCHEDULED' || Boolean(startsAt && startsAt > now);
+      const isClosed = c.status === 'CLOSED' || c.status === 'FINALIZED' || Boolean(endsAt && endsAt < now);
+      const hasVoted = Boolean((c as any).votes && (c as any).votes.length > 0);
+
+      let computedStatus = 'ACTIVE';
+      let statusMessage = 'Voting Active';
+      if (notStarted) {
+        computedStatus = 'NOT_STARTED';
+        statusMessage = 'Voting has not started yet';
+      } else if (isClosed) {
+        computedStatus = 'CLOSED';
+        statusMessage = 'Voting has closed';
+      }
+
+      const { votes, ...rest } = c as any;
+      return {
+        ...rest,
+        computedStatus,
+        statusMessage,
+        hasVoted,
+        candidates: c.candidates.map(cand => ({
+          ...cand,
+          student: studentMap.get(cand.studentId) || null
+        }))
+      };
+    });
 
     res.json(result);
   } catch (err: any) {
@@ -37,9 +68,15 @@ router.get('/voting', async (_req: Request, res: Response) => {
 
 router.get('/voting/:id', async (req: Request, res: Response) => {
   try {
+    const studentId = (req as any).studentId || req.student?.studentId;
+    const includeQuery: any = { candidates: true, event: true };
+    if (studentId) {
+      includeQuery.votes = { where: { voterId: studentId }, select: { id: true } };
+    }
+
     const campaign = await prisma.votingCampaign.findUnique({
       where: { id: req.params.id },
-      include: { candidates: true }
+      include: includeQuery
     });
     if (!campaign) return res.status(404).json({ error: 'NOT_FOUND', message: 'Campaign not found' });
 
@@ -50,8 +87,29 @@ router.get('/voting/:id', async (req: Request, res: Response) => {
     });
     const studentMap = new Map(students.map(s => [s.id, s]));
 
+    const now = new Date();
+    const startsAt = campaign.startsAt ? new Date(campaign.startsAt) : null;
+    const endsAt = campaign.endsAt ? new Date(campaign.endsAt) : null;
+    const notStarted = campaign.status === 'SCHEDULED' || Boolean(startsAt && startsAt > now);
+    const isClosed = campaign.status === 'CLOSED' || campaign.status === 'FINALIZED' || Boolean(endsAt && endsAt < now);
+    const hasVoted = Boolean((campaign as any).votes && (campaign as any).votes.length > 0);
+
+    let computedStatus = 'ACTIVE';
+    let statusMessage = 'Voting Active';
+    if (notStarted) {
+      computedStatus = 'NOT_STARTED';
+      statusMessage = 'Voting has not started yet';
+    } else if (isClosed) {
+      computedStatus = 'CLOSED';
+      statusMessage = 'Voting has closed';
+    }
+
+    const { votes, ...rest } = campaign as any;
     res.json({
-      ...campaign,
+      ...rest,
+      computedStatus,
+      statusMessage,
+      hasVoted,
       candidates: campaign.candidates.map(cand => ({
         ...cand,
         student: studentMap.get(cand.studentId) || null
@@ -62,33 +120,75 @@ router.get('/voting/:id', async (req: Request, res: Response) => {
   }
 });
 
-router.post('/voting/:id/vote', async (req: Request, res: Response) => {
+router.post(['/voting/:id/vote', '/voting/vote'], async (req: Request, res: Response) => {
   try {
     const studentId = (req as any).studentId || req.student?.studentId;
-    const campaignId = req.params.id;
+    const campaignId = req.params.id || req.body.campaignId;
     const { candidateId } = req.body;
     
+    if (!campaignId) {
+      return res.status(400).json({ error: 'INVALID_CAMPAIGN', message: 'Campaign ID is required' });
+    }
+
     const campaign = await prisma.votingCampaign.findUnique({ where: { id: campaignId } });
-    if (!campaign || campaign.status !== 'ACTIVE') {
+    if (!campaign) {
+      return res.status(404).json({ error: 'NOT_FOUND', message: 'Campaign not found' });
+    }
+
+    const now = new Date();
+    const startsAt = campaign.startsAt ? new Date(campaign.startsAt) : null;
+    if (campaign.status === 'SCHEDULED' || Boolean(startsAt && startsAt > now)) {
+      return res.status(400).json({ error: 'VOTING_NOT_STARTED', message: 'Voting has not started yet' });
+    }
+
+    const endsAt = campaign.endsAt ? new Date(campaign.endsAt) : null;
+    if (campaign.status === 'CLOSED' || campaign.status === 'FINALIZED' || Boolean(endsAt && endsAt < now)) {
+      return res.status(400).json({ error: 'VOTING_CLOSED', message: 'Voting has closed' });
+    }
+
+    if (campaign.status !== 'ACTIVE') {
       return res.status(400).json({ error: 'INVALID_CAMPAIGN', message: 'Campaign not active' });
     }
-    
-    const existingVote = await prisma.vote.findFirst({
-      where: { campaignId, voterId: studentId }
-    });
-    if (existingVote) {
-      return res.status(400).json({ error: 'ALREADY_VOTED', message: 'You have already voted' });
-    }
-    
-    const vote = await prisma.vote.create({
-      data: {
-        campaignId,
-        voterId: studentId,
-        candidateId
+
+    const runVote = async (tx: any) => {
+      const existingVote = await tx.vote.findFirst({
+        where: { campaignId, voterId: studentId }
+      });
+      if (existingVote) {
+        const err: any = new Error('ALREADY_VOTED');
+        err.code = 'ALREADY_VOTED';
+        throw err;
       }
-    });
+      
+      return await tx.vote.create({
+        data: {
+          campaignId,
+          voterId: studentId,
+          candidateId
+        }
+      });
+    };
+
+    let vote;
+    if (typeof prisma.$transaction === 'function') {
+      const txResult = await prisma.$transaction(async (tx) => runVote(tx));
+      vote = txResult !== undefined ? txResult : await runVote(prisma);
+    } else {
+      vote = await runVote(prisma);
+    }
+
     res.status(201).json(vote);
   } catch (err: any) {
+    if (
+      err?.code === 'ALREADY_VOTED' ||
+      err?.message === 'ALREADY_VOTED' ||
+      err?.code === 'P2002' ||
+      err?.message?.includes('Unique constraint') ||
+      err?.message?.includes('P2002') ||
+      err?.message?.includes('ALREADY_VOTED')
+    ) {
+      return res.status(400).json({ error: 'ALREADY_VOTED', message: 'You have already voted' });
+    }
     res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
   }
 });
@@ -146,14 +246,24 @@ router.patch('/notifications/:id/read', async (req: Request, res: Response) => {
 router.get(['/registrations', '/registrations/all'], async (req: Request, res: Response) => {
   try {
     const studentId = (req as any).studentId || req.student?.studentId;
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+
     const registrations = await prisma.eventRegistration.findMany({
       where: { studentId },
-      include: { event: true }
+      include: {
+        event: true,
+        student: true,
+        team: true,
+        answers: { include: { field: true } }
+      },
+      orderBy: { registeredAt: 'desc' }
     });
     res.json(registrations.map(r => ({
       ...r,
-      eventTitle: r.event.name,
-      status: r.status === 'CONFIRMED' ? 'REGISTERED' : r.status,
+      eventTitle: r.event?.name || '',
+      status: r.status,
       registeredAt: r.registeredAt
     })));
   } catch (err: any) {
@@ -164,17 +274,26 @@ router.get(['/registrations', '/registrations/all'], async (req: Request, res: R
 router.get('/registrations/:id', async (req: Request, res: Response) => {
   try {
     const studentId = (req as any).studentId || req.student?.studentId;
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+
     const reg = await prisma.eventRegistration.findUnique({
       where: { id: req.params.id },
-      include: { event: true }
+      include: {
+        event: true,
+        student: true,
+        team: true,
+        answers: { include: { field: true } }
+      }
     });
     if (!reg || reg.studentId !== studentId) {
       return res.status(404).json({ error: 'NOT_FOUND', message: 'Registration not found' });
     }
     res.json({
       ...reg,
-      eventTitle: reg.event.name,
-      status: reg.status === 'CONFIRMED' ? 'REGISTERED' : reg.status,
+      eventTitle: reg.event?.name || '',
+      status: reg.status,
       registeredAt: reg.registeredAt
     });
   } catch (err: any) {
@@ -185,12 +304,28 @@ router.get('/registrations/:id', async (req: Request, res: Response) => {
 router.post('/registrations/:id/cancel', async (req: Request, res: Response) => {
   try {
     const studentId = (req as any).studentId || req.student?.studentId;
-    const reg = await prisma.eventRegistration.updateMany({
+    const existing = await prisma.eventRegistration.findFirst({
       where: { id: req.params.id, studentId },
+      include: { event: true, student: true }
+    });
+    if (!existing) return res.status(404).json({ error: 'NOT_FOUND', message: 'Not found' });
+
+    const updated = await prisma.eventRegistration.update({
+      where: { id: existing.id },
       data: { status: 'CANCELLED' }
     });
-    if (reg.count === 0) return res.status(404).json({ error: 'NOT_FOUND', message: 'Not found' });
-    res.json({ message: 'Cancelled successfully' });
+
+    await ActivityService.log({
+      eventId: existing.eventId,
+      category: 'APPLICATION',
+      action: `Student cancelled registration for ${existing.event?.name || 'event'}`,
+      details: `Student ${existing.student?.name || studentId} cancelled registration`,
+      applicantName: existing.student?.name || undefined,
+      userEmail: existing.student?.email || undefined,
+      status: 'INFO'
+    });
+
+    res.json({ message: 'Cancelled successfully', registration: updated });
   } catch (err: any) {
     res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
   }
@@ -219,17 +354,67 @@ router.get('/teams', async (req: Request, res: Response) => {
 router.post('/teams', async (req: Request, res: Response) => {
   try {
     const studentId = (req as any).studentId || req.student?.studentId;
-    const { name, eventId } = req.body;
+    if (!studentId) {
+      return res.status(401).json({ error: 'UNAUTHORIZED', message: 'Authentication required' });
+    }
+
+    const { name } = req.body || {};
+    if (!name || typeof name !== 'string' || !name.trim()) {
+      return res.status(400).json({ error: 'VALIDATION_ERROR', message: 'Team name is required' });
+    }
+
+    let eventId = (req.body?.eventId || req.query?.eventId)?.toString()?.trim();
+
+    if (!eventId) {
+      const activeEvent = await prisma.event.findFirst({
+        where: { status: 'OPEN' },
+        orderBy: { createdAt: 'desc' }
+      });
+      if (!activeEvent) {
+        return res.status(400).json({
+          error: 'VALIDATION_ERROR',
+          message: 'No active event available to create a team for.'
+        });
+      }
+      eventId = activeEvent.id;
+    } else {
+      const existingEvent = await prisma.event.findUnique({
+        where: { id: eventId }
+      });
+      if (!existingEvent) {
+        return res.status(404).json({
+          error: 'NOT_FOUND',
+          message: 'Event not found'
+        });
+      }
+    }
+
+    if (!eventId) {
+      return res.status(400).json({
+        error: 'VALIDATION_ERROR',
+        message: 'No active event available to create a team for.'
+      });
+    }
+
     const team = await prisma.team.create({
       data: {
-        name,
+        name: name.trim(),
         eventId,
-        leaderId: studentId
+        leaderId: studentId,
+        members: {
+          create: {
+            studentId
+          }
+        }
+      },
+      include: {
+        event: true,
+        members: { include: { student: true } }
       }
     });
-    res.status(201).json(team);
+    return res.status(201).json(team);
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    return res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
   }
 });
 

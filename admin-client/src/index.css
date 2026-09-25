@@ -4,8 +4,17 @@
 
 /* ============================================================
    ELITE Academic Portal Design System — Admin Client CSS
-   Source: assests/.../DESIGN.md
-   Font: Inter (Google Fonts, loaded in index.html)
+   Professional Deep-Dark Surface Hierarchy (Scoped to #admin-root)
+   Page: #090B10
+   Sidebar: #0D1016
+   Header: #0B0E14
+   Cards: #11151C
+   Elevated / Modals: #151A22
+   Inputs: #0D1117 (border: #252B35)
+   Primary Text: #F3F5F7
+   Secondary Text: #9BA3AF
+   Muted Text: #6F7785
+   Accent: #E5252A
    ============================================================ */
 
 @layer base {
@@ -16,6 +25,8 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    overflow-x: hidden;
+    width: 100%;
   }
 
   input, select, textarea, button {
@@ -23,90 +34,229 @@
   }
 
   *:focus-visible {
-    outline: 2px solid #0B192C;
+    outline: 2px solid #DC2626;
     outline-offset: 2px;
   }
 }
 
-/* ── CSS custom properties ─────────────────────────────────── */
-:root {
-  --elite-navy:    #0B192C;
-  --elite-crimson: #DC2626;
-  --elite-blue:    #2563EB;
-  --elite-slate:   #64748B;
-
-  --surface-canvas: #F8FAFC;
-  --surface-card:   #FFFFFF;
-  --border-subtle:  #E2E8F0;
-  --border-strong:  #CBD5E1;
-
-  --text-primary:   #0F172A;
-  --text-secondary: #475569;
-  --text-muted:     #94A3B8;
-
-  --status-draft:    #64748B;
-  --status-pending:  #D97706;
-  --status-review:   #7C3AED;
-  --status-approved: #059669;
-  --status-rejected: #DC2626;
-  --status-changes:  #EA580C;
-
-  --shadow-card:       0 1px 2px 0 rgba(15, 23, 42, 0.04);
-  --shadow-card-hover: 0 4px 6px -1px rgba(15, 23, 42, 0.06), 0 2px 4px -2px rgba(15, 23, 42, 0.04);
-  --shadow-drawer:     0 20px 25px -5px rgba(15, 23, 42, 0.1);
-  --shadow-modal:      0 25px 50px -12px rgba(15, 23, 42, 0.25);
-  --modal-backdrop:    rgba(11, 25, 44, 0.4);
-
-  --dur-fast: 120ms;
-  --dur:      220ms;
-  --ease:     cubic-bezier(0.2, 0, 0, 1);
+/* ── Light Mode Default Custom Properties ───────────────────── */
+#admin-root {
+  --admin-bg: #F8FAFC;
+  --admin-sidebar: #FFFFFF;
+  --admin-header: #FFFFFF;
+  --admin-card: #FFFFFF;
+  --admin-card-elevated: #FFFFFF;
+  --admin-input: #FFFFFF;
+  --admin-border: #E2E8F0;
+  --admin-border-subtle: #F1F5F9;
+  --admin-text: #0F172A;
+  --admin-text-secondary: #475569;
+  --admin-text-muted: #94A3B8;
+  --admin-accent: #DC2626;
+  --admin-table-row: #FFFFFF;
+  --admin-table-hover: #F8FAFC;
 }
 
-/* ── Scrollbar ─────────────────────────────────────────────── */
+/* ── Professional Deep-Dark Surface System (Admin Scoped) ────── */
+#admin-root.dark {
+  --admin-bg: #090B10;
+  --admin-sidebar: #0D1016;
+  --admin-header: #0B0E14;
+  --admin-card: #11151C;
+  --admin-card-elevated: #151A22;
+  --admin-input: #0D1117;
+  --admin-border: #252B35;
+  --admin-border-subtle: rgba(255, 255, 255, 0.08);
+  --admin-text: #F3F5F7;
+  --admin-text-secondary: #9BA3AF;
+  --admin-text-muted: #6F7785;
+  --admin-accent: #E5252A;
+  --admin-table-row: #11151C;
+  --admin-table-hover: #151A22;
+}
+
+#admin-root.dark {
+  background-color: var(--admin-bg) !important;
+  color: var(--admin-text) !important;
+}
+
+#admin-root.dark header {
+  background-color: var(--admin-header) !important;
+  border-color: var(--admin-border) !important;
+}
+
+#admin-root.dark aside {
+  background-color: var(--admin-sidebar) !important;
+  border-color: var(--admin-border) !important;
+}
+
+/* Cards & Modals */
+#admin-root.dark .bg-white,
+#admin-root.dark .bg-surface-card {
+  background-color: var(--admin-card) !important;
+}
+
+/* Insets & Search bars */
+#admin-root.dark .bg-\[\#f8fafc\],
+#admin-root.dark .bg-\[\#fafafa\],
+#admin-root.dark .bg-neutral-50,
+#admin-root.dark .bg-slate-50,
+#admin-root.dark .bg-gray-50 {
+  background-color: var(--admin-input) !important;
+}
+
+#admin-root.dark .bg-neutral-100,
+#admin-root.dark .bg-slate-100,
+#admin-root.dark .bg-gray-100 {
+  background-color: var(--admin-card-elevated) !important;
+}
+
+/* Borders */
+#admin-root.dark .border-neutral-200,
+#admin-root.dark .border-slate-200,
+#admin-root.dark .border-gray-200,
+#admin-root.dark .border-neutral-100,
+#admin-root.dark .border-slate-100,
+#admin-root.dark .border-\[\#E2E8F0\],
+#admin-root.dark .border-\[\#CBD5E1\] {
+  border-color: var(--admin-border) !important;
+}
+
+#admin-root.dark .border-dashed {
+  border-color: var(--admin-border) !important;
+}
+
+/* Text Hierarchy */
+#admin-root.dark .text-neutral-900,
+#admin-root.dark .text-slate-900,
+#admin-root.dark .text-gray-900,
+#admin-root.dark .text-\[\#0B192C\],
+#admin-root.dark .text-\[\#0F172A\],
+#admin-root.dark .text-black {
+  color: var(--admin-text) !important;
+}
+
+#admin-root.dark .text-neutral-800,
+#admin-root.dark .text-neutral-700,
+#admin-root.dark .text-neutral-600,
+#admin-root.dark .text-slate-700,
+#admin-root.dark .text-slate-600 {
+  color: var(--admin-text-secondary) !important;
+}
+
+#admin-root.dark .text-neutral-500,
+#admin-root.dark .text-neutral-400,
+#admin-root.dark .text-slate-500,
+#admin-root.dark .text-slate-400 {
+  color: var(--admin-text-muted) !important;
+}
+
+/* Form Controls */
+#admin-root.dark input,
+#admin-root.dark select,
+#admin-root.dark textarea {
+  background-color: var(--admin-input) !important;
+  border-color: var(--admin-border) !important;
+  color: var(--admin-text) !important;
+}
+
+#admin-root.dark input::placeholder,
+#admin-root.dark textarea::placeholder {
+  color: var(--admin-text-muted) !important;
+}
+
+#admin-root.dark input:focus,
+#admin-root.dark select:focus,
+#admin-root.dark textarea:focus {
+  border-color: var(--admin-accent) !important;
+  box-shadow: 0 0 0 1px var(--admin-accent) !important;
+  outline: none !important;
+}
+
+/* Tables */
+#admin-root.dark table {
+  background-color: var(--admin-card) !important;
+  color: var(--admin-text) !important;
+}
+
+#admin-root.dark thead,
+#admin-root.dark thead tr,
+#admin-root.dark thead th {
+  background-color: var(--admin-card-elevated) !important;
+  color: var(--admin-text-secondary) !important;
+  border-color: var(--admin-border) !important;
+}
+
+#admin-root.dark tbody tr {
+  background-color: var(--admin-card) !important;
+  border-color: var(--admin-border) !important;
+  color: var(--admin-text) !important;
+}
+
+#admin-root.dark tbody tr:hover {
+  background-color: var(--admin-card-elevated) !important;
+}
+
+#admin-root.dark td {
+  border-color: var(--admin-border) !important;
+}
+
+/* Modals & Dropdown Elevation */
+#admin-root.dark .shadow-xl,
+#admin-root.dark .shadow-2xl {
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.6), 0 8px 10px -6px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Status Badges in Dark Mode (Subtle tints) */
+#admin-root.dark .bg-emerald-50,
+#admin-root.dark .bg-emerald-100 {
+  background-color: rgba(16, 185, 129, 0.12) !important;
+  color: #34D399 !important;
+}
+
+#admin-root.dark .bg-amber-50,
+#admin-root.dark .bg-amber-100 {
+  background-color: rgba(245, 158, 11, 0.12) !important;
+  color: #FBBF24 !important;
+}
+
+#admin-root.dark .bg-red-50,
+#admin-root.dark .bg-red-100 {
+  background-color: rgba(220, 38, 38, 0.15) !important;
+  color: #F87171 !important;
+}
+
+#admin-root.dark .bg-blue-50,
+#admin-root.dark .bg-blue-100 {
+  background-color: rgba(59, 130, 246, 0.12) !important;
+  color: #60A5FA !important;
+}
+
+#admin-root.dark .bg-purple-50,
+#admin-root.dark .bg-purple-100 {
+  background-color: rgba(168, 85, 247, 0.12) !important;
+  color: #C084FC !important;
+}
+
+/* Dark Scrollbars */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: #F8FAFC; }
 ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
 
-/* ── Status badge component layer ──────────────────────────── */
-@layer components {
-  .elite-badge {
-    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded text-label-sm font-label-sm;
-  }
-  .elite-badge--draft    { @apply bg-slate-100  text-status-draft;    }
-  .elite-badge--pending  { @apply bg-amber-50   text-status-pending;  }
-  .elite-badge--review   { @apply bg-purple-50  text-status-review;   }
-  .elite-badge--approved { @apply bg-emerald-50 text-status-approved; }
-  .elite-badge--rejected { @apply bg-red-50     text-status-rejected; }
-  .elite-badge--changes  { @apply bg-orange-50  text-status-changes;  }
+#admin-root.dark ::-webkit-scrollbar-track {
+  background: #090B10;
+}
+#admin-root.dark ::-webkit-scrollbar-thumb {
+  background: #252B35;
+}
+#admin-root.dark ::-webkit-scrollbar-thumb:hover {
+  background: #374151;
+}
 
-  .elite-card {
-    @apply bg-surface-card border border-border-subtle rounded-lg shadow-card;
-  }
-
-  .elite-btn-primary {
-    @apply inline-flex items-center gap-space-xs px-space-md py-space-sm
-           bg-primary text-on-primary font-label-lg text-label-lg
-           rounded hover:opacity-90 transition-opacity shadow-sm;
-  }
-
-  .elite-btn-accent {
-    @apply inline-flex items-center gap-space-xs px-space-md py-space-sm
-           bg-secondary text-on-secondary font-label-lg text-label-lg
-           rounded hover:opacity-90 transition-opacity shadow-sm;
-  }
-
-  .elite-btn-outline {
-    @apply inline-flex items-center gap-space-xs px-space-md py-space-sm
-           bg-surface-card border border-border-strong text-text-primary
-           font-label-lg text-label-lg rounded
-           hover:bg-surface-container-low transition-colors;
-  }
-
-  .elite-input {
-    @apply w-full bg-surface-card border border-border-strong rounded px-space-sm py-space-sm
-           text-body-md text-text-primary placeholder:text-text-muted
-           focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-0
-           transition-shadow;
-  }
+/* Responsive Table Container */
+.table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  width: 100%;
 }

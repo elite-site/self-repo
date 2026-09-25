@@ -39,18 +39,8 @@ export const AdminThemeProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }
   }, [adminUser?.userId, adminUser?.username]);
 
-  // Compute isDark and apply ONLY to the scoped admin container
+  // Compute isDark and apply to document root and scoped container
   useEffect(() => {
-    // CRITICAL SECURITY & ISOLATION RULE:
-    // NEVER touch document.documentElement or document.body globally.
-    // Proactively purge any leaked global .dark classes on <html> or <body>
-    if (document.documentElement.classList.contains('dark')) {
-      document.documentElement.classList.remove('dark');
-    }
-    if (document.body.classList.contains('dark')) {
-      document.body.classList.remove('dark');
-    }
-
     let dark = false;
     if (theme === 'dark') {
       dark = true;
@@ -60,6 +50,16 @@ export const AdminThemeProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     }
     setIsDark(dark);
+
+    if (dark) {
+      document.documentElement.classList.add('dark');
+      document.body.classList.add('dark');
+      document.documentElement.style.colorScheme = 'dark';
+    } else {
+      document.documentElement.classList.remove('dark');
+      document.body.classList.remove('dark');
+      document.documentElement.style.colorScheme = 'light';
+    }
 
     // Save to user-specific storage
     const userKey = getStorageKey(adminUser);
