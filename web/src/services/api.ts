@@ -123,6 +123,9 @@ export const api = {
   async markNotificationRead(id: string) { const res = await client.patch(`/student/notifications/${id}/read`); return res.data; },
   async markAllNotificationsRead() { const res = await client.patch('/student/notifications/read-all'); return res.data; },
 
+  // Announcements
+  async getAnnouncement(id: string) { const res = await client.get(`/student/announcements/${encodeURIComponent(id)}`); return res.data; },
+
   // Public
   async getPublicStudents(params?: any) { const res = await client.get('/public/students', { params }); return res.data; },
   async getPublicStudent(rollNo: string) { const res = await client.get(`/public/students/${rollNo}`); return res.data; },

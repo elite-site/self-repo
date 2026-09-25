@@ -3,7 +3,7 @@ import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { Bell, LogOut, User, ChevronDown, Sparkles, CheckCircle2, CheckCheck } from 'lucide-react';
 import { StudentSession } from '../../types';
 import { api } from '../../services/api';
-import { getNotificationDestination } from '../../utils/notificationRouting';
+import { getNotificationDestination, navigateToNotification } from '../../utils/notificationRouting';
 
 interface StudentHeaderProps {
   session: StudentSession | null;
@@ -25,6 +25,7 @@ const pageTitles: Record<string, { title: string; subtitle: string }> = {
   '/teams': { title: 'Team Management', subtitle: 'Form and manage hackathon teams' },
   '/voting': { title: 'Student Democracy', subtitle: 'Active campaigns & candidate elections' },
   '/notifications': { title: 'Notification Inbox', subtitle: 'Announcements, moderation alerts & updates' },
+  '/announcements': { title: 'Announcement', subtitle: 'Department update details' },
 };
 
 export const StudentHeader: React.FC<StudentHeaderProps> = ({ session, onLogout }) => {
@@ -76,7 +77,7 @@ export const StudentHeader: React.FC<StudentHeaderProps> = ({ session, onLogout 
     }
     setNotifOpen(false);
     const destination = getNotificationDestination(n);
-    navigate(destination);
+    navigateToNotification(destination, navigate);
   };
 
   useEffect(() => {

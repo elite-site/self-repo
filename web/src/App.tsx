@@ -18,6 +18,7 @@ import { RegistrationsPage } from './pages/RegistrationsPage';
 import { TeamsPage } from './pages/TeamsPage';
 import { VotingPage } from './pages/VotingPage';
 import { NotificationsPage } from './pages/NotificationsPage';
+import { AnnouncementDetailPage } from './pages/AnnouncementDetailPage';
 
 import { HomePage } from './pages/public/HomePage';
 import { PublicStudentProfilePage } from './pages/public/PublicStudentProfilePage';
@@ -154,6 +155,7 @@ const AuthWrapper: React.FC = () => {
         <Route path="/voting" element={<VotingPage />} />
         <Route path="/voting/:campaignId" element={<VotingPage />} />
         <Route path="/notifications" element={<NotificationsPage />} />
+        <Route path="/announcements/:id" element={<AnnouncementDetailPage />} />
       </Route>
 
       {/* Fallback */}

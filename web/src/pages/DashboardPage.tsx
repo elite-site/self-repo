@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Video,
   FileText,
@@ -19,6 +19,7 @@ import {
   Plus
 } from 'lucide-react';
 import { api } from '../services/api';
+import { getNotificationDestination, navigateToNotification } from '../utils/notificationRouting';
 import { StudentProfile, Project, Event, EventRegistration, VotingCampaign, Notification } from '../types';
 
 export const DashboardPage: React.FC = () => {
@@ -31,6 +32,7 @@ export const DashboardPage: React.FC = () => {
   const [registrations, setRegistrations] = useState<EventRegistration[]>([]);
   const [votingCampaigns, setVotingCampaigns] = useState<VotingCampaign[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
   const [profileError, setProfileError] = useState<string | null>(null);
@@ -89,6 +91,18 @@ export const DashboardPage: React.FC = () => {
   useEffect(() => {
     loadData();
   }, []);
+
+  const handleNotificationClick = (n: Notification) => {
+    if (!n.isRead && n.status !== 'READ') {
+      api.markNotificationRead(n.id).catch(() => {});
+      setNotifications((prev) =>
+        prev.map((item) => (item.id === n.id ? { ...item, isRead: true, status: 'READ' } : item))
+      );
+    }
+
+    const destination = getNotificationDestination(n);
+    navigateToNotification(destination, navigate);
+  };
 
   // Compute real profile completion
   const checkPhoto = !!profile?.photoUrl;
@@ -581,7 +595,16 @@ export const DashboardPage: React.FC = () => {
                 {notifications.slice(0, 4).map((n) => (
                   <div
                     key={n.id}
-                    className={`p-3 rounded-xl border text-left transition-colors ${
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => handleNotificationClick(n)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handleNotificationClick(n);
+                      }
+                    }}
+                    className={`p-3 rounded-xl border text-left transition-colors cursor-pointer hover:border-neutral-300 ${
                       !n.isRead
                         ? 'bg-red-50/40 border-red-100'
                         : 'bg-white border-neutral-100'

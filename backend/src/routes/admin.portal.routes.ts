@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { requireAdminAuth } from '../middleware/auth';
 import { prisma } from '../lib/prisma';
 import { ActivityService } from '../services/activity.service';
+import { deliverAnnouncementNotifications } from '../services/announcement.service';
 
 const router = Router();
 router.use(requireAdminAuth);
@@ -557,33 +558,18 @@ router.post('/announcements', async (req: Request, res: Response) => {
       },
     });
 
-    // Hold back notifications if scheduled in the future
+    // Hold back notifications if scheduled in the future. The publish route
+    // below uses the same delivery function, so scheduled announcements get
+    // the same canonical target as immediate announcements.
     if (!isFutureScheduled) {
-      const studentWhere: any = {};
-      if (!isTargetAll) {
-        if (targetYear !== undefined && targetYear !== null && targetYear !== '') {
-          studentWhere.year = parseInt(String(targetYear), 10);
-        }
-        if (targetSection !== undefined && targetSection !== null && targetSection !== '') {
-          studentWhere.section = String(targetSection);
-        }
-      }
-
-      const students = await prisma.student.findMany({
-        where: studentWhere,
-        select: { id: true },
+      await deliverAnnouncementNotifications({
+        id: announcement.id,
+        title: announcement.title,
+        message: announcement.message,
+        targetAll: announcement.targetAll,
+        targetYear: announcement.targetYear,
+        targetSection: announcement.targetSection,
       });
-
-      if (students.length > 0) {
-        await prisma.notification.createMany({
-          data: students.map((s) => ({
-            studentId: s.id,
-            title: `Announcement: ${title}`,
-            message: message || body || content || '',
-            type: 'ANNOUNCEMENT',
-          })),
-        });
-      }
     }
 
     res.status(201).json(announcement);
@@ -594,10 +580,29 @@ router.post('/announcements', async (req: Request, res: Response) => {
 
 router.post('/announcements/:id/publish', async (req: Request, res: Response) => {
   try {
+    const existing = await prisma.announcement.findUnique({ where: { id: req.params.id } });
+    if (!existing) {
+      return res.status(404).json({ error: 'NOT_FOUND', message: 'Announcement not found' });
+    }
+
+    if (existing.status === 'PUBLISHED') {
+      return res.json(existing);
+    }
+
     const announcement = await prisma.announcement.update({
       where: { id: req.params.id },
       data: { status: 'PUBLISHED', publishedAt: new Date() },
     });
+
+    await deliverAnnouncementNotifications({
+      id: announcement.id,
+      title: announcement.title,
+      message: announcement.message,
+      targetAll: announcement.targetAll,
+      targetYear: announcement.targetYear,
+      targetSection: announcement.targetSection,
+    });
+
     res.json(announcement);
   } catch (err: any) {
     res.status(500).json({ error: 'SERVER_ERROR', message: err.message });

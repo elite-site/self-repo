@@ -1,4 +1,9 @@
+import path from 'path';
+import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
+
+// Keep standalone Prisma scripts consistent with the API's environment loading.
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 /**
  * Idempotent database bootstrap.

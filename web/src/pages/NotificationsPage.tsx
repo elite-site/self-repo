@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { Notification } from '../types';
-import { getNotificationDestination } from '../utils/notificationRouting';
+import { getNotificationDestination, navigateToNotification } from '../utils/notificationRouting';
 import {
   Bell,
   Loader2,
@@ -62,12 +62,12 @@ export const NotificationsPage: React.FC = () => {
   };
 
   const handleNotificationClick = (n: Notification) => {
-    if (!n.isRead) {
+    if (!n.isRead && n.status !== 'READ') {
       handleMarkSingleRead(n.id);
     }
 
     const destination = getNotificationDestination(n);
-    navigate(destination);
+    navigateToNotification(destination, navigate);
   };
 
   const filteredNotifs = notifs.filter((n) => {

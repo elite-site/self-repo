@@ -67,10 +67,11 @@ cp backend/.env.example backend/.env
 
 Required edits:
 
-- `DATABASE_URL` - the Supabase pooler URL (session mode, port 5432), e.g.
-  `postgresql://postgres.<ref>:<password>@aws-0-ap-south-1.pooler.supabase.com:5432/postgres`.
+- `DATABASE_URL` - the runtime Postgres URL (Supabase pooler or a local Postgres server), e.g.
+  `postgresql://postgres.<ref>:<password>@aws-0-ap-south-1.pooler.supabase.com:5432/postgres?schema=public`.
+- `DIRECT_URL` - a direct/non-pooler Postgres URL for Prisma migrations and CLI commands.
 - `PORT` - set **5001** in `backend/.env`. The admin dev proxy and the web API fallback
-  both assume 5001; `.env.example` ships 5000 as a placeholder.
+  both assume 5001; `.env.example` ships 5001 as the local default.
 - `ALLOWED_ORIGIN` - comma-separated CORS list; `http://localhost:5173` is always included
   by default.
 - Leave the `GOOGLE_*` values blank for a first run: the backend falls back to **local mock

@@ -193,8 +193,7 @@ router.post('/achievements', handleProofUpload, async (req: Request, res: Respon
         proofDriveId: finalProofDriveId,
         proofUrl: finalProofUrl,
         status: 'PENDING' // always default to PENDING on creation
-      },
-      include: { category: true }
+      }
     });
 
     res.status(201).json({

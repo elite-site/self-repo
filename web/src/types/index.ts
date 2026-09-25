@@ -127,11 +127,39 @@ export interface Notification {
   type: string;
   title: string;
   message: string;
+  content?: string | null;
   isRead: boolean;
   status?: string;
   actionUrl?: string | null;
   entityType?: string | null;
   entityId?: string | null;
+  url?: string | null;
+  href?: string | null;
+  link?: string | null;
+  targetUrl?: string | null;
+  slug?: string | null;
+  announcementId?: string | null;
+  eventId?: string | null;
+  campaignId?: string | null;
+  teamId?: string | null;
+  registrationId?: string | null;
+  profileId?: string | null;
+  rollNo?: string | null;
   createdAt: string;
+}
+
+export interface Announcement {
+  id: string;
+  title: string;
+  message: string;
+  body?: string;
+  priority?: string;
+  status?: string;
+  targetYear?: number | null;
+  targetSection?: string | null;
+  targetAll?: boolean;
+  publishedAt?: string | null;
+  createdAt: string;
+  createdBy?: string;
 }
 

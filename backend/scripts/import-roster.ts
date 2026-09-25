@@ -1,7 +1,12 @@
 import path from 'path';
 import fs from 'fs';
+import dotenv from 'dotenv';
 import ExcelJS from 'exceljs';
 import { PrismaClient } from '@prisma/client';
+
+// This module is also imported by prisma/seed.ts; load the same backend/.env
+// before constructing its Prisma client.
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 import { parseRosterRow, RosterRow } from './roster-parser';
 
 const prisma = new PrismaClient();

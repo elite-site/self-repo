@@ -24,6 +24,7 @@ cp backend/.env.example backend/.env
 Fill in `backend/.env`:
 
 - `DATABASE_URL` - Supabase pooler URL (port 5432), password from the Supabase dashboard.
+- `DIRECT_URL` - direct (non-pooler) Postgres URL used by Prisma migrations/CLI commands; keep it separate from the pooled runtime URL.
 - `PORT` - set `5001` (the dev tooling assumes it; `.env.example` ships 5000).
 - `GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET` and
   `GOOGLE_SSO_CLIENT_ID` / `GOOGLE_SSO_CLIENT_SECRET` from the college Google Cloud console

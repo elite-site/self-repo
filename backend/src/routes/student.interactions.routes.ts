@@ -10,15 +10,21 @@ router.use(requireStudentAuth);
 
 router.get('/voting', async (req: Request, res: Response) => {
   try {
-    const studentId = (req as any).studentId || req.student?.studentId;
-    const includeQuery: any = { candidates: true, event: true };
-    if (studentId) {
-      includeQuery.votes = { where: { voterId: studentId }, select: { id: true } };
+    const studentId = req.student?.studentId || (req as any).studentId;
+    if (!studentId) {
+      return res.status(401).json({ error: 'UNAUTHORIZED', message: 'Authentication required' });
     }
 
     const campaigns = await prisma.votingCampaign.findMany({
       where: { status: { in: ['ACTIVE', 'SCHEDULED'] } },
-      include: includeQuery,
+      include: {
+        candidates: true,
+        event: true,
+        votes: {
+          where: { voterId: studentId },
+          select: { id: true },
+        },
+      },
       orderBy: { createdAt: 'desc' }
     });
 
@@ -80,7 +86,12 @@ router.get('/voting/:id', async (req: Request, res: Response) => {
     });
     if (!campaign) return res.status(404).json({ error: 'NOT_FOUND', message: 'Campaign not found' });
 
-    const studentIds = campaign.candidates.map(c => c.studentId);
+    // Prisma's conditional include produces a broad relation union when the
+    // include query is assembled dynamically. The candidates relation is
+    // always VotingCandidate records; keep the mapping explicit for the
+    // generated client types.
+    const candidates = campaign.candidates as any[];
+    const studentIds = candidates.map(c => c.studentId);
     const students = await prisma.student.findMany({
       where: { id: { in: studentIds } },
       select: { id: true, name: true, rollNo: true, year: true, section: true }
@@ -110,7 +121,7 @@ router.get('/voting/:id', async (req: Request, res: Response) => {
       computedStatus,
       statusMessage,
       hasVoted,
-      candidates: campaign.candidates.map(cand => ({
+      candidates: candidates.map(cand => ({
         ...cand,
         student: studentMap.get(cand.studentId) || null
       }))
@@ -236,6 +247,54 @@ router.patch('/notifications/:id/read', async (req: Request, res: Response) => {
     });
     if (updated.count === 0) return res.status(404).json({ error: 'NOT_FOUND', message: 'Not found' });
     res.json({ message: 'Marked as read' });
+  } catch (err: any) {
+    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+  }
+});
+
+// --- Announcements ---
+
+router.get('/announcements/:id', async (req: Request, res: Response) => {
+  try {
+    const studentId = req.student?.studentId || (req as any).studentId;
+    if (!studentId) {
+      return res.status(401).json({ error: 'UNAUTHORIZED', message: 'Authentication required' });
+    }
+
+    const announcement = await prisma.announcement.findFirst({
+      where: {
+        id: req.params.id,
+        status: 'PUBLISHED',
+      },
+    });
+
+    if (!announcement) {
+      return res.status(404).json({ error: 'NOT_FOUND', message: 'Announcement not found' });
+    }
+
+    // Do not expose a targeted announcement to a student outside its audience.
+    if (
+      !announcement.targetAll &&
+      (announcement.targetYear !== null || announcement.targetSection !== null)
+    ) {
+      const student = await prisma.student.findUnique({
+        where: { id: studentId },
+        select: { year: true, section: true },
+      });
+
+      const yearMatches = announcement.targetYear === null || student?.year === announcement.targetYear;
+      const sectionMatches =
+        announcement.targetSection === null || student?.section === announcement.targetSection;
+
+      if (!student || !yearMatches || !sectionMatches) {
+        return res.status(404).json({ error: 'NOT_FOUND', message: 'Announcement not found' });
+      }
+    }
+
+    res.json({
+      ...announcement,
+      body: announcement.message,
+    });
   } catch (err: any) {
     res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
   }

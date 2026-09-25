@@ -8,6 +8,7 @@ export const env = {
   PORT: parseInt(process.env.PORT || '5001', 10),
   NODE_ENV: process.env.NODE_ENV || 'development',
   DATABASE_URL: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/photoclub?schema=public',
+  DIRECT_URL: process.env.DIRECT_URL || process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/photoclub?schema=public',
   JWT_SECRET: process.env.JWT_SECRET || 'dev_secret_photoclub_change_in_production',
   ADMIN_SESSION_COOKIE_NAME: process.env.ADMIN_SESSION_COOKIE_NAME || 'pc_admin_session',
   STUDENT_JWT_SECRET: process.env.STUDENT_JWT_SECRET || 'student_jwt_secret_change_in_production',
