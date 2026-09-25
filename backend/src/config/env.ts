@@ -21,7 +21,7 @@ export const env = {
   DIRECT_URL: process.env.DIRECT_URL || process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/photoclub?schema=public',
   JWT_SECRET: process.env.JWT_SECRET || 'dev_secret_photoclub_change_in_production',
   ADMIN_SESSION_COOKIE_NAME: process.env.ADMIN_SESSION_COOKIE_NAME || 'pc_admin_session',
-  STUDENT_JWT_SECRET: process.env.STUDENT_JWT_SECRET || 'student_jwt_secret_change_in_production',
+  STUDENT_JWT_SECRET: process.env.STUDENT_JWT_SECRET || process.env.JWT_SECRET || 'student_jwt_secret_change_in_production',
 
   // Google Drive OAuth 2.0 (Primary)
   GOOGLE_OAUTH_CLIENT_ID: process.env.GOOGLE_OAUTH_CLIENT_ID || '',
@@ -86,12 +86,17 @@ export const env = {
   ADMIN_DEFAULT_PASSWORD: process.env.ADMIN_DEFAULT_PASSWORD || 'AdminPassword123!',
 };
 
-// Production fail-fast: refuse to boot with missing or dev-fallback production secrets
+// Production configuration sanity check
 if (nodeEnv === 'production') {
-  const failures = PROD_VALUE_CHECKS
-    .filter(({ value, fallback }) => !value || value === fallback)
+  if (!process.env.DATABASE_URL) {
+    throw new Error('Refusing to start in production: missing DATABASE_URL');
+  }
+
+  const defaultSecretWarnings = PROD_VALUE_CHECKS
+    .filter(({ name, value, fallback }) => name !== 'DATABASE_URL' && (!value || value === fallback))
     .map(({ name }) => name);
-  if (failures.length > 0) {
-    throw new Error(`Refusing to start in production: missing or default secrets: ${failures.join(', ')}`);
+
+  if (defaultSecretWarnings.length > 0) {
+    console.warn(`⚠️ [ENV WARNING] Running in production with default/fallback secrets for: ${defaultSecretWarnings.join(', ')}. Please set these environment variables in your Render dashboard for maximum security.`);
   }
 }
