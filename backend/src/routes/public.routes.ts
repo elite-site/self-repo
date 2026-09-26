@@ -328,9 +328,10 @@ router.get('/public/media/:type/:fileId', async (req: Request, res: Response): P
 
     // Allow PDF documents and media to be rendered inside portal iframes
     res.removeHeader('X-Frame-Options');
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
     res.setHeader(
       'Content-Security-Policy',
-      "default-src 'self'; frame-ancestors 'self' https://*.netlify.app https://*.onrender.com https://*.vercel.app http://localhost:* http://127.0.0.1:*;"
+      "default-src 'self' data: blob: https:; frame-ancestors 'self' https://*.netlify.app https://*.onrender.com https://*.vercel.app http://localhost:* http://127.0.0.1:*;"
     );
 
     if (req.query.download === '1' || req.query.download === 'true') {
@@ -439,9 +440,10 @@ router.get('/public/media/:type/:fileId', async (req: Request, res: Response): P
         res.setHeader('Content-Type', 'image/svg+xml');
         res.setHeader('Cache-Control', 'public, max-age=60');
         res.removeHeader('X-Frame-Options');
+        res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
         res.setHeader(
           'Content-Security-Policy',
-          "default-src 'self'; frame-ancestors 'self' https://*.netlify.app https://*.onrender.com https://*.vercel.app http://localhost:* http://127.0.0.1:*;"
+          "default-src 'self' data: blob: https:; frame-ancestors 'self' https://*.netlify.app https://*.onrender.com https://*.vercel.app http://localhost:* http://127.0.0.1:*;"
         );
         res.status(200).send(svg);
         return;

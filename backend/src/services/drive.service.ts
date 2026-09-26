@@ -253,6 +253,44 @@ class DriveService {
   }
 
   /**
+   * Recursively gets or creates a folder hierarchy in Google Drive
+   * (e.g. "Resumes/2-A/24K61A1259_KoppisettiHemanth" or "Certificates/2-A/24K61A1259_KoppisettiHemanth")
+   */
+  public async resolveFolderPath(relativePath: string, rootFolderId?: string): Promise<string> {
+    const rootId = rootFolderId || env.GOOGLE_DRIVE_ROOT_FOLDER_ID || 'root';
+    if (this.isMock || !this.drive) {
+      return `mock_folder_${relativePath.replace(/[\/\s]/g, '_')}`;
+    }
+
+    const segments = relativePath.split('/').map((s) => s.trim()).filter(Boolean);
+    let currentFolderId = rootId;
+    let accumulatedPath = '';
+
+    for (const segment of segments) {
+      accumulatedPath = accumulatedPath ? `${accumulatedPath}/${segment}` : segment;
+      currentFolderId = await this.getOrCreateDriveFolder(segment, currentFolderId, accumulatedPath);
+    }
+
+    return currentFolderId;
+  }
+
+  /**
+   * Returns a direct watch/view URL on Google Drive
+   */
+  public getWatchUrl(fileId?: string | null): string | null {
+    if (!fileId || fileId.startsWith('mock_') || fileId.startsWith('drive_')) return null;
+    return `https://drive.google.com/file/d/${fileId}/view`;
+  }
+
+  /**
+   * Returns an embeddable preview URL on Google Drive
+   */
+  public getPreviewUrl(fileId?: string | null): string | null {
+    if (!fileId || fileId.startsWith('mock_') || fileId.startsWith('drive_')) return null;
+    return `https://drive.google.com/file/d/${fileId}/preview`;
+  }
+
+  /**
    * Uploads a single file to Google Drive or mock storage
    */
   public async uploadFile(
@@ -277,6 +315,16 @@ class DriveService {
       return mockId;
     }
 
+    // Dynamically resolve and create the folder hierarchy in Google Drive
+    let targetFolderId = parentFolderId;
+    if (relativePath) {
+      try {
+        targetFolderId = await this.resolveFolderPath(relativePath, parentFolderId);
+      } catch (folderErr) {
+        console.warn(`Could not resolve folder path "${relativePath}", using parent folder:`, folderErr);
+      }
+    }
+
     const media = {
       mimeType: file.mimetype,
       body: Readable.from(file.buffer),
@@ -285,14 +333,30 @@ class DriveService {
     const res = await this.drive.files.create({
       requestBody: {
         name: fileName,
-        parents: [parentFolderId],
+        parents: [targetFolderId],
       },
       media,
       supportsAllDrives: true,
-      fields: 'id',
+      fields: 'id, name, webViewLink, webContentLink',
     });
 
-    return res.data.id!;
+    const fileId = res.data.id!;
+
+    // Make the file viewable by anyone with the link so it can be watched/viewed
+    try {
+      await this.drive.permissions.create({
+        fileId,
+        requestBody: {
+          role: 'reader',
+          type: 'anyone',
+        },
+        supportsAllDrives: true,
+      });
+    } catch (permErr) {
+      console.warn('Could not set public view permission on Drive file:', permErr);
+    }
+
+    return fileId;
   }
 
   /**

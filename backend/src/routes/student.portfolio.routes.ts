@@ -148,7 +148,13 @@ router.get('/achievements', async (req: Request, res: Response) => {
       ...a,
       date: a.achievedAt,
       organizationName: a.organization,
-      proofUrl: a.proofUrl || (a.proofDriveId ? `/api/public/media/achievement/${a.proofDriveId}` : null)
+      proofUrl: a.proofUrl || (a.proofDriveId ? `/api/public/media/achievement/${a.proofDriveId}` : null),
+      watchUrl: typeof driveService.getWatchUrl === 'function'
+        ? driveService.getWatchUrl(a.proofDriveId)
+        : (a.proofDriveId && !a.proofDriveId.startsWith('mock_') && !a.proofDriveId.startsWith('drive_') ? `https://drive.google.com/file/d/${a.proofDriveId}/view` : null),
+      previewUrl: typeof driveService.getPreviewUrl === 'function'
+        ? driveService.getPreviewUrl(a.proofDriveId)
+        : (a.proofDriveId && !a.proofDriveId.startsWith('mock_') && !a.proofDriveId.startsWith('drive_') ? `https://drive.google.com/file/d/${a.proofDriveId}/preview` : null),
     })));
   } catch (err: any) {
     res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
@@ -186,9 +192,11 @@ router.post('/achievements', handleProofUpload, async (req: Request, res: Respon
       });
       const ext = path.extname(file.originalname) || (file.mimetype === 'application/pdf' ? '.pdf' : '.jpg');
       const cleanRollNo = student?.rollNo ? student.rollNo.toUpperCase().replace(/[^a-zA-Z0-9]/g, '') : 'STUDENT';
+      const cleanName = student?.name ? student.name.replace(/[^a-zA-Z0-9]/g, '') : '';
       const cleanTitle = title.replace(/[^a-zA-Z0-9]/g, '_');
       const fileName = `Proof_${cleanRollNo}_${cleanTitle}_${Date.now()}${ext}`;
-      const relativePath = `Achievements/${cleanRollNo}`;
+      const studentFolder = cleanName ? `${cleanRollNo}_${cleanName}` : cleanRollNo;
+      const relativePath = `Achievements/${student?.year || 'All'}-${student?.section || 'All'}/${studentFolder}`;
 
       try {
         finalProofDriveId = await driveService.uploadFile(
@@ -335,7 +343,13 @@ router.get('/certificates', async (req: Request, res: Response) => {
     res.json(certificates.map(c => ({
       ...c,
       issueDate: c.issuedAt,
-      fileUrl: c.fileDriveId ? `/api/public/media/certificate/${c.fileDriveId}` : null
+      fileUrl: c.fileDriveId ? `/api/public/media/certificate/${c.fileDriveId}` : null,
+      watchUrl: typeof driveService.getWatchUrl === 'function'
+        ? driveService.getWatchUrl(c.fileDriveId)
+        : (c.fileDriveId && !c.fileDriveId.startsWith('mock_') && !c.fileDriveId.startsWith('drive_') ? `https://drive.google.com/file/d/${c.fileDriveId}/view` : null),
+      previewUrl: typeof driveService.getPreviewUrl === 'function'
+        ? driveService.getPreviewUrl(c.fileDriveId)
+        : (c.fileDriveId && !c.fileDriveId.startsWith('mock_') && !c.fileDriveId.startsWith('drive_') ? `https://drive.google.com/file/d/${c.fileDriveId}/preview` : null),
     })));
   } catch (err: any) {
     res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
@@ -355,9 +369,11 @@ router.post('/certificates', certificateUpload, async (req: Request, res: Respon
 
     const ext = path.extname(file.originalname) || (file.mimetype === 'application/pdf' ? '.pdf' : '.jpg');
     const cleanRollNo = student?.rollNo ? student.rollNo.toUpperCase().replace(/[^a-zA-Z0-9]/g, '') : 'STUDENT';
+    const cleanName = student?.name ? student.name.replace(/[^a-zA-Z0-9]/g, '') : '';
     const cleanTitle = (req.body.title || 'Certificate').replace(/[^a-zA-Z0-9]/g, '_');
     const fileName = `Cert_${cleanRollNo}_${cleanTitle}_${Date.now()}${ext}`;
-    const relativePath = `Certificates/${student?.year || 'All'}-${student?.section || 'All'}/${cleanRollNo}`;
+    const studentFolder = cleanName ? `${cleanRollNo}_${cleanName}` : cleanRollNo;
+    const relativePath = `Certificates/${student?.year || 'All'}-${student?.section || 'All'}/${studentFolder}`;
 
     let driveFileId: string;
     try {
@@ -390,7 +406,13 @@ router.post('/certificates', certificateUpload, async (req: Request, res: Respon
     res.status(201).json({
       ...certificate,
       issueDate: certificate.issuedAt,
-      fileUrl: `/api/public/media/certificate/${driveFileId}`
+      fileUrl: `/api/public/media/certificate/${driveFileId}`,
+      watchUrl: typeof driveService.getWatchUrl === 'function'
+        ? driveService.getWatchUrl(driveFileId)
+        : (driveFileId && !driveFileId.startsWith('mock_') && !driveFileId.startsWith('drive_') ? `https://drive.google.com/file/d/${driveFileId}/view` : null),
+      previewUrl: typeof driveService.getPreviewUrl === 'function'
+        ? driveService.getPreviewUrl(driveFileId)
+        : (driveFileId && !driveFileId.startsWith('mock_') && !driveFileId.startsWith('drive_') ? `https://drive.google.com/file/d/${driveFileId}/preview` : null),
     });
   } catch (err: any) {
     res.status(500).json({ error: 'SERVER_ERROR', message: err.message });

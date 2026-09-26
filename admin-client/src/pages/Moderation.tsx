@@ -15,6 +15,10 @@ interface ModerationItem {
   submittedAt: string;
   fileUrl?: string;
   driveFileId?: string;
+  fileDriveId?: string;
+  proofDriveId?: string;
+  watchUrl?: string;
+  previewUrl?: string;
   status: string;
   title?: string;
   reason?: string;
@@ -235,60 +239,81 @@ export const Moderation: React.FC = () => {
                     )}
 
                     {/* Attachment Header with Open in Tab & Download */}
-                    {currentItem.fileUrl && (
-                      <div className="flex items-center justify-between mb-3 pb-2 border-b border-neutral-100 dark:border-neutral-800">
-                        <span className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
-                          {activeTab === 'videos' ? 'Video Attachment' : 'Submitted Document'}
-                        </span>
-                        <div className="flex items-center gap-2">
-                          <a
-                            href={currentItem.fileUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-200 transition-colors"
-                          >
-                            <ExternalLink className="w-3.5 h-3.5 text-[#DC2626]" />
-                            <span>Open in Tab</span>
-                          </a>
-                          <a
-                            href={`${currentItem.fileUrl}${currentItem.fileUrl.includes('?') ? '&' : '?'}download=1`}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-200 transition-colors"
-                          >
-                            <Download className="w-3.5 h-3.5 text-blue-500" />
-                            <span>Download</span>
-                          </a>
-                        </div>
-                      </div>
-                    )}
+                    {currentItem.fileUrl && (() => {
+                      const driveId = currentItem.fileDriveId || currentItem.proofDriveId || currentItem.driveFileId;
+                      const isGoogleDriveId = Boolean(driveId) && !driveId?.startsWith('mock_') && !driveId?.startsWith('drive_');
+                      const watchUrl = currentItem.watchUrl || (isGoogleDriveId ? `https://drive.google.com/file/d/${driveId}/view` : null);
+                      const previewUrl = currentItem.previewUrl || (isGoogleDriveId ? `https://drive.google.com/file/d/${driveId}/preview` : null);
+                      const embedUrl = previewUrl || currentItem.fileUrl;
 
-                    {/* Media preview */}
-                    {activeTab === 'videos' && currentItem.fileUrl ? (
-                      <div className="bg-neutral-900 rounded-xl overflow-hidden aspect-video">
-                        <video src={currentItem.fileUrl} controls className="w-full h-full object-contain" />
-                      </div>
-                    ) : activeTab === 'resumes' && currentItem.fileUrl ? (
-                      <div className="w-full h-[520px] rounded-xl overflow-hidden border border-[#E2E8F0] dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800">
-                        <object data={currentItem.fileUrl} type="application/pdf" className="w-full h-full border-none" title="Resume">
-                          <iframe src={currentItem.fileUrl} className="w-full h-full border-none" title="Resume" />
-                        </object>
-                      </div>
-                    ) : (activeTab === 'achievements' || activeTab === 'certificates') ? (
-                      currentItem.fileUrl ? (
-                        <div className="w-full h-[450px] rounded-xl overflow-hidden border border-[#E2E8F0] dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800 flex items-center justify-center">
-                          <object data={currentItem.fileUrl} className="w-full h-full border-none" title="Proof Document">
-                            <iframe src={currentItem.fileUrl} className="w-full h-full border-none" title="Proof" />
-                          </object>
-                        </div>
-                      ) : (
-                        <div className="flex items-center justify-center h-32 bg-neutral-50 rounded-xl border border-[#E2E8F0] text-neutral-400 text-sm">
-                          No file attached
-                        </div>
-                      )
-                    ) : (
-                      <div className="flex items-center justify-center h-32 bg-neutral-50 rounded-xl text-neutral-400 text-sm">
-                        No preview available
-                      </div>
-                    )}
+                      return (
+                        <>
+                          <div className="flex items-center justify-between mb-3 pb-2 border-b border-neutral-100 dark:border-neutral-800">
+                            <span className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
+                              {activeTab === 'videos' ? 'Video Attachment' : 'Submitted Document'}
+                            </span>
+                            <div className="flex items-center gap-2">
+                              {watchUrl && (
+                                <a
+                                  href={watchUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/60 text-blue-700 dark:text-blue-300 transition-colors"
+                                >
+                                  <ExternalLink className="w-3.5 h-3.5 text-blue-600" />
+                                  <span>View on Drive</span>
+                                </a>
+                              )}
+                              <a
+                                href={watchUrl || currentItem.fileUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-200 transition-colors"
+                              >
+                                <ExternalLink className="w-3.5 h-3.5 text-[#DC2626]" />
+                                <span>Open in Tab</span>
+                              </a>
+                              <a
+                                href={`${currentItem.fileUrl}${currentItem.fileUrl.includes('?') ? '&' : '?'}download=1`}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-200 transition-colors"
+                              >
+                                <Download className="w-3.5 h-3.5 text-blue-500" />
+                                <span>Download</span>
+                              </a>
+                            </div>
+                          </div>
+
+                          {/* Media preview */}
+                          {activeTab === 'videos' && currentItem.fileUrl ? (
+                            <div className="bg-neutral-900 rounded-xl overflow-hidden aspect-video">
+                              <video src={currentItem.fileUrl} controls className="w-full h-full object-contain" />
+                            </div>
+                          ) : activeTab === 'resumes' && embedUrl ? (
+                            <div className="w-full h-[520px] rounded-xl overflow-hidden border border-[#E2E8F0] dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800">
+                              <object data={embedUrl} type="application/pdf" className="w-full h-full border-none" title="Resume">
+                                <iframe src={embedUrl} className="w-full h-full border-none" title="Resume" />
+                              </object>
+                            </div>
+                          ) : (activeTab === 'achievements' || activeTab === 'certificates') ? (
+                            embedUrl ? (
+                              <div className="w-full h-[450px] rounded-xl overflow-hidden border border-[#E2E8F0] dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800 flex items-center justify-center">
+                                <object data={embedUrl} className="w-full h-full border-none" title="Proof Document">
+                                  <iframe src={embedUrl} className="w-full h-full border-none" title="Proof" />
+                                </object>
+                              </div>
+                            ) : (
+                              <div className="flex items-center justify-center h-32 bg-neutral-50 rounded-xl border border-[#E2E8F0] text-neutral-400 text-sm">
+                                No file attached
+                              </div>
+                            )
+                          ) : (
+                            <div className="flex items-center justify-center h-32 bg-neutral-50 rounded-xl text-neutral-400 text-sm">
+                              No preview available
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
                   </>
                 )}
               </div>

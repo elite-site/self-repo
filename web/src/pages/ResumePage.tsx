@@ -83,6 +83,19 @@ export const ResumePage: React.FC = () => {
   }
 
   const hasValidFile = Boolean(resumeData && resumeData.driveFileId);
+  const isGoogleDriveId =
+    Boolean(resumeData?.driveFileId) &&
+    !resumeData.driveFileId.startsWith('mock_') &&
+    !resumeData.driveFileId.startsWith('drive_');
+
+  const watchUrl =
+    resumeData?.watchUrl ||
+    (isGoogleDriveId ? `https://drive.google.com/file/d/${resumeData.driveFileId}/view` : null);
+
+  const previewUrl =
+    resumeData?.previewUrl ||
+    (isGoogleDriveId ? `https://drive.google.com/file/d/${resumeData.driveFileId}/preview` : null);
+
   // The API returns a root-relative path. It must be resolved against the API
   // origin before it goes into <iframe src>, otherwise the browser requests it
   // from the portal origin and the viewer renders a 404 / the SPA shell.
@@ -91,6 +104,10 @@ export const ResumePage: React.FC = () => {
     : resumeData?.driveFileId
       ? resolveMediaUrl(`/api/public/media/resume/${resumeData.driveFileId}`)
       : null;
+
+  // Prefer Google Drive's embed preview URL for cross-origin iframes (bypasses CORS/X-Frame blocks),
+  // falling back to backend media proxy URL.
+  const embedUrl = previewUrl || fileUrl;
 
   return (
     <div className="space-y-6 text-left">
@@ -211,10 +228,21 @@ export const ResumePage: React.FC = () => {
               </div>
             </div>
 
-            {fileUrl && (
+            {(embedUrl || fileUrl || watchUrl) && (
               <div className="flex items-center gap-2">
+                {watchUrl && (
+                  <a
+                    href={watchUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-blue-200 bg-blue-50/60 hover:bg-blue-100/80 text-blue-700 text-xs font-bold transition-colors"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5 text-blue-600" />
+                    <span>View on Drive</span>
+                  </a>
+                )}
                 <a
-                  href={fileUrl}
+                  href={watchUrl || fileUrl!}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-neutral-300 hover:bg-neutral-50 text-neutral-700 text-xs font-bold transition-colors"
@@ -222,38 +250,52 @@ export const ResumePage: React.FC = () => {
                   <ExternalLink className="w-3.5 h-3.5 text-neutral-500" />
                   <span>Open in Tab</span>
                 </a>
-                <a
-                  href={`${fileUrl}${fileUrl.includes('?') ? '&' : '?'}download=1`}
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#0B192C] hover:bg-neutral-800 text-white text-xs font-bold transition-colors"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>Download PDF</span>
-                </a>
+                {fileUrl && (
+                  <a
+                    href={`${fileUrl}${fileUrl.includes('?') ? '&' : '?'}download=1`}
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#0B192C] hover:bg-neutral-800 text-white text-xs font-bold transition-colors"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Download PDF</span>
+                  </a>
+                )}
               </div>
             )}
           </div>
 
           {/* Embedded PDF viewer with fallback */}
-          {fileUrl && (
+          {embedUrl && (
             <div className="bg-white rounded-2xl shadow-xs border border-[#E2E8F0] overflow-hidden h-[750px] w-full">
               <object
-                data={fileUrl}
+                data={embedUrl}
                 type="application/pdf"
                 className="w-full h-full border-none"
                 title="Resume Document Viewer"
               >
-                <iframe src={fileUrl} className="w-full h-full border-none" title="Resume Document Viewer">
+                <iframe src={embedUrl} className="w-full h-full border-none" title="Resume Document Viewer">
                   <div className="flex flex-col items-center justify-center h-full p-8 text-center text-neutral-500 space-y-3">
                     <p className="text-xs">Your browser cannot display this PDF document inline.</p>
-                    <a
-                      href={fileUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-4 py-2 bg-[#0B192C] text-white text-xs font-bold rounded-xl"
-                    >
-                      Open PDF in New Window
-                    </a>
+                    <div className="flex items-center gap-3">
+                      {watchUrl && (
+                        <a
+                          href={watchUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl"
+                        >
+                          View on Google Drive
+                        </a>
+                      )}
+                      <a
+                        href={fileUrl || embedUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-4 py-2 bg-[#0B192C] hover:bg-neutral-800 text-white text-xs font-bold rounded-xl"
+                      >
+                        Open PDF in New Window
+                      </a>
+                    </div>
                   </div>
                 </iframe>
               </object>
