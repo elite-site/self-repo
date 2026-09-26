@@ -17,6 +17,7 @@ import { adminApi } from '../services/api';
 interface StudentsTableProps {
   activeEventId: string;
   onSelectSubmission: (submission: Submission) => void;
+  onSelectStudent?: (studentId: string) => void;
 }
 
 function toSubmission(student: Student): Submission | null {
@@ -56,6 +57,7 @@ function studentYearLabel(year: number): string {
 export const StudentsTable: React.FC<StudentsTableProps> = ({
   activeEventId,
   onSelectSubmission,
+  onSelectStudent,
 }) => {
   const [data, setData] = useState<StudentsResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -101,6 +103,14 @@ export const StudentsTable: React.FC<StudentsTableProps> = ({
       onSelectSubmission(sub);
     } else {
       alert(`${student.name} (${student.rollNo}) has not uploaded an introduction video yet.`);
+    }
+  };
+
+  const handleView = (student: Student) => {
+    if (onSelectStudent) {
+      onSelectStudent(student.id || student.rollNo);
+    } else {
+      handleOpen(student);
     }
   };
 
@@ -232,7 +242,7 @@ export const StudentsTable: React.FC<StudentsTableProps> = ({
                   return (
                     <tr
                       key={student.id}
-                      onClick={() => handleOpen(student)}
+                      onClick={() => handleView(student)}
                       className="hover:bg-[#fcfcfc] dark:hover:bg-neutral-800/50 transition-colors cursor-pointer group"
                     >
                       <td className="py-3.5 px-5">
@@ -286,11 +296,11 @@ export const StudentsTable: React.FC<StudentsTableProps> = ({
 
                       <td className="py-3.5 px-5 text-right">
                         <button
-                          onClick={(e) => { e.stopPropagation(); handleOpen(student); }}
+                          onClick={(e) => { e.stopPropagation(); handleView(student); }}
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-neutral-100 dark:bg-neutral-800 group-hover:bg-elite-red group-hover:text-white rounded text-neutral-700 dark:text-neutral-300 font-semibold text-xs transition-colors cursor-pointer"
                         >
                           <Eye className="w-3.5 h-3.5" />
-                          <span>View</span>
+                          <span>View Profile</span>
                         </button>
                       </td>
                     </tr>

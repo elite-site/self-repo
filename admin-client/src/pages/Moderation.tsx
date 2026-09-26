@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import {
-  ShieldCheck, CheckCircle, XCircle, MessageSquare, EyeOff,
-  Film, FileText, Trophy, Award, ChevronRight, ChevronLeft,
-  Inbox, AlertCircle, Loader2, ExternalLink, Download,
+  CheckCircle, XCircle, MessageSquare, EyeOff,
+  Film, ChevronRight, ChevronLeft,
+  Inbox, AlertCircle, Loader2, ExternalLink, Download, Info
 } from 'lucide-react';
 import { adminApi } from '../services/api';
-
-type ModerationTab = 'videos' | 'resumes' | 'achievements' | 'certificates';
 
 interface ModerationItem {
   id: string;
@@ -41,7 +39,6 @@ const StatusBadge = ({ status }: { status: string }) => {
 };
 
 export const Moderation: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<ModerationTab>('videos');
   const [items, setItems] = useState<ModerationItem[]>([]);
   const [idx, setIdx] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -52,42 +49,23 @@ export const Moderation: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
-  const tabs: { id: ModerationTab; label: string; icon: React.FC<{ className?: string }> }[] = [
-    { id: 'videos', label: 'Intro Videos', icon: Film },
-    { id: 'resumes', label: 'Resumes', icon: FileText },
-    { id: 'achievements', label: 'Achievements', icon: Trophy },
-    { id: 'certificates', label: 'Certificates', icon: Award },
-  ];
-
   const fetchItems = async () => {
     setLoading(true);
     setError(null);
     setIdx(0);
     try {
-      // Each tab maps to a different endpoint
-      let data: ModerationItem[] = [];
-      if (activeTab === 'videos') {
-        const res = await adminApi.getModerationVideos?.() ?? { items: [] };
-        data = res.items ?? [];
-      } else if (activeTab === 'resumes') {
-        const res = await adminApi.getModerationResumes?.() ?? { items: [] };
-        data = res.items ?? [];
-      } else if (activeTab === 'achievements') {
-        const res = await adminApi.getModerationAchievements?.() ?? { items: [] };
-        data = res.items ?? [];
-      } else {
-        const res = await adminApi.getModerationCertificates?.() ?? { items: [] };
-        data = res.items ?? [];
-      }
-      setItems(data);
+      const res = await adminApi.getModerationVideos?.() ?? { items: [] };
+      setItems(res.items ?? []);
     } catch {
-      setError('Failed to load moderation queue.');
+      setError('Failed to load intro video moderation queue.');
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { fetchItems(); }, [activeTab]);
+  useEffect(() => {
+    fetchItems();
+  }, []);
 
   const currentItem = items[idx] ?? null;
 
@@ -101,39 +79,36 @@ export const Moderation: React.FC = () => {
     if ((action === 'reject' || action === 'changes') && !reason.trim()) return;
     setSubmitting(true);
     try {
-      await adminApi.moderationDecision?.(activeTab, currentItem.id, {
+      await adminApi.moderationDecision?.('videos', currentItem.id, {
         action,
         reason,
-        // Approving an intro video can publish it on the public page; the
-        // student can also publish it themselves once it is approved.
-        publish: activeTab === 'videos' ? publishOnApprove : undefined,
+        publish: publishOnApprove,
       });
       showToast(
         action === 'approve'
-          ? activeTab === 'videos' && publishOnApprove
-            ? 'Approved and published.'
-            : 'Approved!'
+          ? publishOnApprove
+            ? 'Video approved and published!'
+            : 'Video approved!'
           : action === 'reject'
-          ? 'Rejected.'
+          ? 'Video rejected.'
           : action === 'changes'
           ? 'Change requested — the student has been notified.'
-          : 'Hidden.'
+          : 'Video hidden.'
       );
       setAction(null);
       setReason('');
-      // Remove item from list
       const next = items.filter((_, i) => i !== idx);
       setItems(next);
       setIdx(Math.min(idx, next.length - 1));
     } catch {
-      showToast('Action failed. Try again.');
+      showToast('Action failed. Please try again.');
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 text-left">
       {/* Toast */}
       {toast && (
         <div className="fixed top-5 right-5 z-50 bg-[#0B192C] text-white text-xs font-semibold px-4 py-2.5 rounded-lg shadow-lg animate-pulse">
@@ -142,32 +117,36 @@ export const Moderation: React.FC = () => {
       )}
 
       {/* Header */}
-      <div className="flex items-center gap-3 pb-2 border-b border-neutral-200 dark:border-neutral-800">
-        <ShieldCheck className="w-6 h-6 text-[#DC2626]" />
-        <div>
-          <h1 className="text-xl font-extrabold text-[#0B192C] dark:text-white">Moderation Queue</h1>
-          <p className="text-xs text-neutral-500 dark:text-neutral-400">Review and decide on student submissions</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-neutral-200 dark:border-neutral-800">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-950/40 text-elite-red flex items-center justify-center">
+            <Film className="w-5 h-5" />
+          </div>
+          <div>
+            <h1 className="text-xl font-extrabold text-[#0B192C] dark:text-white">Video Moderation Queue</h1>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400">
+              Review and approve student introduction videos
+            </p>
+          </div>
         </div>
+        <button
+          onClick={fetchItems}
+          className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-200 self-start sm:self-auto cursor-pointer"
+        >
+          Refresh Queue
+        </button>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 bg-neutral-100 dark:bg-neutral-800 rounded-xl p-1 w-fit border border-neutral-200 dark:border-neutral-700">
-        {tabs.map((t) => {
-          const Icon = t.icon;
-          const isActive = activeTab === t.id;
-          return (
-            <button
-              key={t.id}
-              onClick={() => setActiveTab(t.id)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                isActive ? 'bg-white dark:bg-neutral-900 text-[#DC2626] dark:text-elite-red shadow-sm' : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200'
-              }`}
-            >
-              <Icon className="w-3.5 h-3.5" />
-              {t.label}
-            </button>
-          );
-        })}
+      {/* Info Callout Banner */}
+      <div className="flex items-start gap-3 p-4 bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200/80 dark:border-blue-900/40 rounded-xl">
+        <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+        <div className="text-xs text-blue-900 dark:text-blue-200 space-y-1">
+          <p className="font-bold">Fast-Track Portfolio Workflows Enabled</p>
+          <p className="text-blue-700 dark:text-blue-300">
+            Resumes, honors & achievements, and certificates are automatically approved upon upload to eliminate bottleneck queues for 50+ students.
+            To inspect student portfolios, request revisions, or delete any record, open the student's profile directly in the <strong>Student Roster</strong>.
+          </p>
+        </div>
       </div>
 
       {/* Content */}
@@ -179,20 +158,20 @@ export const Moderation: React.FC = () => {
         <div className="flex flex-col items-center justify-center h-64 bg-white dark:bg-neutral-900 rounded-2xl border border-red-200 dark:border-red-900/50 gap-3">
           <AlertCircle className="w-8 h-8 text-red-400" />
           <p className="text-sm text-neutral-600 dark:text-neutral-400">{error}</p>
-          <button onClick={fetchItems} className="text-xs text-[#DC2626] font-semibold hover:underline">Retry</button>
+          <button onClick={fetchItems} className="text-xs text-[#DC2626] font-semibold hover:underline cursor-pointer">Retry</button>
         </div>
       ) : items.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-64 bg-white dark:bg-neutral-900 rounded-2xl border border-[#E2E8F0] dark:border-neutral-800 gap-3">
           <Inbox className="w-10 h-10 text-neutral-300 dark:text-neutral-600" />
-          <p className="text-sm font-semibold text-neutral-500 dark:text-neutral-400">Queue is empty</p>
-          <p className="text-xs text-neutral-400 dark:text-neutral-500">No pending {activeTab} to review.</p>
+          <p className="text-sm font-semibold text-neutral-500 dark:text-neutral-400">Queue is clear</p>
+          <p className="text-xs text-neutral-400 dark:text-neutral-500">No pending student introduction videos to review right now.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-          {/* LEFT: Content Preview */}
+          {/* LEFT: Video Player & Metadata */}
           <div className="lg:col-span-3 space-y-4">
             <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-[#E2E8F0] dark:border-neutral-800 overflow-hidden shadow-sm">
-              {/* Navigation */}
+              {/* Navigation header */}
               <div className="flex items-center justify-between px-5 py-3 border-b border-[#E2E8F0] dark:border-neutral-800 bg-[#F8FAFC] dark:bg-neutral-800/60">
                 <button
                   onClick={() => setIdx(Math.max(0, idx - 1))}
@@ -224,7 +203,7 @@ export const Moderation: React.FC = () => {
                       </div>
                       <div>
                         <div className="font-bold text-[#0B192C] dark:text-white text-sm">{currentItem.studentName}</div>
-                        <div className="text-xs text-neutral-400">{currentItem.studentRoll}</div>
+                        <div className="text-xs font-mono text-neutral-400">{currentItem.studentRoll}</div>
                       </div>
                       <div className="ml-auto flex items-center gap-2">
                         <StatusBadge status={currentItem.status} />
@@ -234,23 +213,17 @@ export const Moderation: React.FC = () => {
                       </div>
                     </div>
 
-                    {currentItem.title && (
-                      <p className="text-sm font-semibold text-[#0B192C] dark:text-white mb-3">{currentItem.title}</p>
-                    )}
-
                     {/* Attachment Header with Open in Tab & Download */}
                     {currentItem.fileUrl && (() => {
                       const driveId = currentItem.fileDriveId || currentItem.proofDriveId || currentItem.driveFileId;
                       const isGoogleDriveId = Boolean(driveId) && !driveId?.startsWith('mock_') && !driveId?.startsWith('drive_');
                       const watchUrl = currentItem.watchUrl || (isGoogleDriveId ? `https://drive.google.com/file/d/${driveId}/view?usp=sharing` : null);
-                      const previewUrl = currentItem.previewUrl || (isGoogleDriveId ? `https://drive.google.com/file/d/${driveId}/preview` : null);
-                      const embedUrl = previewUrl || currentItem.fileUrl;
 
                       return (
                         <>
                           <div className="flex items-center justify-between mb-3 pb-2 border-b border-neutral-100 dark:border-neutral-800">
                             <span className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
-                              {activeTab === 'videos' ? 'Video Attachment' : 'Submitted Document'}
+                              Introduction Video Attachment
                             </span>
                             <div className="flex items-center gap-2">
                               {watchUrl && (
@@ -283,32 +256,10 @@ export const Moderation: React.FC = () => {
                             </div>
                           </div>
 
-                          {/* Media preview */}
-                          {activeTab === 'videos' && currentItem.fileUrl ? (
-                            <div className="bg-neutral-900 rounded-xl overflow-hidden aspect-video">
-                              <video src={currentItem.fileUrl} controls className="w-full h-full object-contain" />
-                            </div>
-                          ) : activeTab === 'resumes' && embedUrl ? (
-                            <div className="w-full h-[520px] rounded-xl overflow-hidden border border-[#E2E8F0] dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800">
-                              <iframe src={embedUrl} className="w-full h-full border-0" title="Resume" allow="autoplay" />
-                            </div>
-                          ) : (activeTab === 'achievements' || activeTab === 'certificates') ? (
-                            embedUrl ? (
-                              <div className="w-full h-[450px] rounded-xl overflow-hidden border border-[#E2E8F0] dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800 flex items-center justify-center">
-                                <object data={embedUrl} className="w-full h-full border-none" title="Proof Document">
-                                  <iframe src={embedUrl} className="w-full h-full border-none" title="Proof" />
-                                </object>
-                              </div>
-                            ) : (
-                              <div className="flex items-center justify-center h-32 bg-neutral-50 rounded-xl border border-[#E2E8F0] text-neutral-400 text-sm">
-                                No file attached
-                              </div>
-                            )
-                          ) : (
-                            <div className="flex items-center justify-center h-32 bg-neutral-50 rounded-xl text-neutral-400 text-sm">
-                              No preview available
-                            </div>
-                          )}
+                          {/* Video player */}
+                          <div className="bg-neutral-900 rounded-xl overflow-hidden aspect-video">
+                            <video src={currentItem.fileUrl} controls className="w-full h-full object-contain" />
+                          </div>
                         </>
                       );
                     })()}
@@ -371,13 +322,13 @@ export const Moderation: React.FC = () => {
               {(action === 'reject' || action === 'changes') && (
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-neutral-700 dark:text-neutral-300 uppercase tracking-wide">
-                    Reason <span className="text-[#DC2626]">*</span>
+                    Reason / Faculty Feedback <span className="text-[#DC2626]">*</span>
                   </label>
                   <textarea
                     value={reason}
                     onChange={(e) => setReason(e.target.value)}
                     rows={4}
-                    placeholder="Explain why this is being rejected or what needs to change..."
+                    placeholder="Explain why this is being rejected or what needs to be changed in the re-uploaded video..."
                     className="w-full text-xs border border-[#E2E8F0] dark:border-neutral-700 bg-white dark:bg-neutral-800 rounded-lg p-3 resize-none focus:outline-none focus:border-[#DC2626] focus:ring-1 focus:ring-[#DC2626] text-[#0B192C] dark:text-white"
                   />
                   {!reason.trim() && (
@@ -386,8 +337,8 @@ export const Moderation: React.FC = () => {
                 </div>
               )}
 
-              {/* Publish option — intro videos only, shown when approving */}
-              {activeTab === 'videos' && action === 'approve' && (
+              {/* Publish option — shown when approving */}
+              {action === 'approve' && (
                 <label className="flex items-start gap-2.5 p-3 rounded-lg border border-emerald-200 dark:border-emerald-800/60 bg-emerald-50/50 dark:bg-emerald-950/20 cursor-pointer">
                   <input
                     type="checkbox"
@@ -396,8 +347,8 @@ export const Moderation: React.FC = () => {
                     className="mt-0.5 w-3.5 h-3.5 rounded border-neutral-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
                   />
                   <span className="text-[11px] text-emerald-800 dark:text-emerald-300 leading-relaxed">
-                    <span className="font-bold">Publish on the public page.</span> The video becomes watchable by
-                    anyone on the public home page, without logging in. Uncheck to approve it but keep it private.
+                    <span className="font-bold">Publish on public showcase.</span> The video becomes watchable by
+                    visitors on the student's public profile and directory without logging in.
                   </span>
                 </label>
               )}

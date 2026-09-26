@@ -94,6 +94,37 @@ export const adminApi = {
     return res.data;
   },
 
+  async getStudent(id: string): Promise<any> {
+    const res = await client.get(`/admin/api/portal/students/${id}`);
+    return res.data;
+  },
+
+  async requestItemChange(
+    studentId: string,
+    type: string,
+    itemId: string,
+    note: string
+  ): Promise<any> {
+    const res = await client.post(
+      `/admin/api/portal/students/${studentId}/items/${type}/${itemId}/request-change`,
+      { note }
+    );
+    return res.data;
+  },
+
+  async deleteStudentItem(
+    studentId: string,
+    type: string,
+    itemId: string,
+    reason?: string
+  ): Promise<any> {
+    const res = await client.delete(
+      `/admin/api/portal/students/${studentId}/items/${type}/${itemId}`,
+      { data: { reason } }
+    );
+    return res.data;
+  },
+
   async updateReview(
     id: string,
     data: { reviewText: string; pros: string[]; cons: string[] }

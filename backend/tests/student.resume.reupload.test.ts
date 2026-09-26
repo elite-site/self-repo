@@ -82,7 +82,7 @@ describe('Resume and Intro Video Reupload Persistence & Cache Invalidation', () 
         driveFileId: 'drive_resume_A',
         filename: 'resume_v1.pdf',
         sizeMb: 1.2,
-        status: 'PENDING',
+        status: 'APPROVED',
         submittedAt: new Date(),
       });
 
@@ -98,7 +98,8 @@ describe('Resume and Intro Video Reupload Persistence & Cache Invalidation', () 
           studentId: 'stud_123',
           driveFileId: 'drive_resume_A',
           filename: 'resume_v1.pdf',
-          status: 'PENDING',
+          status: 'APPROVED',
+          isPublic: true,
         }),
       });
       expect(res.body.driveFileId).toBe('drive_resume_A');
@@ -128,7 +129,7 @@ describe('Resume and Intro Video Reupload Persistence & Cache Invalidation', () 
         driveFileId: 'drive_resume_B',
         filename: 'resume_v2.pdf',
         sizeMb: 1.5,
-        status: 'PENDING',
+        status: 'APPROVED',
         submittedAt: new Date(),
       });
 
@@ -148,7 +149,8 @@ describe('Resume and Intro Video Reupload Persistence & Cache Invalidation', () 
         data: expect.objectContaining({
           driveFileId: 'drive_resume_B',
           filename: 'resume_v2.pdf',
-          status: 'PENDING',
+          status: 'APPROVED',
+          isPublic: true,
         }),
       });
       expect(res.body.driveFileId).toBe('drive_resume_B');

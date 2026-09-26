@@ -260,6 +260,36 @@ if (webBuildPath) {
 // Global error handler
 app.use(errorHandler);
 
+async function autoMigratePendingItems() {
+  try {
+    const [resumeRes, achRes, certRes, profRes] = await Promise.all([
+      prisma.resume.updateMany({
+        where: { status: 'PENDING' },
+        data: { status: 'APPROVED', isPublic: true },
+      }),
+      prisma.achievement.updateMany({
+        where: { status: 'PENDING' },
+        data: { status: 'APPROVED', isPublic: true },
+      }),
+      prisma.certificate.updateMany({
+        where: { status: 'PENDING' },
+        data: { status: 'APPROVED', isPublic: true },
+      }),
+      prisma.studentProfile.updateMany({
+        where: { isPublic: false },
+        data: { isPublic: true },
+      }),
+    ]);
+    if (resumeRes.count > 0 || achRes.count > 0 || certRes.count > 0 || profRes.count > 0) {
+      console.log(
+        `[Auto-Approval] Backlog migrated to APPROVED: ${resumeRes.count} resumes, ${achRes.count} achievements, ${certRes.count} certificates, ${profRes.count} profiles set public.`
+      );
+    }
+  } catch (err: any) {
+    console.warn('[Auto-Approval] Startup migration skipped or encountered error:', err?.message || err);
+  }
+}
+
 const port = env.PORT;
 if (process.env.NODE_ENV !== 'test') {
   app.listen(port, () => {
@@ -267,6 +297,9 @@ if (process.env.NODE_ENV !== 'test') {
     console.log(`🌐 Web Portal:    http://localhost:${port}/`);
     console.log(`📡 Public API:    http://localhost:${port}/api`);
     console.log(`🛡️ Admin Portal:  http://localhost:${port}/admin`);
+
+    // Run backlog auto-approval migration for existing items
+    autoMigratePendingItems().catch(() => {});
 
     // Ensure all stored Drive files and folders have viewer permissions in the background
     if (typeof driveService.ensureAllFilesViewerAccess === 'function') {

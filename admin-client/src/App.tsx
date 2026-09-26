@@ -11,21 +11,31 @@ import { AdminStats, AdminUser, Submission } from './types';
 import { adminApi } from './services/api';
 import { useTheme } from './context/ThemeContext';
 
-// Pages
-import { Moderation } from './pages/Moderation';
-import { AdminEvents } from './pages/AdminEvents';
-import { EventRegistrations } from './pages/EventRegistrations';
-import { VotingManagement } from './pages/VotingManagement';
-import { VotingResults } from './pages/VotingResults';
-import { Communications } from './pages/Communications';
-import { EmailAutomation } from './pages/EmailAutomation';
-import { EmailHistory } from './pages/EmailHistory';
-import { Analytics } from './pages/Analytics';
-import { Exports } from './pages/Exports';
-import { Storage } from './pages/Storage';
-import { RolesPermissions } from './pages/RolesPermissions';
-import { AuditLogs } from './pages/AuditLogs';
-import { Settings } from './pages/Settings';
+import { Loader2 } from 'lucide-react';
+
+// Lazy Loaded Pages
+const Moderation = React.lazy(() => import('./pages/Moderation').then((m) => ({ default: m.Moderation })));
+const AdminEvents = React.lazy(() => import('./pages/AdminEvents').then((m) => ({ default: m.AdminEvents })));
+const EventRegistrations = React.lazy(() => import('./pages/EventRegistrations').then((m) => ({ default: m.EventRegistrations })));
+const VotingManagement = React.lazy(() => import('./pages/VotingManagement').then((m) => ({ default: m.VotingManagement })));
+const VotingResults = React.lazy(() => import('./pages/VotingResults').then((m) => ({ default: m.VotingResults })));
+const Communications = React.lazy(() => import('./pages/Communications').then((m) => ({ default: m.Communications })));
+const EmailAutomation = React.lazy(() => import('./pages/EmailAutomation').then((m) => ({ default: m.EmailAutomation })));
+const EmailHistory = React.lazy(() => import('./pages/EmailHistory').then((m) => ({ default: m.EmailHistory })));
+const Analytics = React.lazy(() => import('./pages/Analytics').then((m) => ({ default: m.Analytics })));
+const Exports = React.lazy(() => import('./pages/Exports').then((m) => ({ default: m.Exports })));
+const Storage = React.lazy(() => import('./pages/Storage').then((m) => ({ default: m.Storage })));
+const RolesPermissions = React.lazy(() => import('./pages/RolesPermissions').then((m) => ({ default: m.RolesPermissions })));
+const AuditLogs = React.lazy(() => import('./pages/AuditLogs').then((m) => ({ default: m.AuditLogs })));
+const Settings = React.lazy(() => import('./pages/Settings').then((m) => ({ default: m.Settings })));
+const StudentDetail = React.lazy(() => import('./pages/StudentDetail').then((m) => ({ default: m.StudentDetail })));
+
+const PageLoadingFallback: React.FC = () => (
+  <div className="flex flex-col items-center justify-center min-h-[350px] gap-3">
+    <Loader2 className="w-8 h-8 animate-spin text-elite-red" />
+    <span className="text-xs font-semibold text-neutral-400">Loading module...</span>
+  </div>
+);
 
 export const App: React.FC = () => {
   const [user, setUser] = useState<AdminUser | null>(null);
@@ -36,6 +46,7 @@ export const App: React.FC = () => {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   // Check auth on load
@@ -186,6 +197,7 @@ export const App: React.FC = () => {
           activeTab={activeTab}
           onSelectTab={(tab) => {
             setActiveTab(tab);
+            setSelectedStudentId(null);
             if (tab === 'dashboard') loadStats();
           }}
           user={user}
@@ -201,6 +213,7 @@ export const App: React.FC = () => {
               activeTab={activeTab}
               onSelectTab={(tab) => {
                 setActiveTab(tab);
+                setSelectedStudentId(null);
                 setMobileSidebarOpen(false);
                 if (tab === 'dashboard') loadStats();
               }}
@@ -222,49 +235,65 @@ export const App: React.FC = () => {
           user={user}
           onToggleMobileSidebar={() => setMobileSidebarOpen(!mobileSidebarOpen)}
           onLogout={handleLogout}
-          onNavigateTab={(tab) => setActiveTab(tab)}
+          onNavigateTab={(tab) => {
+            setActiveTab(tab);
+            setSelectedStudentId(null);
+          }}
         />
 
         {/* MAIN WORKSPACE VIEW */}
         <main className="flex-1 p-5 sm:p-8 max-w-7xl w-full mx-auto">
-          {activeTab === 'dashboard' && (
-            <StatsDashboard
-              stats={stats}
-              loading={statsLoading}
-              onNavigateTab={(t) => setActiveTab(t)}
-            />
-          )}
+          <React.Suspense fallback={<PageLoadingFallback />}>
+            {activeTab === 'dashboard' && (
+              <StatsDashboard
+                stats={stats}
+                loading={statsLoading}
+                onNavigateTab={(t) => {
+                  setActiveTab(t);
+                  setSelectedStudentId(null);
+                }}
+              />
+            )}
 
-          {activeTab === 'submissions' && (
-            <SubmissionsTable
-              activeEventId={ACTIVE_EVENT_ID}
-              onSelectSubmission={(sub) => setSelectedSubmission(sub)}
-              onRefreshStats={() => loadStats()}
-            />
-          )}
+            {activeTab === 'submissions' && (
+              <SubmissionsTable
+                activeEventId={ACTIVE_EVENT_ID}
+                onSelectSubmission={(sub) => setSelectedSubmission(sub)}
+                onRefreshStats={() => loadStats()}
+              />
+            )}
 
-          {activeTab === 'students' && (
-            <StudentsTable
-              activeEventId={ACTIVE_EVENT_ID}
-              onSelectSubmission={(sub) => setSelectedSubmission(sub)}
-            />
-          )}
+            {activeTab === 'students' && (
+              selectedStudentId ? (
+                <StudentDetail
+                  studentId={selectedStudentId}
+                  onBack={() => setSelectedStudentId(null)}
+                />
+              ) : (
+                <StudentsTable
+                  activeEventId={ACTIVE_EVENT_ID}
+                  onSelectStudent={(id) => setSelectedStudentId(id)}
+                  onSelectSubmission={(sub) => setSelectedSubmission(sub)}
+                />
+              )
+            )}
 
-          {activeTab === 'moderation' && <Moderation />}
-          {activeTab === 'events' && <AdminEvents />}
-          {activeTab === 'event-registrations' && <EventRegistrations />}
-          {activeTab === 'voting' && <VotingManagement />}
-          {activeTab === 'voting-results' && <VotingResults />}
-          {activeTab === 'communications' && <Communications />}
-          {activeTab === 'email-automation' && <EmailAutomation />}
-          {activeTab === 'email-history' && <EmailHistory />}
-          {activeTab === 'analytics' && <Analytics />}
-          {activeTab === 'exports' && <Exports />}
-          {activeTab === 'storage' && <Storage />}
-          {activeTab === 'roles' && <RolesPermissions />}
-          {activeTab === 'audit-logs' && <AuditLogs />}
-          {activeTab === 'activity' && <ActivityLogView activeEventId={ACTIVE_EVENT_ID} />}
-          {activeTab === 'settings' && <Settings />}
+            {activeTab === 'moderation' && <Moderation />}
+            {activeTab === 'events' && <AdminEvents />}
+            {activeTab === 'event-registrations' && <EventRegistrations />}
+            {activeTab === 'voting' && <VotingManagement />}
+            {activeTab === 'voting-results' && <VotingResults />}
+            {activeTab === 'communications' && <Communications />}
+            {activeTab === 'email-automation' && <EmailAutomation />}
+            {activeTab === 'email-history' && <EmailHistory />}
+            {activeTab === 'analytics' && <Analytics />}
+            {activeTab === 'exports' && <Exports />}
+            {activeTab === 'storage' && <Storage />}
+            {activeTab === 'roles' && <RolesPermissions />}
+            {activeTab === 'audit-logs' && <AuditLogs />}
+            {activeTab === 'activity' && <ActivityLogView activeEventId={ACTIVE_EVENT_ID} />}
+            {activeTab === 'settings' && <Settings />}
+          </React.Suspense>
         </main>
       </div>
 

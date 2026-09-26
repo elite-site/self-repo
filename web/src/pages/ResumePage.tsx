@@ -149,13 +149,21 @@ export const ResumePage: React.FC = () => {
               className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
                 resumeData.status === 'APPROVED'
                   ? 'bg-emerald-100 text-emerald-800'
+                  : resumeData.status === 'CHANGES_REQUESTED'
+                  ? 'bg-orange-100 text-orange-800 border border-orange-200'
                   : resumeData.status === 'REJECTED'
                   ? 'bg-red-100 text-red-800'
                   : 'bg-amber-100 text-amber-800'
               }`}
             >
-              {resumeData.status === 'APPROVED' ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Clock className="w-3.5 h-3.5" />}
-              <span>{resumeData.status || 'Under Review'}</span>
+              {resumeData.status === 'APPROVED' ? (
+                <CheckCircle2 className="w-3.5 h-3.5" />
+              ) : resumeData.status === 'CHANGES_REQUESTED' ? (
+                <AlertCircle className="w-3.5 h-3.5" />
+              ) : (
+                <Clock className="w-3.5 h-3.5" />
+              )}
+              <span>{resumeData.status === 'CHANGES_REQUESTED' ? 'Revision Requested' : (resumeData.status || 'Under Review')}</span>
             </span>
 
             <input
@@ -189,6 +197,24 @@ export const ResumePage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {resumeData && resumeData.status === 'CHANGES_REQUESTED' && (
+        <div className="p-4 bg-orange-50 border border-orange-200 rounded-2xl text-orange-900 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-start gap-2.5">
+            <AlertCircle className="w-4 h-4 shrink-0 text-orange-600 mt-0.5" />
+            <div>
+              <span className="font-bold">Faculty Revision Requested: </span>
+              <span>{resumeData.reviewNote || 'The admin requested updates on your resume. Please click "Replace PDF" to upload a revised copy.'}</span>
+            </div>
+          </div>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="shrink-0 px-3.5 py-1.5 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-xl text-xs cursor-pointer transition-colors self-start sm:self-auto"
+          >
+            Upload Revision
+          </button>
+        </div>
+      )}
 
       {resumeData && resumeData.status === 'REJECTED' && (
         <div className="p-4 bg-red-50 border border-red-200 rounded-2xl text-red-800 text-xs flex items-center justify-between">

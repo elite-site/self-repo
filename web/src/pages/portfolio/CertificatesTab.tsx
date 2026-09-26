@@ -147,10 +147,12 @@ export const CertificatesTab: React.FC = () => {
                     className={`absolute top-2 right-2 text-[9px] font-bold px-2 py-0.5 rounded-full ${
                       c.status === 'APPROVED'
                         ? 'bg-emerald-100 text-emerald-800'
+                        : c.status === 'CHANGES_REQUESTED'
+                        ? 'bg-orange-100 text-orange-800 border border-orange-200'
                         : 'bg-amber-100 text-amber-800'
                     }`}
                   >
-                    {c.status}
+                    {c.status === 'CHANGES_REQUESTED' ? 'Revision Requested' : (c.status || 'Pending')}
                   </span>
                 </div>
 
@@ -159,6 +161,12 @@ export const CertificatesTab: React.FC = () => {
                     {c.title}
                   </h3>
                   <p className="text-[11px] text-neutral-500 mt-0.5">{c.issuer || 'Issuing Body'}</p>
+                  {c.status === 'CHANGES_REQUESTED' && (
+                    <div className="p-2 bg-orange-50 border border-orange-200 rounded-lg text-[11px] text-orange-900 mt-2">
+                      <strong className="font-bold">Faculty Revision Note: </strong>
+                      <span>{c.reviewNote || 'The admin requested changes on this certificate.'}</span>
+                    </div>
+                  )}
                 </div>
               </div>
 

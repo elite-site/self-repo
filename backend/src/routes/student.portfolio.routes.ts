@@ -234,7 +234,8 @@ router.post('/achievements', handleProofUpload, async (req: Request, res: Respon
         categoryId: categoryId || null,
         proofDriveId: finalProofDriveId,
         proofUrl: finalProofUrl,
-        status: 'PENDING' // always default to PENDING on creation
+        status: 'APPROVED',
+        isPublic: true
       }
     });
 
@@ -312,7 +313,13 @@ router.put('/achievements/:id', handleProofUpload, async (req: Request, res: Res
     if (categoryId !== undefined) updateData.categoryId = categoryId || null;
     if (finalProofDriveId !== undefined) updateData.proofDriveId = finalProofDriveId;
     if (finalProofUrl !== undefined) updateData.proofUrl = finalProofUrl;
-    if (status !== undefined) updateData.status = status;
+    if (status !== undefined) {
+      updateData.status = status;
+    } else {
+      updateData.status = 'APPROVED';
+      updateData.isPublic = true;
+      updateData.reviewNote = null;
+    }
 
     const updated = await prisma.achievement.updateMany({
       where: { id: req.params.id, studentId },
@@ -414,7 +421,8 @@ router.post('/certificates', certificateUpload, async (req: Request, res: Respon
         issuer: req.body.issuer || '',
         issuedAt: req.body.issueDate || req.body.issuedAt ? new Date(req.body.issueDate || req.body.issuedAt) : new Date(),
         fileDriveId: driveFileId,
-        status: 'PENDING'
+        status: 'APPROVED',
+        isPublic: true
       }
     });
     res.status(201).json({

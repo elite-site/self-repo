@@ -88,7 +88,8 @@ export interface Achievement {
   proofUrl?: string;
   watchUrl?: string;
   previewUrl?: string;
-  status: 'DRAFT' | 'PENDING' | 'APPROVED' | 'REJECTED';
+  status: 'DRAFT' | 'PENDING' | 'APPROVED' | 'REJECTED' | 'CHANGES_REQUESTED';
+  reviewNote?: string | null;
 }
 
 export interface Certificate {
@@ -100,7 +101,8 @@ export interface Certificate {
   watchUrl?: string;
   previewUrl?: string;
   thumbnailUrl?: string;
-  status: 'APPROVED' | 'PENDING';
+  status: 'APPROVED' | 'PENDING' | 'REJECTED' | 'CHANGES_REQUESTED';
+  reviewNote?: string | null;
 }
 
 export interface Event {

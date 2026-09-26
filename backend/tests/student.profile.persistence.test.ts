@@ -201,7 +201,7 @@ describe('Student Profile Data Persistence', () => {
         description: 'Built AI-powered drone vision system',
         organization: 'Ministry of Education',
         achievedAt: now,
-        status: 'PENDING',
+        status: 'APPROVED',
       });
 
       const res = await request(app)
@@ -217,13 +217,13 @@ describe('Student Profile Data Persistence', () => {
       expect(res.status).toBe(201);
       expect(res.body.title).toBe('Smart India Hackathon 1st Place');
       expect(res.body.organizationName).toBe('Ministry of Education');
-      expect(res.body.status).toBe('PENDING');
+      expect(res.body.status).toBe('APPROVED');
       expect(prisma.achievement.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
           studentId: 'stud_123',
           title: 'Smart India Hackathon 1st Place',
           organization: 'Ministry of Education',
-          status: 'PENDING',
+          status: 'APPROVED',
         }),
       });
     });

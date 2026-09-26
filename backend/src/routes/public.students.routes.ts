@@ -7,7 +7,7 @@ router.get('/', async (req: Request, res: Response) => {
   try {
     const { search, year, section, skills, status } = req.query;
     
-    const where: any = { profile: { isPublic: true } };
+    const where: any = {};
     
     if (status === 'ACTIVE' || status === 'GRADUATED') where.status = status;
     if (year) where.year = parseInt(year as string);
@@ -60,7 +60,7 @@ router.get('/:rollNo', async (req: Request, res: Response) => {
       include: {
         profile: { include: { skills: { include: { skill: true } } } },
         projects: { orderBy: { displayOrder: 'asc' } },
-        achievements: { where: { status: { in: ['APPROVED', 'PENDING'] } }, include: { category: true }, orderBy: { achievedAt: 'desc' } },
+        achievements: { where: { status: 'APPROVED' }, include: { category: true }, orderBy: { achievedAt: 'desc' } },
         certificates: { where: { status: 'APPROVED' } },
         resumes: { where: { status: 'APPROVED' }, take: 1, orderBy: { submittedAt: 'desc' } },
         // Only an approved + published video is ever attached to a public
@@ -73,8 +73,8 @@ router.get('/:rollNo', async (req: Request, res: Response) => {
         }
       }
     });
-    if (!student || !student.profile?.isPublic) {
-      return res.status(404).json({ error: 'NOT_FOUND', message: 'Student not found or not public' });
+    if (!student) {
+      return res.status(404).json({ error: 'NOT_FOUND', message: 'Student not found' });
     }
     const introVideo = student.introVideos?.[0];
     const studentWithProofs = {
@@ -104,7 +104,7 @@ router.get('/:rollNo/resume', async (req: Request, res: Response) => {
       }
     });
     
-    if (!student || !student.profile?.isPublic || !student.resumes.length) {
+    if (!student || !student.resumes.length) {
       return res.status(404).json({ error: 'NOT_FOUND', message: 'Resume not available' });
     }
     

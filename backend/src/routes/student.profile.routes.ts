@@ -137,6 +137,7 @@ router.put('/', async (req: Request, res: Response) => {
       update: updateData,
       create: {
         studentId,
+        isPublic: true,
         biography: bioText || '',
         githubUrl: normalizedLinks.githubUrl || '',
         linkedinUrl: normalizedLinks.linkedinUrl || '',
@@ -210,7 +211,7 @@ router.post('/photo', profilePhotoUpload, async (req: Request, res: Response) =>
     const profile = await prisma.studentProfile.upsert({
       where: { studentId },
       update: updateData,
-      create: { studentId, ...updateData }
+      create: { studentId, isPublic: true, ...updateData }
     });
     res.json({
       photoUrl: profile.photoUrl || photoUrl,
@@ -252,7 +253,7 @@ router.put('/skills', async (req: Request, res: Response) => {
     const profile = await prisma.studentProfile.upsert({
       where: { studentId },
       update: {},
-      create: { studentId }
+      create: { studentId, isPublic: true }
     });
 
     // Resolve skill IDs — accept either skillIds directly or skillNames to resolve

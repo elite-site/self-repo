@@ -152,11 +152,25 @@ export const AchievementsTab: React.FC = () => {
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
                   <h3 className="font-bold text-sm text-[#0B192C]">{a.title}</h3>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
-                    {a.status}
+                  <span
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                      a.status === 'APPROVED'
+                        ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                        : a.status === 'CHANGES_REQUESTED'
+                        ? 'bg-orange-50 text-orange-800 border border-orange-200'
+                        : 'bg-amber-50 text-amber-800 border border-amber-200'
+                    }`}
+                  >
+                    {a.status === 'CHANGES_REQUESTED' ? 'Revision Requested' : (a.status || 'Pending')}
                   </span>
                 </div>
                 <p className="text-xs text-neutral-600">{a.description}</p>
+                {a.status === 'CHANGES_REQUESTED' && (
+                  <div className="p-2.5 bg-orange-50 border border-orange-200 rounded-xl text-xs text-orange-900 my-1.5">
+                    <strong className="font-bold">Faculty Revision Note: </strong>
+                    <span>{a.reviewNote || 'The admin requested changes on this achievement. Click the edit icon to update and re-submit.'}</span>
+                  </div>
+                )}
                 <div className="flex flex-wrap items-center gap-3 text-[11px] text-neutral-400 pt-1">
                   <span>{a.organization || 'Department'}</span>
                   <span>·</span>
