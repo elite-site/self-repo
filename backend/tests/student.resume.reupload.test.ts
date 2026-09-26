@@ -153,6 +153,20 @@ describe('Resume and Intro Video Reupload Persistence & Cache Invalidation', () 
       expect(res.body.fileUrl).toBe('/api/public/media/resume/drive_resume_B');
     });
 
+    it('rejects a non-PDF resume with a 400 the UI can display, storing nothing', async () => {
+      const res = await request(app)
+        .post('/api/student/resume')
+        .set('Cookie', `pc_student_session=${token}`)
+        .attach('resume', Buffer.from('not really a pdf'), 'resume.png');
+
+      // A rejected MIME type is the caller's mistake, so it must not surface as
+      // a 500 server fault.
+      expect(res.status).toBe(400);
+      expect(res.body.message).toMatch(/PDF/i);
+      expect(driveService.uploadFile).not.toHaveBeenCalled();
+      expect(prisma.resume.create).not.toHaveBeenCalled();
+    });
+
     it('GET /api/student/resume maps fileUrl for each resume record', async () => {
       (prisma.resume.findMany as unknown as ReturnType<typeof vi.fn>).mockResolvedValue([
         {

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { api } from '../../services/api';
+import { api, resolveMediaUrl } from '../../services/api';
 import { StudentSession } from '../../types';
 import { Loader2, ArrowLeft, FileText, ShieldCheck } from 'lucide-react';
 import { Navbar } from '../../components/Navbar';
@@ -28,7 +28,10 @@ export const PublicResumeViewerPage: React.FC<PublicResumeViewerProps> = ({ sess
           setStudentName(student.name || rollNo);
           if (student.resumes && student.resumes.length > 0) {
             const res = student.resumes[0];
-            const url = res.fileUrl || `/api/public/students/${rollNo}/resume`;
+            // Root-relative API paths must be resolved against the API origin
+            // before being handed to <iframe src>, otherwise the browser fetches
+            // them from the portal origin and the PDF never renders.
+            const url = resolveMediaUrl(res.fileUrl || `/api/public/students/${rollNo}/resume`);
             setResumeUrl(url);
           } else {
             setResumeUrl(null);

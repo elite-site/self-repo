@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { api } from '../services/api';
+import { api, resolveMediaUrl } from '../services/api';
 import {
   UploadCloud,
   CheckCircle2,
@@ -83,7 +83,14 @@ export const ResumePage: React.FC = () => {
   }
 
   const hasValidFile = Boolean(resumeData && resumeData.driveFileId);
-  const fileUrl = resumeData?.fileUrl || (resumeData?.driveFileId ? `/api/public/media/resume/${resumeData.driveFileId}` : null);
+  // The API returns a root-relative path. It must be resolved against the API
+  // origin before it goes into <iframe src>, otherwise the browser requests it
+  // from the portal origin and the viewer renders a 404 / the SPA shell.
+  const fileUrl = resumeData?.fileUrl
+    ? resolveMediaUrl(resumeData.fileUrl)
+    : resumeData?.driveFileId
+      ? resolveMediaUrl(`/api/public/media/resume/${resumeData.driveFileId}`)
+      : null;
 
   return (
     <div className="space-y-6 text-left">
