@@ -1,0 +1,27 @@
+{
+  "name": "self-intro-portal-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Unified Self Introduction Portal (Backend API, Admin Client & Student Web Portal)",
+  "scripts": {
+    "install:all": "npm install --prefix backend && npm install --prefix admin-client && npm install --prefix web",
+    "dev": "node scripts/dev.js",
+    "dev:backend": "npm run --prefix backend dev",
+    "dev:web": "npm run --prefix web dev",
+    "dev:admin": "npm run --prefix admin-client dev",
+    "build:backend": "npm run --prefix backend build",
+    "build:admin": "npm run --prefix admin-client build",
+    "build:web": "npm run --prefix web build",
+    "build": "npm run build:admin && npm run build:web && npm run build:backend",
+    "build:all": "npm run build",
+    "start": "npm run --prefix backend start",
+    "test": "npm run --prefix backend test",
+    "test:backend": "npm run --prefix backend test",
+    "verify:env-guard": "npm run --prefix backend verify:env-guard",
+    "verify:esm-interop": "npm run --prefix backend verify:esm-interop",
+    "prisma:generate": "npm run --prefix backend prisma:generate",
+    "prisma:migrate": "npm run --prefix backend prisma:migrate",
+    "prisma:seed": "npm run --prefix backend prisma:seed",
+    "roster:import": "npm run --prefix backend roster:import"
+  }
+}

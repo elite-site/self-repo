@@ -1,8 +1,10 @@
 import dotenv from 'dotenv';
 import path from 'path';
 
-// Load environment variables from backend/.env
-dotenv.config({ path: path.resolve(__dirname, '../../.env') });
+// Load environment variables from backend/.env unless explicitly skipped (e.g. in test/verification scripts)
+if (!process.env.SKIP_DOTENV) {
+  dotenv.config({ path: process.env.DOTENV_CONFIG_PATH || path.resolve(__dirname, '../../.env') });
+}
 
 const nodeEnv = process.env.NODE_ENV || 'development';
 
@@ -56,6 +58,8 @@ export const env = {
       'https://self-repo.onrender.com',
       'https://self-e.netlify.app',
       'https://elitephotoit.netlify.app',
+      'https://self-repo.vercel.app',
+      'https://self-intro-portal.vercel.app',
       'http://localhost:5173',
       'http://localhost:3000',
       'http://localhost:5000',

@@ -326,6 +326,13 @@ router.get('/public/media/:type/:fileId', async (req: Request, res: Response): P
     res.setHeader('Cache-Control', 'no-cache, must-revalidate');
     res.setHeader('ETag', etag);
 
+    // Allow PDF documents and media to be rendered inside portal iframes
+    res.removeHeader('X-Frame-Options');
+    res.setHeader(
+      'Content-Security-Policy',
+      "default-src 'self'; frame-ancestors 'self' https://*.netlify.app https://*.onrender.com https://*.vercel.app http://localhost:* http://127.0.0.1:*;"
+    );
+
     if (req.query.download === '1' || req.query.download === 'true') {
       const ext = mimeType.split('/')[1] || 'bin';
       res.setHeader('Content-Disposition', `attachment; filename="${type || 'media'}_${fileId}.${ext}"`);

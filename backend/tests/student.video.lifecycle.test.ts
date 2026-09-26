@@ -25,6 +25,8 @@ vi.mock('../src/lib/prisma', () => ({
     },
     introVideo: {
       findFirst: vi.fn(),
+      findMany: vi.fn().mockResolvedValue([]),
+      deleteMany: vi.fn().mockResolvedValue({ count: 0 }),
       create: vi.fn(),
       update: vi.fn(),
     },

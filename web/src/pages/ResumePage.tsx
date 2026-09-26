@@ -212,21 +212,51 @@ export const ResumePage: React.FC = () => {
             </div>
 
             {fileUrl && (
-              <a
-                href={`${fileUrl}${fileUrl.includes('?') ? '&' : '?'}download=1`}
-                rel="noreferrer"
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#0B192C] hover:bg-neutral-800 text-white text-xs font-bold transition-colors"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span>Download PDF</span>
-              </a>
+              <div className="flex items-center gap-2">
+                <a
+                  href={fileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-neutral-300 hover:bg-neutral-50 text-neutral-700 text-xs font-bold transition-colors"
+                >
+                  <ExternalLink className="w-3.5 h-3.5 text-neutral-500" />
+                  <span>Open in Tab</span>
+                </a>
+                <a
+                  href={`${fileUrl}${fileUrl.includes('?') ? '&' : '?'}download=1`}
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#0B192C] hover:bg-neutral-800 text-white text-xs font-bold transition-colors"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download PDF</span>
+                </a>
+              </div>
             )}
           </div>
 
-          {/* Embedded PDF iframe or preview card */}
+          {/* Embedded PDF viewer with fallback */}
           {fileUrl && (
             <div className="bg-white rounded-2xl shadow-xs border border-[#E2E8F0] overflow-hidden h-[750px] w-full">
-              <iframe src={fileUrl} className="w-full h-full border-none" title="Resume Document Viewer" />
+              <object
+                data={fileUrl}
+                type="application/pdf"
+                className="w-full h-full border-none"
+                title="Resume Document Viewer"
+              >
+                <iframe src={fileUrl} className="w-full h-full border-none" title="Resume Document Viewer">
+                  <div className="flex flex-col items-center justify-center h-full p-8 text-center text-neutral-500 space-y-3">
+                    <p className="text-xs">Your browser cannot display this PDF document inline.</p>
+                    <a
+                      href={fileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-4 py-2 bg-[#0B192C] text-white text-xs font-bold rounded-xl"
+                    >
+                      Open PDF in New Window
+                    </a>
+                  </div>
+                </iframe>
+              </object>
             </div>
           )}
         </div>

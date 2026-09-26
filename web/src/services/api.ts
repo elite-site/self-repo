@@ -1,8 +1,19 @@
 import axios from 'axios';
 import { PublicIntroVideo, StudentProfile } from '../types';
 
+function getApiBaseUrl(): string {
+  if (typeof window !== 'undefined') {
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    // If served directly from unified backend (e.g. port 5001), use relative /api
+    if (isLocalhost && window.location.port === '5001') {
+      return '/api';
+    }
+  }
+  return import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api';
+}
+
 const client = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api',
+  baseURL: getApiBaseUrl(),
   withCredentials: true,
 });
 
@@ -26,7 +37,12 @@ export interface UploadProgressInfo {
 export const api = {
   // Original methods
   getOAuthAuthorizeUrl(): string {
-    return `${client.defaults.baseURL}/student/google/authorize`;
+    const base = client.defaults.baseURL || '/api';
+    if (/^https?:\/\//i.test(base)) {
+      return `${base}/student/google/authorize`;
+    }
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5001';
+    return `${origin}${base.startsWith('/') ? '' : '/'}${base}/student/google/authorize`;
   },
   async getMe(): Promise<{ student: StudentProfile; reviewStatus?: string }> {
     const res = await client.get(`/student/me?t=${Date.now()}`);

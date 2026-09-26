@@ -8,6 +8,7 @@ const envModule = path.resolve(__dirname, '../dist/config/env.js');
 const BASE = {
   PATH: process.env.PATH,
   DATABASE_URL: 'postgresql://user:pw@host:5432/db?schema=public',
+  SKIP_DOTENV: 'true',
 };
 
 const SECRET = 'a'.repeat(64);

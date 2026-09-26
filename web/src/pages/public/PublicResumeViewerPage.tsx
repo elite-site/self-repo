@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { api, resolveMediaUrl } from '../../services/api';
 import { StudentSession } from '../../types';
-import { Loader2, ArrowLeft, FileText, ShieldCheck } from 'lucide-react';
+import { Loader2, ArrowLeft, FileText, ShieldCheck, ExternalLink } from 'lucide-react';
 import { Navbar } from '../../components/Navbar';
 import { Footer } from '../../components/Footer';
 
@@ -62,9 +62,22 @@ export const PublicResumeViewerPage: React.FC<PublicResumeViewerProps> = ({ sess
           <ArrowLeft className="w-4 h-4 text-elite-red" />
           <span>Back to Profile</span>
         </Link>
-        <div className="text-xs font-mono font-bold text-slate-300 flex items-center gap-2">
-          <FileText className="w-4 h-4 text-elite-red" />
-          <span>{studentName ? `${studentName} — Resume` : 'Curriculum Vitae'}</span>
+        <div className="flex items-center gap-3">
+          {resumeUrl && (
+            <a
+              href={resumeUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-xl text-xs font-bold transition-colors"
+            >
+              <ExternalLink className="w-3.5 h-3.5 text-elite-red" />
+              <span>Open in Tab</span>
+            </a>
+          )}
+          <div className="text-xs font-mono font-bold text-slate-300 flex items-center gap-2">
+            <FileText className="w-4 h-4 text-elite-red" />
+            <span>{studentName ? `${studentName} — Resume` : 'Curriculum Vitae'}</span>
+          </div>
         </div>
       </div>
 
@@ -75,11 +88,30 @@ export const PublicResumeViewerPage: React.FC<PublicResumeViewerProps> = ({ sess
           </div>
         ) : resumeUrl ? (
           <div className="flex-1 w-full h-[calc(100vh-140px)]">
-            <iframe
-              src={resumeUrl}
+            <object
+              data={resumeUrl}
+              type="application/pdf"
               className="w-full h-full border-none"
               title="Student Resume Document"
-            />
+            >
+              <iframe
+                src={resumeUrl}
+                className="w-full h-full border-none"
+                title="Student Resume Document"
+              >
+                <div className="flex flex-col items-center justify-center h-full p-8 text-center text-slate-300 space-y-3">
+                  <p className="text-xs">Your browser cannot display this PDF document inline.</p>
+                  <a
+                    href={resumeUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-4 py-2 bg-elite-red text-white text-xs font-bold rounded-xl"
+                  >
+                    Open PDF in New Tab
+                  </a>
+                </div>
+              </iframe>
+            </object>
           </div>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center p-8 text-center min-h-[500px] text-slate-300 space-y-3">
