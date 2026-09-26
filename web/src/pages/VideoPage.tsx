@@ -18,7 +18,9 @@ import {
   Zap,
   X,
   Gauge,
-  Info
+  Info,
+  Play,
+  Pause
 } from 'lucide-react';
 
 interface UploadStats {
@@ -48,7 +50,9 @@ export const VideoPage: React.FC = () => {
   const [videoMeta, setVideoMeta] = useState<VideoMeta | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   // Track object URLs so we can revoke them on unmount / re-upload (memory leak prevention)
   const objectUrlRef = useRef<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -60,6 +64,29 @@ export const VideoPage: React.FC = () => {
     }
     objectUrlRef.current = url;
     setVideoUrl(url);
+  };
+
+  const handlePlayPause = () => {
+    if (!videoRef.current) return;
+    if (videoRef.current.paused) {
+      videoRef.current.play().catch(() => {});
+    } else {
+      videoRef.current.pause();
+    }
+  };
+
+  const handleReplay = () => {
+    if (!videoRef.current) return;
+    videoRef.current.currentTime = 0;
+    videoRef.current.play().catch(() => {});
+  };
+
+  const handleSeek = (deltaSec: number) => {
+    if (!videoRef.current) return;
+    const current = videoRef.current.currentTime;
+    const dur = videoRef.current.duration || 0;
+    const target = Math.max(0, dur ? Math.min(dur, current + deltaSec) : current + deltaSec);
+    videoRef.current.currentTime = target;
   };
 
   // Cleanup on unmount
@@ -82,14 +109,14 @@ export const VideoPage: React.FC = () => {
       if (data?.student?.submission) {
         setSubmission(data.student.submission);
         if (data.student.submission.videoUploaded) {
-          api.getVideoBlobUrl()
-            .then((url) => {
-              if (url) setVideoUrlSafe(url);
-            })
-            .catch(() => null);
+          const streamUrl = api.getVideoStreamUrl(data.student.submission.submittedAt || Date.now());
+          setVideoUrlSafe(streamUrl);
+        } else {
+          setVideoUrlSafe(null);
         }
       } else {
         setSubmission(null);
+        setVideoUrlSafe(null);
       }
     } catch {
       if (isInitial) setError('Could not load introduction video status.');
@@ -256,10 +283,8 @@ export const VideoPage: React.FC = () => {
         reviewCons: [],
         reviewedAt: null,
       }));
-      // Show local preview immediately; revoke old URL to free memory
+      // Show newly uploaded video immediately in player without requiring logout/login
       setVideoUrlSafe(localUrl);
-      // Silently sync server state in the background
-      loadSubmission(false);
     } catch (err: any) {
       URL.revokeObjectURL(localUrl); // clean up unused preview URL on error
       if (err.name === 'AbortError' || err.message?.includes('cancelled')) {
@@ -372,7 +397,7 @@ export const VideoPage: React.FC = () => {
               <div className="flex items-center gap-3">
                 {videoUrl && (
                   <a
-                    href={videoUrl}
+                    href={videoUrl.startsWith('blob:') ? videoUrl : api.getVideoDownloadUrl()}
                     download="self-introduction.mp4"
                     className="text-xs font-bold text-neutral-600 hover:text-[#0B192C] flex items-center gap-1 cursor-pointer bg-neutral-100 hover:bg-neutral-200 px-3 py-1.5 rounded-lg transition-colors"
                   >
@@ -483,14 +508,84 @@ export const VideoPage: React.FC = () => {
                 </div>
               </div>
             ) : videoUrl ? (
-              <div className="bg-black rounded-2xl overflow-hidden aspect-video border border-neutral-800 shadow-inner">
-                <video
-                  src={videoUrl}
-                  controls
-                  playsInline
-                  preload="metadata"
-                  className="w-full h-full object-contain"
-                />
+              <div className="space-y-4">
+                <div className="bg-black rounded-2xl overflow-hidden aspect-video border border-neutral-800 shadow-inner">
+                  <video
+                    ref={videoRef}
+                    src={videoUrl}
+                    controls
+                    playsInline
+                    preload="metadata"
+                    onPlay={() => setIsPlaying(true)}
+                    onPause={() => setIsPlaying(false)}
+                    onEnded={() => setIsPlaying(false)}
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+
+                {/* Player Quick Controls: Play, Pause, Replay, Seek, Download, Upload New Take */}
+                <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+                  <div className="flex items-center gap-1.5 sm:gap-2">
+                    <button
+                      type="button"
+                      onClick={handlePlayPause}
+                      className="px-3 py-1.5 rounded-xl bg-[#0B192C] hover:bg-neutral-800 text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                      aria-label={isPlaying ? 'Pause video' : 'Play video'}
+                    >
+                      {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+                      <span>{isPlaying ? 'Pause' : 'Play'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleReplay}
+                      className="px-3 py-1.5 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                      title="Replay from start"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      <span>Replay</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleSeek(-5)}
+                      className="px-2.5 py-1.5 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                      title="Rewind 5 seconds"
+                    >
+                      <span>⏪ -5s</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleSeek(5)}
+                      className="px-2.5 py-1.5 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                      title="Fast-forward 5 seconds"
+                    >
+                      <span>+5s ⏩</span>
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <a
+                      href={videoUrl.startsWith('blob:') ? videoUrl : api.getVideoDownloadUrl()}
+                      download="self-introduction.mp4"
+                      className="px-3 py-1.5 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                      title="Download your submitted introduction video"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Download</span>
+                    </a>
+
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="px-3 py-1.5 rounded-xl bg-red-50 hover:bg-red-100 text-[#DC2626] text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      <span>Upload New Take</span>
+                    </button>
+                  </div>
+                </div>
               </div>
             ) : (
               <div

@@ -26,6 +26,10 @@ export const requireStudentAuth = (req: Request, res: Response, next: NextFuncti
     token = req.headers.authorization.split(' ')[1].trim();
   }
 
+  if (!token && typeof req.query?.token === 'string') {
+    token = req.query.token.trim();
+  }
+
   if (!token) {
     res.status(401).json({
       error: 'UNAUTHORIZED',

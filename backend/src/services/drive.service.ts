@@ -485,13 +485,21 @@ class DriveService {
       const fileName = mockMeta?.fileName ?? `video_${Date.now()}.mp4`;
       const dirPath = path.join(this.mockBaseDir, relPath);
       fs.mkdirSync(dirPath, { recursive: true });
-      fs.writeFileSync(path.join(dirPath, fileName), buffer);
+      const filePath = path.join(dirPath, fileName);
+      fs.writeFileSync(filePath, buffer);
 
-      const mockId = `mock_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-      fs.writeFileSync(
-        path.join(dirPath, `${mockId}.meta.json`),
-        JSON.stringify({ id: mockId, name: fileName, mimeType: contentType, size: buffer.length }),
-      );
+      const mockId = `mock_${Date.now()}_${Math.random().toString(36).slice(2, 8)}_${fileName}`;
+      const metaObj = {
+        id: mockId,
+        name: fileName,
+        fileName,
+        mimetype: contentType,
+        mimeType: contentType,
+        size: buffer.length,
+      };
+
+      fs.writeFileSync(`${filePath}.meta.json`, JSON.stringify(metaObj));
+      fs.writeFileSync(path.join(dirPath, `${mockId}.meta.json`), JSON.stringify(metaObj));
       return mockId;
     }
 
@@ -582,59 +590,73 @@ class DriveService {
     rangeHeader?: string,
   ): Promise<{ stream: Readable; mimeType: string; size?: number }> {
     if (this.isMock || !this.drive) {
-      // Find file in mock directory
+      const inspectMockFile = (metaFilePath: string): { actualFilePath: string; meta: any; size: number } | null => {
+        try {
+          const meta = JSON.parse(fs.readFileSync(metaFilePath, 'utf-8'));
+          if (meta.id === fileId) {
+            const dir = path.dirname(metaFilePath);
+            const targetName = meta.fileName || meta.name || path.basename(metaFilePath).replace('.meta.json', '');
+            let actualPath = path.join(dir, targetName);
+            if (!fs.existsSync(actualPath)) {
+              actualPath = metaFilePath.replace('.meta.json', '');
+            }
+            if (fs.existsSync(actualPath)) {
+              const stat = fs.statSync(actualPath);
+              return { actualFilePath: actualPath, meta, size: stat.size };
+            }
+          }
+        } catch (_) {}
+        return null;
+      };
+
+      let match: { actualFilePath: string; meta: any; size: number } | null = null;
+
+      // 1. Find file in relativePath if provided
       if (relativePath) {
         const dirPath = path.join(this.mockBaseDir, relativePath);
         if (fs.existsSync(dirPath)) {
           const files = fs.readdirSync(dirPath);
           for (const file of files) {
             if (file.endsWith('.meta.json')) {
-              const meta = JSON.parse(fs.readFileSync(path.join(dirPath, file), 'utf-8'));
-              if (meta.id === fileId) {
-                const actualFileName = file.replace('.meta.json', '');
-                const actualFilePath = path.join(dirPath, actualFileName);
-                const stat = fs.statSync(actualFilePath);
-                return {
-                  stream: fs.createReadStream(actualFilePath),
-                  mimeType: meta.mimetype || 'image/jpeg',
-                  size: stat.size,
-                };
-              }
+              match = inspectMockFile(path.join(dirPath, file));
+              if (match) break;
             }
           }
         }
       }
-      // If not found in relativePath, search recursively in mockBaseDir
-      const findInDir = (dir: string): { filePath: string; meta: any } | null => {
-        if (!fs.existsSync(dir)) return null;
-        const entries = fs.readdirSync(dir, { withFileTypes: true });
-        for (const entry of entries) {
-          const full = path.join(dir, entry.name);
-          if (entry.isDirectory()) {
-            const res = findInDir(full);
-            if (res) return res;
-          } else if (entry.name.endsWith('.meta.json')) {
-            try {
-              const meta = JSON.parse(fs.readFileSync(full, 'utf-8'));
-              if (meta.id === fileId) {
-                return {
-                  filePath: full.replace('.meta.json', ''),
-                  meta,
-                };
-              }
-            } catch (_) {}
-          }
-        }
-        return null;
-      };
 
-      const match = findInDir(this.mockBaseDir);
-      if (match && fs.existsSync(match.filePath)) {
-        const stat = fs.statSync(match.filePath);
+      // 2. If not found in relativePath, search recursively in mockBaseDir
+      if (!match) {
+        const findInDir = (dir: string): { actualFilePath: string; meta: any; size: number } | null => {
+          if (!fs.existsSync(dir)) return null;
+          const entries = fs.readdirSync(dir, { withFileTypes: true });
+          for (const entry of entries) {
+            const full = path.join(dir, entry.name);
+            if (entry.isDirectory()) {
+              const res = findInDir(full);
+              if (res) return res;
+            } else if (entry.name.endsWith('.meta.json')) {
+              const found = inspectMockFile(full);
+              if (found) return found;
+            }
+          }
+          return null;
+        };
+        match = findInDir(this.mockBaseDir);
+      }
+
+      if (match) {
+        let start = 0;
+        let end = match.size - 1;
+        if (rangeHeader) {
+          const parts = rangeHeader.replace(/bytes=/, '').split('-');
+          start = parseInt(parts[0], 10) || 0;
+          if (parts[1]) end = Math.min(parseInt(parts[1], 10), match.size - 1);
+        }
         return {
-          stream: fs.createReadStream(match.filePath),
-          mimeType: match.meta.mimetype || 'image/jpeg',
-          size: stat.size,
+          stream: fs.createReadStream(match.actualFilePath, { start, end }),
+          mimeType: match.meta.mimeType || match.meta.mimetype || 'video/mp4',
+          size: match.size,
         };
       }
 
@@ -648,14 +670,19 @@ class DriveService {
       fields: 'mimeType, size, name',
     });
 
+    const requestOptions: any = { responseType: 'stream' };
+    if (rangeHeader) {
+      requestOptions.headers = { Range: rangeHeader };
+    }
+
     const res = await this.drive.files.get(
       { fileId, alt: 'media', supportsAllDrives: true },
-      { responseType: 'stream' }
+      requestOptions,
     );
 
     return {
       stream: res.data as Readable,
-      mimeType: metadata.data.mimeType || 'application/octet-stream',
+      mimeType: metadata.data.mimeType || 'video/mp4',
       size: metadata.data.size ? parseInt(metadata.data.size, 10) : undefined,
     };
   }
@@ -680,12 +707,18 @@ class DriveService {
           for (const file of files) {
             if (!file.endsWith('.meta.json')) continue;
             try {
-              const meta = JSON.parse(fs.readFileSync(path.join(dirPath, file), 'utf-8'));
+              const metaPath = path.join(dirPath, file);
+              const meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'));
               if (meta.id === submission.videoDriveId) {
-                fs.unlinkSync(path.join(dirPath, file));
-                const actualFile = file.replace('.meta.json', '');
-                if (fs.existsSync(path.join(dirPath, actualFile))) {
-                  fs.unlinkSync(path.join(dirPath, actualFile));
+                fs.unlinkSync(metaPath);
+                const targetName = meta.fileName || meta.name || file.replace('.meta.json', '');
+                const actualFilePath = path.join(dirPath, targetName);
+                if (fs.existsSync(actualFilePath)) {
+                  fs.unlinkSync(actualFilePath);
+                }
+                const fallback = path.join(dirPath, file.replace('.meta.json', ''));
+                if (fallback !== actualFilePath && fs.existsSync(fallback)) {
+                  fs.unlinkSync(fallback);
                 }
               }
             } catch (_) {}

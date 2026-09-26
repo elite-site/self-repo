@@ -29,7 +29,7 @@ export const api = {
     return `${client.defaults.baseURL}/student/google/authorize`;
   },
   async getMe(): Promise<{ student: StudentProfile; reviewStatus?: string }> {
-    const res = await client.get('/student/me');
+    const res = await client.get(`/student/me?t=${Date.now()}`);
     return res.data;
   },
   async logout(): Promise<{ success: boolean }> {
@@ -140,6 +140,21 @@ export const api = {
   async getVideoBlobUrl(): Promise<string> {
     const res = await client.get(`/student/submission/media/video?t=${Date.now()}`, { responseType: 'blob' });
     return URL.createObjectURL(res.data as Blob);
+  },
+  getVideoStreamUrl(version?: string | number): string {
+    const base = (client.defaults.baseURL ?? 'http://localhost:5001/api')
+      .replace(/\/api\/?$/, '');
+    const token = localStorage.getItem('student_token');
+    const tokenParam = token ? `&token=${encodeURIComponent(token)}` : '';
+    const vParam = version ? `&v=${encodeURIComponent(String(version))}` : '';
+    return `${base}/api/student/submission/media/video?t=${Date.now()}${vParam}${tokenParam}`;
+  },
+  getVideoDownloadUrl(): string {
+    const base = (client.defaults.baseURL ?? 'http://localhost:5001/api')
+      .replace(/\/api\/?$/, '');
+    const token = localStorage.getItem('student_token');
+    const tokenParam = token ? `&token=${encodeURIComponent(token)}` : '';
+    return `${base}/api/student/submission/media/video?download=1${tokenParam}`;
   },
 
   // Profile

@@ -32,6 +32,7 @@ router.get('/', async (req: Request, res: Response) => {
       orderBy: { submittedAt: 'desc' }
     });
     
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     res.json({
       id: student.id,
       rollNo: student.rollNo,

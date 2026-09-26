@@ -173,9 +173,11 @@ router.get('/me', requireStudentAuth, async (req: Request, res: Response): Promi
       },
     });
 
-    // Allow a 30-second private cache for the /me response so repeated
-    // dashboard polls don't hammer the DB when 200 students are online.
-    res.setHeader('Cache-Control', 'private, max-age=30');
+    // Never cache student session/profile data so submissions, reviews,
+    // and profile edits reflect immediately without requiring re-login.
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
     res.json({ student: serializeStudentView(student, submission) });
   } catch (err: any) {
     console.error('Error fetching student profile:', err);
@@ -395,37 +397,46 @@ router.get('/submission/media/video', requireStudentAuth, async (req: Request, r
       return;
     }
 
+    const rangeHeader = req.headers.range;
+
     const { stream, mimeType, size } = await driveService.streamDriveFile(
       driveFileId,
       submission.driveFolderPath,
+      rangeHeader,
     );
 
     // Respond with proper headers
-    const statusCode = req.headers.range && size ? 206 : 200;
-
-    res.setHeader('Content-Type', mimeType);
+    res.setHeader('Content-Type', mimeType || 'video/mp4');
     res.setHeader('Accept-Ranges', 'bytes');
-    // 10-minute private browser cache; ETag handles stale detection on re-upload
-    res.setHeader('Cache-Control', 'private, max-age=600');
+    res.setHeader('Cache-Control', 'no-cache, private');
     res.setHeader('ETag', etag);
 
-    if (size !== undefined) {
-      const rangeHeader = req.headers.range;
-      if (rangeHeader) {
-        const [startStr, endStr] = rangeHeader.replace(/bytes=/, '').split('-');
-        const start = parseInt(startStr, 10) || 0;
-        const end = endStr ? Math.min(parseInt(endStr, 10), size - 1) : size - 1;
-        const chunkSize = end - start + 1;
-        res.setHeader('Content-Range', `bytes ${start}-${end}/${size}`);
-        res.setHeader('Content-Length', chunkSize);
-        res.status(206);
-      } else {
-        res.setHeader('Content-Length', size);
-        res.status(200);
-      }
+    if (req.query.download === '1' || req.query.download === 'true') {
+      res.setHeader('Content-Disposition', `attachment; filename="self-introduction_${student.rollNo}.mp4"`);
     } else {
-      res.status(statusCode);
+      res.setHeader('Content-Disposition', 'inline');
     }
+
+    if (size !== undefined && rangeHeader) {
+      const [startStr, endStr] = rangeHeader.replace(/bytes=/, '').split('-');
+      const start = parseInt(startStr, 10) || 0;
+      const end = endStr ? Math.min(parseInt(endStr, 10), size - 1) : size - 1;
+      const chunkSize = end - start + 1;
+      res.setHeader('Content-Range', `bytes ${start}-${end}/${size}`);
+      res.setHeader('Content-Length', chunkSize);
+      res.status(206);
+    } else if (size !== undefined) {
+      res.setHeader('Content-Length', size);
+      res.status(200);
+    } else {
+      res.status(200);
+    }
+
+    req.on('close', () => {
+      if (!res.writableEnded && typeof (stream as any).destroy === 'function') {
+        (stream as any).destroy();
+      }
+    });
 
     stream.pipe(res);
   } catch (err: any) {
@@ -555,13 +566,27 @@ router.post(
         reviewedBy: null,
       };
 
+      // Ensure target event exists in database before upserting
+      const dbEvent = await prisma.event.findUnique({ where: { id: EVENT_ID } });
+      if (!dbEvent) {
+        await prisma.event.create({
+          data: {
+            id: EVENT_ID,
+            name: EVENT_NAME,
+            slug: 'self-introduction',
+            year: env.EVENT_YEAR,
+            status: 'OPEN',
+          },
+        });
+      }
+
       const submission = existing
         ? await prisma.submission.update({ where: { id: existing.id }, data: submissionData })
         : await prisma.submission.create({ data: { eventId: EVENT_ID, ...submissionData } });
 
-      // ── 8. Sync introVideo table (non-blocking — don't fail the upload) ───
+      // ── 8. Sync introVideo table ─────────────────────────────────────────
       const sizeMb = parseFloat((contentLength / 1024 / 1024).toFixed(2));
-      (async () => {
+      try {
         const iv = await prisma.introVideo.findFirst({
           where: { studentId: student.id },
           orderBy: { submittedAt: 'desc' },
@@ -583,7 +608,9 @@ router.post(
         } else {
           await prisma.introVideo.create({ data: { studentId: student.id, ...ivData } });
         }
-      })().catch((e) => console.warn('[video-stream] introVideo sync failed:', e));
+      } catch (e) {
+        console.warn('[video-stream] introVideo sync failed:', e);
+      }
 
       // ── 9. Activity log ──────────────────────────────────────────────────
       ActivityService.log({
@@ -599,6 +626,7 @@ router.post(
       res.status(201).json({
         success: true,
         id: submission.id,
+        videoDriveId: driveFileId,
         message: 'Your introduction video has been submitted successfully.',
       });
     } catch (err: any) {
