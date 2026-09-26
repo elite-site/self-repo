@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { api } from '../../services/api';
+import { api, resolveMediaUrl } from '../../services/api';
 import { StudentSession } from '../../types';
 import {
   Loader2,
@@ -14,7 +14,8 @@ import {
   ShieldCheck,
   ExternalLink,
   Calendar,
-  CheckCircle2
+  CheckCircle2,
+  Video as VideoIcon
 } from 'lucide-react';
 import { Navbar } from '../../components/Navbar';
 import { Footer } from '../../components/Footer';
@@ -84,6 +85,8 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
   const certificates = student.certificates || [];
   const resumes = student.resumes || [];
   const hasResume = resumes.length > 0;
+  // Only an approved + published video is returned by the public API.
+  const introVideo = student.introVideo || null;
 
   const initials = (student.name || '')
     .split(' ')
@@ -198,6 +201,25 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
               </div>
             )}
           </div>
+
+          {/* Published introduction video */}
+          {introVideo?.streamUrl && (
+            <div className="pt-6 border-t border-neutral-100">
+              <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2">
+                <VideoIcon className="w-3.5 h-3.5" />
+                Introduction Video
+              </h3>
+              <div className="bg-black rounded-2xl overflow-hidden aspect-video max-w-3xl">
+                <video
+                  src={resolveMediaUrl(introVideo.streamUrl)}
+                  controls
+                  preload="metadata"
+                  playsInline
+                  className="w-full h-full object-contain"
+                />
+              </div>
+            </div>
+          )}
 
           {/* Biography */}
           {(profile.biography || profile.bio) && (

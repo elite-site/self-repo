@@ -7,7 +7,7 @@ import { driveService } from '../services/drive.service';
 import { RATINGS, RATING_LABELS, SUBMISSION_STATUSES } from '../config/constants';
 import { ActivityService } from '../services/activity.service';
 import { deliverAnnouncementNotifications } from '../services/announcement.service';
-import { parseRange } from '../utils/rangeParser';
+import { notifyStudent, notifyVideoChangeRequested } from '../services/notification.service';
 
 const router = Router();
 
@@ -523,7 +523,30 @@ router.get('/submissions/:id', async (req: Request, res: Response): Promise<Resp
       return;
     }
 
-    res.json(submission);
+    // Include the introduction video's moderation + public visibility state so
+    // the admin can approve, publish, or request a new take from one place.
+    const introVideo = await prisma.introVideo.findFirst({
+      where: { student: { rollNo: submission.rollNo } },
+      orderBy: { submittedAt: 'desc' },
+      select: {
+        id: true,
+        status: true,
+        reviewNote: true,
+        isPublic: true,
+        publishedAt: true,
+        changeRequestedAt: true,
+        changeRequestNote: true,
+        driveFileId: true,
+        submittedAt: true,
+      },
+    });
+
+    res.json({
+      ...submission,
+      introVideo: introVideo
+        ? { ...introVideo, publicUrl: introVideo.isPublic && introVideo.status === 'APPROVED' ? `/api/public/videos/stream/${introVideo.id}` : null }
+        : null,
+    });
   } catch (err: any) {
     console.error('Error fetching submission detail:', err);
     return httpError(res, 500, err, "FAILED_TO_FETCH_SUBMISSION");
@@ -566,7 +589,11 @@ router.get('/submissions/:id/media/:fileKey', async (req: Request, res: Response
     }
 
     const rangeHeader = req.headers.range;
-    const { stream, mimeType, size } = await driveService.streamDriveFile(
+
+    // The service performs the actual byte-range fetch, so the response body
+    // always matches the advertised Content-Range. Answering 206 while piping
+    // the full file would break seeking in the admin player.
+    const { stream, mimeType, size, contentRange } = await driveService.streamDriveFile(
       driveFileId,
       submission.driveFolderPath,
       rangeHeader,
@@ -577,28 +604,25 @@ router.get('/submissions/:id/media/:fileKey', async (req: Request, res: Response
     res.setHeader('Cache-Control', 'private, max-age=300');
     res.setHeader('ETag', etag);
 
-    if (size !== undefined && rangeHeader) {
-      const parsed = parseRange(rangeHeader, size);
-      if (parsed) {
-        const chunkSize = parsed.end - parsed.start + 1;
-        res.setHeader('Content-Range', `bytes ${parsed.start}-${parsed.end}/${size}`);
-        res.setHeader('Content-Length', chunkSize);
-        res.status(206);
-      } else {
-        if (typeof (stream as any).destroy === 'function') {
-          (stream as any).destroy();
-        }
-        res.setHeader('Content-Range', `bytes */${size}`);
-        res.status(416).end();
-        return;
+    if (contentRange) {
+      res.setHeader('Content-Range', `bytes ${contentRange.start}-${contentRange.end}/${contentRange.total}`);
+      res.setHeader('Content-Length', String(contentRange.end - contentRange.start + 1));
+      res.status(206);
+    } else if (rangeHeader && size !== undefined) {
+      if (typeof (stream as any).destroy === 'function') {
+        (stream as any).destroy();
       }
+      res.setHeader('Content-Range', `bytes */${size}`);
+      res.status(416).end();
+      return;
     } else if (size !== undefined) {
-      res.setHeader('Content-Length', size);
+      res.setHeader('Content-Length', String(size));
       res.status(200);
     } else {
       res.status(200);
     }
 
+    // Release the storage stream when the admin closes the tab or seeks away.
     res.on('close', () => {
       if (!res.writableFinished && typeof (stream as any).destroy === 'function') {
         (stream as any).destroy();
@@ -762,6 +786,72 @@ router.patch('/submissions/:id/status', async (req: Request, res: Response): Pro
 });
 
 // ==============================================================
+// 6b. REQUEST A NEW VIDEO (POST /admin/api/submissions/:id/request-video)
+// Asks the student to re-upload. The current video stays in place until the
+// replacement arrives, and the student receives a notification.
+// ==============================================================
+router.post('/submissions/:id/request-video', async (req: Request, res: Response): Promise<Response | void> => {
+  try {
+    const { id } = req.params;
+    const reason = typeof req.body?.reason === 'string' ? req.body.reason.trim() : null;
+
+    const submission = await prisma.submission.findUnique({
+      where: { id },
+      select: { id: true, rollNo: true, name: true, eventId: true, email: true, videoDriveId: true },
+    });
+
+    if (!submission) {
+      res.status(404).json({ error: 'NOT_FOUND', message: 'Submission not found' });
+      return;
+    }
+
+    const student = await prisma.student.findUnique({
+      where: { rollNo: submission.rollNo },
+      select: { id: true },
+    });
+
+    const introVideo = await prisma.introVideo.findFirst({
+      where: { student: { rollNo: submission.rollNo } },
+      orderBy: { submittedAt: 'desc' },
+    });
+
+    if (introVideo) {
+      await prisma.introVideo.update({
+        where: { id: introVideo.id },
+        data: {
+          status: 'CHANGES_REQUESTED',
+          reviewNote: reason || 'A new introduction video has been requested.',
+          changeRequestedAt: new Date(),
+          changeRequestNote: reason,
+        },
+      });
+    }
+
+    if (student?.id) {
+      await notifyVideoChangeRequested(student.id, reason);
+    }
+
+    await ActivityService.log({
+      eventId: submission.eventId,
+      category: 'ADMIN',
+      action: 'Admin requested a new introduction video',
+      details: `New video requested for ${submission.rollNo}${reason ? `: ${reason}` : ''}`,
+      applicantName: submission.name,
+      userEmail: submission.email,
+      status: 'WARNING',
+    });
+
+    res.json({
+      success: true,
+      message: 'The student has been notified and asked to upload a new video.',
+    });
+  } catch (err: any) {
+    console.error('Error requesting new video:', err);
+    return httpError(res, 500, err, "REQUEST_VIDEO_FAILED");
+  }
+});
+
+// ==============================================================
 // 7. DELETE ONLY THE VIDEO (DELETE /admin/api/submissions/:id/video)
 // Removes the video file so the student can upload a replacement.
 // ==============================================================
@@ -789,22 +879,39 @@ router.delete('/submissions/:id/video', async (req: Request, res: Response): Pro
       },
     });
 
+    const student = await prisma.student.findUnique({
+      where: { rollNo: submission.rollNo },
+      select: { id: true },
+    });
+
     try {
       await prisma.introVideo.updateMany({
         where: { student: { rollNo: submission.rollNo } },
         data: {
           driveFileId: null,
-          status: 'REJECTED',
+          status: 'CHANGES_REQUESTED',
           reviewNote: 'Video removed by administrator.',
+          // Removed videos must disappear from the public showcase too.
+          isPublic: false,
+          publishedAt: null,
+          changeRequestedAt: new Date(),
+          changeRequestNote: 'Your previous video was removed. Please upload a new one.',
         },
       });
     } catch (_) {}
+
+    if (student?.id) {
+      await notifyVideoChangeRequested(
+        student.id,
+        'Your previous video was removed by the administrator.',
+      );
+    }
 
     await ActivityService.log({
       eventId: updated.eventId,
       category: 'ADMIN',
       action: 'Admin deleted student introduction video',
-      details: `Video removed for ${updated.rollNo}. Student may re-upload.`,
+      details: `Video removed for ${updated.rollNo}. Student notified to upload a replacement.`,
       applicantName: updated.name,
       userEmail: updated.email,
       status: 'WARNING',
@@ -812,7 +919,7 @@ router.delete('/submissions/:id/video', async (req: Request, res: Response): Pro
 
     res.json({
       success: true,
-      message: 'Introduction video deleted. The student can now upload a replacement.',
+      message: 'Introduction video deleted. The student has been notified to upload a replacement.',
       submission: updated,
     });
   } catch (err: any) {
@@ -1058,9 +1165,12 @@ router.get('/activity-logs', async (req: Request, res: Response): Promise<Respon
 
 router.get('/moderation/videos', async (req, res) => {
   try {
+    // Only videos still awaiting a decision belong in the queue. Approved
+    // videos are managed from the submission detail view (publish/unpublish).
     const videos = await prisma.introVideo.findMany({
-      where: { status: { in: ['PENDING', 'UNDER_REVIEW'] } },
-      include: { student: true }
+      where: { status: { in: ['PENDING', 'UNDER_REVIEW', 'CHANGES_REQUESTED'] } },
+      include: { student: true },
+      orderBy: { submittedAt: 'desc' },
     });
     res.json(videos.map(v => ({
       ...v,
@@ -1068,6 +1178,8 @@ router.get('/moderation/videos', async (req, res) => {
       studentRoll: v.student?.rollNo || 'Unknown',
       title: `${v.student?.name} (${v.student?.rollNo})`,
       fileUrl: v.driveFileId ? `/api/public/media/video/${v.driveFileId}` : null,
+      isPublic: Boolean(v.isPublic),
+      publicUrl: v.isPublic && v.status === 'APPROVED' ? `/api/public/videos/stream/${v.id}` : null,
     })));
   } catch (err: any) {
     return httpError(res, 500, err, "SERVER_ERROR");
@@ -1140,13 +1252,118 @@ router.get('/moderation/certificates', async (req, res) => {
 
 router.patch('/moderation/videos/:id', async (req, res) => {
   try {
-    const { action, reason } = req.body;
-    const status = action === 'approve' ? 'APPROVED' : action === 'reject' ? 'REJECTED' : 'CHANGES_REQUESTED';
-    await prisma.introVideo.update({
+    const { action, reason, publish } = req.body;
+    const video = await prisma.introVideo.findUnique({
       where: { id: req.params.id },
-      data: { status, reviewNote: reason }
+      include: { student: { select: { id: true, name: true } } },
     });
-    res.json({ message: 'Success' });
+
+    if (!video) {
+      return httpError(res, 404, new Error('Video not found'), "NOT_FOUND");
+    }
+
+    const status = action === 'approve' ? 'APPROVED' : action === 'reject' ? 'REJECTED' : 'CHANGES_REQUESTED';
+    const note = reason ? String(reason) : null;
+
+    // Approval publishes the video on the public page; a rejection un-publishes
+    // it so nothing is visible before approval.
+    const publishApproved = action === 'approve' ? publish !== false : false;
+
+    const data: Record<string, unknown> = {
+      status,
+      reviewNote: note,
+      reviewedAt: new Date(),
+      reviewedBy: req.adminUser?.username || req.adminUser?.email || null,
+    };
+
+    if (action === 'approve') {
+      data.isPublic = publishApproved;
+      data.publishedAt = publishApproved ? (video.publishedAt ?? new Date()) : null;
+      data.changeRequestedAt = null;
+      data.changeRequestNote = null;
+    } else if (action === 'reject') {
+      data.isPublic = false;
+      data.publishedAt = null;
+    } else {
+      // Request changes: the student must upload a new take.
+      data.changeRequestedAt = new Date();
+      data.changeRequestNote = note;
+    }
+
+    const updated = await prisma.introVideo.update({
+      where: { id: req.params.id },
+      data,
+    });
+
+    // Keep the student informed about the decision on their video.
+    if (video.student?.id) {
+      if (status === 'CHANGES_REQUESTED') {
+        await notifyVideoChangeRequested(video.student.id, note);
+      } else if (status === 'APPROVED') {
+        await notifyStudent({
+          studentId: video.student.id,
+          title: publishApproved
+            ? 'Introduction video approved and published'
+            : 'Introduction video approved',
+          message: publishApproved
+            ? 'Your introduction video was approved and is now visible on the public page.'
+            : 'Your introduction video was approved. You can publish it to the public page from your Introduction Video page.',
+        });
+      } else if (status === 'REJECTED') {
+        await notifyStudent({
+          studentId: video.student.id,
+          title: 'Introduction video rejected',
+          message: note
+            ? `Your introduction video was rejected. Faculty note: "${note}". You can upload a new version at any time.`
+            : 'Your introduction video was rejected. You can upload a new version at any time.',
+        });
+      }
+    }
+
+    res.json({ message: 'Success', video: updated, isPublic: Boolean(updated.isPublic) });
+  } catch (err: any) {
+    return httpError(res, 500, err, "SERVER_ERROR");
+  }
+});
+
+// PATCH /admin/api/moderation/videos/:id/visibility — publish/unpublish an
+// approved video on the public showcase without re-running moderation.
+router.patch('/moderation/videos/:id/visibility', async (req, res) => {
+  try {
+    const { isPublic } = req.body || {};
+
+    if (typeof isPublic !== 'boolean') {
+      return httpError(res, 400, new Error('isPublic must be true or false'), "VALIDATION_ERROR");
+    }
+
+    const video = await prisma.introVideo.findUnique({ where: { id: req.params.id } });
+
+    if (!video) {
+      return httpError(res, 404, new Error('Video not found'), "NOT_FOUND");
+    }
+
+    if (isPublic && video.status !== 'APPROVED') {
+      return httpError(
+        res,
+        409,
+        new Error('Only an approved video can be published publicly.'),
+        "NOT_APPROVED",
+      );
+    }
+
+    const updated = await prisma.introVideo.update({
+      where: { id: req.params.id },
+      data: { isPublic, publishedAt: isPublic ? new Date() : null },
+      select: { id: true, isPublic: true, publishedAt: true, status: true },
+    });
+
+    res.json({
+      success: true,
+      video: updated,
+      message: isPublic
+        ? 'Video is now visible on the public page.'
+        : 'Video has been removed from the public page.',
+    });
   } catch (err: any) {
     return httpError(res, 500, err, "SERVER_ERROR");
   }

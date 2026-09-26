@@ -14,6 +14,36 @@ export interface StudentSubmission {
   updatedAt?: string;
 }
 
+/** Moderation + public visibility state of the student's introduction video. */
+export interface StudentIntroVideo {
+  id: string;
+  status: string;
+  reviewNote: string | null;
+  isPublic: boolean;
+  publishedAt: string | null;
+  changeRequestedAt: string | null;
+  changeRequestNote: string | null;
+  submittedAt: string;
+  filename: string | null;
+  mimeType: string | null;
+  sizeMb: number | null;
+  hasFile: boolean;
+}
+
+/** An approved + published video as exposed on the public showcase. */
+export interface PublicIntroVideo {
+  id: string;
+  name: string;
+  rollNo: string;
+  year: number;
+  section: string;
+  submittedAt: string;
+  publishedAt: string | null;
+  sizeMb: number | null;
+  streamUrl: string;
+  profileUrl: string;
+}
+
 export interface StudentProfile {
   id?: string;
   name: string;
@@ -31,6 +61,7 @@ export interface StudentProfile {
   status?: 'ACTIVE' | 'GRADUATED';
   graduatedAt?: string | null;
   submission?: StudentSubmission | null;
+  video?: StudentIntroVideo | null;
 }
 
 export interface StudentSession {

@@ -33,6 +33,40 @@ export interface DriveUploadResult {
   driveFolderPath: string;
 }
 
+export interface DriveStreamResult {
+  stream: Readable;
+  mimeType: string;
+  /** Full size of the file in bytes, when the storage backend reports it. */
+  size?: number;
+  /** Present when the response only carries a byte range (HTTP 206). */
+  contentRange?: { start: number; end: number; total: number };
+}
+
+/**
+ * Parse a `Content-Range` response header (e.g. `bytes 0-1023/4096`) into the
+ * same shape as `parseRange`.
+ *
+ * Used as a fallback when a Drive file's total size is unknown: the original
+ * `Range` request is passed through to Drive untouched, and this recovers the
+ * range Drive actually served so the client still gets a valid 206.
+ */
+export function parseContentRangeHeader(
+  header: string | undefined,
+): { start: number; end: number; total: number } | null {
+  if (!header || typeof header !== 'string') return null;
+
+  const match = /^bytes\s+(\d+)-(\d+)\/(\d+|\*)$/i.exec(header.trim());
+  if (!match) return null;
+
+  const start = parseInt(match[1], 10);
+  const end = parseInt(match[2], 10);
+  const total = match[3] === '*' ? NaN : parseInt(match[3], 10);
+
+  if (!Number.isFinite(start) || !Number.isFinite(end) || start > end) return null;
+
+  return { start, end, total: Number.isFinite(total) ? total : end + 1 };
+}
+
 class DriveService {
   private drive: drive_v3.Drive | null = null;
   private isMock = false;
@@ -578,18 +612,19 @@ class DriveService {
   }
 
   /**
-   * Proxy/Stream a Drive file to the client for admin media viewing.
+   * Proxy/Stream a Drive file to the client for admin/public media viewing.
    * @param fileId       - Google Drive file ID
    * @param relativePath - optional path hint used by the mock storage backend
    * @param rangeHeader  - optional HTTP Range header from the client request
-   *                       (e.g. "bytes=0-1048576"). Passed through so callers can
-   *                       set Content-Range headers even if the full stream is used.
+   *                       (e.g. "bytes=0-1048576"). A matching byte range is
+   *                       requested from the storage backend and reported back
+   *                       via `contentRange` so callers can answer with 206.
    */
   public async streamDriveFile(
     fileId: string,
     relativePath?: string,
     rangeHeader?: string,
-  ): Promise<{ stream: Readable; mimeType: string; size?: number }> {
+  ): Promise<DriveStreamResult> {
     if (this.isMock || !this.drive) {
       const inspectMockFile = (metaFilePath: string): { actualFilePath: string; meta: any; size: number } | null => {
         try {
@@ -646,24 +681,16 @@ class DriveService {
         match = findInDir(this.mockBaseDir);
       }
 
-      if (match) {
-        let start = 0;
-        let end = match.size - 1;
-        if (rangeHeader) {
-          const parsed = parseRange(rangeHeader, match.size);
-          if (parsed) {
-            start = parsed.start;
-            end = parsed.end;
-          }
-        }
-        return {
-          stream: fs.createReadStream(match.actualFilePath, { start, end }),
-          mimeType: match.meta.mimeType || match.meta.mimetype || 'video/mp4',
-          size: match.size,
-        };
+      if (!match) {
+        throw new Error(`Mock file ${fileId} not found`);
       }
 
-      throw new Error(`Mock file ${fileId} not found`);
+      return this.createLocalStream(
+        match.actualFilePath,
+        match.meta.mimeType || match.meta.mimetype || 'application/octet-stream',
+        match.size,
+        rangeHeader,
+      );
     }
 
     // Google Drive stream
@@ -675,17 +702,18 @@ class DriveService {
 
     const totalSize = metadata.data.size ? parseInt(metadata.data.size, 10) : undefined;
     const requestOptions: any = { responseType: 'stream' };
+
+    // A parsed range lets us both narrow the Drive request and report an exact
+    // Content-Range back to the caller. Suffix ranges (`bytes=-500`) matter most
+    // here: MP4 `moov` atoms are often at the end of the file.
+    const parsed = rangeHeader && totalSize ? parseRange(rangeHeader, totalSize) : null;
+
     if (rangeHeader) {
-      if (totalSize) {
-        const parsed = parseRange(rangeHeader, totalSize);
-        if (parsed) {
-          requestOptions.headers = { Range: `bytes=${parsed.start}-${parsed.end}` };
-        } else {
-          requestOptions.headers = { Range: rangeHeader };
-        }
-      } else {
-        requestOptions.headers = { Range: rangeHeader };
-      }
+      // When the size is unknown we cannot parse the header ourselves, so pass it
+      // through untouched and let Drive serve the range.
+      requestOptions.headers = {
+        Range: parsed ? `bytes=${parsed.start}-${parsed.end}` : rangeHeader,
+      };
     }
 
     const res = await this.drive.files.get(
@@ -693,11 +721,96 @@ class DriveService {
       requestOptions,
     );
 
+    // Fall back to the range Drive actually served, so a pass-through range still
+    // produces a correct 206 rather than a full 200 body the player cannot seek in.
+    // `totalSize` is always defined when `parsed` is, since parsing needs it.
+    const contentRange = parsed
+      ? { start: parsed.start, end: parsed.end, total: totalSize! }
+      : (parseContentRangeHeader(
+          (res.headers?.['content-range'] as string | undefined) ?? undefined,
+        ) ?? undefined);
+
     return {
       stream: res.data as Readable,
-      mimeType: metadata.data.mimeType || 'video/mp4',
+      mimeType: metadata.data.mimeType || 'application/octet-stream',
       size: totalSize,
+      contentRange,
     };
+  }
+
+  /** Build a (optionally ranged) read stream for the local mock storage. */
+  private createLocalStream(
+    filePath: string,
+    mimeType: string,
+    size: number,
+    rangeHeader?: string,
+  ): DriveStreamResult {
+    const range = rangeHeader ? parseRange(rangeHeader, size) : null;
+
+    if (!range) {
+      return { stream: fs.createReadStream(filePath), mimeType, size };
+    }
+
+    return {
+      stream: fs.createReadStream(filePath, { start: range.start, end: range.end }),
+      mimeType,
+      size,
+      contentRange: { start: range.start, end: range.end, total: size },
+    };
+  }
+
+  /**
+   * Delete a single stored file by its Drive/mock ID.
+   *
+   * Used to purge a superseded video after a student uploads a replacement, so
+   * the old file never lingers next to the new one. Never throws — a failed
+   * cleanup must not fail the request that already stored the new file.
+   */
+  public async deleteFileById(fileId: string, relativePath?: string): Promise<boolean> {
+    if (!fileId) return false;
+
+    if (this.isMock || !this.drive) {
+      try {
+        const candidates: string[] = [];
+        if (relativePath) candidates.push(path.join(this.mockBaseDir, relativePath));
+        candidates.push(this.mockBaseDir);
+
+        for (const dir of candidates) {
+          if (!fs.existsSync(dir)) continue;
+          const stack = [dir];
+          while (stack.length) {
+            const current = stack.pop()!;
+            for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+              const full = path.join(current, entry.name);
+              if (entry.isDirectory()) {
+                stack.push(full);
+                continue;
+              }
+              if (!entry.name.endsWith('.meta.json')) continue;
+              try {
+                const meta = JSON.parse(fs.readFileSync(full, 'utf-8'));
+                if (meta.id !== fileId) continue;
+                fs.rmSync(full, { force: true });
+                fs.rmSync(full.replace(/\.meta\.json$/, ''), { force: true });
+                return true;
+              } catch (_) {}
+            }
+          }
+        }
+        return false;
+      } catch (err) {
+        console.warn(`[drive] failed to delete mock file ${fileId}:`, err);
+        return false;
+      }
+    }
+
+    try {
+      await this.drive.files.delete({ fileId, supportsAllDrives: true });
+      return true;
+    } catch (err) {
+      console.warn(`[drive] failed to delete file ${fileId}:`, err);
+      return false;
+    }
   }
 
   /**

@@ -4,6 +4,7 @@ import { StudentSession } from '../../types';
 import { api } from '../../services/api';
 import { Navbar } from '../../components/Navbar';
 import { Footer } from '../../components/Footer';
+import { PublicVideoShowcase } from '../../components/PublicVideoShowcase';
 import { ShieldCheck, Search, ArrowRight, UserCheck } from 'lucide-react';
 
 interface HomePageProps {
@@ -39,7 +40,7 @@ export const HomePage: React.FC<HomePageProps> = ({ session, onLogout }) => {
     <div className="min-h-screen bg-[#FAFAFA] text-neutral-900 flex flex-col justify-between">
       <Navbar session={session} onLogout={onLogout} />
 
-      <main className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-16 sm:py-24 text-center">
+      <main className="flex-1 flex flex-col items-center px-4 sm:px-6 py-16 sm:py-20 text-center">
         <div className="max-w-xl w-full mx-auto space-y-10">
           {/* HEADER / IDENTITY */}
           <div className="space-y-4">
@@ -123,6 +124,11 @@ export const HomePage: React.FC<HomePageProps> = ({ session, onLogout }) => {
               )}
             </form>
           </div>
+        </div>
+
+        {/* Publicly visible approved introduction videos — no login required */}
+        <div className="w-full max-w-6xl mx-auto mt-16 sm:mt-24">
+          <PublicVideoShowcase />
         </div>
       </main>
 

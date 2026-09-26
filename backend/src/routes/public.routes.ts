@@ -7,7 +7,6 @@ import { submissionRateLimiter } from '../middleware/rateLimiter';
 import { ValidationService } from '../services/validation.service';
 import { driveService } from '../services/drive.service';
 import { ActivityService } from '../services/activity.service';
-import { parseRange } from '../utils/rangeParser';
 
 const router = Router();
 
@@ -311,7 +310,15 @@ router.get('/public/media/:type/:fileId', async (req: Request, res: Response): P
     }
 
     const rangeHeader = req.headers.range;
-    const { stream, mimeType, size } = await driveService.streamDriveFile(fileId, undefined, rangeHeader);
+
+    // Honour Range requests so <video> can seek instead of buffering the whole
+    // file. The byte range is fetched from storage, so the body always matches
+    // the advertised Content-Range.
+    const { stream, mimeType, size, contentRange } = await driveService.streamDriveFile(
+      fileId,
+      undefined,
+      rangeHeader,
+    );
 
     res.setHeader('Content-Type', mimeType);
     res.setHeader('Accept-Ranges', 'bytes');
@@ -325,28 +332,25 @@ router.get('/public/media/:type/:fileId', async (req: Request, res: Response): P
       res.setHeader('Content-Disposition', 'inline');
     }
 
-    if (size !== undefined && rangeHeader) {
-      const parsed = parseRange(rangeHeader, size);
-      if (parsed) {
-        const chunkSize = parsed.end - parsed.start + 1;
-        res.setHeader('Content-Range', `bytes ${parsed.start}-${parsed.end}/${size}`);
-        res.setHeader('Content-Length', chunkSize);
-        res.status(206);
-      } else {
-        if (typeof (stream as any).destroy === 'function') {
-          (stream as any).destroy();
-        }
-        res.setHeader('Content-Range', `bytes */${size}`);
-        res.status(416).end();
-        return;
+    if (contentRange) {
+      res.setHeader('Content-Range', `bytes ${contentRange.start}-${contentRange.end}/${contentRange.total}`);
+      res.setHeader('Content-Length', String(contentRange.end - contentRange.start + 1));
+      res.status(206);
+    } else if (rangeHeader && size !== undefined) {
+      if (typeof (stream as any).destroy === 'function') {
+        (stream as any).destroy();
       }
+      res.setHeader('Content-Range', `bytes */${size}`);
+      res.status(416).end();
+      return;
     } else if (size !== undefined) {
-      res.setHeader('Content-Length', size);
+      res.setHeader('Content-Length', String(size));
       res.status(200);
     } else {
       res.status(200);
     }
 
+    // Drop the storage stream if the client aborts (page switch/refresh/seek).
     res.on('close', () => {
       if (!res.writableFinished && typeof (stream as any).destroy === 'function') {
         (stream as any).destroy();
@@ -364,7 +368,9 @@ router.get('/public/media/:type/:fileId', async (req: Request, res: Response): P
 
     stream.pipe(res);
   } catch (err: any) {
-    res.status(404).json({ error: 'MEDIA_NOT_FOUND', message: 'Requested media could not be found or loaded.' });
+    if (!res.headersSent) {
+      res.status(404).json({ error: 'MEDIA_NOT_FOUND', message: 'Requested media could not be found or loaded.' });
+    }
   }
 });
 

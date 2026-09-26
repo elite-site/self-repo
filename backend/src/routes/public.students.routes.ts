@@ -62,14 +62,27 @@ router.get('/:rollNo', async (req: Request, res: Response) => {
         projects: { orderBy: { displayOrder: 'asc' } },
         achievements: { where: { status: { in: ['APPROVED', 'PENDING'] } }, include: { category: true }, orderBy: { achievedAt: 'desc' } },
         certificates: { where: { status: 'APPROVED' } },
-        resumes: { where: { status: 'APPROVED' }, take: 1, orderBy: { submittedAt: 'desc' } }
+        resumes: { where: { status: 'APPROVED' }, take: 1, orderBy: { submittedAt: 'desc' } },
+        // Only an approved + published video is ever attached to a public
+        // profile, so a pending or unapproved recording stays invisible.
+        introVideos: {
+          where: { status: 'APPROVED', isPublic: true, driveFileId: { not: null } },
+          take: 1,
+          orderBy: { publishedAt: 'desc' },
+          select: { id: true, submittedAt: true, publishedAt: true, sizeMb: true },
+        }
       }
     });
     if (!student || !student.profile?.isPublic) {
       return res.status(404).json({ error: 'NOT_FOUND', message: 'Student not found or not public' });
     }
+    const introVideo = student.introVideos?.[0];
     const studentWithProofs = {
       ...student,
+      introVideos: undefined,
+      introVideo: introVideo
+        ? { ...introVideo, streamUrl: `/api/public/videos/stream/${introVideo.id}` }
+        : null,
       achievements: student.achievements.map((a: any) => ({
         ...a,
         proofUrl: a.proofUrl || (a.proofDriveId ? `/api/public/media/achievement/${a.proofDriveId}` : null)

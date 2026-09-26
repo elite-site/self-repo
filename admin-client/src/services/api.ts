@@ -128,6 +128,23 @@ export const adminApi = {
     return res.data;
   },
 
+  /**
+   * Ask a student to upload a new introduction video. The current video stays
+   * in place until the replacement arrives; the student is notified.
+   */
+  async requestNewVideo(id: string, reason?: string): Promise<{ success: boolean; message: string }> {
+    const res = await client.post(`/admin/api/submissions/${id}/request-video`, {
+      reason: reason?.trim() || undefined,
+    });
+    return res.data;
+  },
+
+  /** Publish / unpublish an approved introduction video on the public page. */
+  async setVideoPublic(introVideoId: string, isPublic: boolean): Promise<{ success: boolean; message: string }> {
+    const res = await client.patch(`/admin/api/moderation/videos/${introVideoId}/visibility`, { isPublic });
+    return res.data;
+  },
+
   async deleteSubmission(id: string): Promise<{ success: boolean; message: string }> {
     const res = await client.delete(`/admin/api/submissions/${id}`);
     return res.data;
@@ -183,7 +200,7 @@ export const adminApi = {
     const res = await client.get('/admin/api/moderation/certificates');
     return { items: res.data || [] };
   },
-  async moderationDecision(type: string, id: string, data: { action: string; reason?: string }): Promise<any> {
+  async moderationDecision(type: string, id: string, data: { action: string; reason?: string; publish?: boolean }): Promise<any> {
     const res = await client.patch(`/admin/api/moderation/${type}/${id}`, data);
     return res.data;
   },

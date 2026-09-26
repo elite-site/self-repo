@@ -44,6 +44,7 @@ export const Moderation: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [action, setAction] = useState<'approve' | 'reject' | 'changes' | 'hide' | null>(null);
   const [reason, setReason] = useState('');
+  const [publishOnApprove, setPublishOnApprove] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -96,8 +97,24 @@ export const Moderation: React.FC = () => {
     if ((action === 'reject' || action === 'changes') && !reason.trim()) return;
     setSubmitting(true);
     try {
-      await adminApi.moderationDecision?.(activeTab, currentItem.id, { action, reason });
-      showToast(action === 'approve' ? 'Approved!' : action === 'reject' ? 'Rejected.' : action === 'changes' ? 'Changes requested.' : 'Hidden.');
+      await adminApi.moderationDecision?.(activeTab, currentItem.id, {
+        action,
+        reason,
+        // Approving an intro video can publish it on the public page; the
+        // student can also publish it themselves once it is approved.
+        publish: activeTab === 'videos' ? publishOnApprove : undefined,
+      });
+      showToast(
+        action === 'approve'
+          ? activeTab === 'videos' && publishOnApprove
+            ? 'Approved and published.'
+            : 'Approved!'
+          : action === 'reject'
+          ? 'Rejected.'
+          : action === 'changes'
+          ? 'Change requested — the student has been notified.'
+          : 'Hidden.'
+      );
       setAction(null);
       setReason('');
       // Remove item from list
@@ -309,6 +326,22 @@ export const Moderation: React.FC = () => {
                     <p className="text-[10px] text-[#DC2626]">Reason is required for this action.</p>
                   )}
                 </div>
+              )}
+
+              {/* Publish option — intro videos only, shown when approving */}
+              {activeTab === 'videos' && action === 'approve' && (
+                <label className="flex items-start gap-2.5 p-3 rounded-lg border border-emerald-200 dark:border-emerald-800/60 bg-emerald-50/50 dark:bg-emerald-950/20 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={publishOnApprove}
+                    onChange={(e) => setPublishOnApprove(e.target.checked)}
+                    className="mt-0.5 w-3.5 h-3.5 rounded border-neutral-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                  />
+                  <span className="text-[11px] text-emerald-800 dark:text-emerald-300 leading-relaxed">
+                    <span className="font-bold">Publish on the public page.</span> The video becomes watchable by
+                    anyone on the public home page, without logging in. Uncheck to approve it but keep it private.
+                  </span>
+                </label>
               )}
 
               {action && (

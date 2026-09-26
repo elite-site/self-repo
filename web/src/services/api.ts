@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { StudentProfile } from '../types';
+import { PublicIntroVideo, StudentProfile } from '../types';
 
 const client = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api',
@@ -157,6 +157,15 @@ export const api = {
     return `${base}/api/student/submission/media/video?download=1${tokenParam}`;
   },
 
+  /**
+   * Publish / unpublish the student's own video on the public showcase.
+   * The backend rejects publishing a video that has not been approved yet.
+   */
+  async setVideoPublic(isPublic: boolean): Promise<{ success: boolean; isPublic: boolean; message?: string }> {
+    const res = await client.patch('/student/submission/video-visibility', { isPublic });
+    return res.data;
+  },
+
   // Profile
   async getProfile() {
     const res = await client.get('/student/profile');
@@ -233,4 +242,18 @@ export const api = {
   async getPublicStudent(rollNo: string) { const res = await client.get(`/public/students/${rollNo}`); return res.data; },
   async getPublicEvents() { const res = await client.get('/public/events'); return res.data; },
   async getPublicEvent(id: string) { const res = await client.get(`/public/events/${id}`); return res.data; },
+
+  /** Approved + published introduction videos (empty until a video is approved). */
+  async getPublicVideos(limit?: number): Promise<{ items: PublicIntroVideo[]; total: number }> {
+    const res = await client.get('/public/videos', { params: limit ? { limit } : undefined });
+    return { items: res.data?.items ?? [], total: res.data?.total ?? 0 };
+  },
 };
+
+/** Absolute URL for a media path returned by the API (works in <video src>). */
+export function resolveMediaUrl(pathOrUrl: string): string {
+  if (/^https?:\/\//i.test(pathOrUrl)) return pathOrUrl;
+  const base = (client.defaults.baseURL ?? '')
+    .replace(/\/api\/?$/, '');
+  return `${base}${pathOrUrl.startsWith('/') ? '' : '/'}${pathOrUrl}`;
+}

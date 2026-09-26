@@ -30,6 +30,7 @@ vi.mock('../src/lib/prisma', () => ({
       create: vi.fn(),
       update: vi.fn(),
       updateMany: vi.fn(),
+      deleteMany: vi.fn(),
     },
     activityLog: {
       create: vi.fn(),
@@ -42,6 +43,7 @@ vi.mock('../src/services/drive.service', () => ({
     uploadFile: vi.fn(),
     uploadSubmissionFiles: vi.fn(),
     deleteVideo: vi.fn(),
+    deleteFileById: vi.fn(),
     cleanupFailedUpload: vi.fn(),
     streamDriveFile: vi.fn(),
   },
@@ -190,6 +192,7 @@ describe('Resume and Intro Video Reupload Persistence & Cache Invalidation', () 
         driveFolderPath: 'Events/2026/3-A/IT_23K61A1201_Test',
       });
       (driveService.deleteVideo as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+      (driveService.deleteFileById as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(true);
       (driveService.uploadSubmissionFiles as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
         videoDriveId: 'video_new_123',
         driveFolderPath: 'Events/2026/3-A/IT_23K61A1201_Test',
@@ -204,6 +207,11 @@ describe('Resume and Intro Video Reupload Persistence & Cache Invalidation', () 
         studentId: 'stud_123',
         driveFileId: 'video_old',
       });
+      // A second, superseded row from an earlier take still exists.
+      (prisma.introVideo.findMany as unknown as ReturnType<typeof vi.fn>).mockResolvedValue([
+        { id: 'iv_0', driveFileId: 'video_ancient' },
+      ]);
+      (prisma.introVideo.deleteMany as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ count: 1 });
       (prisma.introVideo.update as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
         id: 'iv_1',
         driveFileId: 'video_new_123',
@@ -216,8 +224,22 @@ describe('Resume and Intro Video Reupload Persistence & Cache Invalidation', () 
         .attach('video', Buffer.from('000000186674797069736f6d000000006d703432', 'hex'), 'intro.mp4');
 
       expect(res.status).toBe(201);
-      // Confirmed: old video deleted from Drive
-      expect(driveService.deleteVideo).toHaveBeenCalled();
+      // Confirmed: the superseded files are removed from storage
+      expect(driveService.deleteFileById).toHaveBeenCalledWith(
+        'video_old',
+        'Events/2026/3-A/IT_23K61A1201_Test'
+      );
+      // Confirmed: the leftover row (and its orphaned file) is purged too
+      expect(prisma.introVideo.deleteMany).toHaveBeenCalledWith({ where: { id: { in: ['iv_0'] } } });
+      expect(driveService.deleteFileById).toHaveBeenCalledWith(
+        'video_ancient',
+        'Events/2026/3-A/IT_23K61A1201_Test'
+      );
+      // Confirmed: the new file is never deleted as part of its own cleanup
+      expect(driveService.deleteFileById).not.toHaveBeenCalledWith(
+        'video_new_123',
+        expect.anything()
+      );
       // Confirmed: Submission table updated with new videoDriveId
       expect(prisma.submission.update).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -233,6 +255,18 @@ describe('Resume and Intro Video Reupload Persistence & Cache Invalidation', () 
           data: expect.objectContaining({
             driveFileId: 'video_new_123',
             status: 'PENDING',
+          }),
+        })
+      );
+      // Confirmed: a replacement is un-published and must be approved again
+      // before it can appear on the public page
+      expect(prisma.introVideo.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            isPublic: false,
+            publishedAt: null,
+            changeRequestedAt: null,
+            changeRequestNote: null,
           }),
         })
       );

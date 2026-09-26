@@ -14,6 +14,7 @@ import {
   Award,
   Vote,
   Info,
+  Video,
   ChevronRight
 } from 'lucide-react';
 
@@ -24,7 +25,7 @@ export const NotificationsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeFilter, setActiveFilter] = useState<'ALL' | 'UNREAD' | 'EVENT' | 'ACADEMIC' | 'VOTING'>('ALL');
+  const [activeFilter, setActiveFilter] = useState<'ALL' | 'UNREAD' | 'EVENT' | 'ACADEMIC' | 'VOTING' | 'VIDEO'>('ALL');
   const [markingAll, setMarkingAll] = useState(false);
   const navigate = useNavigate();
 
@@ -99,6 +100,9 @@ export const NotificationsPage: React.FC = () => {
 
   const filteredNotifs = notifs.filter((n) => {
     if (activeFilter === 'UNREAD') return !n.isRead;
+    // Video / moderation decisions (approve, reject, "upload a new video") are
+    // stored with the MODERATION type.
+    if (activeFilter === 'VIDEO') return n.type === 'MODERATION';
     if (activeFilter !== 'ALL') return n.type === activeFilter;
     return true;
   });
@@ -119,6 +123,8 @@ export const NotificationsPage: React.FC = () => {
         return <Award className="w-4 h-4 text-blue-600" />;
       case 'VOTING':
         return <Vote className="w-4 h-4 text-purple-600" />;
+      case 'MODERATION':
+        return <Video className="w-4 h-4 text-orange-600" />;
       default:
         return <Info className="w-4 h-4 text-neutral-500" />;
     }
@@ -179,7 +185,7 @@ export const NotificationsPage: React.FC = () => {
 
       {/* FILTER CHIPS */}
       <div className="flex flex-wrap gap-2">
-        {(['ALL', 'UNREAD', 'EVENT', 'ACADEMIC', 'VOTING'] as const).map((filter) => (
+        {(['ALL', 'UNREAD', 'EVENT', 'ACADEMIC', 'VOTING', 'VIDEO'] as const).map((filter) => (
           <button
             key={filter}
             onClick={() => setActiveFilter(filter)}
@@ -193,6 +199,8 @@ export const NotificationsPage: React.FC = () => {
               ? 'All Notifications'
               : filter === 'UNREAD'
               ? `Unread (${unreadCount})`
+              : filter === 'VIDEO'
+              ? 'Video Reviews'
               : filter}
           </button>
         ))}

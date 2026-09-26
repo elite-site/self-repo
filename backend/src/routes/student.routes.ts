@@ -12,7 +12,6 @@ import { ValidationService } from '../services/validation.service';
 import { driveService } from '../services/drive.service';
 import { ActivityService } from '../services/activity.service';
 import { ssoService } from '../services/sso.service';
-import { parseRange } from '../utils/rangeParser';
 
 const router = Router();
 
@@ -30,7 +29,7 @@ function serializeStudentView(student: {
   branch: string;
   status: StudentStatus;
   graduatedAt: Date | null;
-}, submission: any | null) {
+}, submission: any | null, introVideo: any | null = null) {
   return {
     id: student.id,
     rollNo: student.rollNo,
@@ -53,7 +52,75 @@ function serializeStudentView(student: {
           reviewedAt: submission.reviewedAt || null,
         }
       : null,
+    // Moderation + public visibility state of the introduction video, plus the
+    // stored file's own metadata so the portal can show the student exactly
+    // which recording they submitted.
+    video: introVideo
+      ? {
+          id: introVideo.id,
+          status: introVideo.status,
+          reviewNote: introVideo.reviewNote || null,
+          isPublic: Boolean(introVideo.isPublic),
+          publishedAt: introVideo.publishedAt || null,
+          changeRequestedAt: introVideo.changeRequestedAt || null,
+          changeRequestNote: introVideo.changeRequestNote || null,
+          submittedAt: introVideo.submittedAt,
+          filename: introVideo.filename || null,
+          mimeType: introVideo.mimeType || null,
+          sizeMb: introVideo.sizeMb ?? null,
+          hasFile: Boolean(introVideo.driveFileId),
+        }
+      : null,
   };
+}
+
+/**
+ * Remove every IntroVideo row for a student except the one just written.
+ * A student only ever has one active intro video, so superseded rows would
+ * otherwise pile up (and keep orphaned moderation entries around).
+ */
+async function purgeSupersededIntroVideos(
+  studentId: string,
+  keepId: string,
+  protectedFileId?: string | null,
+): Promise<string[]> {
+  try {
+    const stale = (await prisma.introVideo.findMany({
+      where: { studentId, id: { not: keepId } },
+      select: { id: true, driveFileId: true },
+    })) ?? [];
+
+    if (stale.length === 0) return [];
+
+    await prisma.introVideo.deleteMany({ where: { id: { in: stale.map((v) => v.id) } } });
+
+    // Orphaned Drive files are removed by the caller — the new video is already
+    // stored, so a cleanup failure must never fail the upload.
+    return stale
+      .map((v) => v.driveFileId)
+      .filter((fileId): fileId is string => Boolean(fileId) && fileId !== protectedFileId);
+  } catch (err) {
+    console.warn('Could not purge superseded intro video rows:', err);
+    return [];
+  }
+}
+
+/**
+ * Best-effort removal of a stored file.
+ *
+ * This only ever runs after a replacement video is safely stored and
+ * referenced, so it must never throw: a storage hiccup while deleting the
+ * superseded file must not fail the upload the student just completed.
+ */
+function deleteStoredFile(fileId: string | null | undefined, relativePath?: string): void {
+  if (!fileId) return;
+  try {
+    void Promise.resolve(driveService.deleteFileById(fileId, relativePath)).catch((err) => {
+      console.warn(`Could not delete superseded file ${fileId}:`, err);
+    });
+  } catch (err) {
+    console.warn(`Could not delete superseded file ${fileId}:`, err);
+  }
 }
 
 function signedState(): string {
@@ -174,12 +241,32 @@ router.get('/me', requireStudentAuth, async (req: Request, res: Response): Promi
       },
     });
 
+    const introVideo = await prisma.introVideo.findFirst({
+      where: { studentId: student.id },
+      orderBy: { submittedAt: 'desc' },
+      select: {
+        id: true,
+        status: true,
+        reviewNote: true,
+        isPublic: true,
+        publishedAt: true,
+        changeRequestedAt: true,
+        changeRequestNote: true,
+        submittedAt: true,
+        filename: true,
+        mimeType: true,
+        sizeMb: true,
+        driveFileId: true,
+      },
+    });
+
     // Never cache student session/profile data so submissions, reviews,
-    // and profile edits reflect immediately without requiring re-login.
+    // profile photo edits and the intro video reflect immediately without
+    // requiring a re-login.
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
-    res.json({ student: serializeStudentView(student, submission) });
+    res.json({ student: serializeStudentView(student, submission, introVideo) });
   } catch (err: any) {
     console.error('Error fetching student profile:', err);
     res.status(500).json({ error: 'FAILED_TO_FETCH_PROFILE', message: err.message });
@@ -228,15 +315,14 @@ router.post(
         return;
       }
 
-      // Existing submission (if any) — delete its video from Drive first
+      // Existing submission (if any). The old file is NOT deleted yet — the new
+      // video is uploaded first so a failed upload can never leave the student
+      // with no video at all.
       const existing = await prisma.submission.findFirst({
         where: { rollNo: student.rollNo },
         orderBy: { submittedAt: 'desc' },
       });
-
-      if (existing?.videoDriveId) {
-        await driveService.deleteVideo(existing);
-      }
+      const previousDriveId = existing?.videoDriveId ?? null;
 
       // Upload the new video to Google Drive (or mock storage)
       const uploadResult = await driveService.uploadSubmissionFiles(
@@ -284,6 +370,8 @@ router.post(
         : await prisma.submission.create({ data: { eventId: EVENT_ID, ...data } });
 
       // Also keep prisma.introVideo in sync so Admin Moderation queue and student queries immediately reflect the video
+      const sizeMb = parseFloat((videoFile.size / (1024 * 1024)).toFixed(2));
+      let keptIntroVideoId: string | null = null;
       try {
         const existingIntroVideo = await prisma.introVideo.findFirst({
           where: { studentId: student.id },
@@ -291,37 +379,60 @@ router.post(
         });
 
         if (existingIntroVideo) {
-          await prisma.introVideo.update({
+          const updated = await prisma.introVideo.update({
             where: { id: existingIntroVideo.id },
             data: {
               driveFileId: uploadResult.videoDriveId || null,
               filename: videoFile.originalname,
               mimeType: videoFile.mimetype,
-              sizeMb: parseFloat((videoFile.size / (1024 * 1024)).toFixed(2)),
+              sizeMb,
               status: 'PENDING',
               reviewNote: null,
               reviewedBy: null,
               reviewedAt: null,
               submittedAt: new Date(),
               isActive: true,
+              // A replaced video must be re-approved before it is public again.
+              isPublic: false,
+              publishedAt: null,
+              changeRequestedAt: null,
+              changeRequestNote: null,
             },
           });
+          keptIntroVideoId = updated.id;
         } else {
-          await prisma.introVideo.create({
+          const created = await prisma.introVideo.create({
             data: {
               studentId: student.id,
               driveFileId: uploadResult.videoDriveId || null,
               filename: videoFile.originalname,
               mimeType: videoFile.mimetype,
-              sizeMb: parseFloat((videoFile.size / (1024 * 1024)).toFixed(2)),
+              sizeMb,
               status: 'PENDING',
               submittedAt: new Date(),
               isActive: true,
             },
           });
+          keptIntroVideoId = created.id;
         }
       } catch (introVideoErr) {
         console.warn('Could not sync introVideo table:', introVideoErr);
+      }
+
+      // The new video is stored and referenced — now override the old one and
+      // delete every superseded file from storage.
+      if (keptIntroVideoId) {
+        const orphanedFileIds = await purgeSupersededIntroVideos(
+          student.id,
+          keptIntroVideoId,
+          uploadResult.videoDriveId,
+        );
+        for (const fileId of [previousDriveId, ...orphanedFileIds]) {
+          if (fileId === uploadResult.videoDriveId) continue;
+          deleteStoredFile(fileId, uploadResult.driveFolderPath);
+        }
+      } else {
+        deleteStoredFile(previousDriveId, uploadResult.driveFolderPath);
       }
 
       await ActivityService.log({
@@ -360,6 +471,61 @@ router.post(
     }
   }
 );
+
+// PATCH /api/student/submission/video-visibility — publish / unpublish your own
+// video on the public showcase. Only an APPROVED video can be published, so a
+// pending or freshly replaced video never appears publicly before moderation.
+router.patch('/submission/video-visibility', requireStudentAuth, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const studentId = req.student!.studentId;
+    const { isPublic } = req.body || {};
+
+    if (typeof isPublic !== 'boolean') {
+      res.status(400).json({ error: 'VALIDATION_ERROR', message: 'isPublic must be true or false.' });
+      return;
+    }
+
+    const introVideo = await prisma.introVideo.findFirst({
+      where: { studentId },
+      orderBy: { submittedAt: 'desc' },
+    });
+
+    if (!introVideo || !introVideo.driveFileId) {
+      res.status(404).json({ error: 'NO_VIDEO', message: 'Upload an introduction video first.' });
+      return;
+    }
+
+    if (isPublic && introVideo.status !== 'APPROVED') {
+      res.status(409).json({
+        error: 'NOT_APPROVED',
+        message: 'Your video is still awaiting faculty approval, so it cannot be published yet.',
+      });
+      return;
+    }
+
+    const updated = await prisma.introVideo.update({
+      where: { id: introVideo.id },
+      data: {
+        isPublic,
+        publishedAt: isPublic ? new Date() : null,
+      },
+      select: { id: true, isPublic: true, publishedAt: true, status: true },
+    });
+
+    res.json({
+      success: true,
+      isPublic: updated.isPublic,
+      publishedAt: updated.publishedAt,
+      message: isPublic
+        ? 'Your video is now visible on the public page.'
+        : 'Your video has been removed from the public page.',
+    });
+  } catch (err: any) {
+    console.error('Error updating video visibility:', err);
+    res.status(500).json({ error: 'SERVER_ERROR', message: 'Could not update video visibility.' });
+  }
+});
+
 
 // GET /api/student/submission/media/video — stream the student's own video (preview)
 // Supports HTTP Range requests so the browser can seek without re-downloading.
@@ -400,13 +566,15 @@ router.get('/submission/media/video', requireStudentAuth, async (req: Request, r
 
     const rangeHeader = req.headers.range;
 
-    const { stream, mimeType, size } = await driveService.streamDriveFile(
+    // The service performs the real byte-range fetch, so the body always
+    // matches the advertised Content-Range. A <video> element can then seek
+    // through the stored recording instead of buffering the whole file.
+    const { stream, mimeType, size, contentRange } = await driveService.streamDriveFile(
       driveFileId,
       submission.driveFolderPath,
       rangeHeader,
     );
 
-    // Respond with proper headers
     res.setHeader('Content-Type', mimeType || 'video/mp4');
     res.setHeader('Accept-Ranges', 'bytes');
     res.setHeader('Cache-Control', 'no-cache, private');
@@ -418,28 +586,29 @@ router.get('/submission/media/video', requireStudentAuth, async (req: Request, r
       res.setHeader('Content-Disposition', 'inline');
     }
 
-    if (size !== undefined && rangeHeader) {
-      const parsed = parseRange(rangeHeader, size);
-      if (parsed) {
-        const chunkSize = parsed.end - parsed.start + 1;
-        res.setHeader('Content-Range', `bytes ${parsed.start}-${parsed.end}/${size}`);
-        res.setHeader('Content-Length', chunkSize);
-        res.status(206);
-      } else {
-        if (typeof (stream as any).destroy === 'function') {
-          (stream as any).destroy();
-        }
-        res.setHeader('Content-Range', `bytes */${size}`);
-        res.status(416).end();
-        return;
+    if (contentRange) {
+      res.setHeader('Content-Range', `bytes ${contentRange.start}-${contentRange.end}/${contentRange.total}`);
+      res.setHeader('Content-Length', String(contentRange.end - contentRange.start + 1));
+      res.status(206);
+    } else if (rangeHeader && size !== undefined) {
+      // A range was requested but could not be satisfied (malformed or past EOF).
+      // Reject it explicitly rather than replying 200 with the whole file, which
+      // the player would then try to seek inside.
+      if (typeof (stream as any).destroy === 'function') {
+        (stream as any).destroy();
       }
+      res.setHeader('Content-Range', `bytes */${size}`);
+      res.status(416).end();
+      return;
     } else if (size !== undefined) {
-      res.setHeader('Content-Length', size);
+      res.setHeader('Content-Length', String(size));
       res.status(200);
     } else {
       res.status(200);
     }
 
+    // Release the Drive stream when the client goes away (page switch, refresh or
+    // a seek) instead of leaving a half-read response holding a socket open.
     res.on('close', () => {
       if (!res.writableFinished && typeof (stream as any).destroy === 'function') {
         (stream as any).destroy();
@@ -543,16 +712,12 @@ router.post(
         where: { rollNo: student.rollNo },
         orderBy: { submittedAt: 'desc' },
       });
+      const previousDriveId = existing?.videoDriveId ?? null;
 
       // ── 5. Create Drive resumable session (returns null in mock mode) ─────
       const sessionUrl = await driveService.createResumableUploadSession(
         videoFileName, rawMime, contentLength, folderId,
       );
-
-      // Delete old video from Drive asynchronously so we don't block the upload
-      if (existing?.videoDriveId) {
-        driveService.deleteVideo(existing).catch(() => {});
-      }
 
       // ── 6. Pipe req stream → Drive (THE KEY STEP — no buffering) ─────────
       const driveFileId = await driveService.streamUploadToDrive(
@@ -562,6 +727,12 @@ router.post(
         req,   // Express Request is a Node.js Readable
         { relativePath, fileName: videoFileName },
       );
+
+      // The new file is safely stored. Only now is the old one removed, so a
+      // failed upload can never destroy the student's current video.
+      if (previousDriveId && previousDriveId !== driveFileId) {
+        deleteStoredFile(previousDriveId, relativePath);
+      }
 
       // ── 7. Persist to DB ─────────────────────────────────────────────────
       const submissionData = {
@@ -619,11 +790,27 @@ router.post(
           reviewedAt: null,
           submittedAt: new Date(),
           isActive: true,
+          // A replaced video must be re-approved before it appears publicly.
+          isPublic: false,
+          publishedAt: null,
+          changeRequestedAt: null,
+          changeRequestNote: null,
         };
+
+        let keptId: string;
         if (iv) {
-          await prisma.introVideo.update({ where: { id: iv.id }, data: ivData });
+          const updated = await prisma.introVideo.update({ where: { id: iv.id }, data: ivData });
+          keptId = updated.id;
         } else {
-          await prisma.introVideo.create({ data: { studentId: student.id, ...ivData } });
+          const created = await prisma.introVideo.create({ data: { studentId: student.id, ...ivData } });
+          keptId = created.id;
+        }
+
+        // Drop any leftover rows/files from earlier takes so the old video is
+        // fully overridden by this one.
+        const orphaned = await purgeSupersededIntroVideos(student.id, keptId, driveFileId);
+        for (const fileId of orphaned) {
+          deleteStoredFile(fileId, relativePath);
         }
       } catch (e) {
         console.warn('[video-stream] introVideo sync failed:', e);

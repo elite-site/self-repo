@@ -15,6 +15,7 @@ import { driveService } from './services/drive.service';
 import { generalApiRateLimiter } from './middleware/rateLimiter';
 import publicRoutes from './routes/public.routes';
 import publicStudentRoutes from './routes/public.students.routes';
+import publicVideoRoutes from './routes/public.videos.routes';
 import studentRoutes from './routes/student.routes';
 import studentProfileRoutes from './routes/student.profile.routes';
 import studentPortfolioRoutes from './routes/student.portfolio.routes';
@@ -132,6 +133,7 @@ app.get('/ready', async (_req, res) => {
 // 1. Public API routes (existing submission form + new public directory)
 app.use('/api', publicRoutes);
 app.use('/api/public/students', publicStudentRoutes);
+app.use('/api/public/videos', publicVideoRoutes);   // approved + published intro videos
 
 // 1b. Student portal API routes
 app.use('/api/student', studentRoutes);                         // existing: SSO, me, video upload
