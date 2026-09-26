@@ -1,5 +1,4 @@
 import sharp from 'sharp';
-import FileType from 'file-type';
 import { env } from '../config/env';
 
 export interface FileValidationResult {
@@ -37,6 +36,30 @@ export class ValidationService {
   ];
 
   /**
+   * Identifies a buffer's real media type from its magic bytes.
+   *
+   * file-type v18+ is ESM-only and dropped the default export in favour of the
+   * named `fileTypeFromBuffer`, so it can no longer be imported statically from
+   * this CommonJS build. tsconfig sets `module: node16`, which preserves a
+   * dynamic `import()` in the emitted CJS instead of rewriting it to `require()`
+   * (which would fail with ERR_REQUIRE_ESM).
+   *
+   * v20+ also throws EndOfStreamError when the buffer is too short to classify,
+   * where v16 returned undefined. This normalises that back to undefined so the
+   * callers' existing `!type` checks keep behaving identically.
+   */
+  private static async sniffMime(
+    fileBuffer: Buffer
+  ): Promise<{ mime: string; ext: string } | undefined> {
+    const { fileTypeFromBuffer } = await import('file-type');
+    try {
+      return await fileTypeFromBuffer(fileBuffer);
+    } catch {
+      return undefined;
+    }
+  }
+
+  /**
    * Validates an uploaded image file using file-type sniffing and Sharp decoding
    */
   public static async validateImage(
@@ -57,7 +80,7 @@ export class ValidationService {
     // 2. Real mime type sniffing
     let detectedMime = 'image/jpeg';
     try {
-      const type = await FileType.fromBuffer(fileBuffer);
+      const type = await this.sniffMime(fileBuffer);
       if (!type || !this.ALLOWED_IMAGE_MIMES.includes(type.mime)) {
         return {
           valid: false,
@@ -120,7 +143,7 @@ export class ValidationService {
     }
 
     try {
-      const type = await FileType.fromBuffer(fileBuffer);
+      const type = await this.sniffMime(fileBuffer);
 
       if (!type || !this.ALLOWED_VIDEO_MIMES.includes(type.mime as any)) {
         return {
@@ -169,7 +192,7 @@ export class ValidationService {
     }
 
     try {
-      const type = await FileType.fromBuffer(fileBuffer);
+      const type = await this.sniffMime(fileBuffer);
 
       if (!type || !this.ALLOWED_AUDIO_MIMES.includes(type.mime as any)) {
         return {
