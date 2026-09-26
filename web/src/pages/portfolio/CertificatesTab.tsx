@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { api } from '../../services/api';
+import { api, resolveMediaUrl } from '../../services/api';
 import { Certificate } from '../../types';
 import { UploadCloud, Loader2, FileText, AlertCircle, Trash2, X, Plus, ExternalLink, Calendar } from 'lucide-react';
 
@@ -163,19 +163,32 @@ export const CertificatesTab: React.FC = () => {
               </div>
 
               <div className="pt-3 mt-3 border-t border-neutral-100 flex items-center justify-between text-xs">
-                {c.fileUrl ? (
-                  <a
-                    href={c.fileUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1 text-[11px] font-bold text-[#DC2626] hover:underline"
-                  >
-                    <span>View File</span>
-                    <ExternalLink className="w-3 h-3" />
-                  </a>
-                ) : (
-                  <span className="text-[10px] text-neutral-400 font-mono">Verified Record</span>
-                )}
+                <div className="flex items-center gap-2">
+                  {c.fileUrl ? (
+                    <a
+                      href={resolveMediaUrl(c.fileUrl)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 text-[11px] font-bold text-[#DC2626] hover:underline"
+                    >
+                      <span>View File</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  ) : (
+                    <span className="text-[10px] text-neutral-400 font-mono">Verified Record</span>
+                  )}
+                  {c.watchUrl && (
+                    <a
+                      href={c.watchUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-600 hover:underline"
+                    >
+                      <span>Drive</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  )}
+                </div>
 
                 <button
                   onClick={() => handleDelete(c.id)}

@@ -19,6 +19,7 @@ export const ResumePage: React.FC = () => {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [useDriveViewer, setUseDriveViewer] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadResume = async () => {
@@ -105,9 +106,9 @@ export const ResumePage: React.FC = () => {
       ? resolveMediaUrl(`/api/public/media/resume/${resumeData.driveFileId}`)
       : null;
 
-  // Prefer Google Drive's embed preview URL for cross-origin iframes (bypasses CORS/X-Frame blocks),
-  // falling back to backend media proxy URL.
-  const embedUrl = previewUrl || fileUrl;
+  // Primary inline viewer URL: use direct backend stream (fileUrl) so the document
+  // renders instantly using native browser PDF reader without asking students to sign in to Google.
+  const embedUrl = (useDriveViewer && previewUrl) ? previewUrl : (fileUrl || previewUrl);
 
   return (
     <div className="space-y-6 text-left">
@@ -240,6 +241,15 @@ export const ResumePage: React.FC = () => {
                     <ExternalLink className="w-3.5 h-3.5 text-blue-600" />
                     <span>View on Drive</span>
                   </a>
+                )}
+                {previewUrl && (
+                  <button
+                    type="button"
+                    onClick={() => setUseDriveViewer(!useDriveViewer)}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-neutral-300 hover:bg-neutral-50 text-neutral-700 text-xs font-bold transition-colors cursor-pointer"
+                  >
+                    <span>{useDriveViewer ? 'Use Direct PDF Viewer' : 'Use Drive Viewer'}</span>
+                  </button>
                 )}
                 <a
                   href={watchUrl || fileUrl!}

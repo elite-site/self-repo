@@ -86,6 +86,8 @@ export interface Achievement {
   organization: string;
   category: string;
   proofUrl?: string;
+  watchUrl?: string;
+  previewUrl?: string;
   status: 'DRAFT' | 'PENDING' | 'APPROVED' | 'REJECTED';
 }
 
@@ -95,6 +97,8 @@ export interface Certificate {
   issuer: string;
   date: string;
   fileUrl: string;
+  watchUrl?: string;
+  previewUrl?: string;
   thumbnailUrl?: string;
   status: 'APPROVED' | 'PENDING';
 }

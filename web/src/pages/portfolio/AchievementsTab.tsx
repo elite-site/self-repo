@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { api } from '../../services/api';
+import { api, resolveMediaUrl } from '../../services/api';
 import { Achievement } from '../../types';
-import { Plus, Trophy, Loader2, AlertCircle, Trash2, X, Calendar, Pencil } from 'lucide-react';
+import { Plus, Trophy, Loader2, AlertCircle, Trash2, X, Calendar, Pencil, ExternalLink } from 'lucide-react';
 
 export const AchievementsTab: React.FC = () => {
   const [achievements, setAchievements] = useState<Achievement[]>([]);
@@ -157,13 +157,41 @@ export const AchievementsTab: React.FC = () => {
                   </span>
                 </div>
                 <p className="text-xs text-neutral-600">{a.description}</p>
-                <div className="flex items-center gap-3 text-[11px] text-neutral-400 pt-1">
+                <div className="flex flex-wrap items-center gap-3 text-[11px] text-neutral-400 pt-1">
                   <span>{a.organization || 'Department'}</span>
                   <span>·</span>
                   <span className="flex items-center gap-1">
                     <Calendar className="w-3 h-3" />
                     {a.date ? new Date(a.date).toLocaleDateString() : 'N/A'}
                   </span>
+                  {a.proofUrl && (
+                    <>
+                      <span>·</span>
+                      <a
+                        href={resolveMediaUrl(a.proofUrl)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 text-[11px] font-bold text-[#DC2626] hover:underline"
+                      >
+                        <span>Proof</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </>
+                  )}
+                  {a.watchUrl && (
+                    <>
+                      <span>·</span>
+                      <a
+                        href={a.watchUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-600 hover:underline"
+                      >
+                        <span>Drive</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </>
+                  )}
                 </div>
               </div>
 

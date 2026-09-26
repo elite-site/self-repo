@@ -342,7 +342,7 @@ class DriveService {
 
     const fileId = res.data.id!;
 
-    // Make the file viewable by anyone with the link so it can be watched/viewed
+    // Make the file viewable: try public link first, fallback to Google Workspace domain
     try {
       await this.drive.permissions.create({
         fileId,
@@ -352,8 +352,23 @@ class DriveService {
         },
         supportsAllDrives: true,
       });
-    } catch (permErr) {
-      console.warn('Could not set public view permission on Drive file:', permErr);
+    } catch (permErr: any) {
+      console.warn('Could not set public anyone view permission on Drive file:', permErr?.message || permErr);
+      if (env.GOOGLE_SSO_HD) {
+        try {
+          await this.drive.permissions.create({
+            fileId,
+            requestBody: {
+              role: 'reader',
+              type: 'domain',
+              domain: env.GOOGLE_SSO_HD,
+            },
+            supportsAllDrives: true,
+          });
+        } catch (domainErr) {
+          console.warn('Could not set domain view permission on Drive file:', domainErr);
+        }
+      }
     }
 
     return fileId;

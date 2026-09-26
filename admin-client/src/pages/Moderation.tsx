@@ -244,7 +244,7 @@ export const Moderation: React.FC = () => {
                       const isGoogleDriveId = Boolean(driveId) && !driveId?.startsWith('mock_') && !driveId?.startsWith('drive_');
                       const watchUrl = currentItem.watchUrl || (isGoogleDriveId ? `https://drive.google.com/file/d/${driveId}/view` : null);
                       const previewUrl = currentItem.previewUrl || (isGoogleDriveId ? `https://drive.google.com/file/d/${driveId}/preview` : null);
-                      const embedUrl = previewUrl || currentItem.fileUrl;
+                      const embedUrl = currentItem.fileUrl || previewUrl;
 
                       return (
                         <>
