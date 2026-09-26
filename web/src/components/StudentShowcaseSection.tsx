@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Users, ArrowRight, ExternalLink, GraduationCap, Sparkles } from 'lucide-react';
-import { api } from '../services/api';
+import { api, resolveMediaUrl } from '../services/api';
 
 interface StudentItem {
   id: string;
@@ -95,7 +95,7 @@ export const StudentShowcaseSection: React.FC = () => {
                       <div className="w-12 h-12 rounded-xl bg-slate-900 text-white font-bold flex items-center justify-center text-sm shadow-sm group-hover:bg-elite-red transition-colors">
                         {student.profile?.photoUrl ? (
                           <img
-                            src={student.profile.photoUrl}
+                            src={resolveMediaUrl(student.profile.photoUrl)}
                             alt={student.name}
                             className="w-full h-full object-cover rounded-xl"
                           />

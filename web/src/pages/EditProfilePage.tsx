@@ -17,7 +17,7 @@ import {
   ShieldAlert,
   Sparkles
 } from 'lucide-react';
-import { api } from '../services/api';
+import { api, resolveMediaUrl } from '../services/api';
 import { StudentProfile } from '../types';
 
 const COMMON_SKILLS = [
@@ -205,7 +205,7 @@ export const EditProfilePage: React.FC = () => {
             <div className="relative">
               {profile?.photoUrl ? (
                 <img
-                  src={profile.photoUrl}
+                  src={resolveMediaUrl(profile.photoUrl)}
                   alt={profile.name}
                   className="w-24 h-24 rounded-2xl object-cover border-2 border-neutral-200 shadow-sm"
                 />

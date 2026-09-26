@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { Bell, LogOut, User, ChevronDown, Sparkles, CheckCircle2, CheckCheck } from 'lucide-react';
 import { StudentSession } from '../../types';
-import { api } from '../../services/api';
+import { api, resolveMediaUrl } from '../../services/api';
 import { getNotificationDestination, navigateToNotification } from '../../utils/notificationRouting';
 
 interface StudentHeaderProps {
@@ -272,7 +272,7 @@ export const StudentHeader: React.FC<StudentHeaderProps> = ({ session, onLogout 
             >
               {student?.photoUrl ? (
                 <img
-                  src={student.photoUrl}
+                  src={resolveMediaUrl(student.photoUrl)}
                   alt={student.name}
                   className="w-8 h-8 rounded-full object-cover border border-[#E2E8F0]"
                 />

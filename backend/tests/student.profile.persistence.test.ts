@@ -54,6 +54,14 @@ const studentPayload = {
 
 const token = jwt.sign(studentPayload, env.STUDENT_JWT_SECRET);
 
+vi.mock('../src/services/drive.service', () => ({
+  driveService: {
+    uploadFile: vi.fn(),
+  },
+}));
+
+import { driveService } from '../src/services/drive.service';
+
 describe('Student Profile Data Persistence', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -218,6 +226,48 @@ describe('Student Profile Data Persistence', () => {
           status: 'PENDING',
         }),
       });
+    });
+  });
+
+  describe('4. Profile Photo Storage', () => {
+    it('stores the photo in Drive and returns a resolvable media path', async () => {
+      (driveService.uploadFile as unknown as ReturnType<typeof vi.fn>).mockResolvedValue('drive_photo_1');
+      (prisma.studentProfile.upsert as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+        id: 'prof_1',
+        studentId: 'stud_123',
+        photoDriveId: 'drive_photo_1',
+        photoUrl: '/api/public/media/photo/drive_photo_1',
+        photoOffsetX: 0,
+        photoOffsetY: 0,
+        photoZoom: 1,
+      });
+
+      const res = await request(app)
+        .post('/api/student/profile/photo')
+        .set('Cookie', `pc_student_session=${token}`)
+        .attach('photo', Buffer.from('fake-jpeg-bytes'), 'me.jpg');
+
+      expect(res.status).toBe(200);
+      expect(driveService.uploadFile).toHaveBeenCalled();
+      expect(res.body.photoUrl).toBe('/api/public/media/photo/drive_photo_1');
+    });
+
+    it('reports a storage failure instead of silently saving a placeholder photoUrl', async () => {
+      // The route used to swallow this error and persist photoUrl: 'mock_url',
+      // which left the student with a permanently broken avatar and no clue why.
+      (driveService.uploadFile as unknown as ReturnType<typeof vi.fn>).mockRejectedValue(
+        new Error('Drive unavailable'),
+      );
+
+      const res = await request(app)
+        .post('/api/student/profile/photo')
+        .set('Cookie', `pc_student_session=${token}`)
+        .attach('photo', Buffer.from('fake-jpeg-bytes'), 'me.jpg');
+
+      expect(res.status).toBe(502);
+      expect(res.body.photoUrl).toBeUndefined();
+      expect(res.body.message).toBeTruthy();
+      expect(prisma.studentProfile.upsert).not.toHaveBeenCalled();
     });
   });
 });

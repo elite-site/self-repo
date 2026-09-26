@@ -120,7 +120,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
             <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-2xl bg-[#0B192C] text-white flex items-center justify-center font-bold text-3xl shadow-md overflow-hidden shrink-0 border-4 border-white">
               {profile.photoUrl ? (
                 <img
-                  src={profile.photoUrl}
+                  src={resolveMediaUrl(profile.photoUrl)}
                   alt={student.name}
                   className="w-full h-full object-cover"
                 />

@@ -18,7 +18,7 @@ import {
   RefreshCw,
   Plus
 } from 'lucide-react';
-import { api } from '../services/api';
+import { api, resolveMediaUrl } from '../services/api';
 import { getNotificationDestination, navigateToNotification } from '../utils/notificationRouting';
 import { StudentProfile, Project, Event, EventRegistration, VotingCampaign, Notification } from '../types';
 
@@ -167,7 +167,7 @@ export const DashboardPage: React.FC = () => {
         <div className="flex items-start sm:items-center gap-4 sm:gap-5">
           {profile?.photoUrl ? (
             <img
-              src={profile.photoUrl}
+              src={resolveMediaUrl(profile.photoUrl)}
               alt={profile.name}
               className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover border-2 border-red-100 shrink-0 shadow-sm"
             />

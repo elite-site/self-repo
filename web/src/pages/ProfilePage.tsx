@@ -25,7 +25,7 @@ import {
   Building,
   GraduationCap
 } from 'lucide-react';
-import { api } from '../services/api';
+import { api, resolveMediaUrl } from '../services/api';
 import { StudentProfile, Project, Certificate, Achievement } from '../types';
 
 export const ProfilePage: React.FC = () => {
@@ -181,7 +181,7 @@ export const ProfilePage: React.FC = () => {
             <div className="relative">
               {profile?.photoUrl ? (
                 <img
-                  src={profile.photoUrl}
+                  src={resolveMediaUrl(profile.photoUrl)}
                   alt={profile.name}
                   className="w-24 h-24 sm:w-32 sm:h-32 rounded-2xl object-cover border-4 border-white shadow-md bg-white shrink-0"
                 />

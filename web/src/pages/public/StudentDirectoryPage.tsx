@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { api } from '../../services/api';
+import { api, resolveMediaUrl } from '../../services/api';
 import { StudentSession } from '../../types';
 import { Link } from 'react-router-dom';
 import { Search, Filter, Loader2, Users, ArrowRight, Sparkles, X } from 'lucide-react';
@@ -285,7 +285,12 @@ export const StudentDirectoryPage: React.FC<StudentDirectoryProps> = ({ session,
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {sorted.map((s) => {
-                  const photoUrl = s.profile?.photoUrl || s.photoUrl;
+                  // Root-relative API paths must be resolved against the API
+                  // origin; the portal and API are served from different origins
+                  // in production, so a bare path would 404.
+                  const photoUrl = s.profile?.photoUrl || s.photoUrl
+                    ? resolveMediaUrl(s.profile?.photoUrl || s.photoUrl!)
+                    : null;
                   const skillsList = s.profile?.skills || s.skills || [];
                    const initials = (s.name || '')
                      .split(' ')

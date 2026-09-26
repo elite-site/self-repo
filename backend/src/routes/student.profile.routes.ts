@@ -114,8 +114,12 @@ router.post('/photo', profilePhotoUpload, async (req: Request, res: Response) =>
     const photoOffsetY = req.body.photoOffsetY != null ? parseFloat(req.body.photoOffsetY) : undefined;
     const photoZoom = req.body.photoZoom != null ? parseFloat(req.body.photoZoom) : undefined;
 
-    let driveFileId = 'mock_drive_id';
-    let photoUrl = 'mock_url';
+    // A failed storage write must not be swallowed. Previously the catch was
+    // empty, so a Drive outage still returned 200 and persisted the placeholder
+    // photoUrl ('mock_url'), leaving the student with a permanently broken
+    // avatar and no indication that anything had failed.
+    let driveFileId: string;
+    let photoUrl: string;
     try {
       driveFileId = await driveService.uploadFile(
         {
@@ -128,8 +132,17 @@ router.post('/photo', profilePhotoUpload, async (req: Request, res: Response) =>
         env.GOOGLE_DRIVE_ROOT_FOLDER_ID || 'root',
         'profiles'
       );
+      if (!driveFileId) {
+        throw new Error('Storage returned no file id for the profile photo.');
+      }
       photoUrl = `/api/public/media/photo/${driveFileId}`;
-    } catch(e) { } // Ignore drive errors
+    } catch (err: any) {
+      console.error('Profile photo upload to storage failed:', err);
+      return res.status(502).json({
+        error: 'PHOTO_UPLOAD_FAILED',
+        message: 'Could not save your photo. Please try again.',
+      });
+    }
 
     const updateData: any = { photoDriveId: driveFileId, photoUrl };
     if (photoOffsetX !== undefined && !isNaN(photoOffsetX)) updateData.photoOffsetX = photoOffsetX;
@@ -148,7 +161,16 @@ router.post('/photo', profilePhotoUpload, async (req: Request, res: Response) =>
       photoZoom: profile.photoZoom
     });
   } catch (err: any) {
-    if (err.code === 'P2021' || err.message?.includes('does not exist')) return res.json({ photoUrl: 'mock_url' });
+    // A missing table is a deployment/migration problem, not a client error, and
+    // must not be papered over with a fake photo URL.
+    if (err.code === 'P2021' || err.message?.includes('does not exist')) {
+      console.error('studentProfile table is missing — run prisma migrations:', err.message);
+      return res.status(500).json({
+        error: 'PROFILE_STORAGE_UNAVAILABLE',
+        message: 'Profile storage is not initialised yet. Please try again later.',
+      });
+    }
+    console.error('Error saving profile photo:', err);
     res.status(500).json({ error: 'Server error' });
   }
 });
