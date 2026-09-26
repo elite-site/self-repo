@@ -97,6 +97,16 @@ app.use(
   })
 );
 
+// Normalize repeated consecutive slashes in request paths (e.g. /api//student -> /api/student)
+app.use((req: express.Request, _res: express.Response, next: express.NextFunction) => {
+  if (req.url.includes('//')) {
+    const [pathPart, queryPart] = req.url.split('?');
+    const normalizedPath = pathPart.replace(/\/+/g, '/');
+    req.url = queryPart !== undefined ? `${normalizedPath}?${queryPart}` : normalizedPath;
+  }
+  next();
+});
+
 app.use(cookieParser());
 
 // Gzip/Brotli compress all JSON/text responses — reduces payload 60-80%,

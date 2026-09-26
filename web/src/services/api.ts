@@ -9,7 +9,12 @@ function getApiBaseUrl(): string {
       return '/api';
     }
   }
-  return import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api';
+  const raw = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api';
+  let clean = raw.trim().replace(/\/+$/, '');
+  if (!clean.endsWith('/api')) {
+    clean = `${clean}/api`;
+  }
+  return clean.replace(/\/+$/, '');
 }
 
 const client = axios.create({
@@ -37,12 +42,21 @@ export interface UploadProgressInfo {
 export const api = {
   // Original methods
   getOAuthAuthorizeUrl(): string {
-    const base = client.defaults.baseURL || '/api';
+    const rawBase = client.defaults.baseURL || '/api';
+    let base = rawBase.trim().replace(/\/+$/, '');
+    if (!base.endsWith('/api')) {
+      base = `${base}/api`;
+    }
+
+    const returnTo = typeof window !== 'undefined' ? `${window.location.origin}/login` : '';
+    const returnParam = returnTo ? `?return_to=${encodeURIComponent(returnTo)}` : '';
+
     if (/^https?:\/\//i.test(base)) {
-      return `${base}/student/google/authorize`;
+      return `${base}/student/google/authorize${returnParam}`;
     }
     const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5001';
-    return `${origin}${base.startsWith('/') ? '' : '/'}${base}/student/google/authorize`;
+    const path = base.startsWith('/') ? base : `/${base}`;
+    return `${origin}${path}/student/google/authorize${returnParam}`;
   },
   async getMe(): Promise<{ student: StudentProfile; reviewStatus?: string }> {
     const res = await client.get(`/student/me?t=${Date.now()}`);

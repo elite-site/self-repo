@@ -124,23 +124,52 @@ function deleteStoredFile(fileId: string | null | undefined, relativePath?: stri
   }
 }
 
-function signedState(): string {
-  return jwt.sign({ nonce: crypto.randomUUID() }, env.STUDENT_JWT_SECRET, { expiresIn: '10m' });
+function isAllowedRedirectUrl(candidateUrl: string): boolean {
+  try {
+    const parsed = new URL(candidateUrl);
+    const origin = parsed.origin.trim().replace(/\/$/, '');
+    if (
+      env.ALLOWED_ORIGINS.includes(origin) ||
+      /^https:\/\/[a-z0-9_.-]+(\.netlify\.app|\.onrender\.com|\.vercel\.app)$/i.test(origin) ||
+      /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin)
+    ) {
+      return true;
+    }
+  } catch {
+    // Malformed URL
+  }
+  return false;
+}
+
+function signedState(returnTo?: string): string {
+  return jwt.sign(
+    { nonce: crypto.randomUUID(), ...(returnTo ? { returnTo } : {}) },
+    env.STUDENT_JWT_SECRET,
+    { expiresIn: '10m' }
+  );
 }
 
 // GET /api/student/google/authorize — kick off Google Workspace SSO.
-router.get('/google/authorize', studentLoginRateLimiter, (_req: Request, res: Response): void => {
+router.get('/google/authorize', studentLoginRateLimiter, (req: Request, res: Response): void => {
   const url = ssoService.getAuthUrl();
   const sep = url.includes('?') ? '&' : '?';
-  res.redirect(302, `${url}${sep}state=${encodeURIComponent(signedState())}`);
+
+  let returnTo: string | undefined;
+  const rawReturnTo = (req.query.return_to || req.query.redirect_uri) as string | undefined;
+  if (typeof rawReturnTo === 'string' && isAllowedRedirectUrl(rawReturnTo)) {
+    returnTo = rawReturnTo.trim();
+  }
+
+  res.redirect(302, `${url}${sep}state=${encodeURIComponent(signedState(returnTo))}`);
 });
 
 // GET /api/student/google/callback — verify id_token, look up roster email, mint our JWT.
 router.get('/google/callback', studentLoginRateLimiter, async (req: Request, res: Response): Promise<void> => {
   const { code, state } = req.query;
 
+  let decodedState: any = null;
   try {
-    jwt.verify(String(state ?? ''), env.STUDENT_JWT_SECRET);
+    decodedState = jwt.verify(String(state ?? ''), env.STUDENT_JWT_SECRET);
   } catch {
     res.status(400).json({ error: 'INVALID_STATE', message: 'State mismatch or expired. Try signing in again.' });
     return;
@@ -194,7 +223,14 @@ router.get('/google/callback', studentLoginRateLimiter, async (req: Request, res
       path: '/',
     });
 
-    const redirectBase = env.STUDENT_APP_LOGIN_URL;
+    let redirectBase = env.STUDENT_APP_LOGIN_URL;
+    if (
+      decodedState?.returnTo &&
+      typeof decodedState.returnTo === 'string' &&
+      isAllowedRedirectUrl(decodedState.returnTo)
+    ) {
+      redirectBase = decodedState.returnTo.trim();
+    }
     const sep = redirectBase.includes('?') ? '&' : '?';
     res.redirect(302, `${redirectBase}${sep}token=${encodeURIComponent(token)}`);
   } catch (err: any) {

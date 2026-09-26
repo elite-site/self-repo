@@ -85,6 +85,51 @@ describe('student google oauth', () => {
     expect(res.body.error).toBe('DOMAIN_FORBIDDEN');
   });
 
+  it('handles duplicate consecutive slashes in URL path gracefully', async () => {
+    const res = await request(app).get('/api//student/google/authorize');
+    expect(res.status).toBe(302);
+    expect(res.headers.location).toMatch(/accounts\.google\.com/);
+  });
+
+  it('accepts and preserves safe return_to origin (like Vercel) in signed state', async () => {
+    const vercelReturn = 'https://self-repo.vercel.app/login';
+    const res = await request(app)
+      .get('/api/student/google/authorize')
+      .query({ return_to: vercelReturn });
+    expect(res.status).toBe(302);
+    const state = /[?&]state=([^&]+)/.exec(res.headers.location)?.[1];
+    expect(state).toBeTruthy();
+    const decoded = jwt.verify(state!, env.STUDENT_JWT_SECRET) as any;
+    expect(decoded.returnTo).toBe(vercelReturn);
+  });
+
+  it('callback redirects to vercel return_to URL when present in verified state', async () => {
+    const vercelState = jwt.sign(
+      { nonce: 'n2', returnTo: 'https://self-repo.vercel.app/login' },
+      env.STUDENT_JWT_SECRET,
+      { expiresIn: '10m' }
+    );
+    const res = await request(app)
+      .get('/api/student/google/callback')
+      .query({ code: 'c1', state: vercelState });
+    expect(res.status).toBe(302);
+    expect(res.headers.location).toMatch(/^https:\/\/self-repo\.vercel\.app\/login\?token=/);
+  });
+
+  it('callback ignores malicious return_to and falls back to STUDENT_APP_LOGIN_URL', async () => {
+    const evilState = jwt.sign(
+      { nonce: 'n3', returnTo: 'https://evil-phishing.com/login' },
+      env.STUDENT_JWT_SECRET,
+      { expiresIn: '10m' }
+    );
+    const res = await request(app)
+      .get('/api/student/google/callback')
+      .query({ code: 'c1', state: evilState });
+    expect(res.status).toBe(302);
+    expect(res.headers.location).not.toContain('evil-phishing.com');
+    expect(res.headers.location).toContain(env.STUDENT_APP_LOGIN_URL);
+  });
+
   it('rejects an invalid/expired state', async () => {
     const res = await request(app)
       .get('/api/student/google/callback')
