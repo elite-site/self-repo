@@ -245,6 +245,7 @@ export const api = {
   // Resume
   async getResume() { const res = await client.get('/student/resume'); return res.data; },
   async uploadResume(formData: FormData, onProgress?: (ev: any) => void) { const res = await client.post('/student/resume', formData, { onUploadProgress: onProgress }); return res.data; },
+  async deleteResume(): Promise<{ success: boolean; message?: string }> { const res = await client.delete('/student/resume'); return res.data; },
 
   // Events
   async getEvents(filters?: any) { const res = await client.get('/student/events', { params: filters }); return res.data; },

@@ -10,16 +10,39 @@ import {
   Loader2,
   RotateCcw,
   ExternalLink,
-  ShieldCheck
+  ShieldCheck,
+  Trash2
 } from 'lucide-react';
 
 export const ResumePage: React.FC = () => {
   const [resumeData, setResumeData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  /** Withdraw the submitted resume. The server deletes the file and DB row. */
+  const handleDelete = async () => {
+    if (!window.confirm('Delete your submitted resume? This cannot be undone.')) {
+      return;
+    }
+    setDeleting(true);
+    setError(null);
+    try {
+      const res = await api.deleteResume();
+      setResumeData(null);
+      setUploadSuccess(false);
+      setError(null);
+      // Show a transient notice by reloading (will show empty state)
+      await loadResume();
+    } catch (err: any) {
+      setError(err?.response?.data?.message || 'Could not delete your resume. Please try again.');
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const loadResume = async () => {
     setLoading(true);
@@ -149,6 +172,19 @@ export const ResumePage: React.FC = () => {
             >
               <RotateCcw className="w-3.5 h-3.5" />
               <span>Replace PDF</span>
+            </button>
+            <button
+              onClick={handleDelete}
+              disabled={deleting || uploading}
+              title="Delete your submitted resume"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-neutral-200 hover:bg-red-50 hover:border-red-200 text-xs font-bold text-neutral-600 hover:text-red-600 transition-colors cursor-pointer disabled:opacity-50"
+            >
+              {deleting ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Trash2 className="w-3.5 h-3.5" />
+              )}
+              <span>Delete Resume</span>
             </button>
           </div>
         )}

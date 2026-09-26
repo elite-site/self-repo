@@ -1103,4 +1103,60 @@ router.post('/resume', requireStudentAuth, resumeUpload, async (req: Request, re
   }
 });
 
+// DELETE /api/student/resume — withdraw the student's own resume.
+// Ownership is enforced against the authenticated student.
+router.delete('/resume', requireStudentAuth, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const studentId = req.student!.studentId;
+    const student = await prisma.student.findUnique({
+      where: { id: studentId },
+      select: { rollNo: true, name: true },
+    });
+    if (!student) {
+      res.status(404).json({ error: 'NOT_FOUND', message: 'Student account not found.' });
+      return;
+    }
+
+    const existingResume = await prisma.resume.findFirst({
+      where: { studentId },
+      orderBy: { submittedAt: 'desc' },
+    });
+
+    if (!existingResume) {
+      res.status(404).json({ error: 'NOT_FOUND', message: 'You have no resume to delete.' });
+      return;
+    }
+
+    const fileId = existingResume.driveFileId;
+
+    await prisma.resume.delete({ where: { id: existingResume.id } });
+
+    if (fileId) {
+      try {
+        await driveService.deleteFileById(fileId);
+      } catch (e) {
+        console.warn('Could not delete resume file from storage:', e);
+      }
+    }
+
+    await ActivityService.log({
+      eventId: EVENT_ID,
+      category: 'FILE_UPLOAD',
+      action: 'Student deleted resume',
+      details: `Roll: ${student.rollNo}`,
+      applicantName: student.name,
+      userEmail: student.rollNo,
+      status: 'SUCCESS',
+    });
+
+    res.json({ success: true, message: 'Your resume has been deleted.' });
+  } catch (err: any) {
+    console.error('Error deleting resume:', err);
+    res.status(500).json({
+      error: 'DELETE_FAILED',
+      message: 'Could not delete your resume. Please try again.',
+    });
+  }
+});
+
 export default router;
