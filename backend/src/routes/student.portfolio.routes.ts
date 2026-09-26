@@ -144,6 +144,13 @@ router.get('/achievements', async (req: Request, res: Response) => {
       include: { category: true },
       orderBy: { achievedAt: 'desc' }
     });
+
+    for (const a of achievements) {
+      if (a.proofDriveId && typeof driveService.setViewerPermission === 'function') {
+        driveService.setViewerPermission(a.proofDriveId).catch(() => {});
+      }
+    }
+
     res.json(achievements.map(a => ({
       ...a,
       date: a.achievedAt,
@@ -340,6 +347,13 @@ router.get('/certificates', async (req: Request, res: Response) => {
       where: { studentId: (req as any).studentId },
       orderBy: { issuedAt: 'desc' }
     });
+
+    for (const c of certificates) {
+      if (c.fileDriveId && typeof driveService.setViewerPermission === 'function') {
+        driveService.setViewerPermission(c.fileDriveId).catch(() => {});
+      }
+    }
+
     res.json(certificates.map(c => ({
       ...c,
       issueDate: c.issuedAt,

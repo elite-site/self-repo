@@ -343,6 +343,11 @@ export const adminApi = {
     return res.data;
   },
 
+  async ensureDriveViewerPermissions(): Promise<{ success: boolean; message: string; count: number; failed: number }> {
+    const res = await client.post('/admin/api/storage/ensure-viewer-permissions');
+    return res.data;
+  },
+
   // Email Automation
   async getEmailAutomations(): Promise<{ automations: EmailAutomationItem[] }> {
     const res = await client.get('/admin/api/email/automations');

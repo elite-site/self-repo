@@ -14,6 +14,7 @@ import {
   Layers,
   AlertCircle,
   Database,
+  Eye,
 } from 'lucide-react';
 
 export const Storage: React.FC = () => {
@@ -59,6 +60,22 @@ export const Storage: React.FC = () => {
       setError(err?.response?.data?.message || 'Failed to purge cache');
     } finally {
       setClearingCache(false);
+    }
+  };
+
+  const [syncingPermissions, setSyncingPermissions] = useState(false);
+
+  const handleSyncPermissions = async () => {
+    setSyncingPermissions(true);
+    setCacheMessage(null);
+    try {
+      const res = await adminApi.ensureDriveViewerPermissions();
+      setCacheMessage(res.message || 'Viewer permissions synced for all Drive files and folders.');
+    } catch (err: any) {
+      console.error('Failed to sync permissions:', err);
+      setError(err?.response?.data?.message || 'Failed to sync viewer permissions');
+    } finally {
+      setSyncingPermissions(false);
     }
   };
 
@@ -163,9 +180,18 @@ export const Storage: React.FC = () => {
 
           <div className="flex items-center gap-3">
             <button
+              onClick={handleSyncPermissions}
+              disabled={syncingPermissions}
+              className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/50 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-950/60 transition-colors disabled:opacity-50 cursor-pointer"
+              title="Grant reader/viewer permissions across all files and folders on Drive"
+            >
+              <Eye className="w-3.5 h-3.5" />
+              {syncingPermissions ? 'Syncing...' : 'Sync Viewer Access'}
+            </button>
+            <button
               onClick={handleClearCache}
               disabled={clearingCache}
-              className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 rounded-lg hover:bg-rose-100 dark:hover:bg-rose-950/60 transition-colors disabled:opacity-50"
+              className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 rounded-lg hover:bg-rose-100 dark:hover:bg-rose-950/60 transition-colors disabled:opacity-50 cursor-pointer"
             >
               <Trash2 className="w-3.5 h-3.5" />
               {clearingCache ? 'Purging...' : 'Purge Folder Cache'}

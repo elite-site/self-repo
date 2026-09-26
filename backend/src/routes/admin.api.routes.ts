@@ -2211,6 +2211,30 @@ router.post('/storage/clear-cache', async (_req: Request, res: Response): Promis
   }
 });
 
+router.post('/storage/ensure-viewer-permissions', async (_req: Request, res: Response): Promise<Response | void> => {
+  try {
+    const result = typeof driveService.ensureAllFilesViewerAccess === 'function'
+      ? await driveService.ensureAllFilesViewerAccess()
+      : { count: 0, failed: 0 };
+
+    await ActivityService.log({
+      eventId: 'photo-2026',
+      category: 'ADMIN',
+      action: 'Admin synchronized Drive viewer permissions',
+      details: `Granted viewer access to ${result.count} files/folders (${result.failed} failed)`,
+      status: 'SUCCESS',
+    });
+
+    res.json({
+      success: true,
+      message: `Viewer permissions updated for ${result.count} Drive items.`,
+      ...result,
+    });
+  } catch (err: any) {
+    return httpError(res, 500, err, "SERVER_ERROR");
+  }
+});
+
 // ==========================================
 // EMAIL AUTOMATIONS & HISTORY
 // ==========================================

@@ -267,6 +267,15 @@ if (process.env.NODE_ENV !== 'test') {
     console.log(`🌐 Web Portal:    http://localhost:${port}/`);
     console.log(`📡 Public API:    http://localhost:${port}/api`);
     console.log(`🛡️ Admin Portal:  http://localhost:${port}/admin`);
+
+    // Ensure all stored Drive files and folders have viewer permissions in the background
+    if (typeof driveService.ensureAllFilesViewerAccess === 'function') {
+      setTimeout(() => {
+        driveService.ensureAllFilesViewerAccess().catch((err) => {
+          console.warn('[Drive] Background viewer permissions sync encountered an error:', err?.message || err);
+        });
+      }, 5000);
+    }
   });
 }
 

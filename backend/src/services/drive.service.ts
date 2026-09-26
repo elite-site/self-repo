@@ -75,6 +75,7 @@ class DriveService {
   // Stored so createResumableUploadSession() can get a fresh access token
   private oauthClient: InstanceType<typeof google.auth.OAuth2> | null = null;
   private serviceAccountAuth: InstanceType<typeof google.auth.GoogleAuth> | null = null;
+  private viewerPermissionCache = new Set<string>();
 
   constructor() {
     this.init();
@@ -204,6 +205,7 @@ class DriveService {
     });
 
     const folderId = created.data.id!;
+    this.setViewerPermission(folderId).catch(() => {});
     if (cacheKey) {
       await prisma.driveFolderCache.upsert({
         where: { pathKey: cacheKey },
@@ -275,11 +277,19 @@ class DriveService {
   }
 
   /**
-   * Returns a direct watch/view URL on Google Drive
+   * Returns a direct watch/view URL on Google Drive with sharing parameters
    */
   public getWatchUrl(fileId?: string | null): string | null {
     if (!fileId || fileId.startsWith('mock_') || fileId.startsWith('drive_')) return null;
-    return `https://drive.google.com/file/d/${fileId}/view`;
+    return `https://drive.google.com/file/d/${fileId}/view?usp=sharing`;
+  }
+
+  /**
+   * Returns a direct watch/view URL for a folder on Google Drive
+   */
+  public getFolderWatchUrl(folderId?: string | null): string | null {
+    if (!folderId || folderId.startsWith('mock_') || folderId.startsWith('drive_')) return null;
+    return `https://drive.google.com/drive/folders/${folderId}?usp=sharing`;
   }
 
   /**
@@ -288,6 +298,178 @@ class DriveService {
   public getPreviewUrl(fileId?: string | null): string | null {
     if (!fileId || fileId.startsWith('mock_') || fileId.startsWith('drive_')) return null;
     return `https://drive.google.com/file/d/${fileId}/preview`;
+  }
+
+  /**
+   * Sets reader/viewer permissions on a Google Drive file or folder so it can be viewed by anyone with the link.
+   * If organization admin policy restricts 'anyone' sharing, falls back to the organization domain.
+   */
+  public async setViewerPermission(fileOrFolderId?: string | null): Promise<boolean> {
+    if (!fileOrFolderId || this.isMock || !this.drive) return false;
+    if (fileOrFolderId.startsWith('mock_') || fileOrFolderId.startsWith('drive_')) return false;
+    if (this.viewerPermissionCache.has(fileOrFolderId)) return true;
+
+    try {
+      await this.drive.permissions.create({
+        fileId: fileOrFolderId,
+        requestBody: {
+          role: 'reader',
+          type: 'anyone',
+          allowFileDiscovery: false,
+        },
+        supportsAllDrives: true,
+      });
+      this.viewerPermissionCache.add(fileOrFolderId);
+      console.log(`[Drive] Public viewer access ('anyone') granted to: ${fileOrFolderId}`);
+      return true;
+    } catch (permErr: any) {
+      const msg = permErr?.message || String(permErr);
+      if (msg.includes('already exists') || msg.includes('duplicate')) {
+        this.viewerPermissionCache.add(fileOrFolderId);
+        return true;
+      }
+
+      console.warn(`[Drive] 'anyone' viewer permission failed for ${fileOrFolderId}: ${msg}`);
+
+      // Fallback: Google Workspace domain sharing
+      if (env.GOOGLE_SSO_HD) {
+        try {
+          await this.drive.permissions.create({
+            fileId: fileOrFolderId,
+            requestBody: {
+              role: 'reader',
+              type: 'domain',
+              domain: env.GOOGLE_SSO_HD,
+              allowFileDiscovery: false,
+            },
+            supportsAllDrives: true,
+          });
+          this.viewerPermissionCache.add(fileOrFolderId);
+          console.log(`[Drive] Domain (${env.GOOGLE_SSO_HD}) viewer access granted to: ${fileOrFolderId}`);
+          return true;
+        } catch (domainErr: any) {
+          const dMsg = domainErr?.message || String(domainErr);
+          if (dMsg.includes('already exists') || dMsg.includes('duplicate')) {
+            this.viewerPermissionCache.add(fileOrFolderId);
+            return true;
+          }
+          console.warn(`[Drive] Domain viewer permission failed for ${fileOrFolderId}: ${dMsg}`);
+        }
+      }
+      return false;
+    }
+  }
+
+  /**
+   * Ensures all stored files and cached folders in the system have viewer access.
+   */
+  public async ensureAllFilesViewerAccess(): Promise<{ count: number; failed: number }> {
+    if (this.isMock || !this.drive) return { count: 0, failed: 0 };
+
+    let count = 0;
+    let failed = 0;
+
+    // 1. Root folder
+    if (env.GOOGLE_DRIVE_ROOT_FOLDER_ID) {
+      const ok = await this.setViewerPermission(env.GOOGLE_DRIVE_ROOT_FOLDER_ID);
+      if (ok) count++; else failed++;
+    }
+
+    // 2. Cached folders
+    try {
+      const cachedFolders = await prisma.driveFolderCache.findMany();
+      for (const f of cachedFolders) {
+        if (f.driveFolderId) {
+          const ok = await this.setViewerPermission(f.driveFolderId);
+          if (ok) count++; else failed++;
+        }
+      }
+    } catch (e) {
+      console.warn('[Drive] Error ensuring cached folders viewer access:', e);
+    }
+
+    // 3. Resumes
+    try {
+      const resumes = await prisma.resume.findMany({
+        where: { driveFileId: { not: null } },
+        select: { driveFileId: true },
+      });
+      for (const r of resumes) {
+        if (r.driveFileId) {
+          const ok = await this.setViewerPermission(r.driveFileId);
+          if (ok) count++; else failed++;
+        }
+      }
+    } catch (e) {
+      console.warn('[Drive] Error ensuring resumes viewer access:', e);
+    }
+
+    // 4. Certificates
+    try {
+      const certs = await prisma.certificate.findMany({
+        where: { fileDriveId: { not: null } },
+        select: { fileDriveId: true },
+      });
+      for (const c of certs) {
+        if (c.fileDriveId) {
+          const ok = await this.setViewerPermission(c.fileDriveId);
+          if (ok) count++; else failed++;
+        }
+      }
+    } catch (e) {
+      console.warn('[Drive] Error ensuring certificates viewer access:', e);
+    }
+
+    // 5. Achievements
+    try {
+      const achievements = await prisma.achievement.findMany({
+        where: { proofDriveId: { not: null } },
+        select: { proofDriveId: true },
+      });
+      for (const a of achievements) {
+        if (a.proofDriveId) {
+          const ok = await this.setViewerPermission(a.proofDriveId);
+          if (ok) count++; else failed++;
+        }
+      }
+    } catch (e) {
+      console.warn('[Drive] Error ensuring achievements viewer access:', e);
+    }
+
+    // 6. Intro Videos
+    try {
+      const introVideos = await prisma.introVideo.findMany({
+        where: { driveFileId: { not: null } },
+        select: { driveFileId: true },
+      });
+      for (const v of introVideos) {
+        if (v.driveFileId) {
+          const ok = await this.setViewerPermission(v.driveFileId);
+          if (ok) count++; else failed++;
+        }
+      }
+    } catch (e) {
+      console.warn('[Drive] Error ensuring intro videos viewer access:', e);
+    }
+
+    // 7. Submissions (photo1, photo2, photo3, video)
+    try {
+      const submissions = await prisma.submission.findMany({
+        where: { videoDriveId: { not: null } },
+        select: { videoDriveId: true, photo1DriveId: true, photo2DriveId: true, photo3DriveId: true },
+      });
+      for (const s of submissions) {
+        const ids = [s.videoDriveId, s.photo1DriveId, s.photo2DriveId, s.photo3DriveId].filter(Boolean) as string[];
+        for (const id of ids) {
+          const ok = await this.setViewerPermission(id);
+          if (ok) count++; else failed++;
+        }
+      }
+    } catch (e) {
+      console.warn('[Drive] Error ensuring submissions viewer access:', e);
+    }
+
+    return { count, failed };
   }
 
   /**
@@ -342,34 +524,8 @@ class DriveService {
 
     const fileId = res.data.id!;
 
-    // Make the file viewable: try public link first, fallback to Google Workspace domain
-    try {
-      await this.drive.permissions.create({
-        fileId,
-        requestBody: {
-          role: 'reader',
-          type: 'anyone',
-        },
-        supportsAllDrives: true,
-      });
-    } catch (permErr: any) {
-      console.warn('Could not set public anyone view permission on Drive file:', permErr?.message || permErr);
-      if (env.GOOGLE_SSO_HD) {
-        try {
-          await this.drive.permissions.create({
-            fileId,
-            requestBody: {
-              role: 'reader',
-              type: 'domain',
-              domain: env.GOOGLE_SSO_HD,
-            },
-            supportsAllDrives: true,
-          });
-        } catch (domainErr) {
-          console.warn('Could not set domain view permission on Drive file:', domainErr);
-        }
-      }
-    }
+    // Grant viewer access to the uploaded file
+    await this.setViewerPermission(fileId);
 
     return fileId;
   }
@@ -644,7 +800,9 @@ class DriveService {
             try {
               const parsed = JSON.parse(body) as { id?: string };
               if (!parsed.id) return reject(new Error('[Drive] Response JSON has no id field'));
-              resolve(parsed.id);
+              const fileId = parsed.id;
+              this.setViewerPermission(fileId).catch(() => {});
+              resolve(fileId);
             } catch {
               reject(new Error(`[Drive] Could not parse response: ${body.slice(0, 100)}`));
             }
@@ -688,6 +846,9 @@ class DriveService {
       supportsAllDrives: true,
     });
     if (res.data.trashed) throw new Error('Drive root folder is trashed');
+    if (env.GOOGLE_DRIVE_ROOT_FOLDER_ID) {
+      this.setViewerPermission(env.GOOGLE_DRIVE_ROOT_FOLDER_ID).catch(() => {});
+    }
   }
 
   /**
@@ -773,6 +934,7 @@ class DriveService {
     }
 
     // Google Drive stream
+    this.setViewerPermission(fileId).catch(() => {});
     const metadata = await this.drive.files.get({
       fileId,
       supportsAllDrives: true,

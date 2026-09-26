@@ -986,6 +986,13 @@ router.get('/resume', requireStudentAuth, async (req, res) => {
       where: { studentId: (req as any).studentId },
       orderBy: { submittedAt: 'desc' }
     });
+
+    for (const r of resumes) {
+      if (r.driveFileId && typeof driveService.setViewerPermission === 'function') {
+        driveService.setViewerPermission(r.driveFileId).catch(() => {});
+      }
+    }
+
     res.json(resumes.map(r => ({
       ...r,
       fileUrl: r.driveFileId ? `/api/public/media/resume/${r.driveFileId}` : null,
