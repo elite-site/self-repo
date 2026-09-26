@@ -22,7 +22,8 @@ import {
   Globe,
   EyeOff,
   Play,
-  Pause
+  Pause,
+  Trash2
 } from 'lucide-react';
 
 interface UploadStats {
@@ -54,6 +55,8 @@ export const VideoPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteNotice, setDeleteNotice] = useState<string | null>(null);
   const [publishNotice, setPublishNotice] = useState<string | null>(null);
   const [previewError, setPreviewError] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -220,6 +223,29 @@ export const VideoPage: React.FC = () => {
       setPublishNotice(err?.response?.data?.message || 'Could not update public visibility.');
     } finally {
       setPublishing(false);
+    }
+  };
+
+  /** Withdraw the submitted take. The server deletes the file and both rows. */
+  const handleDelete = async () => {
+    if (!window.confirm('Delete your submitted introduction video? This cannot be undone.')) {
+      return;
+    }
+    setDeleting(true);
+    setError(null);
+    try {
+      const res = await api.deleteVideo();
+      setLocalPreview(null);
+      setVideo(null);
+      setSubmission(null);
+      setUploadSuccess(false);
+      setError(null);
+      setDeleteNotice(res.message || 'Your introduction video has been deleted.');
+      await loadSubmission(true);
+    } catch (err: any) {
+      setError(err?.response?.data?.message || 'Could not delete your video. Please try again.');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -507,6 +533,13 @@ export const VideoPage: React.FC = () => {
         </div>
       )}
 
+      {deleteNotice && (
+        <div className="p-4 bg-neutral-100 border border-[#E2E8F0] rounded-2xl text-neutral-700 text-xs flex items-center gap-2">
+          <Info className="w-4 h-4 shrink-0" />
+          <span>{deleteNotice}</span>
+        </div>
+      )}
+
       {/* ADMIN REQUESTED A NEW TAKE */}
       {video?.changeRequestedAt && (
         <div className="p-4 bg-orange-50 border border-orange-200 rounded-2xl text-orange-900 text-xs space-y-2">
@@ -616,6 +649,22 @@ export const VideoPage: React.FC = () => {
                   <RotateCcw className="w-3.5 h-3.5" />
                   <span>{submission?.videoUploaded ? 'Upload New Take' : 'Upload Video'}</span>
                 </button>
+                {submission?.videoUploaded && (
+                  <button
+                    type="button"
+                    onClick={handleDelete}
+                    disabled={deleting || uploading}
+                    title="Delete your submitted video"
+                    className="text-xs font-bold text-neutral-500 hover:text-red-600 flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                  >
+                    {deleting ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Trash2 className="w-3.5 h-3.5" />
+                    )}
+                    <span>Delete Video</span>
+                  </button>
+                )}
               </div>
             </div>
 

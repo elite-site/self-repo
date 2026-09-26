@@ -430,7 +430,9 @@ router.get('/teams', async (req: Request, res: Response) => {
       },
       include: { members: { include: { student: true } }, event: true }
     });
-    res.json(teams);
+    // `isLeader` is derived here rather than in the client so the permission
+    // model lives in one place: only the lead can invite or dissolve a team.
+    res.json(teams.map((t) => ({ ...t, isLeader: t.leaderId === studentId })));
   } catch (err: any) {
     res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
   }
@@ -507,18 +509,102 @@ router.post('/teams', async (req: Request, res: Response) => {
   }
 });
 
+// DELETE /api/student/teams/:id — dissolve a team. Only the team lead may do
+// this; an admin dissolving someone's team is a separate, audited action.
+// Registrations that referenced the team keep the student registered for the
+// event, they just lose the team affiliation, so EventRegistration.teamId is
+// cleared before the row goes away (it is a nullable FK).
+router.delete('/teams/:id', async (req: Request, res: Response) => {
+  try {
+    const studentId = req.student?.studentId || (req as any).studentId;
+    if (!studentId) {
+      return res.status(401).json({ error: 'UNAUTHORIZED', message: 'Authentication required' });
+    }
+
+    const team = await prisma.team.findUnique({
+      where: { id: req.params.id },
+      include: { members: { select: { studentId: true } } },
+    });
+    if (!team) {
+      return res.status(404).json({ error: 'NOT_FOUND', message: 'Team not found' });
+    }
+    if (team.leaderId !== studentId) {
+      return res.status(403).json({
+        error: 'FORBIDDEN',
+        message: 'Only the team lead can remove this team.',
+      });
+    }
+
+    await prisma.$transaction([
+      prisma.eventRegistration.updateMany({
+        where: { teamId: team.id },
+        data: { teamId: null },
+      }),
+      prisma.teamInvitation.deleteMany({ where: { teamId: team.id } }),
+      prisma.teamMember.deleteMany({ where: { teamId: team.id } }),
+      prisma.team.delete({ where: { id: team.id } }),
+    ]);
+
+    res.json({
+      success: true,
+      message: `Team "${team.name}" has been removed.`,
+      removedMembers: team.members.length,
+    });
+  } catch (err: any) {
+    if (err.code === 'P2025') {
+      return res.status(404).json({ error: 'NOT_FOUND', message: 'Team not found' });
+    }
+    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+  }
+});
+
 router.post('/teams/:id/invite', async (req: Request, res: Response) => {
   try {
+    const studentId = req.student?.studentId || (req as any).studentId;
+    if (!studentId) {
+      return res.status(401).json({ error: 'UNAUTHORIZED', message: 'Authentication required' });
+    }
+
+    const team = await prisma.team.findUnique({ where: { id: req.params.id } });
+    if (!team) {
+      return res.status(404).json({ error: 'NOT_FOUND', message: 'Team not found' });
+    }
+    if (team.leaderId !== studentId) {
+      return res.status(403).json({ error: 'FORBIDDEN', message: 'Only the team lead can invite members.' });
+    }
+
     const { rollNo } = req.body;
-    const student = await prisma.student.findUnique({ where: { rollNo } });
+    if (typeof rollNo !== 'string' || !rollNo.trim()) {
+      return res.status(400).json({ error: 'VALIDATION_ERROR', message: 'Roll number is required' });
+    }
+
+    const student = await prisma.student.findUnique({ where: { rollNo: rollNo.trim() } });
     if (!student) return res.status(404).json({ error: 'NOT_FOUND', message: 'Student not found' });
-    
-    const invite = await prisma.teamInvitation.create({
-      data: {
-        teamId: req.params.id,
-        studentId: student.id,
-        status: 'PENDING'
-      }
+
+    // The leader is created as a member together with the team, so inviting
+    // yourself produced an invitation that could never be accepted: accepting it
+    // re-inserted the same (teamId, studentId) pair and violated the
+    // @@unique([teamId, studentId]) constraint on TeamMember.
+    if (student.id === team.leaderId) {
+      return res.status(400).json({
+        error: 'SELF_INVITE',
+        message: 'You are already the leader of this team.',
+      });
+    }
+
+    // Reuse a pending invitation rather than tripping the same unique constraint
+    // on TeamInvitation, which surfaced as a bare 500.
+    const existing = await prisma.teamInvitation.findUnique({
+      where: { teamId_studentId: { teamId: team.id, studentId: student.id } },
+    });
+    if (existing?.status === 'PENDING') {
+      return res.status(200).json(existing);
+    }
+
+    const invite = await prisma.teamInvitation.upsert({
+      where: { teamId_studentId: { teamId: team.id, studentId: student.id } },
+      update: { status: 'PENDING', declineNote: null, respondedAt: null, invitedAt: new Date() },
+      create: { teamId: team.id, studentId: student.id, status: 'PENDING' },
     });
     res.status(201).json(invite);
   } catch (err: any) {
@@ -550,21 +636,43 @@ router.post('/team-invitations/:id/accept', async (req: Request, res: Response) 
       return res.status(403).json({ error: 'NOT_ACTIVE', message: 'Your account is no longer active for this activity.' });
     }
     const invite = await prisma.teamInvitation.findFirst({
-      where: { id: req.params.id, studentId }
+      where: { id: req.params.id, studentId },
     });
     if (!invite) return res.status(404).json({ error: 'NOT_FOUND', message: 'Invitation not found' });
-    
+
+    // Only a pending invitation can be accepted. Previously a declined (or
+    // already accepted) invitation could be replayed, which re-ran the member
+    // insert and failed on the unique constraint.
+    if (invite.status !== 'PENDING') {
+      return res.status(409).json({
+        error: 'ALREADY_RESPONDED',
+        message:
+          invite.status === 'ACCEPTED'
+            ? 'This invitation has already been accepted.'
+            : 'This invitation is no longer pending.',
+      });
+    }
+
+    // The leader is already a member of the team they created, and a member can
+    // be invited to a second team they already belong to. `upsert` makes the
+    // join idempotent so a duplicate membership can no longer abort the whole
+    // transaction and leave the invitation stuck as PENDING.
     await prisma.$transaction([
       prisma.teamInvitation.update({
         where: { id: invite.id },
-        data: { status: 'ACCEPTED' }
+        data: { status: 'ACCEPTED', respondedAt: new Date() }
       }),
-      prisma.teamMember.create({
-        data: { teamId: invite.teamId, studentId: invite.studentId }
-      })
+      prisma.teamMember.upsert({
+        where: { teamId_studentId: { teamId: invite.teamId, studentId: invite.studentId } },
+        update: {},
+        create: { teamId: invite.teamId, studentId: invite.studentId },
+      }),
     ]);
     res.json({ message: 'Accepted' });
   } catch (err: any) {
+    if (err.code === 'P2002') {
+      return res.status(409).json({ error: 'ALREADY_MEMBER', message: 'You are already a member of this team.' });
+    }
     res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
   }
 });

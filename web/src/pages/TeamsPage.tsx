@@ -1,12 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../services/api';
-import { Users, Loader2, Plus, UserPlus, Check, X, AlertCircle, Shield, Mail } from 'lucide-react';
+import { Users, Loader2, Plus, UserPlus, Check, X, AlertCircle, Shield, Mail, Trash2 } from 'lucide-react';
 
 export const TeamsPage: React.FC = () => {
   const [teams, setTeams] = useState<any[]>([]);
   const [invitations, setInvitations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [removingTeamId, setRemovingTeamId] = useState<string | null>(null);
+  const [teamError, setTeamError] = useState<string | null>(null);
+  const [teamNotice, setTeamNotice] = useState<string | null>(null);
 
   // Create Team Modal
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -45,6 +48,24 @@ export const TeamsPage: React.FC = () => {
       setError('Could not load teams information.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRemoveTeam = async (team: any) => {
+    const name = team?.name || 'this team';
+    if (!window.confirm(`Remove the team "${name}"? All members and pending invitations will be removed. This cannot be undone.`)) {
+      return;
+    }
+    setRemovingTeamId(team.id);
+    setTeamError(null);
+    try {
+      const res = await api.removeTeam(team.id);
+      setTeams((prev) => prev.filter((t) => t.id !== team.id));
+      setTeamNotice(res?.message || `Team "${name}" has been removed.`);
+    } catch (err: any) {
+      setTeamError(err?.response?.data?.message || 'Could not remove the team. Please try again.');
+    } finally {
+      setRemovingTeamId(null);
     }
   };
 
@@ -167,6 +188,20 @@ export const TeamsPage: React.FC = () => {
         </div>
       )}
 
+      {teamNotice && (
+        <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl text-emerald-800 text-xs flex items-center gap-2">
+          <Check className="w-4 h-4 shrink-0 text-emerald-600" />
+          <span>{teamNotice}</span>
+        </div>
+      )}
+
+      {teamError && (
+        <div className="p-4 bg-red-50 border border-red-200 rounded-2xl text-red-800 text-xs flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
+          <span>{teamError}</span>
+        </div>
+      )}
+
       {/* PENDING INVITATIONS */}
       {invitations.length > 0 && (
         <div className="space-y-3">
@@ -247,26 +282,45 @@ export const TeamsPage: React.FC = () => {
                 key={t.id}
                 className="bg-white border border-[#E2E8F0] rounded-2xl overflow-hidden shadow-xs flex flex-col justify-between"
               >
-                <div className="p-5 border-b border-neutral-100 flex items-center justify-between">
+                <div className="p-5 border-b border-neutral-100 flex items-center justify-between gap-2">
                   <div>
                     <h3 className="font-bold text-sm text-[#0B192C]">{t.name}</h3>
                     <p className="text-[11px] text-neutral-400 font-mono">
                       {t.event?.name || 'Independent Team'}
                     </p>
                   </div>
-                  <button
-                    onClick={() => {
-                      setSelectedTeamId(t.id);
-                      setInviteRollNo('');
-                      setInviteError(null);
-                      setInviteSuccess(false);
-                      setInviteModalOpen(true);
-                    }}
-                    className="p-1.5 rounded-lg border border-neutral-200 text-neutral-600 hover:text-[#DC2626] hover:bg-red-50 transition-colors cursor-pointer"
-                    title="Invite Member"
-                  >
-                    <UserPlus className="w-4 h-4" />
-                  </button>
+                  {/* Only the lead can invite or dissolve the team; the server
+                      enforces this too, so the controls are hidden for members
+                      rather than shown and then rejected. */}
+                  {t.isLeader && (
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => {
+                          setSelectedTeamId(t.id);
+                          setInviteRollNo('');
+                          setInviteError(null);
+                          setInviteSuccess(false);
+                          setInviteModalOpen(true);
+                        }}
+                        className="p-1.5 rounded-lg border border-neutral-200 text-neutral-600 hover:text-[#DC2626] hover:bg-red-50 transition-colors cursor-pointer"
+                        title="Invite Member"
+                      >
+                        <UserPlus className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleRemoveTeam(t)}
+                        disabled={removingTeamId === t.id}
+                        className="p-1.5 rounded-lg border border-neutral-200 text-neutral-600 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer disabled:opacity-50"
+                        title="Remove Team"
+                      >
+                        {removingTeamId === t.id ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="w-4 h-4" />
+                        )}
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 <div className="p-5 space-y-2">

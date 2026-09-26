@@ -166,6 +166,12 @@ export const api = {
     return res.data;
   },
 
+  /** Withdraw the student's own introduction video. */
+  async deleteVideo(): Promise<{ success: boolean; message?: string }> {
+    const res = await client.delete('/student/submission');
+    return res.data;
+  },
+
   // Profile
   async getProfile() {
     const res = await client.get('/student/profile');
@@ -224,6 +230,7 @@ export const api = {
   async getTeamInvitations() { const res = await client.get('/student/team-invitations'); return res.data; },
   async acceptInvitation(id: string) { const res = await client.post(`/student/team-invitations/${id}/accept`); return res.data; },
   async declineInvitation(id: string) { const res = await client.post(`/student/team-invitations/${id}/decline`); return res.data; },
+  async removeTeam(teamId: string) { const res = await client.delete(`/student/teams/${teamId}`); return res.data; },
 
   // Voting
   async getVotingCampaigns() { const res = await client.get('/student/voting'); return res.data; },

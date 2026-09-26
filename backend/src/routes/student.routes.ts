@@ -488,6 +488,79 @@ router.post(
   }
 );
 
+// DELETE /api/student/submission — withdraw the student's own introduction
+// video. Ownership is enforced against the authenticated student's roll number,
+// so one student can never delete another's take. Both rows that reference the
+// file are removed: the Submission (what /me reports) and the active
+// IntroVideo (what the admin moderation queue reads), plus any superseded
+// IntroVideo rows for the same student so no orphaned moderation entry is left
+// pointing at a file that no longer exists.
+router.delete('/submission', requireStudentAuth, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const studentId = req.student!.studentId;
+    const student = await prisma.student.findUnique({
+      where: { id: studentId },
+      select: { rollNo: true, name: true },
+    });
+    if (!student) {
+      res.status(404).json({ error: 'NOT_FOUND', message: 'Student account not found.' });
+      return;
+    }
+
+    const submissions = await prisma.submission.findMany({
+      where: { rollNo: student.rollNo },
+      select: { id: true, videoDriveId: true, driveFolderPath: true },
+    });
+    const introVideos = await prisma.introVideo.findMany({
+      where: { studentId },
+      select: { id: true, driveFileId: true },
+    });
+
+    if (submissions.length === 0 && introVideos.length === 0) {
+      res.status(404).json({ error: 'NOT_FOUND', message: 'You have no submitted video to delete.' });
+      return;
+    }
+
+    const fileIds = new Set<string>();
+    for (const s of submissions) {
+      if (s.videoDriveId) fileIds.add(s.videoDriveId);
+    }
+    for (const v of introVideos) {
+      if (v.driveFileId) fileIds.add(v.driveFileId);
+    }
+    const folderPath = submissions[0]?.driveFolderPath;
+
+    // `rating` is a plain enum column on Submission and EmailLog.submissionId is
+    // an unconstrained string, so the rows can be removed directly.
+    await prisma.$transaction([
+      prisma.submission.deleteMany({ where: { id: { in: submissions.map((s) => s.id) } } }),
+      prisma.introVideo.deleteMany({ where: { id: { in: introVideos.map((v) => v.id) } } }),
+    ]);
+
+    for (const fileId of fileIds) {
+      deleteStoredFile(fileId, folderPath);
+    }
+
+    await ActivityService.log({
+      eventId: EVENT_ID,
+      category: 'APPLICATION',
+      action: 'Student deleted introduction video',
+      details: `Roll: ${student.rollNo}, files removed: ${fileIds.size}`,
+      applicantName: student.name,
+      userEmail: student.rollNo,
+      status: 'SUCCESS',
+    });
+
+    res.json({ success: true, message: 'Your introduction video has been deleted.' });
+  } catch (err: any) {
+    console.error('Error deleting student submission:', err);
+    res.status(500).json({
+      error: 'DELETE_FAILED',
+      message: 'Could not delete your video. Please try again.',
+    });
+  }
+});
+
 // PATCH /api/student/submission/video-visibility — publish / unpublish your own
 // video on the public showcase. Only an APPROVED video can be published, so a
 // pending or freshly replaced video never appears publicly before moderation.
