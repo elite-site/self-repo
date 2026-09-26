@@ -1,6 +1,6 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { api, UploadProgressInfo } from '../services/api';
-import { StudentSubmission } from '../types';
+import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
+import { api, resolveMediaUrl, UploadProgressInfo } from '../services/api';
+import { StudentIntroVideo, StudentSubmission } from '../types';
 import {
   UploadCloud,
   AlertCircle,
@@ -18,7 +18,9 @@ import {
   Zap,
   X,
   Gauge,
-  Info
+  Info,
+  Globe,
+  EyeOff
 } from 'lucide-react';
 
 interface UploadStats {
@@ -40,7 +42,8 @@ interface VideoMeta {
 
 export const VideoPage: React.FC = () => {
   const [submission, setSubmission] = useState<StudentSubmission | null>(null);
-  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [video, setVideo] = useState<StudentIntroVideo | null>(null);
+  const [localPreviewUrl, setLocalPreviewUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -48,18 +51,21 @@ export const VideoPage: React.FC = () => {
   const [videoMeta, setVideoMeta] = useState<VideoMeta | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const [publishNotice, setPublishNotice] = useState<string | null>(null);
+  const [previewError, setPreviewError] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   // Track object URLs so we can revoke them on unmount / re-upload (memory leak prevention)
   const objectUrlRef = useRef<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   // Revoke any previously created blob URLs to free memory
-  const setVideoUrlSafe = (url: string | null) => {
+  const setLocalPreview = (url: string | null) => {
     if (objectUrlRef.current && objectUrlRef.current !== url) {
       URL.revokeObjectURL(objectUrlRef.current);
     }
     objectUrlRef.current = url;
-    setVideoUrl(url);
+    setLocalPreviewUrl(url);
   };
 
   // Cleanup on unmount
@@ -79,15 +85,9 @@ export const VideoPage: React.FC = () => {
     setError(null);
     try {
       const data = await api.getMe();
+      setVideo(data?.student?.video ?? null);
       if (data?.student?.submission) {
         setSubmission(data.student.submission);
-        if (data.student.submission.videoUploaded) {
-          api.getVideoBlobUrl()
-            .then((url) => {
-              if (url) setVideoUrlSafe(url);
-            })
-            .catch(() => null);
-        }
       } else {
         setSubmission(null);
       }
@@ -98,6 +98,67 @@ export const VideoPage: React.FC = () => {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  /**
+   * The submitted recording is streamed from the server, not held in memory.
+   *
+   * A blob URL built at upload time only lives as long as the page, so the
+   * video would vanish on the next login. Pointing the player at the
+   * authenticated media endpoint instead means the student's own take is
+   * re-fetched from Drive on every visit and can be seeked. Both the row id and
+   * the submission timestamp go into the query string: the row is reused
+   * across takes, so only the timestamp changes when a new recording replaces
+   * the old one, and the browser then refetches instead of replaying its
+   * 10-minute private cache of the previous video.
+   */
+  const storedVideoUrl = useMemo(() => {
+    if (!video?.hasFile) return null;
+    const base = resolveMediaUrl('/student/submission/media/video');
+    const stamp = new Date(video.submittedAt || 0).getTime() || 0;
+    return `${base}?v=${encodeURIComponent(video.id)}-${stamp}`;
+  }, [video?.id, video?.submittedAt, video?.hasFile]);
+
+  // Right after an upload, show the local file instantly; afterwards fall back
+  // to the stored recording so the preview survives reloads and new sessions.
+  const playbackUrl = localPreviewUrl ?? storedVideoUrl;
+
+  /**
+   * A bare <video src> only carries the session cookie, not the Authorization
+   * header the rest of the app relies on. If the cookie is unavailable (or the
+   * browser refuses the credentialed subresource) the stream 401s, so retry
+   * once through the authenticated client and hold a blob in memory instead.
+   */
+  const handlePlaybackError = useCallback(() => {
+    if (!storedVideoUrl || localPreviewUrl) return;
+    setPreviewError(true);
+    api
+      .getVideoBlobUrl()
+      .then((url) => {
+        setPreviewError(false);
+        setLocalPreview(url);
+      })
+      .catch(() => setPreviewError(true));
+  }, [storedVideoUrl, localPreviewUrl]);
+
+  // A new take invalidates any previous fallback attempt.
+  useEffect(() => {
+    setPreviewError(false);
+  }, [video?.id]);
+
+  /** Publish / unpublish the approved video on the public showcase. */
+  const handleTogglePublish = async (next: boolean) => {
+    setPublishing(true);
+    setPublishNotice(null);
+    try {
+      const res = await api.setVideoPublic(next);
+      setVideo((prev) => (prev ? { ...prev, isPublic: res.isPublic, publishedAt: res.isPublic ? new Date().toISOString() : null } : prev));
+      setPublishNotice(res.message || (next ? 'Your video is now public.' : 'Your video is no longer public.'));
+    } catch (err: any) {
+      setPublishNotice(err?.response?.data?.message || 'Could not update public visibility.');
+    } finally {
+      setPublishing(false);
+    }
+  };
 
   useEffect(() => {
     loadSubmission(true);
@@ -256,8 +317,23 @@ export const VideoPage: React.FC = () => {
         reviewCons: [],
         reviewedAt: null,
       }));
-      // Show local preview immediately; revoke old URL to free memory
-      setVideoUrlSafe(localUrl);
+      // A new take overrides the old video, so it goes back to moderation and
+      // is no longer public until it is approved again.
+      setVideo((prev) =>
+        prev
+          ? {
+              ...prev,
+              status: 'PENDING',
+              isPublic: false,
+              publishedAt: null,
+              changeRequestedAt: null,
+              changeRequestNote: null,
+            }
+          : prev,
+      );
+      // Show the freshly uploaded take immediately; the stored copy is
+      // streamed from the server on the next page load or login.
+      setLocalPreview(localUrl);
       // Silently sync server state in the background
       loadSubmission(false);
     } catch (err: any) {
@@ -282,6 +358,19 @@ export const VideoPage: React.FC = () => {
       </div>
     );
   }
+
+  const formatSubmittedAt = (iso: string | null | undefined): string => {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '—';
+    return d.toLocaleString(undefined, {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -331,7 +420,7 @@ export const VideoPage: React.FC = () => {
         </div>
         {submission && (
           <div className="flex items-center gap-2 shrink-0">
-            {getStatusBadge(submission.status)}
+            {getStatusBadge(video?.status || submission.status)}
           </div>
         )}
       </div>
@@ -355,6 +444,82 @@ export const VideoPage: React.FC = () => {
         </div>
       )}
 
+      {/* ADMIN REQUESTED A NEW TAKE */}
+      {video?.changeRequestedAt && (
+        <div className="p-4 bg-orange-50 border border-orange-200 rounded-2xl text-orange-900 text-xs space-y-2">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0 text-orange-600" />
+            <span className="font-bold">A new introduction video has been requested</span>
+          </div>
+          <p className="text-orange-800/90 leading-relaxed">
+            {video.changeRequestNote ||
+              'Faculty asked you to record a new version of your introduction video. Uploading it will replace your current video and the old file will be removed.'}
+          </p>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#DC2626] hover:bg-[#B5121B] text-white font-bold disabled:opacity-50"
+          >
+            <UploadCloud className="w-3.5 h-3.5" />
+            <span>Upload New Video</span>
+          </button>
+        </div>
+      )}
+
+      {/* PUBLIC VISIBILITY */}
+      {submission?.videoUploaded && (
+        <div className="p-4 bg-white border border-[#E2E8F0] rounded-2xl text-xs space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-start gap-2.5 min-w-0">
+              {video?.isPublic ? (
+                <Globe className="w-4 h-4 shrink-0 text-emerald-600 mt-0.5" />
+              ) : (
+                <EyeOff className="w-4 h-4 shrink-0 text-neutral-400 mt-0.5" />
+              )}
+              <div className="min-w-0">
+                <p className="font-bold text-[#0B192C]">
+                  {video?.isPublic ? 'Your video is public' : 'Your video is private'}
+                </p>
+                <p className="text-neutral-500 mt-0.5 leading-relaxed">
+                  {video?.status === 'APPROVED'
+                    ? video.isPublic
+                      ? 'Anyone can watch it on the public home page, even without logging in.'
+                      : 'Publish it to make it watchable on the public home page without logging in.'
+                    : 'Your video appears on the public page only after faculty approves it.'}
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => handleTogglePublish(!video?.isPublic)}
+              disabled={publishing || video?.status !== 'APPROVED'}
+              title={video?.status === 'APPROVED' ? undefined : 'Awaiting faculty approval'}
+              className={`shrink-0 inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                video?.isPublic
+                  ? 'bg-neutral-100 hover:bg-neutral-200 text-[#0B192C]'
+                  : 'bg-[#DC2626] hover:bg-[#B5121B] text-white'
+              }`}
+            >
+              {publishing ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : video?.isPublic ? (
+                <EyeOff className="w-3.5 h-3.5" />
+              ) : (
+                <Globe className="w-3.5 h-3.5" />
+              )}
+              <span>{video?.isPublic ? 'Make Private' : 'Publish Publicly'}</span>
+            </button>
+          </div>
+
+          {publishNotice && (
+            <p className="text-[11px] text-neutral-500 flex items-center gap-1.5">
+              <Info className="w-3 h-3 shrink-0" />
+              {publishNotice}
+            </p>
+          )}
+        </div>
+      )}
+
       {/* MAIN TWO-COLUMN CONTENT */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* LEFT COLUMN: VIDEO PLAYER OR UPLOADER (8 COLS) */}
@@ -370,10 +535,10 @@ export const VideoPage: React.FC = () => {
                 className="hidden"
               />
               <div className="flex items-center gap-3">
-                {videoUrl && (
+                {playbackUrl && (
                   <a
-                    href={videoUrl}
-                    download="self-introduction.mp4"
+                    href={playbackUrl}
+                    download={video?.filename || 'self-introduction.mp4'}
                     className="text-xs font-bold text-neutral-600 hover:text-[#0B192C] flex items-center gap-1 cursor-pointer bg-neutral-100 hover:bg-neutral-200 px-3 py-1.5 rounded-lg transition-colors"
                   >
                     <Download className="w-3.5 h-3.5" />
@@ -482,15 +647,29 @@ export const VideoPage: React.FC = () => {
                   </button>
                 </div>
               </div>
-            ) : videoUrl ? (
+            ) : playbackUrl ? (
               <div className="bg-black rounded-2xl overflow-hidden aspect-video border border-neutral-800 shadow-inner">
                 <video
-                  src={videoUrl}
+                  key={playbackUrl}
+                  src={playbackUrl}
                   controls
                   playsInline
                   preload="metadata"
+                  // Sends the httpOnly session cookie when the API lives on a
+                  // different origin than the portal (local dev).
+                  crossOrigin="use-credentials"
+                  onError={handlePlaybackError}
                   className="w-full h-full object-contain"
-                />
+                >
+                  Your browser cannot play this video. Use the Download button to
+                  open it in a video player.
+                </video>
+                {previewError && (
+                  <p className="px-4 py-2 text-[11px] text-amber-800 bg-amber-50 border-t border-amber-200">
+                    Could not load your recording from the server. Refresh the
+                    page to try again, or use Download.
+                  </p>
+                )}
               </div>
             ) : (
               <div
@@ -510,6 +689,33 @@ export const VideoPage: React.FC = () => {
                 >
                   Select Video File
                 </button>
+              </div>
+            )}
+
+            {/* WHAT IS CURRENTLY STORED — lets the student identify the exact
+                take they submitted, on any device and after any number of
+                logins, instead of relying on a session-scoped preview. */}
+            {video && (
+              <div className="rounded-xl border border-[#E2E8F0] bg-neutral-50/60 px-4 py-3">
+                <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[11px] text-neutral-600">
+                  <div className="flex items-center gap-1.5">
+                    <FileVideo className="w-3.5 h-3.5 text-[#DC2626] shrink-0" />
+                    <span className="font-semibold text-[#0B192C] truncate max-w-[16rem]">
+                      {video.filename || 'self-introduction.mp4'}
+                    </span>
+                  </div>
+                  {video.sizeMb != null && (
+                    <span className="font-medium">{video.sizeMb} MB</span>
+                  )}
+                  {video.mimeType && <span className="font-medium uppercase">{video.mimeType}</span>}
+                  <span className="flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 shrink-0" />
+                    <span className="font-medium">
+                      Submitted {formatSubmittedAt(video.submittedAt)}
+                    </span>
+                  </span>
+                  <span className="ml-auto">{getStatusBadge(video.status)}</span>
+                </div>
               </div>
             )}
           </div>

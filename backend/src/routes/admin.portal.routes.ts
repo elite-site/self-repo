@@ -3,6 +3,7 @@ import { requireAdminAuth } from '../middleware/auth';
 import { prisma } from '../lib/prisma';
 import { ActivityService } from '../services/activity.service';
 import { deliverAnnouncementNotifications } from '../services/announcement.service';
+import { notifyStudent, notifyVideoChangeRequested } from '../services/notification.service';
 
 const router = Router();
 router.use(requireAdminAuth);
@@ -135,8 +136,58 @@ const handleModerationDecision = async (
   reason?: string
 ) => {
   switch (type) {
-    case 'videos':
-      return prisma.introVideo.update({ where: { id }, data: { status, reviewNote: reason } });
+    case 'videos': {
+      // Approval publishes the video publicly; a rejection or a change request
+      // takes it off the public page and tells the student what to do.
+      const data: Record<string, unknown> = {
+        status,
+        reviewNote: reason,
+        reviewedAt: new Date(),
+      };
+
+      if (status === 'APPROVED') {
+        data.isPublic = true;
+        data.publishedAt = new Date();
+        data.changeRequestedAt = null;
+        data.changeRequestNote = null;
+      } else {
+        data.isPublic = false;
+        data.publishedAt = null;
+        if (status === 'CHANGES_REQUESTED') {
+          data.changeRequestedAt = new Date();
+          data.changeRequestNote = reason;
+        }
+      }
+
+      const updated = await prisma.introVideo.update({ where: { id }, data });
+
+      const video = await prisma.introVideo.findUnique({
+        where: { id },
+        include: { student: { select: { id: true } } },
+      });
+
+      if (video?.student?.id) {
+        if (status === 'CHANGES_REQUESTED') {
+          await notifyVideoChangeRequested(video.student.id, reason);
+        } else if (status === 'APPROVED') {
+          await notifyStudent({
+            studentId: video.student.id,
+            title: 'Introduction video approved and published',
+            message: 'Your introduction video was approved and is now visible on the public page.',
+          });
+        } else if (status === 'REJECTED') {
+          await notifyStudent({
+            studentId: video.student.id,
+            title: 'Introduction video rejected',
+            message: reason
+              ? `Your introduction video was rejected. Faculty note: "${reason}". You can upload a new version at any time.`
+              : 'Your introduction video was rejected. You can upload a new version at any time.',
+          });
+        }
+      }
+
+      return updated;
+    }
     case 'resumes':
       return prisma.resume.update({ where: { id }, data: { status, reviewNote: reason } });
     case 'achievements':

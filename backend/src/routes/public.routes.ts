@@ -303,21 +303,42 @@ router.get('/public/media/:type/:fileId', async (req: Request, res: Response): P
       return;
     }
 
-    const { stream, mimeType, size } = await driveService.streamDriveFile(fileId);
-
-    res.setHeader('Content-Type', mimeType);
-    if (size) res.setHeader('Content-Length', size.toString());
-    res.setHeader('Cache-Control', 'no-cache, must-revalidate');
-    res.setHeader('ETag', `"${fileId}"`);
-
     if (req.headers['if-none-match'] === `"${fileId}"`) {
       res.status(304).end();
       return;
     }
 
+    // Honour Range requests so <video> can seek instead of buffering the whole
+    // file. The byte range is fetched from storage, so the body always matches
+    // the advertised Content-Range.
+    const { stream, mimeType, size, contentRange } = await driveService.streamDriveFile(
+      fileId,
+      undefined,
+      req.headers.range,
+    );
+
+    res.setHeader('Content-Type', mimeType);
+    res.setHeader('Accept-Ranges', 'bytes');
+    res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+    res.setHeader('ETag', `"${fileId}"`);
+
+    if (contentRange) {
+      res.setHeader('Content-Range', `bytes ${contentRange.start}-${contentRange.end}/${contentRange.total}`);
+      res.setHeader('Content-Length', String(contentRange.end - contentRange.start + 1));
+      res.status(206);
+    } else if (size !== undefined) {
+      res.setHeader('Content-Length', String(size));
+    }
+
+    stream.on('error', () => {
+      if (!res.headersSent) res.status(500);
+      res.end();
+    });
     stream.pipe(res);
   } catch (err: any) {
-    res.status(404).json({ error: 'MEDIA_NOT_FOUND', message: 'Requested media could not be found or loaded.' });
+    if (!res.headersSent) {
+      res.status(404).json({ error: 'MEDIA_NOT_FOUND', message: 'Requested media could not be found or loaded.' });
+    }
   }
 });
 

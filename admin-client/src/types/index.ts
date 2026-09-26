@@ -8,6 +8,20 @@ export interface EventItem {
 
 export type SubmissionRating = 'GOOD' | 'AVERAGE' | 'POOR';
 
+/** Moderation + public visibility state of a student's introduction video. */
+export interface IntroVideoState {
+  id: string;
+  status: string;
+  reviewNote?: string | null;
+  isPublic: boolean;
+  publishedAt?: string | null;
+  changeRequestedAt?: string | null;
+  changeRequestNote?: string | null;
+  driveFileId?: string | null;
+  submittedAt: string;
+  publicUrl?: string | null;
+}
+
 export interface Submission {
   id: string;
   eventId?: string;
@@ -30,6 +44,7 @@ export interface Submission {
   reviewCons?: string[];
   reviewedAt?: string | null;
   reviewedBy?: string | null;
+  introVideo?: IntroVideoState | null;
 }
 
 export interface SectionProgress {

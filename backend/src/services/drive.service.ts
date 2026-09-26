@@ -32,6 +32,48 @@ export interface DriveUploadResult {
   driveFolderPath: string;
 }
 
+export interface DriveStreamResult {
+  stream: Readable;
+  mimeType: string;
+  /** Full size of the file in bytes, when the storage backend reports it. */
+  size?: number;
+  /** Present when the response only carries a byte range (HTTP 206). */
+  contentRange?: { start: number; end: number; total: number };
+}
+
+/** Parse a single `bytes=start-end` range header. Returns null when absent/unsupported. */
+export function parseRangeHeader(
+  rangeHeader: string | undefined,
+  totalSize: number,
+): { start: number; end: number; total: number } | null {
+  if (!rangeHeader || !Number.isFinite(totalSize) || totalSize <= 0) return null;
+
+  const match = /^bytes=(\d*)-(\d*)$/.exec(rangeHeader.trim());
+  if (!match) return null;
+
+  const [, rawStart, rawEnd] = match;
+  if (rawStart === '' && rawEnd === '') return null;
+
+  let start: number;
+  let end: number;
+
+  if (rawStart === '') {
+    // Suffix range: `bytes=-500` means the last 500 bytes.
+    const suffixLength = parseInt(rawEnd, 10);
+    if (!Number.isFinite(suffixLength) || suffixLength <= 0) return null;
+    start = Math.max(0, totalSize - suffixLength);
+    end = totalSize - 1;
+  } else {
+    start = parseInt(rawStart, 10);
+    end = rawEnd === '' ? totalSize - 1 : parseInt(rawEnd, 10);
+  }
+
+  if (!Number.isFinite(start) || !Number.isFinite(end)) return null;
+  if (start > end || start >= totalSize) return null;
+
+  return { start, end: Math.min(end, totalSize - 1), total: totalSize };
+}
+
 class DriveService {
   private drive: drive_v3.Drive | null = null;
   private isMock = false;
@@ -569,18 +611,19 @@ class DriveService {
   }
 
   /**
-   * Proxy/Stream a Drive file to the client for admin media viewing.
+   * Proxy/Stream a Drive file to the client for admin/public media viewing.
    * @param fileId       - Google Drive file ID
    * @param relativePath - optional path hint used by the mock storage backend
    * @param rangeHeader  - optional HTTP Range header from the client request
-   *                       (e.g. "bytes=0-1048576"). Passed through so callers can
-   *                       set Content-Range headers even if the full stream is used.
+   *                       (e.g. "bytes=0-1048576"). A matching byte range is
+   *                       requested from the storage backend and reported back
+   *                       via `contentRange` so callers can answer with 206.
    */
   public async streamDriveFile(
     fileId: string,
     relativePath?: string,
     rangeHeader?: string,
-  ): Promise<{ stream: Readable; mimeType: string; size?: number }> {
+  ): Promise<DriveStreamResult> {
     if (this.isMock || !this.drive) {
       // Find file in mock directory
       if (relativePath) {
@@ -594,11 +637,7 @@ class DriveService {
                 const actualFileName = file.replace('.meta.json', '');
                 const actualFilePath = path.join(dirPath, actualFileName);
                 const stat = fs.statSync(actualFilePath);
-                return {
-                  stream: fs.createReadStream(actualFilePath),
-                  mimeType: meta.mimetype || 'image/jpeg',
-                  size: stat.size,
-                };
+                return this.createLocalStream(actualFilePath, meta.mimetype || 'image/jpeg', stat.size, rangeHeader);
               }
             }
           }
@@ -631,11 +670,7 @@ class DriveService {
       const match = findInDir(this.mockBaseDir);
       if (match && fs.existsSync(match.filePath)) {
         const stat = fs.statSync(match.filePath);
-        return {
-          stream: fs.createReadStream(match.filePath),
-          mimeType: match.meta.mimetype || 'image/jpeg',
-          size: stat.size,
-        };
+        return this.createLocalStream(match.filePath, match.meta.mimetype || 'image/jpeg', stat.size, rangeHeader);
       }
 
       throw new Error(`Mock file ${fileId} not found`);
@@ -648,16 +683,98 @@ class DriveService {
       fields: 'mimeType, size, name',
     });
 
+    const size = metadata.data.size ? parseInt(metadata.data.size, 10) : undefined;
+    const range = parseRangeHeader(rangeHeader, size ?? 0);
+
     const res = await this.drive.files.get(
       { fileId, alt: 'media', supportsAllDrives: true },
-      { responseType: 'stream' }
+      {
+        responseType: 'stream',
+        headers: range ? { Range: `bytes=${range.start}-${range.end}` } : undefined,
+      }
     );
 
     return {
       stream: res.data as Readable,
       mimeType: metadata.data.mimeType || 'application/octet-stream',
-      size: metadata.data.size ? parseInt(metadata.data.size, 10) : undefined,
+      size,
+      contentRange: range ?? undefined,
     };
+  }
+
+  /** Build a (optionally ranged) read stream for the local mock storage. */
+  private createLocalStream(
+    filePath: string,
+    mimeType: string,
+    size: number,
+    rangeHeader?: string,
+  ): DriveStreamResult {
+    const range = parseRangeHeader(rangeHeader, size);
+
+    if (!range) {
+      return { stream: fs.createReadStream(filePath), mimeType, size };
+    }
+
+    return {
+      stream: fs.createReadStream(filePath, { start: range.start, end: range.end }),
+      mimeType,
+      size,
+      contentRange: range,
+    };
+  }
+
+  /**
+   * Delete a single stored file by its Drive/mock ID.
+   *
+   * Used to purge a superseded video after a student uploads a replacement, so
+   * the old file never lingers next to the new one. Never throws — a failed
+   * cleanup must not fail the request that already stored the new file.
+   */
+  public async deleteFileById(fileId: string, relativePath?: string): Promise<boolean> {
+    if (!fileId) return false;
+
+    if (this.isMock || !this.drive) {
+      try {
+        const candidates: string[] = [];
+        if (relativePath) candidates.push(path.join(this.mockBaseDir, relativePath));
+        candidates.push(this.mockBaseDir);
+
+        for (const dir of candidates) {
+          if (!fs.existsSync(dir)) continue;
+          const stack = [dir];
+          while (stack.length) {
+            const current = stack.pop()!;
+            for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+              const full = path.join(current, entry.name);
+              if (entry.isDirectory()) {
+                stack.push(full);
+                continue;
+              }
+              if (!entry.name.endsWith('.meta.json')) continue;
+              try {
+                const meta = JSON.parse(fs.readFileSync(full, 'utf-8'));
+                if (meta.id !== fileId) continue;
+                fs.rmSync(full, { force: true });
+                fs.rmSync(full.replace(/\.meta\.json$/, ''), { force: true });
+                return true;
+              } catch (_) {}
+            }
+          }
+        }
+        return false;
+      } catch (err) {
+        console.warn(`[drive] failed to delete mock file ${fileId}:`, err);
+        return false;
+      }
+    }
+
+    try {
+      await this.drive.files.delete({ fileId, supportsAllDrives: true });
+      return true;
+    } catch (err) {
+      console.warn(`[drive] failed to delete file ${fileId}:`, err);
+      return false;
+    }
   }
 
   /**

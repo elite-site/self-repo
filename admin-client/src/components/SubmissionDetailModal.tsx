@@ -14,8 +14,12 @@ import {
   Phone,
   Folder,
   ShieldCheck,
+  Globe,
+  EyeOff,
+  RefreshCw,
+  Loader2,
 } from 'lucide-react';
-import { Submission, SubmissionRating } from '../types';
+import { IntroVideoState, Submission, SubmissionRating } from '../types';
 import { adminApi } from '../services/api';
 
 const REVIEW_PROS = [
@@ -29,6 +33,14 @@ const REVIEW_CONS = [
   'broken voice',
   'bad lighting',
 ];
+
+const VIDEO_STATUS_BADGE: Record<string, { label: string; cls: string }> = {
+  PENDING: { label: 'Pending review', cls: 'bg-amber-50 text-amber-700 border-amber-200' },
+  UNDER_REVIEW: { label: 'Under review', cls: 'bg-violet-50 text-violet-700 border-violet-200' },
+  APPROVED: { label: 'Approved', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  REJECTED: { label: 'Rejected', cls: 'bg-red-50 text-red-700 border-red-200' },
+  CHANGES_REQUESTED: { label: 'New video requested', cls: 'bg-orange-50 text-orange-700 border-orange-200' },
+};
 
 interface SubmissionDetailModalProps {
   submission: Submission | null;
@@ -80,6 +92,12 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
   const [deleting, setDeleting] = useState(false);
   const [deletingVideo, setDeletingVideo] = useState(false);
   const [hasVideo, setHasVideo] = useState<boolean>(Boolean(submission.videoDriveId));
+  const [introVideo, setIntroVideo] = useState<IntroVideoState | null>(submission.introVideo ?? null);
+  const [requestingVideo, setRequestingVideo] = useState(false);
+  const [showRequestForm, setShowRequestForm] = useState(false);
+  const [requestReason, setRequestReason] = useState('');
+  const [togglingPublic, setTogglingPublic] = useState(false);
+  const [videoNotice, setVideoNotice] = useState<string | null>(null);
   const [reviewText, setReviewText] = useState(submission.reviewText || '');
   const [reviewPros, setReviewPros] = useState<string[]>(submission.reviewPros || []);
   const [reviewCons, setReviewCons] = useState<string[]>(submission.reviewCons || []);
@@ -104,6 +122,61 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
   }, [onClose]);
 
   const videoUrl = hasVideo ? adminApi.getMediaUrl(submission.id, 'video', submission.videoDriveId || submission.submittedAt) : null;
+
+  // Load the freshest moderation + public visibility state for this video.
+  useEffect(() => {
+    let cancelled = false;
+    adminApi
+      .getSubmission(submission.id)
+      .then((data) => {
+        if (!cancelled && data?.introVideo) setIntroVideo(data.introVideo as IntroVideoState);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [submission.id]);
+
+  const handleRequestNewVideo = async () => {
+    setRequestingVideo(true);
+    setVideoNotice(null);
+    try {
+      const res = await adminApi.requestNewVideo(submission.id, requestReason);
+      setVideoNotice(res.message || 'The student has been notified.');
+      setShowRequestForm(false);
+      setRequestReason('');
+      setIntroVideo((prev) =>
+        prev
+          ? {
+              ...prev,
+              status: 'CHANGES_REQUESTED',
+              changeRequestedAt: new Date().toISOString(),
+              changeRequestNote: requestReason.trim() || null,
+            }
+          : prev,
+      );
+    } catch (err) {
+      setVideoNotice('Failed to request a new video. Try again.');
+    } finally {
+      setRequestingVideo(false);
+    }
+  };
+
+  const handleTogglePublic = async () => {
+    if (!introVideo) return;
+    const next = !introVideo.isPublic;
+    setTogglingPublic(true);
+    setVideoNotice(null);
+    try {
+      const res = await adminApi.setVideoPublic(introVideo.id, next);
+      setIntroVideo((prev) => (prev ? { ...prev, isPublic: next } : prev));
+      setVideoNotice(res.message || 'Public visibility updated.');
+    } catch (err: any) {
+      setVideoNotice(err?.response?.data?.message || 'Failed to update public visibility.');
+    } finally {
+      setTogglingPublic(false);
+    }
+  };
 
   const handleRate = async (value: SubmissionRating | null) => {
     setUpdating(true);
@@ -315,10 +388,22 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                   </div>
                 </div>
                 {hasVideo && (
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-emerald-200 dark:border-emerald-800/60 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 text-[11px] font-bold uppercase tracking-wide">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
-                    Uploaded
-                  </span>
+                  <div className="flex items-center gap-2">
+                    {introVideo?.status && (
+                      <span
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-bold uppercase tracking-wide ${
+                          VIDEO_STATUS_BADGE[introVideo.status]?.cls ??
+                          'bg-neutral-50 text-neutral-600 border-neutral-200'
+                        }`}
+                      >
+                        {VIDEO_STATUS_BADGE[introVideo.status]?.label ?? introVideo.status}
+                      </span>
+                    )}
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-emerald-200 dark:border-emerald-800/60 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 text-[11px] font-bold uppercase tracking-wide">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+                      Uploaded
+                    </span>
+                  </div>
                 )}
               </div>
 
@@ -334,6 +419,105 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                   </p>
                 </div>
               )}
+
+              {/* PUBLIC VISIBILITY + CHANGE REQUEST */}
+              <div className="mt-4 pt-4 border-t border-neutral-200 dark:border-[#252B35] space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-start gap-2.5 min-w-0">
+                    {introVideo?.isPublic ? (
+                      <Globe className="w-4 h-4 shrink-0 text-emerald-600 mt-0.5" />
+                    ) : (
+                      <EyeOff className="w-4 h-4 shrink-0 text-neutral-400 mt-0.5" />
+                    )}
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-elite-black dark:text-white">
+                        {introVideo?.isPublic ? 'Visible on the public page' : 'Not published publicly'}
+                      </p>
+                      <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5 leading-relaxed">
+                        {introVideo?.status === 'APPROVED'
+                          ? 'Published videos are watchable by anyone on the public home page, without logging in.'
+                          : 'Only an approved video can be published to the public page.'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={handleTogglePublic}
+                      disabled={!introVideo || togglingPublic || introVideo.status !== 'APPROVED'}
+                      title={introVideo?.status === 'APPROVED' ? undefined : 'Only approved videos can be published'}
+                      className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-[11px] font-bold uppercase tracking-wide transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
+                        introVideo?.isPublic
+                          ? 'bg-neutral-100 hover:bg-neutral-200 text-elite-black dark:bg-neutral-800 dark:text-white'
+                          : 'bg-elite-red hover:bg-red-700 text-white'
+                      }`}
+                    >
+                      {togglingPublic ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : introVideo?.isPublic ? (
+                        <EyeOff className="w-3.5 h-3.5" />
+                      ) : (
+                        <Globe className="w-3.5 h-3.5" />
+                      )}
+                      {introVideo?.isPublic ? 'Unpublish' : 'Publish'}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setShowRequestForm((v) => !v)}
+                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-orange-200 dark:border-orange-800/60 text-[11px] font-bold uppercase tracking-wide text-orange-700 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-950/40 transition-colors cursor-pointer"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" />
+                      Request New Video
+                    </button>
+                  </div>
+                </div>
+
+                {showRequestForm && (
+                  <div className="space-y-2 p-3 rounded-xl border border-orange-200 dark:border-orange-800/60 bg-orange-50/50 dark:bg-orange-950/20">
+                    <label className="block text-[11px] font-bold uppercase tracking-wide text-orange-800 dark:text-orange-300">
+                      What should the student change? <span className="font-normal normal-case">(optional)</span>
+                    </label>
+                    <textarea
+                      value={requestReason}
+                      onChange={(e) => setRequestReason(e.target.value)}
+                      rows={3}
+                      placeholder="e.g. The audio is not clear in the second half — please re-record."
+                      className="w-full text-xs border border-orange-200 dark:border-orange-800/60 bg-white dark:bg-neutral-800 rounded-lg p-3 resize-none focus:outline-none focus:border-elite-red focus:ring-1 focus:ring-elite-red text-elite-black dark:text-white"
+                    />
+                    <p className="text-[11px] text-orange-800/80 dark:text-orange-300/80 leading-relaxed">
+                      The student gets a notification. Their current video stays live until they upload the
+                      replacement, which then overrides it and removes the old file.
+                    </p>
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowRequestForm(false)}
+                        className="px-3 py-1.5 rounded-lg text-[11px] font-bold text-neutral-600 dark:text-neutral-300 hover:bg-white dark:hover:bg-neutral-800 cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleRequestNewVideo}
+                        disabled={requestingVideo}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-elite-red hover:bg-red-700 text-white text-[11px] font-bold uppercase tracking-wide disabled:opacity-50 cursor-pointer"
+                      >
+                        {requestingVideo ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <MessageSquare className="w-3.5 h-3.5" />}
+                        Notify Student
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {videoNotice && (
+                  <p className="text-[11px] text-neutral-600 dark:text-neutral-300 flex items-center gap-1.5">
+                    <ShieldCheck className="w-3 h-3 shrink-0" />
+                    {videoNotice}
+                  </p>
+                )}
+              </div>
             </div>
 
             {/* RATING + RESPONSE GRID */}
