@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   getNotificationDestination,
   navigateToNotification,
+  type NotificationRoutingTarget,
 } from '../../web/src/utils/notificationRouting';
 
 describe('notification destination resolution', () => {
@@ -55,5 +56,60 @@ describe('notification destination resolution', () => {
     const navigate = vi.fn();
     navigateToNotification('/events/event-123', navigate);
     expect(navigate).toHaveBeenCalledWith('/events/event-123');
+  });
+
+  // Regression cover for the real payloads the backend writes. These mirror
+  // `announcement.service.ts` (announcementActionUrl) and
+  // `notification.service.ts` (INTRO_VIDEO_ACTION_URL) exactly as
+  // GET /student/notifications serialises them, so a click is guaranteed to use
+  // the stored target instead of falling back to the portal landing page.
+  it('uses the stored actionUrl for announcement notifications as serialised by the API', () => {
+    expect(
+      getNotificationDestination({
+        id: 'n_1',
+        studentId: 's_1',
+        type: 'ANNOUNCEMENT',
+        title: 'Announcement: Hackathon Registrations Open',
+        message: 'Registrations close on Friday.',
+        actionUrl: '/announcements/ckq123abc',
+        status: 'UNREAD',
+        createdAt: '2026-09-26T10:00:00.000Z',
+        readAt: null,
+        isRead: false,
+      }),
+    ).toBe('/announcements/ckq123abc');
+  });
+
+  it('uses the stored actionUrl for intro-video moderation notifications', () => {
+    expect(
+      getNotificationDestination({
+        id: 'n_2',
+        type: 'MODERATION',
+        title: 'New introduction video requested',
+        message: 'Your introduction video needs to be changed.',
+        actionUrl: '/intro-video',
+        status: 'UNREAD',
+        isRead: false,
+      }),
+    ).toBe('/intro-video');
+  });
+
+  it('never resolves a notification to the public homepage', () => {
+    const payloads: NotificationRoutingTarget[] = [
+      { type: 'ANNOUNCEMENT', actionUrl: '/announcements/a1' },
+      { type: 'ANNOUNCEMENT' },
+      { type: 'MODERATION', actionUrl: '/intro-video' },
+      { type: 'MODERATION' },
+      { type: 'EVENT', eventId: 'e1' },
+      { type: 'EVENT' },
+      { type: 'VOTING', campaignId: 'c1' },
+      { type: 'PROFILE', rollNo: '21CS042' },
+      { type: 'SYSTEM', title: 'Welcome' },
+      {},
+    ];
+
+    for (const payload of payloads) {
+      expect(getNotificationDestination(payload)).not.toBe('/');
+    }
   });
 });
