@@ -12,6 +12,7 @@ import { ValidationService } from '../services/validation.service';
 import { driveService } from '../services/drive.service';
 import { ActivityService } from '../services/activity.service';
 import { ssoService } from '../services/sso.service';
+import { resolveContentRange } from '../utils/rangeParser';
 
 const router = Router();
 
@@ -586,9 +587,11 @@ router.get('/submission/media/video', requireStudentAuth, async (req: Request, r
       res.setHeader('Content-Disposition', 'inline');
     }
 
-    if (contentRange) {
-      res.setHeader('Content-Range', `bytes ${contentRange.start}-${contentRange.end}/${contentRange.total}`);
-      res.setHeader('Content-Length', String(contentRange.end - contentRange.start + 1));
+    const range = resolveContentRange(contentRange, rangeHeader, size);
+
+    if (range) {
+      res.setHeader('Content-Range', `bytes ${range.start}-${range.end}/${range.total}`);
+      res.setHeader('Content-Length', String(range.end - range.start + 1));
       res.status(206);
     } else if (rangeHeader && size !== undefined) {
       // A range was requested but could not be satisfied (malformed or past EOF).

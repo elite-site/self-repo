@@ -8,6 +8,7 @@ import { RATINGS, RATING_LABELS, SUBMISSION_STATUSES } from '../config/constants
 import { ActivityService } from '../services/activity.service';
 import { deliverAnnouncementNotifications } from '../services/announcement.service';
 import { notifyStudent, notifyVideoChangeRequested } from '../services/notification.service';
+import { resolveContentRange } from '../utils/rangeParser';
 
 const router = Router();
 
@@ -604,9 +605,11 @@ router.get('/submissions/:id/media/:fileKey', async (req: Request, res: Response
     res.setHeader('Cache-Control', 'private, max-age=300');
     res.setHeader('ETag', etag);
 
-    if (contentRange) {
-      res.setHeader('Content-Range', `bytes ${contentRange.start}-${contentRange.end}/${contentRange.total}`);
-      res.setHeader('Content-Length', String(contentRange.end - contentRange.start + 1));
+    const range = resolveContentRange(contentRange, rangeHeader, size);
+
+    if (range) {
+      res.setHeader('Content-Range', `bytes ${range.start}-${range.end}/${range.total}`);
+      res.setHeader('Content-Length', String(range.end - range.start + 1));
       res.status(206);
     } else if (rangeHeader && size !== undefined) {
       if (typeof (stream as any).destroy === 'function') {

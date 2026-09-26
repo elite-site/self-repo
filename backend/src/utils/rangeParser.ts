@@ -45,3 +45,32 @@ export function parseRange(rangeHeader: string, size: number): ParsedRange | nul
   end = Math.min(end, size - 1);
   return { start, end };
 }
+
+export interface ContentRange {
+  start: number;
+  end: number;
+  total: number;
+}
+
+/**
+ * Decide which byte range a media response should answer with.
+ *
+ * Prefers the range the storage layer already resolved, which also covers the
+ * pass-through case where the total size was not known up front. Falls back to
+ * parsing the request header against the known file size.
+ *
+ * Returns `null` when no range applies, or when the client asked for a range
+ * that cannot be satisfied. Callers must then reply `416` rather than a full
+ * `200` body, because a `<video>` element would try to seek inside it.
+ */
+export function resolveContentRange(
+  resolved: ContentRange | undefined,
+  rangeHeader: string | undefined,
+  size: number | undefined,
+): ContentRange | null {
+  if (resolved) return resolved;
+  if (!rangeHeader || size === undefined) return null;
+
+  const parsed = parseRange(rangeHeader, size);
+  return parsed ? { start: parsed.start, end: parsed.end, total: size } : null;
+}
