@@ -1,7 +1,10 @@
 import { Router, Request, Response } from 'express';
+import path from 'path';
 import { requireStudentAuth } from '../middleware/studentAuth';
 import { prisma } from '../lib/prisma';
 import { certificateUpload, proofUpload } from '../middleware/upload';
+import { driveService } from '../services/drive.service';
+import { env } from '../config/env';
 
 const handleProofUpload = (req: Request, res: Response, next: any) => {
   const contentType = req.headers['content-type'] || '';
@@ -176,10 +179,34 @@ router.post('/achievements', handleProofUpload, async (req: Request, res: Respon
     let finalProofUrl = proofUrl || certificateUrl || null;
 
     if ((req as any).file) {
-      finalProofDriveId = finalProofDriveId || 'drive_proof_' + Date.now();
-      if (!finalProofUrl) {
-        finalProofUrl = `/api/public/media/achievement/${finalProofDriveId}`;
+      const file = (req as any).file;
+      const student = await prisma.student.findUnique({
+        where: { id: studentId },
+        select: { rollNo: true, name: true, year: true, section: true },
+      });
+      const ext = path.extname(file.originalname) || (file.mimetype === 'application/pdf' ? '.pdf' : '.jpg');
+      const cleanRollNo = student?.rollNo ? student.rollNo.toUpperCase().replace(/[^a-zA-Z0-9]/g, '') : 'STUDENT';
+      const cleanTitle = title.replace(/[^a-zA-Z0-9]/g, '_');
+      const fileName = `Proof_${cleanRollNo}_${cleanTitle}_${Date.now()}${ext}`;
+      const relativePath = `Achievements/${cleanRollNo}`;
+
+      try {
+        finalProofDriveId = await driveService.uploadFile(
+          {
+            buffer: file.buffer,
+            originalname: file.originalname,
+            mimetype: file.mimetype || 'application/octet-stream',
+            size: file.size,
+          },
+          fileName,
+          env.GOOGLE_DRIVE_ROOT_FOLDER_ID || 'root',
+          relativePath
+        );
+      } catch (uploadErr) {
+        console.error('Failed to upload achievement proof to drive:', uploadErr);
+        finalProofDriveId = 'drive_proof_' + Date.now();
       }
+      finalProofUrl = `/api/public/media/achievement/${finalProofDriveId}`;
     }
 
     const achievement = await prisma.achievement.create({
@@ -230,7 +257,33 @@ router.put('/achievements/:id', handleProofUpload, async (req: Request, res: Res
       : undefined;
 
     if ((req as any).file) {
-      finalProofDriveId = 'drive_proof_' + Date.now();
+      const file = (req as any).file;
+      const student = await prisma.student.findUnique({
+        where: { id: studentId },
+        select: { rollNo: true, name: true, year: true, section: true },
+      });
+      const ext = path.extname(file.originalname) || (file.mimetype === 'application/pdf' ? '.pdf' : '.jpg');
+      const cleanRollNo = student?.rollNo ? student.rollNo.toUpperCase().replace(/[^a-zA-Z0-9]/g, '') : 'STUDENT';
+      const cleanTitle = (title || 'Proof').replace(/[^a-zA-Z0-9]/g, '_');
+      const fileName = `Proof_${cleanRollNo}_${cleanTitle}_${Date.now()}${ext}`;
+      const relativePath = `Achievements/${cleanRollNo}`;
+
+      try {
+        finalProofDriveId = await driveService.uploadFile(
+          {
+            buffer: file.buffer,
+            originalname: file.originalname,
+            mimetype: file.mimetype || 'application/octet-stream',
+            size: file.size,
+          },
+          fileName,
+          env.GOOGLE_DRIVE_ROOT_FOLDER_ID || 'root',
+          relativePath
+        );
+      } catch (uploadErr) {
+        console.error('Failed to upload updated achievement proof to drive:', uploadErr);
+        finalProofDriveId = 'drive_proof_' + Date.now();
+      }
       finalProofUrl = `/api/public/media/achievement/${finalProofDriveId}`;
     }
 
@@ -294,8 +347,35 @@ router.post('/certificates', certificateUpload, async (req: Request, res: Respon
     const studentId = (req as any).studentId;
     const file = req.file;
     if (!file) return res.status(400).json({ error: 'NO_FILE', message: 'File is required' });
-    
-    const driveFileId = 'drive_cert_' + Date.now();
+
+    const student = await prisma.student.findUnique({
+      where: { id: studentId },
+      select: { rollNo: true, name: true, year: true, section: true },
+    });
+
+    const ext = path.extname(file.originalname) || (file.mimetype === 'application/pdf' ? '.pdf' : '.jpg');
+    const cleanRollNo = student?.rollNo ? student.rollNo.toUpperCase().replace(/[^a-zA-Z0-9]/g, '') : 'STUDENT';
+    const cleanTitle = (req.body.title || 'Certificate').replace(/[^a-zA-Z0-9]/g, '_');
+    const fileName = `Cert_${cleanRollNo}_${cleanTitle}_${Date.now()}${ext}`;
+    const relativePath = `Certificates/${student?.year || 'All'}-${student?.section || 'All'}/${cleanRollNo}`;
+
+    let driveFileId: string;
+    try {
+      driveFileId = await driveService.uploadFile(
+        {
+          buffer: file.buffer,
+          originalname: file.originalname,
+          mimetype: file.mimetype || 'application/octet-stream',
+          size: file.size,
+        },
+        fileName,
+        env.GOOGLE_DRIVE_ROOT_FOLDER_ID || 'root',
+        relativePath
+      );
+    } catch (uploadErr) {
+      console.error('Failed to upload certificate to drive:', uploadErr);
+      driveFileId = 'drive_cert_' + Date.now();
+    }
 
     const certificate = await prisma.certificate.create({
       data: {
