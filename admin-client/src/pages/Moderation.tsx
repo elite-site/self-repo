@@ -242,9 +242,9 @@ export const Moderation: React.FC = () => {
                     {currentItem.fileUrl && (() => {
                       const driveId = currentItem.fileDriveId || currentItem.proofDriveId || currentItem.driveFileId;
                       const isGoogleDriveId = Boolean(driveId) && !driveId?.startsWith('mock_') && !driveId?.startsWith('drive_');
-                      const watchUrl = currentItem.watchUrl || (isGoogleDriveId ? `https://drive.google.com/file/d/${driveId}/view` : null);
+                      const watchUrl = currentItem.watchUrl || (isGoogleDriveId ? `https://drive.google.com/file/d/${driveId}/view?usp=sharing` : null);
                       const previewUrl = currentItem.previewUrl || (isGoogleDriveId ? `https://drive.google.com/file/d/${driveId}/preview` : null);
-                      const embedUrl = currentItem.fileUrl || previewUrl;
+                      const embedUrl = previewUrl || currentItem.fileUrl;
 
                       return (
                         <>
@@ -290,9 +290,7 @@ export const Moderation: React.FC = () => {
                             </div>
                           ) : activeTab === 'resumes' && embedUrl ? (
                             <div className="w-full h-[520px] rounded-xl overflow-hidden border border-[#E2E8F0] dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800">
-                              <object data={embedUrl} type="application/pdf" className="w-full h-full border-none" title="Resume">
-                                <iframe src={embedUrl} className="w-full h-full border-none" title="Resume" />
-                              </object>
+                              <iframe src={embedUrl} className="w-full h-full border-0" title="Resume" allow="autoplay" />
                             </div>
                           ) : (activeTab === 'achievements' || activeTab === 'certificates') ? (
                             embedUrl ? (

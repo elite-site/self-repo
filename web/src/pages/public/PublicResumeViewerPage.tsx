@@ -14,6 +14,7 @@ interface PublicResumeViewerProps {
 export const PublicResumeViewerPage: React.FC<PublicResumeViewerProps> = ({ session, onLogout }) => {
   const { rollNo } = useParams<{ rollNo: string }>();
   const [resumeUrl, setResumeUrl] = useState<string | null>(null);
+  const [watchUrl, setWatchUrl] = useState<string | null>(null);
   const [studentName, setStudentName] = useState<string>('');
   const [loading, setLoading] = useState(true);
 
@@ -28,22 +29,29 @@ export const PublicResumeViewerPage: React.FC<PublicResumeViewerProps> = ({ sess
           setStudentName(student.name || rollNo);
           if (student.resumes && student.resumes.length > 0) {
             const res = student.resumes[0];
-            // The public student API returns the raw Prisma row, which includes
-            // driveFileId. Build the direct media URL instead of relying on the
-            // redirect endpoint — the redirect adds an extra hop and would fall
-            // back to a mock URL when the file is missing.
             if (res.driveFileId) {
-              setResumeUrl(resolveMediaUrl(`/api/public/media/resume/${res.driveFileId}`));
+              const isGoogleDriveId = !res.driveFileId.startsWith('mock_') && !res.driveFileId.startsWith('drive_');
+              const preview = isGoogleDriveId
+                ? `https://drive.google.com/file/d/${res.driveFileId}/preview`
+                : resolveMediaUrl(`/api/public/media/resume/${res.driveFileId}`);
+              const watch = isGoogleDriveId
+                ? `https://drive.google.com/file/d/${res.driveFileId}/view?usp=sharing`
+                : resolveMediaUrl(`/api/public/media/resume/${res.driveFileId}`);
+              setResumeUrl(preview);
+              setWatchUrl(watch);
             } else {
               setResumeUrl(null);
+              setWatchUrl(null);
             }
           } else {
             setResumeUrl(null);
+            setWatchUrl(null);
           }
         }
       })
       .catch(() => {
         setResumeUrl(null);
+        setWatchUrl(null);
       })
       .finally(() => {
         setLoading(false);
@@ -63,15 +71,15 @@ export const PublicResumeViewerPage: React.FC<PublicResumeViewerProps> = ({ sess
           <span>Back to Profile</span>
         </Link>
         <div className="flex items-center gap-3">
-          {resumeUrl && (
+          {(watchUrl || resumeUrl) && (
             <a
-              href={resumeUrl}
+              href={watchUrl || resumeUrl!}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-xl text-xs font-bold transition-colors"
             >
               <ExternalLink className="w-3.5 h-3.5 text-elite-red" />
-              <span>Open in Tab</span>
+              <span>View on Drive</span>
             </a>
           )}
           <div className="text-xs font-mono font-bold text-slate-300 flex items-center gap-2">
@@ -88,30 +96,12 @@ export const PublicResumeViewerPage: React.FC<PublicResumeViewerProps> = ({ sess
           </div>
         ) : resumeUrl ? (
           <div className="flex-1 w-full h-[calc(100vh-140px)]">
-            <object
-              data={resumeUrl}
-              type="application/pdf"
-              className="w-full h-full border-none"
+            <iframe
+              src={resumeUrl}
+              className="w-full h-full border-0"
               title="Student Resume Document"
-            >
-              <iframe
-                src={resumeUrl}
-                className="w-full h-full border-none"
-                title="Student Resume Document"
-              >
-                <div className="flex flex-col items-center justify-center h-full p-8 text-center text-slate-300 space-y-3">
-                  <p className="text-xs">Your browser cannot display this PDF document inline.</p>
-                  <a
-                    href={resumeUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-4 py-2 bg-elite-red text-white text-xs font-bold rounded-xl"
-                  >
-                    Open PDF in New Tab
-                  </a>
-                </div>
-              </iframe>
-            </object>
+              allow="autoplay"
+            />
           </div>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center p-8 text-center min-h-[500px] text-slate-300 space-y-3">

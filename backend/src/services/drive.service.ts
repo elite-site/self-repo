@@ -200,6 +200,7 @@ class DriveService {
           update: { driveFolderId: folderId },
         });
       }
+      this.setViewerPermission(folderId).catch(() => {});
       return folderId;
     }
 
@@ -332,6 +333,7 @@ class DriveService {
           allowFileDiscovery: false,
         },
         supportsAllDrives: true,
+        sendNotificationEmail: false,
       });
       this.viewerPermissionCache.add(fileOrFolderId);
       console.log(`[Drive] Public viewer access ('anyone') granted to: ${fileOrFolderId}`);
@@ -357,6 +359,7 @@ class DriveService {
               allowFileDiscovery: false,
             },
             supportsAllDrives: true,
+            sendNotificationEmail: false,
           });
           this.viewerPermissionCache.add(fileOrFolderId);
           console.log(`[Drive] Domain (${env.GOOGLE_SSO_HD}) viewer access granted to: ${fileOrFolderId}`);
@@ -544,8 +547,11 @@ class DriveService {
 
     const fileId = res.data.id!;
 
-    // Grant viewer access to the uploaded file
+    // Grant viewer access to the uploaded file and its parent folder
     await this.setViewerPermission(fileId);
+    if (targetFolderId && targetFolderId !== parentFolderId) {
+      this.setViewerPermission(targetFolderId).catch(() => {});
+    }
 
     return fileId;
   }

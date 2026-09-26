@@ -19,7 +19,6 @@ export const ResumePage: React.FC = () => {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState(false);
-  const [useDriveViewer, setUseDriveViewer] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadResume = async () => {
@@ -106,9 +105,9 @@ export const ResumePage: React.FC = () => {
       ? resolveMediaUrl(`/api/public/media/resume/${resumeData.driveFileId}`)
       : null;
 
-  // Primary inline viewer URL: use direct backend stream (fileUrl) so the document
-  // renders instantly using native browser PDF reader without asking students to sign in to Google.
-  const embedUrl = (useDriveViewer && previewUrl) ? previewUrl : (fileUrl || previewUrl);
+  // Primary inline viewer URL: Google's embeddable preview iframe renders smoothly across all browsers
+  // without cross-origin plugin blocks. For local dev or non-Drive files, it falls back to the backend proxy.
+  const embedUrl = previewUrl || fileUrl;
 
   return (
     <div className="space-y-6 text-left">
@@ -236,30 +235,12 @@ export const ResumePage: React.FC = () => {
                     href={watchUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-blue-200 bg-blue-50/60 hover:bg-blue-100/80 text-blue-700 text-xs font-bold transition-colors"
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-blue-200 bg-blue-50/60 hover:bg-blue-100/80 text-blue-700 text-xs font-bold transition-colors"
                   >
                     <ExternalLink className="w-3.5 h-3.5 text-blue-600" />
                     <span>View on Drive</span>
                   </a>
                 )}
-                {previewUrl && (
-                  <button
-                    type="button"
-                    onClick={() => setUseDriveViewer(!useDriveViewer)}
-                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-neutral-300 hover:bg-neutral-50 text-neutral-700 text-xs font-bold transition-colors cursor-pointer"
-                  >
-                    <span>{useDriveViewer ? 'Use Direct PDF Viewer' : 'Use Drive Viewer'}</span>
-                  </button>
-                )}
-                <a
-                  href={watchUrl || fileUrl!}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-neutral-300 hover:bg-neutral-50 text-neutral-700 text-xs font-bold transition-colors"
-                >
-                  <ExternalLink className="w-3.5 h-3.5 text-neutral-500" />
-                  <span>Open in Tab</span>
-                </a>
                 {fileUrl && (
                   <a
                     href={`${fileUrl}${fileUrl.includes('?') ? '&' : '?'}download=1`}
@@ -274,41 +255,15 @@ export const ResumePage: React.FC = () => {
             )}
           </div>
 
-          {/* Embedded PDF viewer with fallback */}
+          {/* Embedded PDF Viewer */}
           {embedUrl && (
-            <div className="bg-white rounded-2xl shadow-xs border border-[#E2E8F0] overflow-hidden h-[750px] w-full">
-              <object
-                data={embedUrl}
-                type="application/pdf"
-                className="w-full h-full border-none"
+            <div className="bg-white rounded-2xl shadow-xs border border-[#E2E8F0] overflow-hidden h-[750px] w-full relative">
+              <iframe
+                src={embedUrl}
+                className="w-full h-full border-0"
                 title="Resume Document Viewer"
-              >
-                <iframe src={embedUrl} className="w-full h-full border-none" title="Resume Document Viewer">
-                  <div className="flex flex-col items-center justify-center h-full p-8 text-center text-neutral-500 space-y-3">
-                    <p className="text-xs">Your browser cannot display this PDF document inline.</p>
-                    <div className="flex items-center gap-3">
-                      {watchUrl && (
-                        <a
-                          href={watchUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl"
-                        >
-                          View on Google Drive
-                        </a>
-                      )}
-                      <a
-                        href={fileUrl || embedUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-4 py-2 bg-[#0B192C] hover:bg-neutral-800 text-white text-xs font-bold rounded-xl"
-                      >
-                        Open PDF in New Window
-                      </a>
-                    </div>
-                  </div>
-                </iframe>
-              </object>
+                allow="autoplay"
+              />
             </div>
           )}
         </div>
