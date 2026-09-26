@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Sidebar, AdminTab, ACTIVE_EVENT_ID } from './components/Sidebar';
 import { AdminHeader } from './components/AdminHeader';
 import { StatsDashboard } from './components/StatsDashboard';
@@ -31,6 +31,7 @@ export const App: React.FC = () => {
   const [user, setUser] = useState<AdminUser | null>(null);
   const { setAdminUser } = useTheme();
   const [authChecking, setAuthChecking] = useState(true);
+  const [authError, setAuthError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
@@ -49,14 +50,56 @@ export const App: React.FC = () => {
           setUser(null);
           setAdminUser(null);
         }
-      } catch {
-        setUser(null);
-        setAdminUser(null);
+      } catch (err: any) {
+        // Only an explicit auth rejection means "logged out". A 500 or a network
+        // blip must not discard the admin session, otherwise a transient server
+        // error logs the user out and dumps them back on the login page.
+        const status = err?.response?.status;
+        if (status === 401 || status === 403) {
+          setUser(null);
+          setAdminUser(null);
+        } else {
+          console.error('Could not verify admin session:', err);
+          setAuthError(
+            status
+              ? `Could not reach the server (HTTP ${status}). Please retry.`
+              : 'Could not reach the server. Please check your connection and retry.',
+          );
+        }
       } finally {
         setAuthChecking(false);
       }
     }
     checkAuth();
+  }, [setAdminUser]);
+
+  const retryAuthCheck = useCallback(async () => {
+    setAuthError(null);
+    setAuthChecking(true);
+    try {
+      const res = await adminApi.getMe();
+      if (res.authenticated && res.user) {
+        setUser(res.user);
+        setAdminUser(res.user);
+      } else {
+        setUser(null);
+        setAdminUser(null);
+      }
+    } catch (err: any) {
+      const status = err?.response?.status;
+      if (status === 401 || status === 403) {
+        setUser(null);
+        setAdminUser(null);
+      } else {
+        setAuthError(
+          status
+            ? `Could not reach the server (HTTP ${status}). Please retry.`
+            : 'Could not reach the server. Please check your connection and retry.',
+        );
+      }
+    } finally {
+      setAuthChecking(false);
+    }
   }, [setAdminUser]);
 
   // Fetch stats when user logged in
@@ -103,6 +146,28 @@ export const App: React.FC = () => {
   }
 
   if (!user) {
+    // A server-side failure must not masquerade as a logout — offer a retry
+    // rather than silently sending the organizer back to the login page.
+    if (authError) {
+      return (
+        <div className="min-h-screen bg-[#fafafa] dark:bg-neutral-950 flex items-center justify-center px-6">
+          <div className="max-w-md text-center">
+            <h1 className="text-lg font-black text-neutral-900 dark:text-white mb-2">
+              Unable to verify your session
+            </h1>
+            <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-6">{authError}</p>
+            <button
+              type="button"
+              onClick={retryAuthCheck}
+              className="px-5 py-2.5 rounded-xl bg-elite-red text-white text-sm font-bold hover:opacity-90 transition-opacity cursor-pointer"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <LoginPage
         onLoginSuccess={(u) => {

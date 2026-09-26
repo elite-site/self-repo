@@ -28,7 +28,30 @@ import { PublicThemeProvider, StudentThemeProvider } from './context/ThemeContex
 const AuthWrapper: React.FC = () => {
   const [session, setSession] = useState<StudentSession | null>(null);
   const [authChecking, setAuthChecking] = useState(true);
+  const [sessionError, setSessionError] = useState<string | null>(null);
   const navigate = useNavigate();
+
+  const retrySessionCheck = useCallback(() => {
+    setSessionError(null);
+    setAuthChecking(true);
+    api
+      .getMe()
+      .then((res) => setSession({ student: res.student }))
+      .catch((err) => {
+        const status = err?.response?.status;
+        if (status === 401 || status === 403) {
+          localStorage.removeItem('student_token');
+          setSession(null);
+        } else {
+          setSessionError(
+            status
+              ? `Could not reach the server (HTTP ${status}). Please retry.`
+              : 'Could not reach the server. Please check your connection and retry.',
+          );
+        }
+      })
+      .finally(() => setAuthChecking(false));
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -50,10 +73,24 @@ const AuthWrapper: React.FC = () => {
         if (cancelled) return;
         setSession({ student: res.student });
       })
-      .catch(() => {
+      .catch((err) => {
         if (cancelled) return;
-        localStorage.removeItem('student_token');
-        setSession(null);
+        // Only an explicit auth rejection should discard the session. Treating
+        // every failure as "logged out" meant a single 500 (or a network blip)
+        // deleted the stored token and trapped the student in a login loop.
+        const status = err?.response?.status;
+        if (status === 401 || status === 403) {
+          localStorage.removeItem('student_token');
+          setSession(null);
+        } else {
+          console.error('Could not verify student session:', err);
+          setSessionError(
+            status
+              ? `Could not reach the server (HTTP ${status}). Please retry.`
+              : 'Could not reach the server. Please check your connection and retry.',
+          );
+          setAuthChecking(false);
+        }
       })
       .finally(() => {
         if (!cancelled) setAuthChecking(false);
@@ -76,6 +113,26 @@ const AuthWrapper: React.FC = () => {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-elite-red border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  // A server-side failure must not masquerade as a logout. Offer a retry instead
+  // of silently sending the student back to the sign-in page.
+  if (sessionError && !session) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center px-6">
+        <div className="max-w-md text-center">
+          <h1 className="text-lg font-black text-[#0B192C] mb-2">Unable to verify your session</h1>
+          <p className="text-sm text-neutral-600 mb-6">{sessionError}</p>
+          <button
+            type="button"
+            onClick={retrySessionCheck}
+            className="px-5 py-2.5 rounded-xl bg-[#DC2626] text-white text-sm font-bold hover:bg-red-700 transition-colors cursor-pointer"
+          >
+            Retry
+          </button>
+        </div>
       </div>
     );
   }

@@ -242,24 +242,39 @@ router.get('/me', requireStudentAuth, async (req: Request, res: Response): Promi
       },
     });
 
-    const introVideo = await prisma.introVideo.findFirst({
-      where: { studentId: student.id },
-      orderBy: { submittedAt: 'desc' },
-      select: {
-        id: true,
-        status: true,
-        reviewNote: true,
-        isPublic: true,
-        publishedAt: true,
-        changeRequestedAt: true,
-        changeRequestNote: true,
-        submittedAt: true,
-        filename: true,
-        mimeType: true,
-        sizeMb: true,
-        driveFileId: true,
-      },
-    });
+    // The intro-video panel is an enrichment on top of the student's identity,
+    // so it must never be able to fail the whole request. This query selects
+    // columns added by a later migration; if that migration has not been applied
+    // (or the DB is briefly unavailable) it throws, and a 500 here makes the
+    // portal treat the session as invalid and bounce the student back to login.
+    // Degrade to "no video" instead.
+    let introVideo: any = null;
+    try {
+      introVideo = await prisma.introVideo.findFirst({
+        where: { studentId: student.id },
+        orderBy: { submittedAt: 'desc' },
+        select: {
+          id: true,
+          status: true,
+          reviewNote: true,
+          isPublic: true,
+          publishedAt: true,
+          changeRequestedAt: true,
+          changeRequestNote: true,
+          submittedAt: true,
+          filename: true,
+          mimeType: true,
+          sizeMb: true,
+          driveFileId: true,
+        },
+      });
+    } catch (err: any) {
+      console.error(
+        '[GET /student/me] intro video lookup failed; serving profile without it. ' +
+          'If this is "column does not exist", run: npx prisma migrate deploy',
+        err?.message ?? err,
+      );
+    }
 
     // Never cache student session/profile data so submissions, reviews,
     // profile photo edits and the intro video reflect immediately without

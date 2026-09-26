@@ -126,6 +126,24 @@ describe("Student intro video — persists across logout and login", () => {
     );
   });
 
+  it('still signs the student in when the intro-video lookup fails', async () => {
+    // The intro-video panel is an enrichment, not part of the identity. If its
+    // query fails — e.g. the columns added by a later migration are missing
+    // because `prisma migrate deploy` has not been run — /me must still return
+    // the student. A 500 here makes the portal discard the token and bounce the
+    // student back to the login page, trapping them in a loop.
+    mock(prisma.introVideo.findFirst).mockRejectedValue(
+      new Error('column IntroVideo.isPublic does not exist'),
+    );
+
+    const res = await signIn(request(app).get('/api/student/me'));
+
+    expect(res.status).toBe(200);
+    expect(res.body.student.id).toBe(STUDENT.id);
+    expect(res.body.student.submission).toBeTruthy();
+    expect(res.body.student.video).toBeNull();
+  });
+
   it('is not session-scoped: the state is identical after logging out and back in', async () => {
     const first = await signIn(request(app).get('/api/student/me'));
 
