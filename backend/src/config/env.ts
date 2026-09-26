@@ -86,17 +86,82 @@ export const env = {
   ADMIN_DEFAULT_PASSWORD: process.env.ADMIN_DEFAULT_PASSWORD || 'AdminPassword123!',
 };
 
+// Every literal this codebase will fall back to. If a value used at runtime
+// matches one of these, the secret is effectively public — it is committed to
+// git and can be used to forge tokens.
+const KNOWN_FALLBACK_SECRETS = new Set([
+  'dev_secret_photoclub_change_in_production',
+  'student_jwt_secret_change_in_production',
+  'AdminPassword123!',
+  'ADMIN123',
+]);
+
 // Production configuration sanity check
 if (nodeEnv === 'production') {
   if (!process.env.DATABASE_URL) {
     throw new Error('Refusing to start in production: missing DATABASE_URL');
   }
 
-  const defaultSecretWarnings = PROD_VALUE_CHECKS
-    .filter(({ name, value, fallback }) => name !== 'DATABASE_URL' && (!value || value === fallback))
+  // Secrets the running server actually uses to sign and verify tokens. If these
+  // are still the committed defaults, anyone can mint a valid session token and
+  // read or replace any student's data, so the server must not start.
+  //
+  // STUDENT_JWT_SECRET falls back to JWT_SECRET (see above), so configuring
+  // either one secures both — check the effective value, not the raw variable.
+  const runtimeSecrets: Array<{ name: string; effective: string | undefined }> = [
+    { name: 'JWT_SECRET', effective: process.env.JWT_SECRET },
+    { name: 'STUDENT_JWT_SECRET', effective: process.env.STUDENT_JWT_SECRET || process.env.JWT_SECRET },
+  ];
+
+  const insecureRuntime = runtimeSecrets
+    .filter(({ effective }) => !effective || KNOWN_FALLBACK_SECRETS.has(effective))
     .map(({ name }) => name);
 
-  if (defaultSecretWarnings.length > 0) {
-    console.warn(`⚠️ [ENV WARNING] Running in production with default/fallback secrets for: ${defaultSecretWarnings.join(', ')}. Please set these environment variables in your Render dashboard for maximum security.`);
+  // Escape hatch for recovering access if the service is otherwise bricked. It
+  // logs loudly and should only ever be a temporary measure.
+  const bypass = process.env.ALLOW_INSECURE_DEFAULT_SECRETS === 'true';
+
+  if (insecureRuntime.length > 0) {
+    if (bypass) {
+      console.warn(
+        `🚨 [ENV] ALLOW_INSECURE_DEFAULT_SECRETS=true — starting with default ` +
+          `secrets for: ${insecureRuntime.join(', ')}. This is NOT safe.`,
+      );
+    } else {
+      throw new Error(
+        `Refusing to start in production: ${insecureRuntime.join(', ')} ` +
+          `${insecureRuntime.length === 1 ? 'is' : 'are'} still set to the ` +
+          `default value committed to source control, so auth tokens can be ` +
+          `forged by anyone.\n\n` +
+          `Set the following in your host's environment (Render: Service -> Environment) ` +
+          `and redeploy:\n` +
+          runtimeSecrets
+            .filter(({ name }) => insecureRuntime.includes(name))
+            .map(({ name }) => `  ${name}=<generate a random value>`)
+            .join('\n') +
+          `\n\nGenerate a value with:\n` +
+          `  node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"\n\n` +
+          `Note: rotating a JWT secret invalidates existing sessions, so everyone ` +
+          `will need to sign in again.\n\n` +
+          `To start anyway (not recommended, and only to recover access), set ` +
+          `ALLOW_INSECURE_DEFAULT_SECRETS=true.`,
+      );
+    }
+  }
+
+  // Not fatal: these are only consumed by one-off scripts such as prisma/seed.ts,
+  // never by the running server, so they must not block a deploy.
+  const seedOnlyWarnings = PROD_VALUE_CHECKS
+    .filter(({ name, value, fallback }) => name !== 'DATABASE_URL')
+    .filter(({ name }) => !runtimeSecrets.some((s) => s.name === name))
+    .filter(({ value, fallback }) => !value || value === fallback)
+    .map(({ name }) => name);
+
+  if (seedOnlyWarnings.length > 0) {
+    console.warn(
+      `⚠️ [ENV WARNING] Still using default values for: ${seedOnlyWarnings.join(', ')}. ` +
+        `These are only used by seed/import scripts, not at runtime, but set them ` +
+        `before re-seeding the database.`,
+    );
   }
 }

@@ -19,6 +19,7 @@
     "prisma:seed": "ts-node prisma/seed.ts",
     "roster:import": "ts-node scripts/import-roster.ts",
     "test": "vitest run",
+    "verify:env-guard": "npm run build && node scripts/verify-env-guard.js",
     "db:setup": "ts-node scripts/db-setup.ts",
     "get-token": "ts-node scripts/get-oauth-token.ts"
   },
