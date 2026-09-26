@@ -208,6 +208,69 @@ describe('Student intro video — stream endpoint serves a returning student', (
     expect(Buffer.from(res.body)).toHaveLength(5);
   });
 
+  it('serves a suffix range, which is how browsers probe for the MP4 moov atom', async () => {
+    // Chrome/Safari issue `Range: bytes=-N` to read metadata stored at the end of
+    // the file. If this is not honoured the player spins forever on "loading".
+    mock(driveService.streamDriveFile).mockResolvedValue({
+      stream: Readable.from([VIDEO_BYTES.subarray(VIDEO_BYTES.length - 8)]),
+      mimeType: 'video/mp4',
+      contentRange: {
+        start: VIDEO_BYTES.length - 8,
+        end: VIDEO_BYTES.length - 1,
+        total: VIDEO_BYTES.length,
+      },
+    });
+
+    const res = await signIn(
+      request(app).get('/api/student/submission/media/video').set('Range', 'bytes=-8'),
+    );
+
+    expect(driveService.streamDriveFile).toHaveBeenCalledWith(
+      'video_take_1',
+      'Events/2026/3-A/IT_23K61A1201_Test',
+      'bytes=-8',
+    );
+    expect(res.status).toBe(206);
+    expect(res.headers['content-range']).toBe(
+      `bytes ${VIDEO_BYTES.length - 8}-${VIDEO_BYTES.length - 1}/${VIDEO_BYTES.length}`,
+    );
+    expect(res.headers['content-length']).toBe('8');
+  });
+
+  it('still serves a satisfiable range when the service reports no contentRange', async () => {
+    // The service normally resolves the range, but the route must not 416 a range
+    // it can satisfy on its own from the known file size.
+    mock(driveService.streamDriveFile).mockResolvedValue({
+      stream: Readable.from([VIDEO_BYTES.subarray(0, 5)]),
+      mimeType: 'video/mp4',
+      size: VIDEO_BYTES.length,
+    });
+
+    const res = await signIn(
+      request(app).get('/api/student/submission/media/video').set('Range', 'bytes=0-4'),
+    );
+
+    expect(res.status).toBe(206);
+    expect(res.headers['content-range']).toBe(`bytes 0-4/${VIDEO_BYTES.length}`);
+  });
+
+  it('answers 416 for a range that starts past the end of the file', async () => {
+    mock(driveService.streamDriveFile).mockResolvedValue({
+      stream: Readable.from([Buffer.alloc(0)]),
+      mimeType: 'video/mp4',
+      size: VIDEO_BYTES.length,
+    });
+
+    const res = await signIn(
+      request(app)
+        .get('/api/student/submission/media/video')
+        .set('Range', `bytes=${VIDEO_BYTES.length + 500}-`),
+    );
+
+    expect(res.status).toBe(416);
+    expect(res.headers['content-range']).toBe(`bytes */${VIDEO_BYTES.length}`);
+  });
+
   it('answers 304 to a revalidation, so the cached copy is reused across logins', async () => {
     const res = await signIn(request(app).get('/api/student/submission/media/video').set('If-None-Match', '"video_take_1"'));
 

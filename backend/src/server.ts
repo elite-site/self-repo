@@ -76,6 +76,16 @@ app.use(
       return callback(null, false);
     },
     credentials: true,
+    // Media elements and the range-aware fetch fallbacks need to read these to
+    // seek/inspect a stream. None of them are CORS-safelisted response headers,
+    // so without this they are invisible to cross-origin clients.
+    exposedHeaders: [
+      'Content-Range',
+      'Content-Length',
+      'Accept-Ranges',
+      'Content-Disposition',
+      'ETag',
+    ],
   })
 );
 

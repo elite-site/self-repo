@@ -117,9 +117,18 @@ export const VideoPage: React.FC = () => {
    */
   const storedVideoUrl = useMemo(() => {
     if (!video?.hasFile) return null;
-    const base = resolveMediaUrl('/student/submission/media/video');
+    // NOTE: the path must keep its `/api` prefix — `resolveMediaUrl` strips the
+    // prefix from the configured baseURL and re-appends the path verbatim, so a
+    // bare `/student/...` would resolve to a 404 and silently push the player
+    // onto the slow whole-file blob fallback.
+    const base = resolveMediaUrl('/api/student/submission/media/video');
     const stamp = new Date(video.submittedAt || 0).getTime() || 0;
-    return `${base}?v=${encodeURIComponent(video.id)}-${stamp}`;
+    // A <video src> cannot carry an Authorization header, so pass the session
+    // token explicitly as well as relying on the cookie. Without this the request
+    // 401s whenever the browser withholds the cookie (cross-origin API).
+    const token = localStorage.getItem('student_token');
+    const tokenParam = token ? `&token=${encodeURIComponent(token)}` : '';
+    return `${base}?v=${encodeURIComponent(video.id)}-${stamp}${tokenParam}`;
   }, [video?.id, video?.submittedAt, video?.hasFile]);
 
   // Right after an upload, show the local file instantly; afterwards fall back
