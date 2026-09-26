@@ -5,6 +5,7 @@ import fs from 'fs';
 import path from 'path';
 import { env } from '../config/env';
 import { prisma } from '../lib/prisma';
+import { parseRange } from '../utils/rangeParser';
 
 export interface UploadedFileData {
   buffer: Buffer;
@@ -649,9 +650,11 @@ class DriveService {
         let start = 0;
         let end = match.size - 1;
         if (rangeHeader) {
-          const parts = rangeHeader.replace(/bytes=/, '').split('-');
-          start = parseInt(parts[0], 10) || 0;
-          if (parts[1]) end = Math.min(parseInt(parts[1], 10), match.size - 1);
+          const parsed = parseRange(rangeHeader, match.size);
+          if (parsed) {
+            start = parsed.start;
+            end = parsed.end;
+          }
         }
         return {
           stream: fs.createReadStream(match.actualFilePath, { start, end }),
@@ -670,9 +673,19 @@ class DriveService {
       fields: 'mimeType, size, name',
     });
 
+    const totalSize = metadata.data.size ? parseInt(metadata.data.size, 10) : undefined;
     const requestOptions: any = { responseType: 'stream' };
     if (rangeHeader) {
-      requestOptions.headers = { Range: rangeHeader };
+      if (totalSize) {
+        const parsed = parseRange(rangeHeader, totalSize);
+        if (parsed) {
+          requestOptions.headers = { Range: `bytes=${parsed.start}-${parsed.end}` };
+        } else {
+          requestOptions.headers = { Range: rangeHeader };
+        }
+      } else {
+        requestOptions.headers = { Range: rangeHeader };
+      }
     }
 
     const res = await this.drive.files.get(
@@ -683,7 +696,7 @@ class DriveService {
     return {
       stream: res.data as Readable,
       mimeType: metadata.data.mimeType || 'video/mp4',
-      size: metadata.data.size ? parseInt(metadata.data.size, 10) : undefined,
+      size: totalSize,
     };
   }
 

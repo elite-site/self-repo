@@ -12,6 +12,7 @@ import { ValidationService } from '../services/validation.service';
 import { driveService } from '../services/drive.service';
 import { ActivityService } from '../services/activity.service';
 import { ssoService } from '../services/sso.service';
+import { parseRange } from '../utils/rangeParser';
 
 const router = Router();
 
@@ -418,13 +419,20 @@ router.get('/submission/media/video', requireStudentAuth, async (req: Request, r
     }
 
     if (size !== undefined && rangeHeader) {
-      const [startStr, endStr] = rangeHeader.replace(/bytes=/, '').split('-');
-      const start = parseInt(startStr, 10) || 0;
-      const end = endStr ? Math.min(parseInt(endStr, 10), size - 1) : size - 1;
-      const chunkSize = end - start + 1;
-      res.setHeader('Content-Range', `bytes ${start}-${end}/${size}`);
-      res.setHeader('Content-Length', chunkSize);
-      res.status(206);
+      const parsed = parseRange(rangeHeader, size);
+      if (parsed) {
+        const chunkSize = parsed.end - parsed.start + 1;
+        res.setHeader('Content-Range', `bytes ${parsed.start}-${parsed.end}/${size}`);
+        res.setHeader('Content-Length', chunkSize);
+        res.status(206);
+      } else {
+        if (typeof (stream as any).destroy === 'function') {
+          (stream as any).destroy();
+        }
+        res.setHeader('Content-Range', `bytes */${size}`);
+        res.status(416).end();
+        return;
+      }
     } else if (size !== undefined) {
       res.setHeader('Content-Length', size);
       res.status(200);
@@ -432,9 +440,18 @@ router.get('/submission/media/video', requireStudentAuth, async (req: Request, r
       res.status(200);
     }
 
-    req.on('close', () => {
-      if (!res.writableEnded && typeof (stream as any).destroy === 'function') {
+    res.on('close', () => {
+      if (!res.writableFinished && typeof (stream as any).destroy === 'function') {
         (stream as any).destroy();
+      }
+    });
+
+    stream.on('error', (err: any) => {
+      console.error('Video stream error:', err);
+      if (!res.headersSent) {
+        res.status(500).json({ error: 'STREAM_ERROR', message: 'Video stream interrupted' });
+      } else {
+        res.end();
       }
     });
 

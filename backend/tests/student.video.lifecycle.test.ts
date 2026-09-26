@@ -6,6 +6,7 @@ import app from '../src/server';
 import { env } from '../src/config/env';
 import { prisma } from '../src/lib/prisma';
 import { driveService } from '../src/services/drive.service';
+import { parseRange } from '../src/utils/rangeParser';
 
 vi.mock('../src/lib/prisma', () => ({
   prisma: {
@@ -159,10 +160,12 @@ describe('Student Video Upload & Playback Lifecycle Flow', () => {
       async (_fileId: string, _path?: string, range?: string) => {
         let streamData = mockVideoData;
         if (range) {
-          const parts = range.replace(/bytes=/, '').split('-');
-          const start = parseInt(parts[0], 10) || 0;
-          const end = parts[1] ? Math.min(parseInt(parts[1], 10), mockVideoData.length - 1) : mockVideoData.length - 1;
-          streamData = mockVideoData.subarray(start, end + 1);
+          const parsed = parseRange(range, mockVideoData.length);
+          if (parsed) {
+            streamData = mockVideoData.subarray(parsed.start, parsed.end + 1);
+          } else {
+            streamData = Buffer.alloc(0);
+          }
         }
         return {
           stream: Readable.from([streamData]),
@@ -192,6 +195,25 @@ describe('Student Video Upload & Playback Lifecycle Flow', () => {
     expect(rangeRes.status).toBe(206);
     expect(rangeRes.headers['content-range']).toBe('bytes 1000-2000/5000');
     expect(rangeRes.headers['content-length']).toBe('1001');
+
+    // Suffix range (e.g. Chrome/Safari probing MP4 moov metadata atom at end of file)
+    const suffixRangeRes = await request(app)
+      .get('/api/student/submission/media/video')
+      .set('Cookie', `pc_student_session=${token}`)
+      .set('Range', 'bytes=-500');
+
+    expect(suffixRangeRes.status).toBe(206);
+    expect(suffixRangeRes.headers['content-range']).toBe('bytes 4500-4999/5000');
+    expect(suffixRangeRes.headers['content-length']).toBe('500');
+
+    // Unsatisfiable range -> 416
+    const invalidRangeRes = await request(app)
+      .get('/api/student/submission/media/video')
+      .set('Cookie', `pc_student_session=${token}`)
+      .set('Range', 'bytes=99999-');
+
+    expect(invalidRangeRes.status).toBe(416);
+    expect(invalidRangeRes.headers['content-range']).toBe('bytes */5000');
 
     // Token query param support (for HTML5 <video src="...">)
     const tokenQueryRes = await request(app)

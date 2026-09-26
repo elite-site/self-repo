@@ -69,7 +69,14 @@ export const VideoPage: React.FC = () => {
   const handlePlayPause = () => {
     if (!videoRef.current) return;
     if (videoRef.current.paused) {
-      videoRef.current.play().catch(() => {});
+      videoRef.current.play().catch((err) => {
+        console.warn('Video play interrupted:', err);
+        if (videoUrl && !videoUrl.startsWith('blob:')) {
+          api.getVideoBlobUrl().then((blobUrl) => {
+            if (blobUrl) setVideoUrlSafe(blobUrl);
+          }).catch(() => {});
+        }
+      });
     } else {
       videoRef.current.pause();
     }
@@ -78,7 +85,14 @@ export const VideoPage: React.FC = () => {
   const handleReplay = () => {
     if (!videoRef.current) return;
     videoRef.current.currentTime = 0;
-    videoRef.current.play().catch(() => {});
+    videoRef.current.play().catch((err) => {
+      console.warn('Video replay interrupted:', err);
+      if (videoUrl && !videoUrl.startsWith('blob:')) {
+        api.getVideoBlobUrl().then((blobUrl) => {
+          if (blobUrl) setVideoUrlSafe(blobUrl);
+        }).catch(() => {});
+      }
+    });
   };
 
   const handleSeek = (deltaSec: number) => {
@@ -111,6 +125,17 @@ export const VideoPage: React.FC = () => {
         if (data.student.submission.videoUploaded) {
           const streamUrl = api.getVideoStreamUrl(data.student.submission.submittedAt || Date.now());
           setVideoUrlSafe(streamUrl);
+
+          // Eagerly pre-load video blob so playback, seeking, and replay are completely seamless
+          api.getVideoBlobUrl()
+            .then((blobUrl) => {
+              if (blobUrl) {
+                setVideoUrlSafe(blobUrl);
+              }
+            })
+            .catch((blobErr) => {
+              console.warn('Background video blob pre-load deferred, using direct stream:', blobErr);
+            });
         } else {
           setVideoUrlSafe(null);
         }
@@ -515,10 +540,24 @@ export const VideoPage: React.FC = () => {
                     src={videoUrl}
                     controls
                     playsInline
-                    preload="metadata"
+                    preload="auto"
+                    crossOrigin="anonymous"
                     onPlay={() => setIsPlaying(true)}
                     onPause={() => setIsPlaying(false)}
                     onEnded={() => setIsPlaying(false)}
+                    onError={() => {
+                      if (videoUrl && !videoUrl.startsWith('blob:')) {
+                        console.warn('[VideoPlayer] Stream error, loading blob buffer fallback...');
+                        api.getVideoBlobUrl()
+                          .then((blobUrl) => {
+                            if (blobUrl) setVideoUrlSafe(blobUrl);
+                          })
+                          .catch((err) => {
+                            console.error('[VideoPlayer] Blob fallback failed:', err);
+                            setError('Video playback stalled. Please download or reload.');
+                          });
+                      }
+                    }}
                     className="w-full h-full object-contain"
                   />
                 </div>
