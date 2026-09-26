@@ -31,6 +31,16 @@ const AuthWrapper: React.FC = () => {
   const [sessionError, setSessionError] = useState<string | null>(null);
   const navigate = useNavigate();
 
+  // The header avatar is rendered from the session, not from the profile the
+  // edit page fetches. Without this patch a freshly uploaded photo only appeared
+  // on the edit page itself and the header kept showing the previous image until
+  // the student logged out and back in.
+  const handlePhotoChange = useCallback((photoUrl: string | null) => {
+    setSession((prev) =>
+      prev ? { ...prev, student: { ...prev.student, photoUrl: photoUrl ?? undefined } } : prev,
+    );
+  }, []);
+
   const retrySessionCheck = useCallback(() => {
     setSessionError(null);
     setAuthChecking(true);
@@ -172,7 +182,11 @@ const AuthWrapper: React.FC = () => {
         element={
           session ? (
             <StudentThemeProvider>
-              <StudentLayout session={session} onLogout={handleLogout} />
+              <StudentLayout
+                session={session}
+                onLogout={handleLogout}
+                onPhotoChange={handlePhotoChange}
+              />
             </StudentThemeProvider>
           ) : (
             <Navigate to="/" replace />

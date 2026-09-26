@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useOutletContext } from 'react-router-dom';
 import {
   User,
   Camera,
@@ -18,6 +18,8 @@ import {
   Sparkles
 } from 'lucide-react';
 import { api, resolveMediaUrl } from '../services/api';
+import { normalizeSocialLink, type SocialLinkKind } from '../utils/socialLinks';
+import type { StudentOutletContext } from '../components/layout/StudentLayout';
 import { StudentProfile } from '../types';
 
 const COMMON_SKILLS = [
@@ -51,6 +53,7 @@ export const EditProfilePage: React.FC = () => {
   const [success, setSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
+  const { onPhotoChange } = useOutletContext<StudentOutletContext>() ?? {};
 
   const [bio, setBio] = useState('');
   const [githubUrl, setGithubUrl] = useState('');
@@ -58,6 +61,7 @@ export const EditProfilePage: React.FC = () => {
   const [portfolioUrl, setPortfolioUrl] = useState('');
   const [skills, setSkills] = useState<string[]>([]);
   const [customSkill, setCustomSkill] = useState('');
+  const [linkErrors, setLinkErrors] = useState<Partial<Record<SocialLinkKind, string>>>({});
 
   useEffect(() => {
     api.getProfile()
@@ -95,8 +99,15 @@ export const EditProfilePage: React.FC = () => {
 
     try {
       const res = await api.uploadProfilePhoto(formData);
-      if (res.photoUrl && profile) {
-        setProfile({ ...profile, photoUrl: res.photoUrl });
+      if (res.photoUrl) {
+        // `setProfile(prev => ...)` rather than reading `profile` from closure:
+        // the old guard `if (res.photoUrl && profile)` silently dropped the new
+        // URL whenever the profile had not finished loading.
+        setProfile((prev) => (prev ? { ...prev, photoUrl: res.photoUrl } : prev));
+        // Keep the header/dashboard avatar in step with the new photo.
+        onPhotoChange?.(res.photoUrl);
+      } else {
+        setPhotoError('The photo was uploaded but no image URL was returned. Please try again.');
       }
     } catch (err: any) {
       setPhotoError(err.response?.data?.message || 'Failed to upload photo. Please try again.');
@@ -117,12 +128,46 @@ export const EditProfilePage: React.FC = () => {
     setSkills(skills.filter((s) => s !== skillToRemove));
   };
 
+  /**
+   * Canonicalise one link field. The inputs accept any common paste format
+   * (full URL, no protocol, `www.`, `@handle`, bare username), so the raw text
+   * is normalised on blur and any unreadable value is reported inline instead of
+   * silently failing the browser's native URL validation on submit.
+   */
+  const applyLink = (kind: SocialLinkKind, value: string) => {
+    const result = normalizeSocialLink(kind, value);
+    setLinkErrors((prev) => ({ ...prev, [kind]: result.ok ? undefined : result.error! }));
+    return result.ok ? result.value : value;
+  };
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile) return;
     setSaving(true);
     setError(null);
     setSuccess(false);
+
+    // Normalise every link first; an invalid value must block the save rather
+    // than be persisted in a shape the profile page cannot render.
+    const links: Array<[SocialLinkKind, string, (v: string) => void]> = [
+      ['github', githubUrl, setGithubUrl],
+      ['linkedin', linkedinUrl, setLinkedinUrl],
+      ['portfolio', portfolioUrl, setPortfolioUrl],
+    ];
+    const normalized: Record<string, string> = {};
+    const errors: Partial<Record<SocialLinkKind, string>> = {};
+    for (const [kind, raw, setter] of links) {
+      const result = normalizeSocialLink(kind, raw);
+      normalized[kind] = result.value;
+      if (!result.ok) errors[kind] = result.error!;
+      setter(result.ok ? result.value : raw);
+    }
+    setLinkErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      setError('Please correct the highlighted links before saving.');
+      setSaving(false);
+      return;
+    }
 
     try {
       // Save profile fields and skills in parallel
@@ -131,9 +176,9 @@ export const EditProfilePage: React.FC = () => {
       await Promise.all([
         api.updateProfile({
           bio: bio.trim(),
-          githubUrl: githubUrl.trim(),
-          linkedinUrl: linkedinUrl.trim(),
-          portfolioUrl: portfolioUrl.trim(),
+          githubUrl: normalized.github,
+          linkedinUrl: normalized.linkedin,
+          portfolioUrl: normalized.portfolio,
         }),
         api.updateSkills(skills),
       ]);
@@ -369,12 +414,19 @@ export const EditProfilePage: React.FC = () => {
                 <span>GitHub URL</span>
               </label>
               <input
-                type="url"
+                type="text"
+                inputMode="url"
+                autoComplete="off"
+                spellCheck={false}
                 value={githubUrl}
                 onChange={(e) => setGithubUrl(e.target.value)}
-                placeholder="https://github.com/username"
+                onBlur={(e) => setGithubUrl(applyLink('github', e.target.value))}
+                placeholder="jane, @jane or github.com/jane"
                 className="w-full p-2.5 bg-neutral-50 border border-[#CBD5E1] rounded-xl text-xs focus:outline-none focus:border-[#DC2626] focus:bg-white"
               />
+              {linkErrors.github && (
+                <span className="text-[11px] text-[#DC2626]">{linkErrors.github}</span>
+              )}
             </div>
 
             <div className="space-y-1.5">
@@ -383,12 +435,19 @@ export const EditProfilePage: React.FC = () => {
                 <span>LinkedIn URL</span>
               </label>
               <input
-                type="url"
+                type="text"
+                inputMode="url"
+                autoComplete="off"
+                spellCheck={false}
                 value={linkedinUrl}
                 onChange={(e) => setLinkedinUrl(e.target.value)}
-                placeholder="https://linkedin.com/in/username"
+                onBlur={(e) => setLinkedinUrl(applyLink('linkedin', e.target.value))}
+                placeholder="jane, @jane or linkedin.com/in/jane"
                 className="w-full p-2.5 bg-neutral-50 border border-[#CBD5E1] rounded-xl text-xs focus:outline-none focus:border-[#DC2626] focus:bg-white"
               />
+              {linkErrors.linkedin && (
+                <span className="text-[11px] text-[#DC2626]">{linkErrors.linkedin}</span>
+              )}
             </div>
 
             <div className="space-y-1.5">
@@ -397,12 +456,19 @@ export const EditProfilePage: React.FC = () => {
                 <span>Portfolio Website</span>
               </label>
               <input
-                type="url"
+                type="text"
+                inputMode="url"
+                autoComplete="off"
+                spellCheck={false}
                 value={portfolioUrl}
                 onChange={(e) => setPortfolioUrl(e.target.value)}
-                placeholder="https://yourportfolio.dev"
+                onBlur={(e) => setPortfolioUrl(applyLink('portfolio', e.target.value))}
+                placeholder="yourportfolio.dev or https://yourportfolio.dev"
                 className="w-full p-2.5 bg-neutral-50 border border-[#CBD5E1] rounded-xl text-xs focus:outline-none focus:border-[#DC2626] focus:bg-white"
               />
+              {linkErrors.portfolio && (
+                <span className="text-[11px] text-[#DC2626]">{linkErrors.portfolio}</span>
+              )}
             </div>
           </div>
         </div>

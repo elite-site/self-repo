@@ -5,6 +5,28 @@ import { profilePhotoUpload } from '../middleware/upload';
 import { driveService } from '../services/drive.service';
 import { env } from '../config/env';
 
+/**
+ * Trust-boundary check for the professional link fields.
+ *
+ * The edit form accepts every common paste format (full URL, no protocol,
+ * `www.`, `@handle`, bare username) and normalises it to a canonical https URL
+ * before sending — see `web/src/utils/socialLinks.ts`, which is unit tested from
+ * this package. The API is deliberately stricter than the UI: it stores exactly
+ * what it is given, so anything that is not already an absolute http(s) URL is
+ * rejected. That keeps `javascript:`, `data:` and bare strings out of the
+ * `href` the public profile renders.
+ */
+const SAFE_LINK_RE = /^https?:\/\/[^\s<>"'`\\]+$/i;
+
+function assertSafeLink(field: string, value: unknown): string | { error: string } {
+  const raw = typeof value === 'string' ? value.trim() : '';
+  if (!raw) return '';
+  if (!SAFE_LINK_RE.test(raw)) {
+    return { error: `${field} must be an absolute http:// or https:// link.` };
+  }
+  return raw;
+}
+
 const router = Router();
 router.use(requireStudentAuth);
 
@@ -77,7 +99,7 @@ router.get('/', async (req: Request, res: Response) => {
 router.put('/', async (req: Request, res: Response) => {
   try {
     const studentId = req.student?.studentId || (req as any).studentId;
-    const { biography, bio, githubUrl, linkedinUrl, portfolioUrl } = req.body;
+    const { biography, bio } = req.body;
     // Prefer `bio` over `biography` — the edit form sends `bio` explicitly,
     // but `...profile` spread also includes `biography` with the OLD value.
     const bioText = bio !== undefined ? bio : (biography !== undefined ? biography : undefined);
@@ -85,17 +107,41 @@ router.put('/', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Biography max 300 chars' });
     }
 
+    // Validate the professional link fields. The client normalises the accepted
+    // paste formats; this is the server-side guarantee that only a real,
+    // safe absolute URL is ever persisted.
+    const linkFields = ['githubUrl', 'linkedinUrl', 'portfolioUrl'] as const;
+    const normalizedLinks: Record<string, string> = {};
+    for (const field of linkFields) {
+      if (req.body[field] === undefined) continue;
+      const result = assertSafeLink(field, req.body[field]);
+      if (typeof result !== 'string') {
+        return res.status(400).json({
+          error: 'VALIDATION_ERROR',
+          field,
+          message: result.error,
+        });
+      }
+      normalizedLinks[field] = result;
+    }
+
     // Build update data — only include fields that were actually sent
     const updateData: any = {};
     if (bioText !== undefined) updateData.biography = bioText;
-    if (githubUrl !== undefined) updateData.githubUrl = githubUrl;
-    if (linkedinUrl !== undefined) updateData.linkedinUrl = linkedinUrl;
-    if (portfolioUrl !== undefined) updateData.portfolioUrl = portfolioUrl;
+    if (normalizedLinks.githubUrl !== undefined) updateData.githubUrl = normalizedLinks.githubUrl;
+    if (normalizedLinks.linkedinUrl !== undefined) updateData.linkedinUrl = normalizedLinks.linkedinUrl;
+    if (normalizedLinks.portfolioUrl !== undefined) updateData.portfolioUrl = normalizedLinks.portfolioUrl;
 
     const profile = await prisma.studentProfile.upsert({
       where: { studentId },
       update: updateData,
-      create: { studentId, biography: bioText || '', githubUrl: githubUrl || '', linkedinUrl: linkedinUrl || '', portfolioUrl: portfolioUrl || '' }
+      create: {
+        studentId,
+        biography: bioText || '',
+        githubUrl: normalizedLinks.githubUrl || '',
+        linkedinUrl: normalizedLinks.linkedinUrl || '',
+        portfolioUrl: normalizedLinks.portfolioUrl || '',
+      },
     });
     res.json(profile);
   } catch (err: any) {
