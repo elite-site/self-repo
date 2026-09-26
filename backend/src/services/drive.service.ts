@@ -76,6 +76,7 @@ class DriveService {
   private oauthClient: InstanceType<typeof google.auth.OAuth2> | null = null;
   private serviceAccountAuth: InstanceType<typeof google.auth.GoogleAuth> | null = null;
   private viewerPermissionCache = new Set<string>();
+  private folderMemoryCache = new Map<string, string>();
 
   constructor() {
     this.init();
@@ -150,17 +151,24 @@ class DriveService {
    * Helper to get or create a folder idempotently in Google Drive
    */
   private async getOrCreateDriveFolder(name: string, parentId: string, cacheKey?: string): Promise<string> {
+    const memoryKey = cacheKey || `${parentId}:${name}`;
+    if (this.folderMemoryCache.has(memoryKey)) {
+      return this.folderMemoryCache.get(memoryKey)!;
+    }
+
     if (cacheKey) {
       const cached = await prisma.driveFolderCache.findUnique({
         where: { pathKey: cacheKey },
       });
       if (cached) {
+        this.folderMemoryCache.set(memoryKey, cached.driveFolderId);
         return cached.driveFolderId;
       }
     }
 
     if (this.isMock || !this.drive) {
       const folderId = `mock_folder_${cacheKey ? cacheKey.replace(/[\/\s]/g, '_') : name}`;
+      this.folderMemoryCache.set(memoryKey, folderId);
       if (cacheKey) {
         await prisma.driveFolderCache.upsert({
           where: { pathKey: cacheKey },
@@ -183,7 +191,9 @@ class DriveService {
 
     if (res.data.files && res.data.files.length > 0) {
       const folderId = res.data.files[0].id!;
+      this.folderMemoryCache.set(memoryKey, folderId);
       if (cacheKey) {
+        this.folderMemoryCache.set(cacheKey, folderId);
         await prisma.driveFolderCache.upsert({
           where: { pathKey: cacheKey },
           create: { pathKey: cacheKey, driveFolderId: folderId },
@@ -205,6 +215,10 @@ class DriveService {
     });
 
     const folderId = created.data.id!;
+    this.folderMemoryCache.set(memoryKey, folderId);
+    if (cacheKey) this.folderMemoryCache.set(cacheKey, folderId);
+
+    // Grant viewer access to the newly created folder
     this.setViewerPermission(folderId).catch(() => {});
     if (cacheKey) {
       await prisma.driveFolderCache.upsert({
@@ -503,7 +517,13 @@ class DriveService {
       try {
         targetFolderId = await this.resolveFolderPath(relativePath, parentFolderId);
       } catch (folderErr) {
-        console.warn(`Could not resolve folder path "${relativePath}", using parent folder:`, folderErr);
+        console.warn(`Retry resolving folder path "${relativePath}":`, folderErr);
+        try {
+          targetFolderId = await this.resolveFolderPath(relativePath, parentFolderId);
+        } catch (retryErr) {
+          console.error(`Failed to resolve folder path "${relativePath}" after retry:`, retryErr);
+          throw new Error(`Failed to create or access Google Drive folder for "${relativePath}"`);
+        }
       }
     }
 
@@ -848,6 +868,15 @@ class DriveService {
     if (res.data.trashed) throw new Error('Drive root folder is trashed');
     if (env.GOOGLE_DRIVE_ROOT_FOLDER_ID) {
       this.setViewerPermission(env.GOOGLE_DRIVE_ROOT_FOLDER_ID).catch(() => {});
+      // Ensure top-level category folders exist and are cached
+      Promise.all([
+        this.resolveFolderPath('Resumes', env.GOOGLE_DRIVE_ROOT_FOLDER_ID),
+        this.resolveFolderPath('Certificates', env.GOOGLE_DRIVE_ROOT_FOLDER_ID),
+        this.resolveFolderPath('Achievements', env.GOOGLE_DRIVE_ROOT_FOLDER_ID),
+        this.resolveFolderPath('Profiles', env.GOOGLE_DRIVE_ROOT_FOLDER_ID),
+      ]).catch((err) => {
+        console.warn('[Drive] Pre-creating category folders notice:', err?.message || err);
+      });
     }
   }
 

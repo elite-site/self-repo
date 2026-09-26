@@ -166,6 +166,18 @@ router.post('/photo', profilePhotoUpload, async (req: Request, res: Response) =>
     // avatar and no indication that anything had failed.
     let driveFileId: string;
     let photoUrl: string;
+
+    const student = await prisma.student.findUnique({
+      where: { id: studentId },
+      select: { rollNo: true, name: true, year: true, section: true },
+    });
+    const cleanRollNo = student?.rollNo ? student.rollNo.toUpperCase().replace(/[^a-zA-Z0-9]/g, '') : 'STUDENT';
+    const cleanName = student?.name ? student.name.replace(/[^a-zA-Z0-9]/g, '') : '';
+    const studentFolder = cleanName ? `${cleanRollNo}_${cleanName}` : cleanRollNo;
+    const relativePath = `Profiles/${student?.year || 'All'}-${student?.section || 'All'}/${studentFolder}`;
+    const ext = req.file.originalname.split('.').pop() || 'jpg';
+    const fileName = `Photo_${cleanRollNo}_${Date.now()}.${ext}`;
+
     try {
       driveFileId = await driveService.uploadFile(
         {
@@ -174,9 +186,9 @@ router.post('/photo', profilePhotoUpload, async (req: Request, res: Response) =>
           mimetype: req.file.mimetype,
           size: req.file.size,
         },
-        `photo_${studentId}_${Date.now()}.${req.file.originalname.split('.').pop() || 'jpg'}`,
+        fileName,
         env.GOOGLE_DRIVE_ROOT_FOLDER_ID || 'root',
-        'profiles'
+        relativePath
       );
       if (!driveFileId) {
         throw new Error('Storage returned no file id for the profile photo.');
