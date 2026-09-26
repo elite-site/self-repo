@@ -5,6 +5,7 @@
   "main": "dist/server.js",
   "scripts": {
     "dev": "ts-node src/server.ts",
+    "prebuild": "node scripts/migrate-if-configured.js",
     "build": "tsc",
     "install:admin": "npm install --include=dev --prefix ../admin-client",
     "build:admin": "npm run install:admin && npm run --prefix ../admin-client build",
@@ -13,6 +14,7 @@
     "start": "node dist/server.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
+    "migrate:deploy": "prisma migrate deploy",
     "prisma:push": "prisma db push",
     "prisma:seed": "ts-node prisma/seed.ts",
     "roster:import": "ts-node scripts/import-roster.ts",
