@@ -56,6 +56,9 @@ export interface StudentProfile {
   skills: string[];
   photoUrl?: string;
   viewUrl?: string;
+  photoOffsetX?: number | null;
+  photoOffsetY?: number | null;
+  photoZoom?: number | null;
   githubUrl?: string;
   linkedinUrl?: string;
   portfolioUrl?: string;
@@ -106,7 +109,15 @@ export interface Certificate {
   thumbnailUrl?: string;
   status: 'APPROVED' | 'PENDING' | 'REJECTED' | 'CHANGES_REQUESTED';
   reviewNote?: string | null;
+  isPublic?: boolean;
 }
+
+export interface PublicSkill {
+  id: string;
+  name: string;
+  category?: string | null;
+}
+
 
 export interface Event {
   id: string;

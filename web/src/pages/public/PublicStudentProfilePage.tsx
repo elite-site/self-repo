@@ -15,10 +15,12 @@ import {
   ExternalLink,
   Calendar,
   CheckCircle2,
-  Video as VideoIcon
+  Video as VideoIcon,
+  Sparkles
 } from 'lucide-react';
 import { Navbar } from '../../components/Navbar';
 import { Footer } from '../../components/Footer';
+import { getPhotoStyle } from '../../utils/photoStyle';
 
 interface PublicProfileProps {
   session?: StudentSession | null;
@@ -64,7 +66,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
             Student Not Found
           </h1>
           <p className="text-slate-500 mb-6 max-w-md text-xs sm:text-sm">
-            The profile you are looking for either does not exist or has not enabled public directory visibility.
+            The profile you are looking for does not exist in our department roster.
           </p>
           <Link
             to="/"
@@ -87,6 +89,15 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
   const hasResume = resumes.length > 0;
   // Only an approved + published video is returned by the public API.
   const introVideo = student.introVideo || null;
+
+  const hasNoData =
+    !profile.biography &&
+    !profile.bio &&
+    skillsList.length === 0 &&
+    projects.length === 0 &&
+    achievements.length === 0 &&
+    certificates.length === 0 &&
+    !introVideo;
 
   const initials = (student.name || '')
     .split(' ')
@@ -122,7 +133,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
                 <img
                   src={resolveMediaUrl(profile.viewUrl || profile.photoUrl)}
                   alt={student.name}
-                  className="w-full h-full object-cover"
+                  style={getPhotoStyle(profile)}
                 />
               ) : (
                 initials || 'IT'
@@ -232,9 +243,25 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
               </p>
             </div>
           )}
+
+          {/* EMPTY PROFILE STATE */}
+          {hasNoData && (
+            <div className="pt-8 border-t border-neutral-100 flex flex-col items-center justify-center text-center py-8 sm:py-12 px-4">
+              <div className="w-14 h-14 rounded-2xl bg-neutral-100 text-neutral-500 flex items-center justify-center mb-3">
+                <Sparkles className="w-6 h-6 text-elite-red" />
+              </div>
+              <h3 className="text-base sm:text-lg font-bold text-[#0B192C] mb-1">
+                This student hasn't updated their profile yet.
+              </h3>
+              <p className="text-xs sm:text-sm text-neutral-500 max-w-md leading-relaxed">
+                This official student profile is linked to the department roster. When {student.name?.split(' ')[0] || 'the student'} updates their bio, technical skills, projects, or achievements, they will appear here.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* DETAILS GRID */}
+        {!hasNoData && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
           {/* LEFT: SKILLS */}
           <div className="lg:col-span-1 space-y-6">
@@ -397,6 +424,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
             )}
           </div>
         </div>
+        )}
       </main>
 
       <Footer />

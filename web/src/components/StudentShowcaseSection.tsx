@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Users, ArrowRight, ExternalLink, GraduationCap, Sparkles } from 'lucide-react';
 import { api, resolveMediaUrl } from '../services/api';
+import { getPhotoStyle } from '../utils/photoStyle';
 
 interface StudentItem {
   id: string;
@@ -11,6 +12,9 @@ interface StudentItem {
   section: string;
   profile?: {
     photoUrl?: string | null;
+    photoOffsetX?: number | null;
+    photoOffsetY?: number | null;
+    photoZoom?: number | null;
     biography?: string | null;
     skills?: Array<{ skill: { name: string } }>;
   } | null;
@@ -26,7 +30,8 @@ export const StudentShowcaseSection: React.FC = () => {
       .getPublicStudents({ limit: 4 })
       .then((data) => {
         if (mounted) {
-          setStudents(Array.isArray(data) ? data.slice(0, 4) : []);
+          const items = Array.isArray(data?.students) ? data.students : (Array.isArray(data) ? data : []);
+          setStudents(items.slice(0, 4));
         }
       })
       .catch((err) => {
@@ -92,12 +97,12 @@ export const StudentShowcaseSection: React.FC = () => {
                 >
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                      <div className="w-12 h-12 rounded-xl bg-slate-900 text-white font-bold flex items-center justify-center text-sm shadow-sm group-hover:bg-elite-red transition-colors">
+                      <div className="w-12 h-12 rounded-xl bg-slate-900 text-white font-bold flex items-center justify-center text-sm shadow-sm group-hover:bg-elite-red transition-colors overflow-hidden">
                         {student.profile?.photoUrl ? (
                           <img
                             src={resolveMediaUrl(student.profile.photoUrl)}
                             alt={student.name}
-                            className="w-full h-full object-cover rounded-xl"
+                            style={getPhotoStyle(student.profile)}
                           />
                         ) : (
                           initials || <GraduationCap className="w-5 h-5" />

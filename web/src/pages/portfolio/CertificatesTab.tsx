@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { api, resolveMediaUrl } from '../../services/api';
 import { Certificate } from '../../types';
-import { UploadCloud, Loader2, FileText, AlertCircle, Trash2, X, Plus, ExternalLink, Calendar } from 'lucide-react';
+import { UploadCloud, Loader2, FileText, AlertCircle, Trash2, X, Plus, ExternalLink, Calendar, Globe, EyeOff } from 'lucide-react';
 
 export const CertificatesTab: React.FC = () => {
   const [certificates, setCertificates] = useState<Certificate[]>([]);
@@ -78,6 +78,28 @@ export const CertificatesTab: React.FC = () => {
       loadCertificates();
     } catch {
       alert('Failed to delete certificate.');
+    }
+  };
+
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+
+  const handleTogglePublic = async (id: string, newIsPublic: boolean) => {
+    // Optimistic UI update
+    setCertificates((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, isPublic: newIsPublic } : c))
+    );
+    setTogglingId(id);
+
+    try {
+      await api.setCertificatePublic(id, newIsPublic);
+    } catch (err: any) {
+      // Revert on failure
+      setCertificates((prev) =>
+        prev.map((c) => (c.id === id ? { ...c, isPublic: !newIsPublic } : c))
+      );
+      alert(err.response?.data?.message || 'Failed to update certificate visibility.');
+    } finally {
+      setTogglingId(null);
     }
   };
 
@@ -168,6 +190,42 @@ export const CertificatesTab: React.FC = () => {
                     </div>
                   )}
                 </div>
+              </div>
+
+              {/* PUBLIC VISIBILITY TOGGLE */}
+              <div className="pt-2.5 mt-2.5 border-t border-neutral-100 flex items-center justify-between">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  {c.isPublic ? (
+                    <Globe className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  ) : (
+                    <EyeOff className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
+                  )}
+                  <span className="text-[11px] font-medium text-neutral-600 truncate">
+                    {c.isPublic ? 'Public on profile' : 'Hidden from profile'}
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleTogglePublic(c.id, !c.isPublic)}
+                  disabled={togglingId === c.id || c.status !== 'APPROVED'}
+                  title={
+                    c.status === 'APPROVED'
+                      ? c.isPublic
+                        ? 'Hide from public profile'
+                        : 'Show on public profile'
+                      : 'Requires faculty approval to display publicly'
+                  }
+                  className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden disabled:opacity-40 disabled:cursor-not-allowed ${
+                    c.isPublic ? 'bg-emerald-600' : 'bg-neutral-200'
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
+                      c.isPublic ? 'translate-x-4' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
               </div>
 
               <div className="pt-3 mt-3 border-t border-neutral-100 flex items-center justify-between text-xs">

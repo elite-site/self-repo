@@ -240,6 +240,10 @@ export const api = {
   // Portfolio - Certificates
   async getCertificates() { const res = await client.get('/student/portfolio/certificates'); return res.data; },
   async uploadCertificate(formData: FormData) { const res = await client.post('/student/portfolio/certificates', formData); return res.data; },
+  async setCertificatePublic(id: string, isPublic: boolean): Promise<{ success: boolean; isPublic: boolean; message?: string }> {
+    const res = await client.patch(`/student/portfolio/certificates/${id}/visibility`, { isPublic });
+    return res.data;
+  },
   async deleteCertificate(id: string) { const res = await client.delete(`/student/portfolio/certificates/${id}`); return res.data; },
 
   // Resume
@@ -277,6 +281,10 @@ export const api = {
 
   // Public
   async getPublicStudents(params?: any) { const res = await client.get('/public/students', { params }); return res.data; },
+  async getPublicSkills(): Promise<Array<{ id: string; name: string; category?: string | null }>> {
+    const res = await client.get('/public/students/skills');
+    return Array.isArray(res.data) ? res.data : [];
+  },
   async getPublicStudent(rollNo: string) { const res = await client.get(`/public/students/${rollNo}`); return res.data; },
   async getPublicEvents() { const res = await client.get('/public/events'); return res.data; },
   async getPublicEvent(id: string) { const res = await client.get(`/public/events/${id}`); return res.data; },

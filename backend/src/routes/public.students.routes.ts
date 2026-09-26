@@ -5,57 +5,113 @@ const router = Router();
 
 router.get('/', async (req: Request, res: Response) => {
   try {
-    const { search, year, section, skills, status } = req.query;
+    res.setHeader('Cache-Control', 'public, max-age=60');
+    const { search, year, section, skills, skillName, status } = req.query;
     
     const where: any = {};
     
     if (status === 'ACTIVE' || status === 'GRADUATED') where.status = status;
     if (year) where.year = parseInt(year as string);
     if (section) where.section = String(section);
-    if (search) {
-      where.OR = [
-        { name: { contains: String(search), mode: 'insensitive' } },
-        { rollNo: { contains: String(search), mode: 'insensitive' } }
-      ];
-    }
-    if (skills) {
-      const skillsArray = Array.isArray(skills) ? skills : [skills];
-      where.profile = {
-        ...where.profile,
-        skills: { some: { skillId: { in: skillsArray as string[] } } }
-      };
-    }
     
-    const students = await prisma.student.findMany({
-      where,
-      select: {
-        id: true,
-        rollNo: true,
-        name: true,
-        year: true,
-        section: true,
-        status: true,
-        graduatedAt: true,
-        profile: {
-          select: {
-            id: true,
-            photoUrl: true,
-            biography: true,
-            skills: { include: { skill: true } }
+    if (search) {
+      const term = String(search).trim();
+      where.OR = [
+        { name: { contains: term, mode: 'insensitive' } },
+        { rollNo: { contains: term, mode: 'insensitive' } },
+        {
+          profile: {
+            skills: {
+              some: {
+                skill: { name: { contains: term, mode: 'insensitive' } }
+              }
+            }
           }
         }
-      },
-      take: 50
-    });
+      ];
+    }
     
-    res.json(students.map(s => {
+    const skillsFilter = skills || skillName;
+    if (skillsFilter) {
+      const skillsArray = (Array.isArray(skillsFilter) ? skillsFilter : [skillsFilter]).map(String);
+      where.profile = {
+        ...where.profile,
+        skills: {
+          some: {
+            OR: [
+              { skillId: { in: skillsArray } },
+              { skill: { name: { in: skillsArray, mode: 'insensitive' } } }
+            ]
+          }
+        }
+      };
+    }
+
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 50));
+    const skip = (page - 1) * limit;
+    
+    const [total, students] = await Promise.all([
+      prisma.student.count({ where }),
+      prisma.student.findMany({
+        where,
+        select: {
+          id: true,
+          rollNo: true,
+          name: true,
+          year: true,
+          section: true,
+          status: true,
+          graduatedAt: true,
+          profile: {
+            select: {
+              id: true,
+              photoUrl: true,
+              photoOffsetX: true,
+              photoOffsetY: true,
+              photoZoom: true,
+              biography: true,
+              skills: { include: { skill: true } }
+            }
+          }
+        },
+        orderBy: [{ year: 'desc' }, { section: 'asc' }, { rollNo: 'asc' }],
+        skip,
+        take: limit
+      })
+    ]);
+    
+    const mapped = students.map(s => {
       const profile = s.profile ? {
         ...s.profile,
         photoUrl: s.profile.photoUrl ? `/api/public/media/photo/${s.profile.id || s.id}` : null,
         viewUrl: s.profile.photoUrl ? `/api/public/media/photo/${s.profile.id || s.id}` : null,
       } : null;
       return { ...s, profile };
-    }));
+    });
+
+    res.json({
+      students: mapped,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit)
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+  }
+});
+
+// GET /api/public/students/skills — searchable skill categories and items
+router.get('/skills', async (_req: Request, res: Response) => {
+  try {
+    const skills = await prisma.skill.findMany({
+      where: { isActive: true },
+      select: { id: true, name: true, category: true },
+      orderBy: { name: 'asc' }
+    });
+    res.setHeader('Cache-Control', 'public, max-age=300');
+    res.json(skills);
   } catch (err: any) {
     res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
   }
@@ -63,13 +119,14 @@ router.get('/', async (req: Request, res: Response) => {
 
 router.get('/:rollNo', async (req: Request, res: Response) => {
   try {
+    res.setHeader('Cache-Control', 'public, max-age=60');
     const student = await prisma.student.findUnique({
       where: { rollNo: req.params.rollNo },
       include: {
         profile: { include: { skills: { include: { skill: true } } } },
         projects: { orderBy: { displayOrder: 'asc' } },
         achievements: { where: { status: 'APPROVED' }, include: { category: true }, orderBy: { achievedAt: 'desc' } },
-        certificates: { where: { status: 'APPROVED' } },
+        certificates: { where: { status: 'APPROVED', isPublic: true } },
         resumes: { where: { status: 'APPROVED' }, take: 1, orderBy: { submittedAt: 'desc' } },
         // Only an approved + published video is ever attached to a public
         // profile, so a pending or unapproved recording stays invisible.

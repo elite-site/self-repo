@@ -23,6 +23,7 @@ import { normalizeSocialLink, type SocialLinkKind } from '../utils/socialLinks';
 import type { StudentOutletContext } from '../components/layout/StudentLayout';
 import { StudentProfile } from '../types';
 import { PhotoCropModal } from '../components/PhotoCropModal';
+import { getPhotoStyle } from '../utils/photoStyle';
 
 const COMMON_SKILLS = [
   'Python',
@@ -94,7 +95,7 @@ export const EditProfilePage: React.FC = () => {
       .finally(() => setLoading(false));
   }, []);
 
-  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -112,68 +113,51 @@ export const EditProfilePage: React.FC = () => {
     }
 
     setPhotoError(null);
+    setUploadingPhoto(true);
 
-    // Revoke previous object URL if one was open
-    if (objectUrlRef.current) {
-      URL.revokeObjectURL(objectUrlRef.current);
-      objectUrlRef.current = null;
+    const formData = new FormData();
+    formData.append('photo', file);
+
+    try {
+      const res = await api.uploadProfilePhoto(formData);
+      if (res.photoUrl) {
+        setProfile((prev) => (prev ? { ...prev, photoUrl: res.photoUrl, photoOffsetX: 50, photoOffsetY: 50, photoZoom: 1 } : prev));
+        onPhotoChange?.(res.photoUrl);
+        setCropImageSrc(resolveMediaUrl(res.photoUrl));
+        setIsCropModalOpen(true);
+      } else {
+        setPhotoError('The photo was uploaded but no image URL was returned. Please try again.');
+      }
+    } catch (err: any) {
+      setPhotoError(err.response?.data?.message || 'Failed to upload photo. Please try again.');
+    } finally {
+      setUploadingPhoto(false);
+      e.target.value = '';
     }
-
-    const objectUrl = URL.createObjectURL(file);
-    objectUrlRef.current = objectUrl;
-    setCropImageSrc(objectUrl);
-    setIsCropModalOpen(true);
-
-    // Reset file input so selecting the same file triggers onChange
-    e.target.value = '';
   };
 
   const handleRepositionPhoto = () => {
     if (!profile?.photoUrl) return;
     setPhotoError(null);
-
-    if (objectUrlRef.current) {
-      URL.revokeObjectURL(objectUrlRef.current);
-      objectUrlRef.current = null;
-    }
-
     setCropImageSrc(resolveMediaUrl(profile.photoUrl));
     setIsCropModalOpen(true);
   };
 
   const handleCloseCropModal = () => {
     setIsCropModalOpen(false);
-    if (objectUrlRef.current) {
-      URL.revokeObjectURL(objectUrlRef.current);
-      objectUrlRef.current = null;
-    }
     setCropImageSrc(null);
   };
 
-  const handleCropSave = async (croppedBlob: Blob) => {
+  const handleSavePosition = async (pos: { photoOffsetX: number; photoOffsetY: number; photoZoom: number }) => {
     setPhotoError(null);
-    setUploadingPhoto(true);
-
-    const formData = new FormData();
-    formData.append('photo', croppedBlob, 'profile.jpg');
-
     try {
-      const res = await api.uploadProfilePhoto(formData);
-      if (res.photoUrl) {
-        setProfile((prev) => (prev ? { ...prev, photoUrl: res.photoUrl } : prev));
-        onPhotoChange?.(res.photoUrl);
-        handleCloseCropModal();
-      } else {
-        const errorMsg = 'The photo was uploaded but no image URL was returned. Please try again.';
-        setPhotoError(errorMsg);
-        throw new Error(errorMsg);
-      }
+      await api.updateProfile(pos);
+      setProfile((prev) => (prev ? { ...prev, ...pos } : prev));
+      setIsCropModalOpen(false);
     } catch (err: any) {
-      const errorMsg = err.response?.data?.message || err.message || 'Failed to upload photo. Please try again.';
+      const errorMsg = err.response?.data?.message || err.message || 'Failed to save photo position.';
       setPhotoError(errorMsg);
       throw new Error(errorMsg);
-    } finally {
-      setUploadingPhoto(false);
     }
   };
 
@@ -314,7 +298,7 @@ export const EditProfilePage: React.FC = () => {
                   <img
                     src={resolveMediaUrl(profile.photoUrl)}
                     alt={profile.name}
-                    className="w-full h-full object-cover"
+                    style={getPhotoStyle(profile)}
                   />
                   {!uploadingPhoto && (
                     <button
@@ -606,8 +590,9 @@ export const EditProfilePage: React.FC = () => {
       <PhotoCropModal
         isOpen={isCropModalOpen}
         imageSrc={cropImageSrc}
+        initialPosition={profile}
         onClose={handleCloseCropModal}
-        onCropSave={handleCropSave}
+        onSavePosition={handleSavePosition}
         isSaving={uploadingPhoto}
       />
     </div>

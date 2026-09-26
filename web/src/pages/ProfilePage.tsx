@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { api, resolveMediaUrl } from '../services/api';
 import { StudentProfile, Project, Certificate, Achievement } from '../types';
+import { getPhotoStyle } from '../utils/photoStyle';
 
 export const ProfilePage: React.FC = () => {
   const [profile, setProfile] = useState<StudentProfile | null>(null);
@@ -180,11 +181,13 @@ export const ProfilePage: React.FC = () => {
             {/* Avatar */}
             <div className="relative">
               {profile?.photoUrl ? (
-                <img
-                  src={resolveMediaUrl(profile.photoUrl)}
-                  alt={profile.name}
-                  className="w-24 h-24 sm:w-32 sm:h-32 rounded-2xl object-cover border-4 border-white shadow-md bg-white shrink-0"
-                />
+                <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-2xl overflow-hidden border-4 border-white shadow-md bg-white shrink-0">
+                  <img
+                    src={resolveMediaUrl(profile.photoUrl)}
+                    alt={profile.name}
+                    style={getPhotoStyle(profile)}
+                  />
+                </div>
               ) : (
                 <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-2xl bg-[#0B192C] text-white flex items-center justify-center font-black text-3xl sm:text-4xl border-4 border-white shadow-md shrink-0">
                   {profile?.name

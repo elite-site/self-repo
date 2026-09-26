@@ -450,6 +450,46 @@ router.post('/certificates', certificateUpload, async (req: Request, res: Respon
   }
 });
 
+router.patch('/certificates/:id/visibility', async (req: Request, res: Response) => {
+  try {
+    const studentId = (req as any).studentId;
+    const { isPublic } = req.body || {};
+    if (typeof isPublic !== 'boolean') {
+      return res.status(400).json({ error: 'VALIDATION_ERROR', message: 'isPublic must be a boolean' });
+    }
+
+    const certificate = await prisma.certificate.findFirst({
+      where: { id: req.params.id, studentId }
+    });
+    if (!certificate) {
+      return res.status(404).json({ error: 'NOT_FOUND', message: 'Certificate not found' });
+    }
+
+    if (isPublic && certificate.status !== 'APPROVED') {
+      return res.status(409).json({
+        error: 'NOT_APPROVED',
+        message: 'Only approved certificates can be displayed on your public profile.'
+      });
+    }
+
+    const updated = await prisma.certificate.update({
+      where: { id: certificate.id },
+      data: { isPublic },
+      select: { id: true, isPublic: true, status: true }
+    });
+
+    res.json({
+      success: true,
+      isPublic: updated.isPublic,
+      message: isPublic
+        ? 'Certificate is now visible on your public profile.'
+        : 'Certificate has been hidden from your public profile.'
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+  }
+});
+
 router.delete('/certificates/:id', async (req: Request, res: Response) => {
   try {
     const studentId = (req as any).studentId;
@@ -464,3 +504,4 @@ router.delete('/certificates/:id', async (req: Request, res: Response) => {
 });
 
 export default router;
+

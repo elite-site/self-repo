@@ -4,6 +4,7 @@ import { Bell, LogOut, User, ChevronDown, Sparkles, CheckCircle2, CheckCheck } f
 import { StudentSession } from '../../types';
 import { api, resolveMediaUrl } from '../../services/api';
 import { getNotificationDestination, navigateToNotification } from '../../utils/notificationRouting';
+import { getPhotoStyle } from '../../utils/photoStyle';
 
 interface StudentHeaderProps {
   session: StudentSession | null;
@@ -271,11 +272,13 @@ export const StudentHeader: React.FC<StudentHeaderProps> = ({ session, onLogout 
               className="flex items-center gap-2.5 p-1 sm:px-2.5 sm:py-1.5 rounded-xl border border-transparent hover:border-[#E2E8F0] hover:bg-neutral-50 transition-all cursor-pointer"
             >
               {student?.photoUrl ? (
-                <img
-                  src={resolveMediaUrl(student.photoUrl)}
-                  alt={student.name}
-                  className="w-8 h-8 rounded-full object-cover border border-[#E2E8F0]"
-                />
+                <div className="w-8 h-8 rounded-full overflow-hidden border border-[#E2E8F0] shrink-0">
+                  <img
+                    src={resolveMediaUrl(student.photoUrl)}
+                    alt={student.name}
+                    style={getPhotoStyle(student)}
+                  />
+                </div>
               ) : (
                 <div className="w-8 h-8 rounded-full bg-[#0B192C] text-white flex items-center justify-center font-bold text-xs shadow-sm">
                   {initials}

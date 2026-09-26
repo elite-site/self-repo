@@ -2,9 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { api, resolveMediaUrl } from '../../services/api';
 import { StudentSession } from '../../types';
 import { Link } from 'react-router-dom';
-import { Search, Filter, Loader2, Users, ArrowRight, Sparkles, X } from 'lucide-react';
+import { Search, Filter, Loader2, Users, ArrowRight, Sparkles, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Navbar } from '../../components/Navbar';
 import { Footer } from '../../components/Footer';
+import { getPhotoStyle } from '../../utils/photoStyle';
 
 interface StudentDirectoryProps {
   session?: StudentSession | null;
@@ -23,77 +24,84 @@ export const StudentDirectoryPage: React.FC<StudentDirectoryProps> = ({ session,
   const [students, setStudents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [yearFilter, setYearFilter] = useState('ALL');
   const [sectionFilter, setSectionFilter] = useState('ALL');
   const [skillFilter, setSkillFilter] = useState('');
+  const [availableSkills, setAvailableSkills] = useState<Array<{ id: string; name: string }>>([]);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
-  const [sortBy, setSortBy] = useState<'latest' | 'name'>('latest');
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const limit = 24;
 
-  const loadStudents = async () => {
-    setLoading(true);
-    try {
-      const data = await api.getPublicStudents({
-        status: statusFilter === 'ALL' ? undefined : statusFilter,
-      });
-      if (Array.isArray(data)) setStudents(data);
-    } catch {
-      setStudents([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // Debounce search input to avoid hitting backend on every keystroke
   useEffect(() => {
-    loadStudents();
-  }, [statusFilter]);
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
 
-  const filtered = students.filter((s) => {
-    // Search by name or roll number
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      const matchName = s.name?.toLowerCase().includes(q);
-      const matchRoll = s.rollNo?.toLowerCase().includes(q);
-      if (!matchName && !matchRoll) return false;
-    }
+  // Load real skills from Skill table
+  useEffect(() => {
+    api.getPublicSkills()
+      .then((skills) => {
+        if (Array.isArray(skills)) setAvailableSkills(skills);
+      })
+      .catch(() => {});
+  }, []);
 
-    // Filter by Year
-    if (yearFilter !== 'ALL' && String(s.year) !== yearFilter) {
-      return false;
-    }
+  // Fetch paginated students whenever search or filters or page changes
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
 
-    // Filter by Section
-    if (sectionFilter !== 'ALL' && String(s.section).toUpperCase() !== sectionFilter) {
-      return false;
-    }
+    api.getPublicStudents({
+      search: debouncedSearch.trim() || undefined,
+      year: yearFilter === 'ALL' ? undefined : yearFilter,
+      section: sectionFilter === 'ALL' ? undefined : sectionFilter,
+      skillName: skillFilter || undefined,
+      status: statusFilter === 'ALL' ? undefined : statusFilter,
+      page,
+      limit,
+    })
+      .then((data) => {
+        if (cancelled) return;
+        if (data && Array.isArray(data.students)) {
+          setStudents(data.students);
+          setTotal(data.total ?? 0);
+          setTotalPages(data.totalPages || Math.ceil((data.total ?? 0) / limit) || 1);
+        } else if (Array.isArray(data)) {
+          setStudents(data);
+          setTotal(data.length);
+          setTotalPages(1);
+        }
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setStudents([]);
+        setTotal(0);
+        setTotalPages(1);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
 
-    // Filter by Skill
-    if (skillFilter.trim()) {
-      const qSkill = skillFilter.toLowerCase();
-      const studentSkills = (s.profile?.skills || []).map((sk: any) =>
-        (sk.skill?.name || sk.name || sk).toLowerCase()
-      );
-      const hasSkill = studentSkills.some((sk: string) => sk.includes(qSkill));
-      if (!hasSkill) return false;
-    }
-
-    return true;
-  });
-
-  // Sort
-  const sorted = [...filtered].sort((a, b) => {
-    if (sortBy === 'name') {
-      return (a.name || '').localeCompare(b.name || '');
-    }
-    return 0; // Default order from DB
-  });
+    return () => {
+      cancelled = true;
+    };
+  }, [debouncedSearch, yearFilter, sectionFilter, skillFilter, statusFilter, page]);
 
   const resetFilters = () => {
     setSearch('');
+    setDebouncedSearch('');
     setYearFilter('ALL');
     setSectionFilter('ALL');
     setSkillFilter('');
     setStatusFilter('ALL');
-    setSortBy('latest');
+    setPage(1);
   };
 
   const hasActiveFilters = search || yearFilter !== 'ALL' || sectionFilter !== 'ALL' || skillFilter || statusFilter !== 'ALL';
@@ -190,8 +198,11 @@ export const StudentDirectoryPage: React.FC<StudentDirectoryProps> = ({ session,
                 </label>
                 <select
                   value={sectionFilter}
-                  onChange={(e) => setSectionFilter(e.target.value)}
-                  className="w-full p-2.5 bg-neutral-50 border border-[#E2E8F0] rounded-xl text-xs text-[#0B192C] font-medium focus:outline-none focus:border-elite-red"
+                  onChange={(e) => {
+                    setSectionFilter(e.target.value);
+                    setPage(1);
+                  }}
+                  className="w-full p-2.5 bg-neutral-50 border border-[#E2E8F0] rounded-xl text-xs text-[#0B192C] font-medium focus:outline-none focus:border-elite-red cursor-pointer"
                 >
                   <option value="ALL">All Sections</option>
                   <option value="A">Section A</option>
@@ -203,29 +214,22 @@ export const StudentDirectoryPage: React.FC<StudentDirectoryProps> = ({ session,
               {/* Skill Filter */}
               <div>
                 <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">
-                  Skills & Tech Stack
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. React, Python, Java..."
-                  value={skillFilter}
-                  onChange={(e) => setSkillFilter(e.target.value)}
-                  className="w-full p-2.5 bg-neutral-50 border border-[#E2E8F0] rounded-xl text-xs text-[#0B192C] font-medium focus:outline-none focus:border-elite-red"
-                />
-              </div>
-
-              {/* Sort By */}
-              <div>
-                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">
-                  Sort Order
+                  Filter by Skill
                 </label>
                 <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as any)}
-                  className="w-full p-2.5 bg-neutral-50 border border-[#E2E8F0] rounded-xl text-xs text-[#0B192C] font-medium focus:outline-none focus:border-elite-red"
+                  value={skillFilter}
+                  onChange={(e) => {
+                    setSkillFilter(e.target.value);
+                    setPage(1);
+                  }}
+                  className="w-full p-2.5 bg-neutral-50 border border-[#E2E8F0] rounded-xl text-xs text-[#0B192C] font-medium focus:outline-none focus:border-elite-red cursor-pointer"
                 >
-                  <option value="latest">Latest Profiles</option>
-                  <option value="name">Name (A – Z)</option>
+                  <option value="">All Technical Skills</option>
+                  {availableSkills.map((sk) => (
+                    <option key={sk.id} value={sk.name}>
+                      {sk.name}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -238,7 +242,7 @@ export const StudentDirectoryPage: React.FC<StudentDirectoryProps> = ({ session,
               <Search className="w-4 h-4 absolute left-4 top-3.5 text-slate-400" />
               <input
                 type="text"
-                placeholder="Search students by name or roll number..."
+                placeholder="Search by student name, roll number, or skill (e.g. React, Python)..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-full pl-11 pr-4 py-3 bg-white border border-[#E2E8F0] rounded-xl shadow-xs text-xs text-[#0B192C] font-medium focus:outline-none focus:border-elite-red"
@@ -258,20 +262,20 @@ export const StudentDirectoryPage: React.FC<StudentDirectoryProps> = ({ session,
               <div className="flex justify-center py-24">
                 <Loader2 className="w-8 h-8 animate-spin text-elite-red" />
               </div>
-            ) : sorted.length === 0 ? (
+            ) : students.length === 0 ? (
               <div className="text-center py-20 px-6 bg-white border border-[#E2E8F0] rounded-2xl space-y-3">
                 <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto text-slate-400">
                   <Users className="w-6 h-6" />
                 </div>
                 <h3 className="font-bold text-base text-[#0B192C]">
-                  {students.length === 0
-                    ? 'No public student profiles yet.'
-                    : 'No students match your filter criteria.'}
+                  {search || hasActiveFilters
+                    ? 'No students match your search criteria.'
+                    : 'No public student profiles yet.'}
                 </h3>
                 <p className="text-xs text-slate-400 max-w-sm mx-auto leading-relaxed">
-                  {students.length === 0
-                    ? 'As students enable public visibility on their portfolios, they will appear in this directory.'
-                    : 'Try clearing your search terms or filters to see more student profiles.'}
+                  {search || hasActiveFilters
+                    ? 'Try searching with a different skill, name, or roll number.'
+                    : 'As students update their portfolios, they will appear in this directory.'}
                 </p>
                 {hasActiveFilters && (
                   <button
@@ -284,7 +288,7 @@ export const StudentDirectoryPage: React.FC<StudentDirectoryProps> = ({ session,
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {sorted.map((s) => {
+                {students.map((s: any) => {
                   // Root-relative API paths must be resolved against the API
                   // origin; the portal and API are served from different origins
                   // in production, so a bare path would 404.
@@ -314,7 +318,7 @@ export const StudentDirectoryPage: React.FC<StudentDirectoryProps> = ({ session,
                               <img
                                 src={photoUrl}
                                 alt={s.name}
-                                className="w-full h-full object-cover"
+                                style={getPhotoStyle(s.profile)}
                               />
                             ) : (
                               initials || 'IT'
@@ -363,6 +367,40 @@ export const StudentDirectoryPage: React.FC<StudentDirectoryProps> = ({ session,
                     </Link>
                   );
                 })}
+
+                {/* PAGINATION CONTROLS */}
+                {total > 0 && (
+                  <div className="col-span-full flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t border-[#E2E8F0] mt-2">
+                    <div className="text-xs font-mono text-neutral-500">
+                      Showing <span className="font-bold text-[#0B192C]">{(page - 1) * limit + 1}</span>–
+                      <span className="font-bold text-[#0B192C]">{Math.min(page * limit, total)}</span> of{' '}
+                      <span className="font-bold text-[#0B192C]">{total}</span> students
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setPage((p) => Math.max(1, p - 1))}
+                        disabled={page <= 1 || loading}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[#E2E8F0] bg-white text-xs font-bold text-neutral-700 hover:bg-neutral-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-xs"
+                      >
+                        <ChevronLeft className="w-3.5 h-3.5" />
+                        <span>Previous</span>
+                      </button>
+                      <span className="text-xs font-medium text-neutral-600 px-2 font-mono">
+                        Page {page} of {totalPages}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                        disabled={page >= totalPages || loading}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[#E2E8F0] bg-white text-xs font-bold text-neutral-700 hover:bg-neutral-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-xs"
+                      >
+                        <span>Next</span>
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>

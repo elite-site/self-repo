@@ -574,14 +574,14 @@ export const VideoPage: React.FC = () => {
               )}
               <div className="min-w-0">
                 <p className="font-bold text-[#0B192C]">
-                  {video?.isPublic ? 'Your video is public' : 'Your video is private'}
+                  Show this video on my public profile
                 </p>
                 <p className="text-neutral-500 mt-0.5 leading-relaxed">
                   {video?.status === 'APPROVED'
                     ? video.isPublic
-                      ? 'Anyone can watch it on the public home page, even without logging in.'
-                      : 'Publish it to make it watchable on the public home page without logging in.'
-                    : 'Your video appears on the public page only after faculty approves it.'}
+                      ? 'Your approved video is currently visible on your public profile and the showcase.'
+                      : 'Make your video visible on your public profile and the student showcase.'
+                    : 'Awaiting faculty approval. Only approved videos can be displayed on your public profile.'}
                 </p>
               </div>
             </div>
@@ -589,7 +589,7 @@ export const VideoPage: React.FC = () => {
             <button
               onClick={() => handleTogglePublish(!video?.isPublic)}
               disabled={publishing || video?.status !== 'APPROVED'}
-              title={video?.status === 'APPROVED' ? undefined : 'Awaiting faculty approval'}
+              title={video?.status === 'APPROVED' ? undefined : 'Faculty approval required to publish on public profile'}
               className={`shrink-0 inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                 video?.isPublic
                   ? 'bg-neutral-100 hover:bg-neutral-200 text-[#0B192C]'
@@ -603,7 +603,7 @@ export const VideoPage: React.FC = () => {
               ) : (
                 <Globe className="w-3.5 h-3.5" />
               )}
-              <span>{video?.isPublic ? 'Make Private' : 'Publish Publicly'}</span>
+              <span>{video?.isPublic ? 'Hide from Profile' : 'Show on Profile'}</span>
             </button>
           </div>
 

@@ -6,20 +6,29 @@ import { getCroppedImg } from '../utils/cropImage';
 export interface PhotoCropModalProps {
   isOpen: boolean;
   imageSrc: string | null;
+  initialPosition?: {
+    photoOffsetX?: number | null;
+    photoOffsetY?: number | null;
+    photoZoom?: number | null;
+  } | null;
   onClose: () => void;
-  onCropSave: (croppedBlob: Blob) => Promise<void> | void;
+  onSavePosition?: (position: { photoOffsetX: number; photoOffsetY: number; photoZoom: number }) => Promise<void> | void;
+  onCropSave?: (croppedBlob: Blob) => Promise<void> | void;
   isSaving?: boolean;
 }
 
 export const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
   isOpen,
   imageSrc,
+  initialPosition,
   onClose,
+  onSavePosition,
   onCropSave,
   isSaving = false,
 }) => {
   const [crop, setCrop] = useState<Point>({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
+  const [croppedAreaPercent, setCroppedAreaPercent] = useState<Area | null>(null);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -28,12 +37,13 @@ export const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       setCrop({ x: 0, y: 0 });
-      setZoom(1);
+      setZoom(initialPosition?.photoZoom && initialPosition.photoZoom >= 1 ? initialPosition.photoZoom : 1);
+      setCroppedAreaPercent(null);
       setCroppedAreaPixels(null);
       setError(null);
       setIsProcessing(false);
     }
-  }, [isOpen, imageSrc]);
+  }, [isOpen, imageSrc, initialPosition]);
 
   // Support closing modal on Escape key press
   useEffect(() => {
@@ -49,7 +59,8 @@ export const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, isSaving, isProcessing, onClose]);
 
-  const handleCropComplete = useCallback((_croppedArea: Area, areaPixels: Area) => {
+  const handleCropComplete = useCallback((croppedArea: Area, areaPixels: Area) => {
+    setCroppedAreaPercent(croppedArea);
     setCroppedAreaPixels(areaPixels);
   }, []);
 
@@ -67,17 +78,24 @@ export const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
   };
 
   const handleSave = async () => {
-    if (!imageSrc || !croppedAreaPixels) return;
+    if (!imageSrc) return;
 
     setError(null);
     setIsProcessing(true);
 
     try {
-      const croppedBlob = await getCroppedImg(imageSrc, croppedAreaPixels, 'image/jpeg', 0.92);
-      await onCropSave(croppedBlob);
+      if (onSavePosition && croppedAreaPercent) {
+        const photoOffsetX = Number((croppedAreaPercent.x + croppedAreaPercent.width / 2).toFixed(1));
+        const photoOffsetY = Number((croppedAreaPercent.y + croppedAreaPercent.height / 2).toFixed(1));
+        const photoZoom = Number(zoom.toFixed(2));
+        await onSavePosition({ photoOffsetX, photoOffsetY, photoZoom });
+      } else if (onCropSave && croppedAreaPixels) {
+        const croppedBlob = await getCroppedImg(imageSrc, croppedAreaPixels, 'image/jpeg', 0.92);
+        await onCropSave(croppedBlob);
+      }
     } catch (err: any) {
       console.error('Failed to crop and save photo:', err);
-      setError(err?.message || 'Failed to crop photo. Please try again.');
+      setError(err?.message || 'Failed to update photo. Please try again.');
     } finally {
       setIsProcessing(false);
     }
