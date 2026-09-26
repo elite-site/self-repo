@@ -297,23 +297,53 @@ router.get('/public/events/:id', async (req: Request, res: Response): Promise<vo
 // GET /api/public/media/:type/:fileId - Public streaming proxy for photos, resumes, certificates, and videos
 router.get('/public/media/:type/:fileId', async (req: Request, res: Response): Promise<void> => {
   try {
-    const { fileId } = req.params;
+    const { type, fileId } = req.params;
     if (!fileId) {
       res.status(400).json({ error: 'MISSING_FILE_ID', message: 'File ID is required' });
       return;
     }
 
-    const { stream, mimeType, size } = await driveService.streamDriveFile(fileId);
-
-    res.setHeader('Content-Type', mimeType);
-    if (size) res.setHeader('Content-Length', size.toString());
-    res.setHeader('Cache-Control', 'no-cache, must-revalidate');
-    res.setHeader('ETag', `"${fileId}"`);
-
-    if (req.headers['if-none-match'] === `"${fileId}"`) {
+    const etag = `"${fileId}"`;
+    if (req.headers['if-none-match'] === etag) {
       res.status(304).end();
       return;
     }
+
+    const rangeHeader = req.headers.range;
+    const { stream, mimeType, size } = await driveService.streamDriveFile(fileId, undefined, rangeHeader);
+
+    res.setHeader('Content-Type', mimeType);
+    res.setHeader('Accept-Ranges', 'bytes');
+    res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+    res.setHeader('ETag', etag);
+
+    if (req.query.download === '1' || req.query.download === 'true') {
+      const ext = mimeType.split('/')[1] || 'bin';
+      res.setHeader('Content-Disposition', `attachment; filename="${type || 'media'}_${fileId}.${ext}"`);
+    } else {
+      res.setHeader('Content-Disposition', 'inline');
+    }
+
+    if (size !== undefined && rangeHeader) {
+      const [startStr, endStr] = rangeHeader.replace(/bytes=/, '').split('-');
+      const start = parseInt(startStr, 10) || 0;
+      const end = endStr ? Math.min(parseInt(endStr, 10), size - 1) : size - 1;
+      const chunkSize = end - start + 1;
+      res.setHeader('Content-Range', `bytes ${start}-${end}/${size}`);
+      res.setHeader('Content-Length', chunkSize);
+      res.status(206);
+    } else if (size !== undefined) {
+      res.setHeader('Content-Length', size);
+      res.status(200);
+    } else {
+      res.status(200);
+    }
+
+    req.on('close', () => {
+      if (!res.writableEnded && typeof (stream as any).destroy === 'function') {
+        (stream as any).destroy();
+      }
+    });
 
     stream.pipe(res);
   } catch (err: any) {

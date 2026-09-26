@@ -23,6 +23,7 @@ import studentInteractionsRoutes from './routes/student.interactions.routes';
 import adminAuthRoutes from './routes/admin.auth.routes';
 import adminApiRoutes from './routes/admin.api.routes';
 import adminPortalRoutes from './routes/admin.portal.routes';
+import adminAcademicYearRoutes from './routes/admin.academic-year.routes';
 
 const app = express();
 
@@ -147,6 +148,10 @@ app.use('/admin/api', adminApiRoutes);
 
 // 4. Admin Portal Management routes — Phase 7 (moderation, events, voting, RBAC, settings …)
 app.use('/admin/api/portal', adminPortalRoutes);
+
+// 5. Admin Academic Year Promotion routes
+app.use('/admin/api/academic-year', adminAcademicYearRoutes);
+app.use('/api/admin/academic-year', adminAcademicYearRoutes);
 
 // 4. Admin Frontend Static Serving (Served strictly by backend, never Netlify)
 const adminBuildPath = path.resolve(__dirname, '../public/admin');

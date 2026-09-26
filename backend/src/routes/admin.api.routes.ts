@@ -564,28 +564,38 @@ router.get('/submissions/:id/media/:fileKey', async (req: Request, res: Response
       return;
     }
 
-    const { stream, mimeType, size } = await driveService.streamDriveFile(driveFileId, submission.driveFolderPath);
+    const rangeHeader = req.headers.range;
+    const { stream, mimeType, size } = await driveService.streamDriveFile(
+      driveFileId,
+      submission.driveFolderPath,
+      rangeHeader,
+    );
 
     res.setHeader('Content-Type', mimeType);
     res.setHeader('Accept-Ranges', 'bytes');
     res.setHeader('Cache-Control', 'private, max-age=300');
     res.setHeader('ETag', etag);
 
-    if (size !== undefined) {
-      const rangeHeader = req.headers.range;
-      if (rangeHeader) {
-        const [startStr, endStr] = rangeHeader.replace(/bytes=/, '').split('-');
-        const start = parseInt(startStr, 10) || 0;
-        const end = endStr ? Math.min(parseInt(endStr, 10), size - 1) : size - 1;
-        const chunkSize = end - start + 1;
-        res.setHeader('Content-Range', `bytes ${start}-${end}/${size}`);
-        res.setHeader('Content-Length', chunkSize);
-        res.status(206);
-      } else {
-        res.setHeader('Content-Length', size);
-        res.status(200);
-      }
+    if (size !== undefined && rangeHeader) {
+      const [startStr, endStr] = rangeHeader.replace(/bytes=/, '').split('-');
+      const start = parseInt(startStr, 10) || 0;
+      const end = endStr ? Math.min(parseInt(endStr, 10), size - 1) : size - 1;
+      const chunkSize = end - start + 1;
+      res.setHeader('Content-Range', `bytes ${start}-${end}/${size}`);
+      res.setHeader('Content-Length', chunkSize);
+      res.status(206);
+    } else if (size !== undefined) {
+      res.setHeader('Content-Length', size);
+      res.status(200);
+    } else {
+      res.status(200);
     }
+
+    req.on('close', () => {
+      if (!res.writableEnded && typeof (stream as any).destroy === 'function') {
+        (stream as any).destroy();
+      }
+    });
 
     stream.pipe(res);
   } catch (err: any) {

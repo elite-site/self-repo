@@ -133,11 +133,14 @@ router.get('/voting/:id', async (req: Request, res: Response) => {
 
 router.post(['/voting/:id/vote', '/voting/vote'], async (req: Request, res: Response) => {
   try {
-    const student = await prisma.student.findUnique({ where: { id: (req as any).studentId }, select: { status: true } });
+    const studentId = req.student?.studentId || (req as any).studentId;
+    if (!studentId) {
+      return res.status(401).json({ error: 'UNAUTHORIZED', message: 'Authentication required' });
+    }
+    const student = await prisma.student.findUnique({ where: { id: studentId }, select: { status: true } });
     if (!student || student.status !== 'ACTIVE') {
       return res.status(403).json({ error: 'NOT_ACTIVE', message: 'Your account is no longer active for this activity.' });
     }
-    const studentId = (req as any).studentId || req.student?.studentId;
     const campaignId = req.params.id || req.body.campaignId;
     const { candidateId } = req.body;
     
@@ -435,13 +438,13 @@ router.get('/teams', async (req: Request, res: Response) => {
 
 router.post('/teams', async (req: Request, res: Response) => {
   try {
-    const student = await prisma.student.findUnique({ where: { id: (req as any).studentId }, select: { status: true } });
-    if (!student || student.status !== 'ACTIVE') {
-      return res.status(403).json({ error: 'NOT_ACTIVE', message: 'Your account is no longer active for this activity.' });
-    }
-    const studentId = (req as any).studentId || req.student?.studentId;
+    const studentId = req.student?.studentId || (req as any).studentId;
     if (!studentId) {
       return res.status(401).json({ error: 'UNAUTHORIZED', message: 'Authentication required' });
+    }
+    const student = await prisma.student.findUnique({ where: { id: studentId }, select: { status: true } });
+    if (!student || student.status !== 'ACTIVE') {
+      return res.status(403).json({ error: 'NOT_ACTIVE', message: 'Your account is no longer active for this activity.' });
     }
 
     const { name } = req.body || {};
@@ -538,11 +541,14 @@ router.get('/team-invitations', async (req: Request, res: Response) => {
 
 router.post('/team-invitations/:id/accept', async (req: Request, res: Response) => {
   try {
-    const student = await prisma.student.findUnique({ where: { id: (req as any).studentId }, select: { status: true } });
+    const studentId = req.student?.studentId || (req as any).studentId;
+    if (!studentId) {
+      return res.status(401).json({ error: 'UNAUTHORIZED', message: 'Authentication required' });
+    }
+    const student = await prisma.student.findUnique({ where: { id: studentId }, select: { status: true } });
     if (!student || student.status !== 'ACTIVE') {
       return res.status(403).json({ error: 'NOT_ACTIVE', message: 'Your account is no longer active for this activity.' });
     }
-    const studentId = (req as any).studentId || req.student?.studentId;
     const invite = await prisma.teamInvitation.findFirst({
       where: { id: req.params.id, studentId }
     });

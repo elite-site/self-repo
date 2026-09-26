@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import express from 'express';
+import cookieParser from 'cookie-parser';
 import request from 'supertest';
 import jwt from 'jsonwebtoken';
 import { env } from '../src/config/env';
@@ -50,6 +51,7 @@ const promotedSetting = {
 };
 
 const routeApp = express();
+routeApp.use(cookieParser());
 routeApp.use(express.json());
 routeApp.use('/api/admin/academic-year', adminAcademicYearRouter);
 

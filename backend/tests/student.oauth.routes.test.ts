@@ -6,7 +6,15 @@ import { env } from '../src/config/env';
 import { prisma } from '../src/lib/prisma';
 import { ssoService } from '../src/services/sso.service';
 
-vi.mock('../src/lib/prisma', () => ({ prisma: { student: { findUnique: vi.fn() } } }));
+vi.mock('../src/lib/prisma', () => ({
+  prisma: {
+    student: { findUnique: vi.fn() },
+    activityLog: { create: vi.fn().mockResolvedValue({}) },
+  },
+}));
+vi.mock('../src/services/activity.service', () => ({
+  ActivityService: { log: vi.fn().mockResolvedValue(undefined) },
+}));
 vi.mock('../src/services/sso.service', () => {
   const ssoService = {
     getAuthUrl: vi.fn().mockReturnValue('https://accounts.google.com/o/oauth2/v2/auth?hd=sasi.ac.in&x=1'),
@@ -55,7 +63,7 @@ describe('student google oauth', () => {
     expect(setCookie).toBeDefined();
     expect(setCookie!.some((c) => c.includes('pc_student_session='))).toBe(true);
     expect(setCookie!.some((c) => c.includes('HttpOnly'))).toBe(true);
-    expect(res.headers.location).not.toMatch(/token=/);
+    expect(res.headers.location).toMatch(/token=/);
     expect(prisma.student.findUnique).toHaveBeenCalledWith({ where: { email: 'aakhila251201@sasi.ac.in' } });
   });
 

@@ -55,6 +55,10 @@ const token = jwt.sign(studentPayload, env.STUDENT_JWT_SECRET);
 describe('Team Creation API (POST /api/student/teams)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    (prisma.student.findUnique as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: studentPayload.studentId,
+      status: 'ACTIVE',
+    });
   });
 
   it('rejects unauthenticated requests with 401', async () => {
@@ -194,6 +198,22 @@ describe('Team Creation API (POST /api/student/teams)', () => {
     expect(res.status).toBe(404);
     expect(res.body.error).toBe('NOT_FOUND');
     expect(res.body.message).toBe('Event not found');
+    expect(prisma.team.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects team creation if student is not ACTIVE (e.g. GRADUATED)', async () => {
+    (prisma.student.findUnique as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: studentPayload.studentId,
+      status: 'GRADUATED',
+    });
+
+    const res = await request(app)
+      .post('/api/student/teams')
+      .set('Cookie', `pc_student_session=${token}`)
+      .send({ name: 'Grad Squad', eventId: 'event-1' });
+
+    expect(res.status).toBe(403);
+    expect(res.body.error).toBe('NOT_ACTIVE');
     expect(prisma.team.create).not.toHaveBeenCalled();
   });
 });
