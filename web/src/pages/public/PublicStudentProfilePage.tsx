@@ -118,9 +118,9 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
           <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 sm:gap-8">
             {/* Avatar */}
             <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-2xl bg-[#0B192C] text-white flex items-center justify-center font-bold text-3xl shadow-md overflow-hidden shrink-0 border-4 border-white">
-              {profile.photoUrl ? (
+              {profile.viewUrl || profile.photoUrl ? (
                 <img
-                  src={resolveMediaUrl(profile.photoUrl)}
+                  src={resolveMediaUrl(profile.viewUrl || profile.photoUrl)}
                   alt={student.name}
                   className="w-full h-full object-cover"
                 />
@@ -272,10 +272,23 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
                   {certificates.map((c: any) => (
                     <div
                       key={c.id}
-                      className="p-3 bg-neutral-50 rounded-xl border border-neutral-200/70 space-y-1 text-xs"
+                      className="p-3 bg-neutral-50 rounded-xl border border-neutral-200/70 flex items-center justify-between text-xs"
                     >
-                      <div className="font-bold text-neutral-800">{c.title}</div>
-                      <div className="text-[11px] text-neutral-500">{c.issuer}</div>
+                      <div className="space-y-0.5">
+                        <div className="font-bold text-neutral-800">{c.title}</div>
+                        <div className="text-[11px] text-neutral-500">{c.issuer}</div>
+                      </div>
+                      {(c.viewUrl || c.fileUrl) && (
+                        <a
+                          href={resolveMediaUrl(c.viewUrl || c.fileUrl)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 text-[11px] font-bold text-[#DC2626] hover:underline shrink-0 ml-2"
+                        >
+                          <span>View</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -360,10 +373,23 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
                           {a.organization} · {a.date ? new Date(a.date).toLocaleDateString() : ''}
                         </div>
                       </div>
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold shrink-0">
-                        <CheckCircle2 className="w-3 h-3" />
-                        Verified
-                      </span>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {(a.viewUrl || a.proofUrl) && (
+                          <a
+                            href={resolveMediaUrl(a.viewUrl || a.proofUrl)}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 text-[11px] font-bold text-[#DC2626] hover:underline"
+                          >
+                            <span>Proof</span>
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        )}
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold">
+                          <CheckCircle2 className="w-3 h-3" />
+                          Verified
+                        </span>
+                      </div>
                     </div>
                   ))}
                 </div>

@@ -304,8 +304,53 @@ router.get('/public/media/:type/:fileId', async (req: Request, res: Response): P
       return;
     }
 
-    const etag = `"${fileId}"`;
-    if (req.headers['if-none-match'] === etag) {
+    let resolvedDriveId: string | null = null;
+    try {
+      if (type === 'certificate') {
+        const cert = await prisma.certificate.findUnique({ where: { id: fileId } });
+        if (cert?.fileDriveId) resolvedDriveId = cert.fileDriveId;
+      } else if (type === 'achievement') {
+        const ach = await prisma.achievement.findUnique({ where: { id: fileId } });
+        if (ach?.proofDriveId) resolvedDriveId = ach.proofDriveId;
+      } else if (type === 'resume') {
+        const resRec = await prisma.resume.findUnique({ where: { id: fileId } });
+        if (resRec?.driveFileId) resolvedDriveId = resRec.driveFileId;
+      } else if (type === 'photo') {
+        const prof = await prisma.studentProfile.findFirst({
+          where: { OR: [{ id: fileId }, { studentId: fileId }] },
+        });
+        if (prof?.photoDriveId) resolvedDriveId = prof.photoDriveId;
+      } else if (type === 'video') {
+        let vid: any = null;
+        if (typeof (prisma as any).video?.findFirst === 'function') {
+          vid = await (prisma as any).video.findFirst({
+            where: { OR: [{ id: fileId }, { studentId: fileId }] },
+          });
+        }
+        if (!vid && typeof prisma.introVideo?.findFirst === 'function') {
+          vid = await prisma.introVideo.findFirst({
+            where: { OR: [{ id: fileId }, { studentId: fileId }] },
+          });
+        }
+        if (vid?.driveFileId) {
+          resolvedDriveId = vid.driveFileId;
+        } else {
+          const sub = await prisma.submission.findFirst({
+            where: { OR: [{ id: fileId }, { rollNo: fileId }] },
+          });
+          if (sub?.videoDriveId) resolvedDriveId = sub.videoDriveId;
+        }
+      }
+    } catch (lookupErr) {
+      console.warn(`[public media] DB lookup error for ${type}/${fileId}:`, lookupErr);
+    }
+
+    const targetDriveFileId = resolvedDriveId || fileId;
+    const etag = `"${targetDriveFileId}"`;
+    const clientEtag = req.headers['if-none-match'];
+    if (clientEtag === etag || clientEtag === `"${fileId}"`) {
+      res.setHeader('Cache-Control', 'private, max-age=3600');
+      res.setHeader('ETag', etag);
       res.status(304).end();
       return;
     }
@@ -316,14 +361,14 @@ router.get('/public/media/:type/:fileId', async (req: Request, res: Response): P
     // file. The byte range is fetched from storage, so the body always matches
     // the advertised Content-Range.
     const { stream, mimeType, size, contentRange } = await driveService.streamDriveFile(
-      fileId,
+      targetDriveFileId,
       undefined,
       rangeHeader,
     );
 
     res.setHeader('Content-Type', mimeType);
     res.setHeader('Accept-Ranges', 'bytes');
-    res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+    res.setHeader('Cache-Control', 'private, max-age=3600');
     res.setHeader('ETag', etag);
 
     // Allow PDF documents and media to be rendered inside portal iframes

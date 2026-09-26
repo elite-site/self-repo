@@ -65,8 +65,13 @@ router.get('/', async (req: Request, res: Response) => {
       email: student.email,
       bio: student.profile?.biography || '',
       biography: student.profile?.biography || '',
-      photoUrl: student.profile?.photoUrl || null,
-      photoDriveId: student.profile?.photoDriveId || null,
+      photoUrl: (student.profile?.photoDriveId || student.profile?.photoUrl)
+        ? `/api/public/media/photo/${student.profile.id || student.id}`
+        : null,
+      viewUrl: (student.profile?.photoDriveId || student.profile?.photoUrl)
+        ? `/api/public/media/photo/${student.profile.id || student.id}`
+        : null,
+      hasPhoto: Boolean(student.profile?.photoDriveId || student.profile?.photoUrl),
       photoOffsetX: student.profile?.photoOffsetX ?? 0,
       photoOffsetY: student.profile?.photoOffsetY ?? 0,
       photoZoom: student.profile?.photoZoom ?? 1,
@@ -194,7 +199,7 @@ router.post('/photo', profilePhotoUpload, async (req: Request, res: Response) =>
       if (!driveFileId) {
         throw new Error('Storage returned no file id for the profile photo.');
       }
-      photoUrl = `/api/public/media/photo/${driveFileId}`;
+      photoUrl = `/api/public/media/photo/${studentId}`;
     } catch (err: any) {
       console.error('Profile photo upload to storage failed:', err);
       return res.status(502).json({
@@ -213,8 +218,12 @@ router.post('/photo', profilePhotoUpload, async (req: Request, res: Response) =>
       update: updateData,
       create: { studentId, isPublic: true, ...updateData }
     });
+
+    const maskedPhotoUrl = `/api/public/media/photo/${profile.id || studentId}`;
     res.json({
-      photoUrl: profile.photoUrl || photoUrl,
+      photoUrl: maskedPhotoUrl,
+      viewUrl: maskedPhotoUrl,
+      hasPhoto: true,
       photoOffsetX: profile.photoOffsetX,
       photoOffsetY: profile.photoOffsetY,
       photoZoom: profile.photoZoom

@@ -15,12 +15,14 @@ import {
   ArrowLeft,
   GraduationCap,
   ShieldAlert,
-  Sparkles
+  Sparkles,
+  Crop
 } from 'lucide-react';
 import { api, resolveMediaUrl } from '../services/api';
 import { normalizeSocialLink, type SocialLinkKind } from '../utils/socialLinks';
 import type { StudentOutletContext } from '../components/layout/StudentLayout';
 import { StudentProfile } from '../types';
+import { PhotoCropModal } from '../components/PhotoCropModal';
 
 const COMMON_SKILLS = [
   'Python',
@@ -63,6 +65,21 @@ export const EditProfilePage: React.FC = () => {
   const [customSkill, setCustomSkill] = useState('');
   const [linkErrors, setLinkErrors] = useState<Partial<Record<SocialLinkKind, string>>>({});
 
+  // Photo Crop & Reposition state
+  const [isCropModalOpen, setIsCropModalOpen] = useState(false);
+  const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
+  const objectUrlRef = useRef<string | null>(null);
+
+  // Clean up any pending object URLs on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (objectUrlRef.current) {
+        URL.revokeObjectURL(objectUrlRef.current);
+        objectUrlRef.current = null;
+      }
+    };
+  }, []);
+
   useEffect(() => {
     api.getProfile()
       .then((data) => {
@@ -77,40 +94,84 @@ export const EditProfilePage: React.FC = () => {
       .finally(() => setLoading(false));
   }, []);
 
-  const handlePhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // Validate original file: must be a supported image under 5MB
     if (!file.type.startsWith('image/')) {
       setPhotoError('Please select a valid image file (JPEG, PNG, WEBP).');
+      e.target.value = '';
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
       setPhotoError('Image must be under 5MB.');
+      e.target.value = '';
       return;
     }
 
     setPhotoError(null);
+
+    // Revoke previous object URL if one was open
+    if (objectUrlRef.current) {
+      URL.revokeObjectURL(objectUrlRef.current);
+      objectUrlRef.current = null;
+    }
+
+    const objectUrl = URL.createObjectURL(file);
+    objectUrlRef.current = objectUrl;
+    setCropImageSrc(objectUrl);
+    setIsCropModalOpen(true);
+
+    // Reset file input so selecting the same file triggers onChange
+    e.target.value = '';
+  };
+
+  const handleRepositionPhoto = () => {
+    if (!profile?.photoUrl) return;
+    setPhotoError(null);
+
+    if (objectUrlRef.current) {
+      URL.revokeObjectURL(objectUrlRef.current);
+      objectUrlRef.current = null;
+    }
+
+    setCropImageSrc(resolveMediaUrl(profile.photoUrl));
+    setIsCropModalOpen(true);
+  };
+
+  const handleCloseCropModal = () => {
+    setIsCropModalOpen(false);
+    if (objectUrlRef.current) {
+      URL.revokeObjectURL(objectUrlRef.current);
+      objectUrlRef.current = null;
+    }
+    setCropImageSrc(null);
+  };
+
+  const handleCropSave = async (croppedBlob: Blob) => {
+    setPhotoError(null);
     setUploadingPhoto(true);
 
     const formData = new FormData();
-    formData.append('photo', file);
+    formData.append('photo', croppedBlob, 'profile.jpg');
 
     try {
       const res = await api.uploadProfilePhoto(formData);
       if (res.photoUrl) {
-        // `setProfile(prev => ...)` rather than reading `profile` from closure:
-        // the old guard `if (res.photoUrl && profile)` silently dropped the new
-        // URL whenever the profile had not finished loading.
         setProfile((prev) => (prev ? { ...prev, photoUrl: res.photoUrl } : prev));
-        // Keep the header/dashboard avatar in step with the new photo.
         onPhotoChange?.(res.photoUrl);
+        handleCloseCropModal();
       } else {
-        setPhotoError('The photo was uploaded but no image URL was returned. Please try again.');
+        const errorMsg = 'The photo was uploaded but no image URL was returned. Please try again.';
+        setPhotoError(errorMsg);
+        throw new Error(errorMsg);
       }
     } catch (err: any) {
-      setPhotoError(err.response?.data?.message || 'Failed to upload photo. Please try again.');
+      const errorMsg = err.response?.data?.message || err.message || 'Failed to upload photo. Please try again.';
+      setPhotoError(errorMsg);
+      throw new Error(errorMsg);
     } finally {
       setUploadingPhoto(false);
     }
@@ -247,13 +308,26 @@ export const EditProfilePage: React.FC = () => {
         <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6 shadow-sm space-y-4">
           <h2 className="text-sm font-bold text-[#0B192C]">Profile Photo</h2>
           <div className="flex flex-col sm:flex-row items-center gap-5">
-            <div className="relative">
+            <div className="relative group">
               {profile?.photoUrl ? (
-                <img
-                  src={resolveMediaUrl(profile.photoUrl)}
-                  alt={profile.name}
-                  className="w-24 h-24 rounded-2xl object-cover border-2 border-neutral-200 shadow-sm"
-                />
+                <div className="relative w-24 h-24 rounded-2xl overflow-hidden border-2 border-neutral-200 shadow-sm">
+                  <img
+                    src={resolveMediaUrl(profile.photoUrl)}
+                    alt={profile.name}
+                    className="w-full h-full object-cover"
+                  />
+                  {!uploadingPhoto && (
+                    <button
+                      type="button"
+                      onClick={handleRepositionPhoto}
+                      title="Reposition Photo"
+                      className="absolute inset-0 bg-black/50 text-white opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center gap-1 transition-opacity cursor-pointer text-[11px] font-bold"
+                    >
+                      <Crop className="w-4 h-4" />
+                      <span>Reposition</span>
+                    </button>
+                  )}
+                </div>
               ) : (
                 <div className="w-24 h-24 rounded-2xl bg-[#0B192C] text-white flex items-center justify-center font-black text-2xl shadow-sm">
                   {profile?.name
@@ -281,15 +355,28 @@ export const EditProfilePage: React.FC = () => {
                 accept="image/jpeg,image/png,image/webp"
                 className="hidden"
               />
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploadingPhoto}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-[#0B192C] text-xs font-bold transition-colors cursor-pointer"
-              >
-                <Camera className="w-4 h-4 text-neutral-600" />
-                <span>{uploadingPhoto ? 'Uploading...' : 'Change Photo'}</span>
-              </button>
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingPhoto}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-[#0B192C] text-xs font-bold transition-colors cursor-pointer"
+                >
+                  <Camera className="w-4 h-4 text-neutral-600" />
+                  <span>{uploadingPhoto ? 'Uploading...' : profile?.photoUrl ? 'Change Photo' : 'Upload Photo'}</span>
+                </button>
+                {profile?.photoUrl && (
+                  <button
+                    type="button"
+                    onClick={handleRepositionPhoto}
+                    disabled={uploadingPhoto}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl border border-neutral-300 hover:bg-neutral-50 text-[#0B192C] text-xs font-bold transition-colors cursor-pointer"
+                  >
+                    <Crop className="w-4 h-4 text-[#DC2626]" />
+                    <span>Reposition Photo</span>
+                  </button>
+                )}
+              </div>
               <p className="text-[11px] text-neutral-400">
                 Recommended: Square image, max 5MB. Visible on public directory and resume card.
               </p>
@@ -514,6 +601,15 @@ export const EditProfilePage: React.FC = () => {
           </button>
         </div>
       </form>
+
+      {/* PHOTO CROP & REPOSITION MODAL */}
+      <PhotoCropModal
+        isOpen={isCropModalOpen}
+        imageSrc={cropImageSrc}
+        onClose={handleCloseCropModal}
+        onCropSave={handleCropSave}
+        isSaving={uploadingPhoto}
+      />
     </div>
   );
 };

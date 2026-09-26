@@ -38,6 +38,7 @@ router.get('/', async (req: Request, res: Response) => {
         graduatedAt: true,
         profile: {
           select: {
+            id: true,
             photoUrl: true,
             biography: true,
             skills: { include: { skill: true } }
@@ -47,7 +48,14 @@ router.get('/', async (req: Request, res: Response) => {
       take: 50
     });
     
-    res.json(students);
+    res.json(students.map(s => {
+      const profile = s.profile ? {
+        ...s.profile,
+        photoUrl: s.profile.photoUrl ? `/api/public/media/photo/${s.profile.id || s.id}` : null,
+        viewUrl: s.profile.photoUrl ? `/api/public/media/photo/${s.profile.id || s.id}` : null,
+      } : null;
+      return { ...s, profile };
+    }));
   } catch (err: any) {
     res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
   }
@@ -77,16 +85,54 @@ router.get('/:rollNo', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'NOT_FOUND', message: 'Student not found' });
     }
     const introVideo = student.introVideos?.[0];
+
+    const maskedProfile = student.profile ? {
+      ...student.profile,
+      photoDriveId: undefined,
+      photoUrl: (student.profile.photoDriveId || student.profile.photoUrl)
+        ? `/api/public/media/photo/${student.profile.id || student.id}`
+        : null,
+      viewUrl: (student.profile.photoDriveId || student.profile.photoUrl)
+        ? `/api/public/media/photo/${student.profile.id || student.id}`
+        : null,
+    } : null;
+
     const studentWithProofs = {
       ...student,
+      profile: maskedProfile,
       introVideos: undefined,
       introVideo: introVideo
         ? { ...introVideo, streamUrl: `/api/public/videos/stream/${introVideo.id}` }
         : null,
-      achievements: student.achievements.map((a: any) => ({
-        ...a,
-        proofUrl: a.proofUrl || (a.proofDriveId ? `/api/public/media/achievement/${a.proofDriveId}` : null)
-      }))
+      achievements: student.achievements.map((a: any) => {
+        const { proofDriveId: _p, ...rest } = a;
+        const viewUrl = a.proofDriveId
+          ? `/api/public/media/achievement/${a.id}`
+          : (a.proofUrl || null);
+        return {
+          ...rest,
+          viewUrl,
+          proofUrl: viewUrl,
+        };
+      }),
+      certificates: student.certificates.map((c: any) => {
+        const { fileDriveId: _f, ...rest } = c;
+        const viewUrl = c.fileDriveId ? `/api/public/media/certificate/${c.id}` : null;
+        return {
+          ...rest,
+          viewUrl,
+          fileUrl: viewUrl,
+        };
+      }),
+      resumes: student.resumes.map((r: any) => {
+        const { driveFileId: _d, ...rest } = r;
+        const viewUrl = r.driveFileId ? `/api/public/media/resume/${r.id}` : null;
+        return {
+          ...rest,
+          viewUrl,
+          fileUrl: viewUrl,
+        };
+      }),
     };
     res.json(studentWithProofs);
   } catch (err: any) {
@@ -112,7 +158,7 @@ router.get('/:rollNo/resume', async (req: Request, res: Response) => {
     if (!resume.driveFileId) {
       return res.status(404).json({ error: 'NOT_FOUND', message: 'Resume file not available' });
     }
-    res.redirect(`/api/public/media/resume/${resume.driveFileId}`);
+    res.redirect(`/api/public/media/resume/${resume.id}`);
   } catch (err: any) {
     res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
   }

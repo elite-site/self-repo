@@ -41,10 +41,12 @@ const transactionClient = {
   portalSettings: prisma.portalSettings,
 };
 
+const currentYear = String(new Date().getFullYear());
+
 const promotedSetting = {
   id: 'setting-promoted-year',
   key: 'promoted_academic_year',
-  value: '5',
+  value: currentYear,
   group: 'academic_year',
   updatedAt: new Date('2026-09-25T00:00:00.000Z'),
   updatedBy: 'admin@example.com',
@@ -85,7 +87,7 @@ describe('promoteAcademicYear', () => {
     await expect(promoteAcademicYear({ adminEmail: 'admin@example.com' })).resolves.toEqual({
       graduated: 2,
       promoted: 6,
-      targetYear: 5,
+      targetYear: '2026',
     });
 
     expect(studentAggregate).toHaveBeenCalledWith({
@@ -104,11 +106,11 @@ describe('promoteAcademicYear', () => {
   });
 
   it('rejects a repeat promotion for the stored target year when force is not set', async () => {
-    portalSettingsFindUnique.mockResolvedValue({ ...promotedSetting, value: '5' });
+    portalSettingsFindUnique.mockResolvedValue({ ...promotedSetting, value: currentYear });
 
     await expect(promoteAcademicYear({ adminEmail: 'admin@example.com' })).rejects.toMatchObject({
       code: 'ALREADY_PROMOTED',
-      targetYear: 5,
+      targetYear: currentYear,
     });
 
     expect(studentUpdateMany).not.toHaveBeenCalled();
@@ -117,7 +119,7 @@ describe('promoteAcademicYear', () => {
   });
 
   it('re-runs a previously promoted target year when force is true', async () => {
-    portalSettingsFindUnique.mockResolvedValue({ ...promotedSetting, value: '5' });
+    portalSettingsFindUnique.mockResolvedValue({ ...promotedSetting, value: currentYear });
     studentUpdateMany.mockResolvedValueOnce({ count: 1 }).mockResolvedValueOnce({ count: 3 });
 
     await expect(
@@ -125,7 +127,7 @@ describe('promoteAcademicYear', () => {
     ).resolves.toEqual({
       graduated: 1,
       promoted: 3,
-      targetYear: 5,
+      targetYear: currentYear,
     });
 
     expect(studentUpdateMany).toHaveBeenCalledTimes(2);
@@ -154,13 +156,13 @@ describe('promoteAcademicYear', () => {
     expect(portalSettingsUpsert).toHaveBeenCalledWith({
       where: { key: 'promoted_academic_year' },
       update: {
-        value: '5',
+        value: currentYear,
         group: 'academic_year',
         updatedBy: 'admin@example.com',
       },
       create: {
         key: 'promoted_academic_year',
-        value: '5',
+        value: currentYear,
         group: 'academic_year',
         updatedBy: 'admin@example.com',
       },
@@ -168,10 +170,55 @@ describe('promoteAcademicYear', () => {
     expect(activityLog).toHaveBeenCalledWith({
       category: 'ADMIN',
       action: 'PROMOTE_ACADEMIC_YEAR',
-      details: 'Graduated 2 students; promoted 6 students; target year: 5.',
+      details: `Graduated 2 students; promoted 6 students; target year: ${currentYear}.`,
       userEmail: 'admin@example.com',
       status: 'SUCCESS',
     });
+  });
+
+  it('succeeds on subsequent promotion when a year passes without requiring force', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-09-25T10:00:00.000Z'));
+    studentUpdateMany.mockResolvedValue({ count: 3 });
+
+    // First promotion in 2026
+    portalSettingsFindUnique.mockResolvedValueOnce(null);
+    const firstRun = await promoteAcademicYear({ adminEmail: 'admin@example.com' });
+    expect(firstRun.targetYear).toBe('2026');
+
+    // Simulate year passing: the stored setting now contains '2026', and clock advances to 2027
+    portalSettingsFindUnique.mockResolvedValue({ ...promotedSetting, value: '2026' });
+    vi.setSystemTime(new Date('2027-09-25T10:00:00.000Z'));
+
+    // Second promotion in 2027 without force succeeds instead of throwing ALREADY_PROMOTED
+    const secondRun = await promoteAcademicYear({ adminEmail: 'admin@example.com' });
+    expect(secondRun.targetYear).toBe('2027');
+    expect(portalSettingsUpsert).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        where: { key: 'promoted_academic_year' },
+        update: expect.objectContaining({ value: '2027' }),
+        create: expect.objectContaining({ value: '2027' }),
+      })
+    );
+  });
+
+  it('succeeds without force when advancing to the next academicYear explicitly', async () => {
+    studentUpdateMany.mockResolvedValue({ count: 2 });
+    portalSettingsFindUnique.mockResolvedValue({ ...promotedSetting, value: '2026-2027' });
+
+    const result = await promoteAcademicYear({
+      adminEmail: 'admin@example.com',
+      academicYear: '2027-2028',
+    });
+
+    expect(result.targetYear).toBe('2027-2028');
+    expect(portalSettingsUpsert).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        where: { key: 'promoted_academic_year' },
+        update: expect.objectContaining({ value: '2027-2028' }),
+        create: expect.objectContaining({ value: '2027-2028' }),
+      })
+    );
   });
 });
 
@@ -192,11 +239,23 @@ describe('POST /api/admin/academic-year/promote', () => {
       .send({});
 
     expect(response.status).toBe(200);
-    expect(response.body).toEqual({ graduated: 2, promoted: 6, targetYear: 5 });
+    expect(response.body).toEqual({ graduated: 2, promoted: 6, targetYear: currentYear });
+  });
+
+  it('accepts explicit academicYear from request body', async () => {
+    studentUpdateMany.mockResolvedValueOnce({ count: 2 }).mockResolvedValueOnce({ count: 6 });
+
+    const response = await request(routeApp)
+      .post('/api/admin/academic-year/promote')
+      .set('Cookie', `${env.ADMIN_SESSION_COOKIE_NAME}=${adminToken}`)
+      .send({ academicYear: '2027-2028' });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ graduated: 2, promoted: 6, targetYear: '2027-2028' });
   });
 
   it('maps an already-promoted guard error to the documented 409 response', async () => {
-    portalSettingsFindUnique.mockResolvedValue({ ...promotedSetting, value: '5' });
+    portalSettingsFindUnique.mockResolvedValue({ ...promotedSetting, value: currentYear });
 
     const response = await request(routeApp)
       .post('/api/admin/academic-year/promote')
@@ -206,7 +265,7 @@ describe('POST /api/admin/academic-year/promote', () => {
     expect(response.status).toBe(409);
     expect(response.body).toEqual({
       error: 'ALREADY_PROMOTED',
-      message: 'Already promoted for academic year 5 — run again anyway?',
+      message: `Already promoted for academic year ${currentYear} — run again anyway?`,
       alreadyPromoted: true,
     });
   });

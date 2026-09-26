@@ -102,8 +102,9 @@ describe('Resume and Intro Video Reupload Persistence & Cache Invalidation', () 
           isPublic: true,
         }),
       });
-      expect(res.body.driveFileId).toBe('drive_resume_A');
-      expect(res.body.fileUrl).toBe('/api/public/media/resume/drive_resume_A');
+      expect(res.body.driveFileId).toBeUndefined();
+      expect(res.body.fileUrl).toBe('/api/public/media/resume/res_1');
+      expect(res.body.viewUrl).toBe('/api/public/media/resume/res_1');
     });
 
     it('reuploads resume B, cleans up old drive file, updates DB pointer to new file B and resets status', async () => {
@@ -153,8 +154,9 @@ describe('Resume and Intro Video Reupload Persistence & Cache Invalidation', () 
           isPublic: true,
         }),
       });
-      expect(res.body.driveFileId).toBe('drive_resume_B');
-      expect(res.body.fileUrl).toBe('/api/public/media/resume/drive_resume_B');
+      expect(res.body.driveFileId).toBeUndefined();
+      expect(res.body.fileUrl).toBe('/api/public/media/resume/res_1');
+      expect(res.body.viewUrl).toBe('/api/public/media/resume/res_1');
     });
 
     it('rejects a non-PDF resume with a 400 the UI can display, storing nothing', async () => {
@@ -189,7 +191,9 @@ describe('Resume and Intro Video Reupload Persistence & Cache Invalidation', () 
 
       expect(res.status).toBe(200);
       expect(res.body).toHaveLength(1);
-      expect(res.body[0].fileUrl).toBe('/api/public/media/resume/drive_resume_B');
+      expect(res.body[0].fileUrl).toBe('/api/public/media/resume/res_1');
+      expect(res.body[0].viewUrl).toBe('/api/public/media/resume/res_1');
+      expect(res.body[0].driveFileId).toBeUndefined();
     });
   });
 

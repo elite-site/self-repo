@@ -172,9 +172,9 @@ export const CertificatesTab: React.FC = () => {
 
               <div className="pt-3 mt-3 border-t border-neutral-100 flex items-center justify-between text-xs">
                 <div className="flex items-center gap-2">
-                  {c.fileUrl ? (
+                  {(c.viewUrl || c.fileUrl) ? (
                     <a
-                      href={resolveMediaUrl(c.fileUrl)}
+                      href={resolveMediaUrl(c.viewUrl || c.fileUrl)}
                       target="_blank"
                       rel="noreferrer"
                       className="inline-flex items-center gap-1 text-[11px] font-bold text-[#DC2626] hover:underline"
@@ -184,17 +184,6 @@ export const CertificatesTab: React.FC = () => {
                     </a>
                   ) : (
                     <span className="text-[10px] text-neutral-400 font-mono">Verified Record</span>
-                  )}
-                  {c.watchUrl && (
-                    <a
-                      href={c.watchUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-600 hover:underline"
-                    >
-                      <span>Drive</span>
-                      <ExternalLink className="w-3 h-3" />
-                    </a>
                   )}
                 </div>
 

@@ -178,30 +178,16 @@ export const AchievementsTab: React.FC = () => {
                     <Calendar className="w-3 h-3" />
                     {a.date ? new Date(a.date).toLocaleDateString() : 'N/A'}
                   </span>
-                  {a.proofUrl && (
+                  {(a.viewUrl || a.proofUrl) && (
                     <>
                       <span>·</span>
                       <a
-                        href={resolveMediaUrl(a.proofUrl)}
+                        href={resolveMediaUrl((a.viewUrl || a.proofUrl)!)}
                         target="_blank"
                         rel="noreferrer"
                         className="inline-flex items-center gap-1 text-[11px] font-bold text-[#DC2626] hover:underline"
                       >
                         <span>Proof</span>
-                        <ExternalLink className="w-3 h-3" />
-                      </a>
-                    </>
-                  )}
-                  {a.watchUrl && (
-                    <>
-                      <span>·</span>
-                      <a
-                        href={a.watchUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-600 hover:underline"
-                      >
-                        <span>Drive</span>
                         <ExternalLink className="w-3 h-3" />
                       </a>
                     </>

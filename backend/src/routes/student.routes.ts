@@ -993,16 +993,16 @@ router.get('/resume', requireStudentAuth, async (req, res) => {
       }
     }
 
-    res.json(resumes.map(r => ({
-      ...r,
-      fileUrl: r.driveFileId ? `/api/public/media/resume/${r.driveFileId}` : null,
-      watchUrl: typeof driveService.getWatchUrl === 'function'
-        ? driveService.getWatchUrl(r.driveFileId)
-        : (r.driveFileId && !r.driveFileId.startsWith('mock_') && !r.driveFileId.startsWith('drive_') ? `https://drive.google.com/file/d/${r.driveFileId}/view` : null),
-      previewUrl: typeof driveService.getPreviewUrl === 'function'
-        ? driveService.getPreviewUrl(r.driveFileId)
-        : (r.driveFileId && !r.driveFileId.startsWith('mock_') && !r.driveFileId.startsWith('drive_') ? `https://drive.google.com/file/d/${r.driveFileId}/preview` : null),
-    })));
+    res.json(resumes.map(r => {
+      const { driveFileId: _d, ...rest } = r;
+      const viewUrl = r.driveFileId ? `/api/public/media/resume/${r.id}` : null;
+      return {
+        ...rest,
+        hasFile: Boolean(r.driveFileId),
+        viewUrl,
+        fileUrl: viewUrl,
+      };
+    }));
   } catch (err: any) {
     res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
   }
@@ -1089,15 +1089,14 @@ router.post('/resume', requireStudentAuth, resumeUpload, async (req: Request, re
           },
         });
 
+    const { driveFileId: _d, ...rest } = resume;
+    const viewUrl = `/api/public/media/resume/${resume.id}`;
+
     res.status(201).json({
-      ...resume,
-      fileUrl: `/api/public/media/resume/${resume.driveFileId}`,
-      watchUrl: typeof driveService.getWatchUrl === 'function'
-        ? driveService.getWatchUrl(resume.driveFileId)
-        : (resume.driveFileId && !resume.driveFileId.startsWith('mock_') && !resume.driveFileId.startsWith('drive_') ? `https://drive.google.com/file/d/${resume.driveFileId}/view` : null),
-      previewUrl: typeof driveService.getPreviewUrl === 'function'
-        ? driveService.getPreviewUrl(resume.driveFileId)
-        : (resume.driveFileId && !resume.driveFileId.startsWith('mock_') && !resume.driveFileId.startsWith('drive_') ? `https://drive.google.com/file/d/${resume.driveFileId}/preview` : null),
+      ...rest,
+      hasFile: true,
+      viewUrl,
+      fileUrl: viewUrl,
     });
   } catch (err: any) {
     console.error('Error uploading resume:', err);

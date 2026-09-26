@@ -67,7 +67,7 @@ export function parseContentRangeHeader(
   return { start, end, total: Number.isFinite(total) ? total : end + 1 };
 }
 
-class DriveService {
+export class DriveService {
   private drive: drive_v3.Drive | null = null;
   private isMock = false;
   private mockBaseDir = path.resolve(__dirname, '../../storage/mock-drive');
@@ -103,6 +103,9 @@ class DriveService {
         this.isMock = false;
         console.log('✅ Google Drive API initialized with OAuth 2.0 Refresh Token (Workspace Account)');
       } catch (err) {
+        if (process.env.NODE_ENV === 'production' || env.NODE_ENV === 'production') {
+          throw new Error('[FATAL] Google Drive credentials must be configured in production (NODE_ENV=production). Mock storage is prohibited in production.');
+        }
         console.warn('⚠️ Failed to initialize Google Drive OAuth 2.0 auth. Falling back to local storage mock.', err);
         this.isMock = true;
       }
@@ -126,10 +129,16 @@ class DriveService {
         this.isMock = false;
         console.log('✅ Google Drive API initialized with Service Account');
       } catch (err) {
+        if (process.env.NODE_ENV === 'production' || env.NODE_ENV === 'production') {
+          throw new Error('[FATAL] Google Drive credentials must be configured in production (NODE_ENV=production). Mock storage is prohibited in production.');
+        }
         console.warn('⚠️ Failed to initialize Google Drive auth. Falling back to local storage mock.', err);
         this.isMock = true;
       }
     } else {
+      if (process.env.NODE_ENV === 'production' || env.NODE_ENV === 'production') {
+        throw new Error('[FATAL] Google Drive credentials must be configured in production (NODE_ENV=production). Mock storage is prohibited in production.');
+      }
       console.log('ℹ️ Google Drive credentials not set. Using local mock storage for Drive.');
       this.isMock = true;
     }

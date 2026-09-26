@@ -5,9 +5,9 @@ export type AcademicYearPromotionErrorCode = 'NO_ACTIVE_STUDENTS' | 'ALREADY_PRO
 
 export class AcademicYearPromotionError extends Error {
   public readonly code: AcademicYearPromotionErrorCode;
-  public readonly targetYear: number | undefined;
+  public readonly targetYear: string | number | undefined;
 
-  constructor(code: AcademicYearPromotionErrorCode, targetYear?: number) {
+  constructor(code: AcademicYearPromotionErrorCode, targetYear?: string | number) {
     super(code);
     this.name = 'AcademicYearPromotionError';
     this.code = code;
@@ -18,12 +18,13 @@ export class AcademicYearPromotionError extends Error {
 export interface PromoteAcademicYearOptions {
   adminEmail: string;
   force?: boolean;
+  academicYear?: string;
 }
 
 export interface AcademicYearPromotionResult {
   graduated: number;
   promoted: number;
-  targetYear: number;
+  targetYear: string | number;
 }
 
 export async function promoteAcademicYear(
@@ -40,13 +41,13 @@ export async function promoteAcademicYear(
       throw new AcademicYearPromotionError('NO_ACTIVE_STUDENTS');
     }
 
-    const targetYear = maxYear + 1;
+    const academicYear = opts.academicYear || String(new Date().getFullYear());
     const promotionSetting = await tx.portalSettings.findUnique({
       where: { key: 'promoted_academic_year' },
     });
 
-    if (promotionSetting?.value === String(targetYear) && !opts.force) {
-      throw new AcademicYearPromotionError('ALREADY_PROMOTED', targetYear);
+    if (promotionSetting?.value === academicYear && !opts.force) {
+      throw new AcademicYearPromotionError('ALREADY_PROMOTED', academicYear);
     }
 
     const graduatedResult = await tx.student.updateMany({
@@ -61,13 +62,13 @@ export async function promoteAcademicYear(
     await tx.portalSettings.upsert({
       where: { key: 'promoted_academic_year' },
       update: {
-        value: String(targetYear),
+        value: academicYear,
         group: 'academic_year',
         updatedBy: opts.adminEmail,
       },
       create: {
         key: 'promoted_academic_year',
-        value: String(targetYear),
+        value: academicYear,
         group: 'academic_year',
         updatedBy: opts.adminEmail,
       },
@@ -79,11 +80,11 @@ export async function promoteAcademicYear(
     await ActivityService.log({
       category: 'ADMIN',
       action: 'PROMOTE_ACADEMIC_YEAR',
-      details: `Graduated ${graduated} students; promoted ${promoted} students; target year: ${targetYear}.`,
+      details: `Graduated ${graduated} students; promoted ${promoted} students; target year: ${academicYear}.`,
       userEmail: opts.adminEmail,
       status: 'SUCCESS',
     });
 
-    return { graduated, promoted, targetYear };
+    return { graduated, promoted, targetYear: academicYear };
   });
 }

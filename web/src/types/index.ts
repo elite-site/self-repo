@@ -55,6 +55,7 @@ export interface StudentProfile {
   bio?: string;
   skills: string[];
   photoUrl?: string;
+  viewUrl?: string;
   githubUrl?: string;
   linkedinUrl?: string;
   portfolioUrl?: string;
@@ -86,6 +87,7 @@ export interface Achievement {
   organization: string;
   category: string;
   proofUrl?: string;
+  viewUrl?: string;
   watchUrl?: string;
   previewUrl?: string;
   status: 'DRAFT' | 'PENDING' | 'APPROVED' | 'REJECTED' | 'CHANGES_REQUESTED';
@@ -98,6 +100,7 @@ export interface Certificate {
   issuer: string;
   date: string;
   fileUrl: string;
+  viewUrl?: string;
   watchUrl?: string;
   previewUrl?: string;
   thumbnailUrl?: string;

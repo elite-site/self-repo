@@ -14,7 +14,6 @@ interface PublicResumeViewerProps {
 export const PublicResumeViewerPage: React.FC<PublicResumeViewerProps> = ({ session, onLogout }) => {
   const { rollNo } = useParams<{ rollNo: string }>();
   const [resumeUrl, setResumeUrl] = useState<string | null>(null);
-  const [watchUrl, setWatchUrl] = useState<string | null>(null);
   const [studentName, setStudentName] = useState<string>('');
   const [loading, setLoading] = useState(true);
 
@@ -29,29 +28,15 @@ export const PublicResumeViewerPage: React.FC<PublicResumeViewerProps> = ({ sess
           setStudentName(student.name || rollNo);
           if (student.resumes && student.resumes.length > 0) {
             const res = student.resumes[0];
-            if (res.driveFileId) {
-              const isGoogleDriveId = !res.driveFileId.startsWith('mock_') && !res.driveFileId.startsWith('drive_');
-              const preview = isGoogleDriveId
-                ? `https://drive.google.com/file/d/${res.driveFileId}/preview`
-                : resolveMediaUrl(`/api/public/media/resume/${res.driveFileId}`);
-              const watch = isGoogleDriveId
-                ? `https://drive.google.com/file/d/${res.driveFileId}/view?usp=sharing`
-                : resolveMediaUrl(`/api/public/media/resume/${res.driveFileId}`);
-              setResumeUrl(preview);
-              setWatchUrl(watch);
-            } else {
-              setResumeUrl(null);
-              setWatchUrl(null);
-            }
+            const raw = res.viewUrl || (res.id ? `/api/public/media/resume/${res.id}` : res.fileUrl);
+            setResumeUrl(raw ? resolveMediaUrl(raw) : null);
           } else {
             setResumeUrl(null);
-            setWatchUrl(null);
           }
         }
       })
       .catch(() => {
         setResumeUrl(null);
-        setWatchUrl(null);
       })
       .finally(() => {
         setLoading(false);
@@ -71,15 +56,15 @@ export const PublicResumeViewerPage: React.FC<PublicResumeViewerProps> = ({ sess
           <span>Back to Profile</span>
         </Link>
         <div className="flex items-center gap-3">
-          {(watchUrl || resumeUrl) && (
+          {resumeUrl && (
             <a
-              href={watchUrl || resumeUrl!}
+              href={`${resumeUrl}${resumeUrl.includes('?') ? '&' : '?'}download=1`}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-xl text-xs font-bold transition-colors"
             >
               <ExternalLink className="w-3.5 h-3.5 text-elite-red" />
-              <span>View on Drive</span>
+              <span>Download PDF</span>
             </a>
           )}
           <div className="text-xs font-mono font-bold text-slate-300 flex items-center gap-2">

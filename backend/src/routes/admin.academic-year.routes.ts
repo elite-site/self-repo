@@ -13,6 +13,7 @@ router.post('/promote', requireAdminAuth, async (req: Request, res: Response): P
     const result = await promoteAcademicYear({
       adminEmail,
       force: req.body?.force === true,
+      academicYear: req.body?.academicYear,
     });
 
     res.status(200).json(result);

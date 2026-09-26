@@ -151,18 +151,20 @@ router.get('/achievements', async (req: Request, res: Response) => {
       }
     }
 
-    res.json(achievements.map(a => ({
-      ...a,
-      date: a.achievedAt,
-      organizationName: a.organization,
-      proofUrl: a.proofUrl || (a.proofDriveId ? `/api/public/media/achievement/${a.proofDriveId}` : null),
-      watchUrl: typeof driveService.getWatchUrl === 'function'
-        ? driveService.getWatchUrl(a.proofDriveId)
-        : (a.proofDriveId && !a.proofDriveId.startsWith('mock_') && !a.proofDriveId.startsWith('drive_') ? `https://drive.google.com/file/d/${a.proofDriveId}/view` : null),
-      previewUrl: typeof driveService.getPreviewUrl === 'function'
-        ? driveService.getPreviewUrl(a.proofDriveId)
-        : (a.proofDriveId && !a.proofDriveId.startsWith('mock_') && !a.proofDriveId.startsWith('drive_') ? `https://drive.google.com/file/d/${a.proofDriveId}/preview` : null),
-    })));
+    res.json(achievements.map(a => {
+      const { proofDriveId: _p, ...rest } = a;
+      const viewUrl = a.proofDriveId
+        ? `/api/public/media/achievement/${a.id}`
+        : (a.proofUrl || null);
+      return {
+        ...rest,
+        date: a.achievedAt,
+        organizationName: a.organization,
+        hasProof: Boolean(a.proofDriveId || a.proofUrl),
+        viewUrl,
+        proofUrl: viewUrl,
+      };
+    }));
   } catch (err: any) {
     res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
   }
@@ -239,11 +241,18 @@ router.post('/achievements', handleProofUpload, async (req: Request, res: Respon
       }
     });
 
+    const { proofDriveId: _p, ...rest } = achievement;
+    const viewUrl = achievement.proofDriveId
+      ? `/api/public/media/achievement/${achievement.id}`
+      : (achievement.proofUrl || null);
+
     res.status(201).json({
-      ...achievement,
+      ...rest,
       date: achievement.achievedAt,
       organizationName: achievement.organization,
-      proofUrl: achievement.proofUrl || (achievement.proofDriveId ? `/api/public/media/achievement/${achievement.proofDriveId}` : null)
+      hasProof: Boolean(achievement.proofDriveId || achievement.proofUrl),
+      viewUrl,
+      proofUrl: viewUrl,
     });
   } catch (err: any) {
     res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
@@ -361,17 +370,17 @@ router.get('/certificates', async (req: Request, res: Response) => {
       }
     }
 
-    res.json(certificates.map(c => ({
-      ...c,
-      issueDate: c.issuedAt,
-      fileUrl: c.fileDriveId ? `/api/public/media/certificate/${c.fileDriveId}` : null,
-      watchUrl: typeof driveService.getWatchUrl === 'function'
-        ? driveService.getWatchUrl(c.fileDriveId)
-        : (c.fileDriveId && !c.fileDriveId.startsWith('mock_') && !c.fileDriveId.startsWith('drive_') ? `https://drive.google.com/file/d/${c.fileDriveId}/view` : null),
-      previewUrl: typeof driveService.getPreviewUrl === 'function'
-        ? driveService.getPreviewUrl(c.fileDriveId)
-        : (c.fileDriveId && !c.fileDriveId.startsWith('mock_') && !c.fileDriveId.startsWith('drive_') ? `https://drive.google.com/file/d/${c.fileDriveId}/preview` : null),
-    })));
+    res.json(certificates.map(c => {
+      const { fileDriveId: _f, ...rest } = c;
+      const viewUrl = c.fileDriveId ? `/api/public/media/certificate/${c.id}` : null;
+      return {
+        ...rest,
+        issueDate: c.issuedAt,
+        hasFile: Boolean(c.fileDriveId),
+        viewUrl,
+        fileUrl: viewUrl,
+      };
+    }));
   } catch (err: any) {
     res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
   }
@@ -425,16 +434,16 @@ router.post('/certificates', certificateUpload, async (req: Request, res: Respon
         isPublic: true
       }
     });
+
+    const { fileDriveId: _f, ...rest } = certificate;
+    const viewUrl = `/api/public/media/certificate/${certificate.id}`;
+
     res.status(201).json({
-      ...certificate,
+      ...rest,
       issueDate: certificate.issuedAt,
-      fileUrl: `/api/public/media/certificate/${driveFileId}`,
-      watchUrl: typeof driveService.getWatchUrl === 'function'
-        ? driveService.getWatchUrl(driveFileId)
-        : (driveFileId && !driveFileId.startsWith('mock_') && !driveFileId.startsWith('drive_') ? `https://drive.google.com/file/d/${driveFileId}/view` : null),
-      previewUrl: typeof driveService.getPreviewUrl === 'function'
-        ? driveService.getPreviewUrl(driveFileId)
-        : (driveFileId && !driveFileId.startsWith('mock_') && !driveFileId.startsWith('drive_') ? `https://drive.google.com/file/d/${driveFileId}/preview` : null),
+      hasFile: true,
+      viewUrl,
+      fileUrl: viewUrl,
     });
   } catch (err: any) {
     res.status(500).json({ error: 'SERVER_ERROR', message: err.message });

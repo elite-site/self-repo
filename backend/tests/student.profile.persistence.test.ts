@@ -236,7 +236,7 @@ describe('Student Profile Data Persistence', () => {
         id: 'prof_1',
         studentId: 'stud_123',
         photoDriveId: 'drive_photo_1',
-        photoUrl: '/api/public/media/photo/drive_photo_1',
+        photoUrl: '/api/public/media/photo/prof_1',
         photoOffsetX: 0,
         photoOffsetY: 0,
         photoZoom: 1,
@@ -249,7 +249,7 @@ describe('Student Profile Data Persistence', () => {
 
       expect(res.status).toBe(200);
       expect(driveService.uploadFile).toHaveBeenCalled();
-      expect(res.body.photoUrl).toBe('/api/public/media/photo/drive_photo_1');
+      expect(res.body.photoUrl).toBe('/api/public/media/photo/prof_1');
     });
 
     it('reports a storage failure instead of silently saving a placeholder photoUrl', async () => {
