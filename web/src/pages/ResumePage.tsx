@@ -213,13 +213,12 @@ export const ResumePage: React.FC = () => {
 
             {fileUrl && (
               <a
-                href={fileUrl}
-                target="_blank"
+                href={`${fileUrl}${fileUrl.includes('?') ? '&' : '?'}download=1`}
                 rel="noreferrer"
                 className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#0B192C] hover:bg-neutral-800 text-white text-xs font-bold transition-colors"
               >
                 <Download className="w-3.5 h-3.5" />
-                <span>Open / Download PDF</span>
+                <span>Download PDF</span>
               </a>
             )}
           </div>

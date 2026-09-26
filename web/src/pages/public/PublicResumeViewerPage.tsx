@@ -28,11 +28,15 @@ export const PublicResumeViewerPage: React.FC<PublicResumeViewerProps> = ({ sess
           setStudentName(student.name || rollNo);
           if (student.resumes && student.resumes.length > 0) {
             const res = student.resumes[0];
-            // Root-relative API paths must be resolved against the API origin
-            // before being handed to <iframe src>, otherwise the browser fetches
-            // them from the portal origin and the PDF never renders.
-            const url = resolveMediaUrl(res.fileUrl || `/api/public/students/${rollNo}/resume`);
-            setResumeUrl(url);
+            // The public student API returns the raw Prisma row, which includes
+            // driveFileId. Build the direct media URL instead of relying on the
+            // redirect endpoint — the redirect adds an extra hop and would fall
+            // back to a mock URL when the file is missing.
+            if (res.driveFileId) {
+              setResumeUrl(resolveMediaUrl(`/api/public/media/resume/${res.driveFileId}`));
+            } else {
+              setResumeUrl(null);
+            }
           } else {
             setResumeUrl(null);
           }

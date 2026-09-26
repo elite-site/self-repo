@@ -109,8 +109,10 @@ router.get('/:rollNo/resume', async (req: Request, res: Response) => {
     }
     
     const resume = student.resumes[0];
-    const resumeUrl = resume.driveFileId ? `/api/public/media/resume/${resume.driveFileId}` : '/mock-resume.pdf';
-    res.redirect(resumeUrl);
+    if (!resume.driveFileId) {
+      return res.status(404).json({ error: 'NOT_FOUND', message: 'Resume file not available' });
+    }
+    res.redirect(`/api/public/media/resume/${resume.driveFileId}`);
   } catch (err: any) {
     res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
   }
