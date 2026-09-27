@@ -431,3 +431,6 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
     </div>
   );
 };
+
+export default PublicStudentProfilePage;
+

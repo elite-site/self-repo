@@ -318,6 +318,8 @@ export const StudentDirectoryPage: React.FC<StudentDirectoryProps> = ({ session,
                               <img
                                 src={photoUrl}
                                 alt={s.name}
+                                loading="lazy"
+                                decoding="async"
                                 style={getPhotoStyle(s.profile)}
                               />
                             ) : (
@@ -411,3 +413,6 @@ export const StudentDirectoryPage: React.FC<StudentDirectoryProps> = ({ session,
     </div>
   );
 };
+
+export default StudentDirectoryPage;
+

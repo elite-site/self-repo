@@ -510,3 +510,6 @@ export const EventDetailPage: React.FC = () => {
     </div>
   );
 };
+
+export default EventDetailPage;
+

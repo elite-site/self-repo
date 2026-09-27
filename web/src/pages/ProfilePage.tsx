@@ -52,34 +52,40 @@ export const ProfilePage: React.FC = () => {
   const fetchProfileData = async () => {
     setLoading(true);
     setError(null);
-    try {
-      const pData = await api.getProfile();
+
+    const [pResult, rResult, prResult, achResult, certResult] = await Promise.allSettled([
+      api.getProfile(),
+      api.getResume(),
+      api.getProjects(),
+      api.getAchievements(),
+      api.getCertificates(),
+    ]);
+
+    if (pResult.status === 'fulfilled') {
+      const pData = pResult.value;
       setProfile(pData);
       if (pData.changeRequests) setChangeRequests(pData.changeRequests);
-    } catch (err: any) {
+    } else {
       setError('Could not load profile details. Please retry.');
     }
 
-    try {
-      const rData = await api.getResume();
+    if (rResult.status === 'fulfilled') {
+      const rData = rResult.value;
       const activeResume = Array.isArray(rData) ? (rData.length > 0 ? rData[0] : null) : rData;
       setResume(activeResume);
-    } catch {}
+    }
 
-    try {
-      const prData = await api.getProjects();
-      if (Array.isArray(prData)) setProjects(prData);
-    } catch {}
+    if (prResult.status === 'fulfilled' && Array.isArray(prResult.value)) {
+      setProjects(prResult.value);
+    }
 
-    try {
-      const achData = await api.getAchievements();
-      if (Array.isArray(achData)) setAchievements(achData);
-    } catch {}
+    if (achResult.status === 'fulfilled' && Array.isArray(achResult.value)) {
+      setAchievements(achResult.value);
+    }
 
-    try {
-      const certData = await api.getCertificates();
-      if (Array.isArray(certData)) setCertificates(certData);
-    } catch {}
+    if (certResult.status === 'fulfilled' && Array.isArray(certResult.value)) {
+      setCertificates(certResult.value);
+    }
 
     setLoading(false);
   };
@@ -746,3 +752,5 @@ export const ProfilePage: React.FC = () => {
     </div>
   );
 };
+
+export default ProfilePage;

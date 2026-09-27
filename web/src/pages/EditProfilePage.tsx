@@ -598,3 +598,6 @@ export const EditProfilePage: React.FC = () => {
     </div>
   );
 };
+
+export default EditProfilePage;
+

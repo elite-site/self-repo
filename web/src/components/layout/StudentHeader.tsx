@@ -120,23 +120,34 @@ export const StudentHeader: React.FC<StudentHeaderProps> = ({ session, onLogout 
         <div className="flex items-center gap-3 sm:gap-4 shrink-0">
           <Link to="/dashboard" className="flex items-center gap-3 group">
             <div className="h-10 w-auto flex items-center gap-2">
-              <img
-                src="/elite-logo.png"
-                alt="ELITE"
-                className="h-9 w-auto object-contain transition-transform group-hover:scale-105"
-                onError={(e) => {
-                  // Fallback to text icon if image fails
-                  (e.target as HTMLElement).style.display = 'none';
-                }}
-              />
-              <img
-                src="/sasi-logo.png"
-                alt="SASI"
-                className="h-8 w-auto object-contain hidden sm:block opacity-90"
-                onError={(e) => {
-                  (e.target as HTMLElement).style.display = 'none';
-                }}
-              />
+              <picture className="flex items-center">
+                <source srcSet="/elite-logo.webp" type="image/webp" />
+                <img
+                  src="/elite-logo.png"
+                  alt="ELITE"
+                  width="36"
+                  height="36"
+                  decoding="async"
+                  className="h-9 w-auto object-contain transition-transform group-hover:scale-105"
+                  onError={(e) => {
+                    (e.target as HTMLElement).style.display = 'none';
+                  }}
+                />
+              </picture>
+              <picture className="hidden sm:flex items-center">
+                <source srcSet="/sasi-logo.webp" type="image/webp" />
+                <img
+                  src="/sasi-logo.png"
+                  alt="SASI"
+                  width="180"
+                  height="32"
+                  decoding="async"
+                  className="h-8 w-auto object-contain opacity-90"
+                  onError={(e) => {
+                    (e.target as HTMLElement).style.display = 'none';
+                  }}
+                />
+              </picture>
             </div>
             <div className="border-l border-[#E2E8F0] pl-3 text-left">
               <div className="flex items-center gap-1.5">

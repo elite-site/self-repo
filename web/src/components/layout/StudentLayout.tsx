@@ -38,3 +38,6 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({ session, onLogout,
   );
 };
 
+export default StudentLayout;
+
+

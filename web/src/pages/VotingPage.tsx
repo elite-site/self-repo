@@ -248,3 +248,6 @@ export const VotingPage: React.FC = () => {
     </div>
   );
 };
+
+export default VotingPage;
+

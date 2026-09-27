@@ -136,3 +136,6 @@ export const HomePage: React.FC<HomePageProps> = ({ session, onLogout }) => {
     </div>
   );
 };
+
+export default HomePage;
+

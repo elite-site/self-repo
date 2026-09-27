@@ -102,6 +102,8 @@ export const StudentShowcaseSection: React.FC = () => {
                           <img
                             src={resolveMediaUrl(student.profile.photoUrl)}
                             alt={student.name}
+                            loading="lazy"
+                            decoding="async"
                             style={getPhotoStyle(student.profile)}
                           />
                         ) : (

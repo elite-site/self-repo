@@ -282,3 +282,6 @@ export const NotificationsPage: React.FC = () => {
     </div>
   );
 };
+
+export default NotificationsPage;
+

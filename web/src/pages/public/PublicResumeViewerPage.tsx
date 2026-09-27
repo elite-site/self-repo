@@ -113,3 +113,6 @@ export const PublicResumeViewerPage: React.FC<PublicResumeViewerProps> = ({ sess
     </div>
   );
 };
+
+export default PublicResumeViewerPage;
+

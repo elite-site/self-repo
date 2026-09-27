@@ -102,3 +102,6 @@ export const AnnouncementDetailPage: React.FC = () => {
     </div>
   );
 };
+
+export default AnnouncementDetailPage;
+

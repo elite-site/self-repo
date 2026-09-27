@@ -305,3 +305,6 @@ export const ResumePage: React.FC = () => {
     </div>
   );
 };
+
+export default ResumePage;
+

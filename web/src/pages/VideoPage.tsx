@@ -956,3 +956,6 @@ export const VideoPage: React.FC = () => {
     </div>
   );
 };
+
+export default VideoPage;
+
