@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { api, resolveMediaUrl } from '../../services/api';
 import { StudentSession } from '../../types';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Search, Filter, Loader2, Users, ArrowRight, Sparkles, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Navbar } from '../../components/Navbar';
 import { Footer } from '../../components/Footer';
@@ -21,10 +21,13 @@ const STATUS_FILTERS = [
 ] as const;
 
 export const StudentDirectoryPage: React.FC<StudentDirectoryProps> = ({ session, onLogout }) => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialSearch = searchParams.get('search') || '';
+
   const [students, setStudents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [search, setSearch] = useState(initialSearch);
+  const [debouncedSearch, setDebouncedSearch] = useState(initialSearch);
   const [yearFilter, setYearFilter] = useState('ALL');
   const [sectionFilter, setSectionFilter] = useState('ALL');
   const [skillFilter, setSkillFilter] = useState('');
@@ -43,6 +46,16 @@ export const StudentDirectoryPage: React.FC<StudentDirectoryProps> = ({ session,
     }, 300);
     return () => clearTimeout(timer);
   }, [search]);
+
+  // Synchronize search state if the URL search query param changes
+  useEffect(() => {
+    const q = searchParams.get('search') || '';
+    if (q !== search) {
+      setSearch(q);
+      setDebouncedSearch(q);
+      setPage(1);
+    }
+  }, [searchParams]);
 
   // Load real skills from Skill table
   useEffect(() => {
@@ -102,6 +115,11 @@ export const StudentDirectoryPage: React.FC<StudentDirectoryProps> = ({ session,
     setSkillFilter('');
     setStatusFilter('ALL');
     setPage(1);
+    if (searchParams.get('search')) {
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete('search');
+      setSearchParams(nextParams, { replace: true });
+    }
   };
 
   const hasActiveFilters = search || yearFilter !== 'ALL' || sectionFilter !== 'ALL' || skillFilter || statusFilter !== 'ALL';
@@ -249,7 +267,15 @@ export const StudentDirectoryPage: React.FC<StudentDirectoryProps> = ({ session,
               />
               {search && (
                 <button
-                  onClick={() => setSearch('')}
+                  onClick={() => {
+                    setSearch('');
+                    setDebouncedSearch('');
+                    if (searchParams.get('search')) {
+                      const nextParams = new URLSearchParams(searchParams);
+                      nextParams.delete('search');
+                      setSearchParams(nextParams, { replace: true });
+                    }
+                  }}
                   className="absolute right-3.5 top-3 text-slate-400 hover:text-slate-600 cursor-pointer"
                 >
                   <X className="w-4 h-4" />

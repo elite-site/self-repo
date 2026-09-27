@@ -13,8 +13,7 @@ interface HomePageProps {
 }
 
 export const HomePage: React.FC<HomePageProps> = ({ session, onLogout }) => {
-  const [rollNo, setRollNo] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
 
   if (session) {
@@ -23,13 +22,12 @@ export const HomePage: React.FC<HomePageProps> = ({ session, onLogout }) => {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    const clean = rollNo.trim().toUpperCase();
+    const clean = searchQuery.trim();
     if (!clean) {
-      setError('Please enter a valid student roll number');
+      navigate('/students');
       return;
     }
-    setError(null);
-    navigate(`/students/${clean}`);
+    navigate(`/students?search=${encodeURIComponent(clean)}`);
   };
 
   const handleSignIn = () => {
@@ -82,16 +80,16 @@ export const HomePage: React.FC<HomePageProps> = ({ session, onLogout }) => {
             </div>
           </div>
 
-          {/* SECONDARY ACTION: VISIT STUDENT PROFILE */}
+          {/* SECONDARY ACTION: SEARCH STUDENT DIRECTORY */}
           <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6 sm:p-8 shadow-xs text-left space-y-4">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-xl bg-neutral-100 flex items-center justify-center text-[#0B192C]">
                 <UserCheck className="w-4 h-4" />
               </div>
               <div>
-                <h2 className="text-sm font-bold text-[#0B192C]">Visit Student Profile</h2>
+                <h2 className="text-sm font-bold text-[#0B192C]">Search Student Directory</h2>
                 <p className="text-xs text-neutral-500">
-                  Enter roll number to view verified portfolio, projects, and resume
+                  Search by name, roll number, or skill to view verified portfolios and projects
                 </p>
               </div>
             </div>
@@ -102,26 +100,19 @@ export const HomePage: React.FC<HomePageProps> = ({ session, onLogout }) => {
                   <Search className="w-4 h-4 absolute left-3.5 top-3 text-neutral-400" />
                   <input
                     type="text"
-                    value={rollNo}
-                    onChange={(e) => {
-                      setRollNo(e.target.value);
-                      if (error) setError(null);
-                    }}
-                    placeholder="Enter Roll Number (e.g. 23K61A1201)"
-                    className="w-full pl-10 pr-4 py-2.5 bg-neutral-50 border border-[#CBD5E1] rounded-xl text-xs font-mono uppercase text-[#0B192C] placeholder:normal-case placeholder:font-sans focus:outline-none focus:border-[#DC2626] focus:bg-white transition-colors"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search by name, roll number, or skill"
+                    className="w-full pl-10 pr-4 py-2.5 bg-neutral-50 border border-[#CBD5E1] rounded-xl text-xs text-[#0B192C] focus:outline-none focus:border-[#DC2626] focus:bg-white transition-colors"
                   />
                 </div>
                 <button
                   type="submit"
                   className="px-5 py-2.5 rounded-xl bg-[#0B192C] hover:bg-neutral-800 text-white text-xs font-bold transition-colors cursor-pointer shrink-0"
                 >
-                  View Profile
+                  Search
                 </button>
               </div>
-
-              {error && (
-                <p className="text-[11px] text-red-600 font-medium">{error}</p>
-              )}
             </form>
           </div>
         </div>
