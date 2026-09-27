@@ -152,10 +152,13 @@ router.get('/achievements', async (req: Request, res: Response) => {
     }
 
     res.json(achievements.map(a => {
-      const { proofDriveId: _p, ...rest } = a;
+      const { proofDriveId: _p, thumbnail: _t, ...rest } = a;
       const viewUrl = a.proofDriveId
         ? `/api/public/media/achievement/${a.id}`
         : (a.proofUrl || null);
+      const thumbnailUrl = a.proofDriveId
+        ? `/api/public/media/thumbnail/achievement/${a.id}?v=${encodeURIComponent(a.proofDriveId)}`
+        : null;
       return {
         ...rest,
         date: a.achievedAt,
@@ -163,6 +166,7 @@ router.get('/achievements', async (req: Request, res: Response) => {
         hasProof: Boolean(a.proofDriveId || a.proofUrl),
         viewUrl,
         proofUrl: viewUrl,
+        thumbnailUrl,
       };
     }));
   } catch (err: any) {
@@ -226,6 +230,15 @@ router.post('/achievements', handleProofUpload, async (req: Request, res: Respon
       finalProofUrl = `/api/public/media/achievement/${finalProofDriveId}`;
     }
 
+    let thumbnailBuffer: Buffer | null = null;
+    if (finalProofDriveId && typeof driveService.generateThumbnail === 'function') {
+      try {
+        thumbnailBuffer = await driveService.generateThumbnail(finalProofDriveId, 'achievement');
+      } catch (thumbErr) {
+        console.warn('Could not generate thumbnail for achievement at upload:', thumbErr);
+      }
+    }
+
     const achievement = await prisma.achievement.create({
       data: {
         studentId,
@@ -236,15 +249,19 @@ router.post('/achievements', handleProofUpload, async (req: Request, res: Respon
         categoryId: categoryId || null,
         proofDriveId: finalProofDriveId,
         proofUrl: finalProofUrl,
+        thumbnail: thumbnailBuffer,
         status: 'APPROVED',
         isPublic: true
       }
     });
 
-    const { proofDriveId: _p, ...rest } = achievement;
+    const { proofDriveId: _p, thumbnail: _t, ...rest } = achievement;
     const viewUrl = achievement.proofDriveId
       ? `/api/public/media/achievement/${achievement.id}`
       : (achievement.proofUrl || null);
+    const thumbnailUrl = achievement.proofDriveId
+      ? `/api/public/media/thumbnail/achievement/${achievement.id}?v=${encodeURIComponent(achievement.proofDriveId)}`
+      : null;
 
     res.status(201).json({
       ...rest,
@@ -253,6 +270,7 @@ router.post('/achievements', handleProofUpload, async (req: Request, res: Respon
       hasProof: Boolean(achievement.proofDriveId || achievement.proofUrl),
       viewUrl,
       proofUrl: viewUrl,
+      thumbnailUrl,
     });
   } catch (err: any) {
     res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
@@ -313,6 +331,15 @@ router.put('/achievements/:id', handleProofUpload, async (req: Request, res: Res
     }
 
     const updateData: any = {};
+    if (finalProofDriveId && (req as any).file && typeof driveService.generateThumbnail === 'function') {
+      try {
+        const thumb = await driveService.generateThumbnail(finalProofDriveId, 'achievement');
+        if (thumb) updateData.thumbnail = thumb;
+      } catch (thumbErr) {
+        console.warn('Could not generate thumbnail for achievement edit:', thumbErr);
+      }
+    }
+
     if (title !== undefined) updateData.title = title.trim();
     if (description !== undefined) updateData.description = description ? description.trim() : null;
     if (date || achievedAt) updateData.achievedAt = new Date(date || achievedAt);
@@ -371,14 +398,18 @@ router.get('/certificates', async (req: Request, res: Response) => {
     }
 
     res.json(certificates.map(c => {
-      const { fileDriveId: _f, ...rest } = c;
+      const { fileDriveId: _f, thumbnail: _t, ...rest } = c;
       const viewUrl = c.fileDriveId ? `/api/public/media/certificate/${c.id}` : null;
+      const thumbnailUrl = c.fileDriveId
+        ? `/api/public/media/thumbnail/certificate/${c.id}?v=${encodeURIComponent(c.fileDriveId)}`
+        : null;
       return {
         ...rest,
         issueDate: c.issuedAt,
         hasFile: Boolean(c.fileDriveId),
         viewUrl,
         fileUrl: viewUrl,
+        thumbnailUrl,
       };
     }));
   } catch (err: any) {
@@ -423,6 +454,15 @@ router.post('/certificates', certificateUpload, async (req: Request, res: Respon
       driveFileId = 'drive_cert_' + Date.now();
     }
 
+    let thumbnailBuffer: Buffer | null = null;
+    if (driveFileId && typeof driveService.generateThumbnail === 'function') {
+      try {
+        thumbnailBuffer = await driveService.generateThumbnail(driveFileId, 'certificate');
+      } catch (thumbErr) {
+        console.warn('Could not generate thumbnail for certificate at upload:', thumbErr);
+      }
+    }
+
     const certificate = await prisma.certificate.create({
       data: {
         studentId,
@@ -430,13 +470,17 @@ router.post('/certificates', certificateUpload, async (req: Request, res: Respon
         issuer: req.body.issuer || '',
         issuedAt: req.body.issueDate || req.body.issuedAt ? new Date(req.body.issueDate || req.body.issuedAt) : new Date(),
         fileDriveId: driveFileId,
+        thumbnail: thumbnailBuffer,
         status: 'APPROVED',
         isPublic: true
       }
     });
 
-    const { fileDriveId: _f, ...rest } = certificate;
+    const { fileDriveId: _f, thumbnail: _t, ...rest } = certificate;
     const viewUrl = `/api/public/media/certificate/${certificate.id}`;
+    const thumbnailUrl = certificate.fileDriveId
+      ? `/api/public/media/thumbnail/certificate/${certificate.id}?v=${encodeURIComponent(certificate.fileDriveId)}`
+      : null;
 
     res.status(201).json({
       ...rest,
@@ -444,6 +488,7 @@ router.post('/certificates', certificateUpload, async (req: Request, res: Respon
       hasFile: true,
       viewUrl,
       fileUrl: viewUrl,
+      thumbnailUrl,
     });
   } catch (err: any) {
     res.status(500).json({ error: 'SERVER_ERROR', message: err.message });

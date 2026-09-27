@@ -77,30 +77,46 @@ router.get('/students/:id', async (req: Request, res: Response) => {
       orderBy: { submittedAt: 'desc' },
     });
 
-    const introVideos = (student.introVideos || []).map((v) => ({
-      ...v,
-      streamUrl: `/api/public/videos/stream/${v.id}`,
-      watchUrl: typeof driveService.getWatchUrl === 'function' ? driveService.getWatchUrl(v.driveFileId) : null,
-      previewUrl: typeof driveService.getPreviewUrl === 'function' ? driveService.getPreviewUrl(v.driveFileId) : null,
-    }));
-    const resumes = (student.resumes || []).map((r) => ({
-      ...r,
-      fileUrl: r.driveFileId ? `/api/public/media/resume/${r.driveFileId}` : null,
-      previewUrl: typeof driveService.getPreviewUrl === 'function' ? driveService.getPreviewUrl(r.driveFileId) : null,
-      watchUrl: typeof driveService.getWatchUrl === 'function' ? driveService.getWatchUrl(r.driveFileId) : null,
-    }));
-    const achievements = (student.achievements || []).map((a) => ({
-      ...a,
-      proofUrl: a.proofUrl || (a.proofDriveId ? `/api/public/media/achievement/${a.proofDriveId}` : null),
-      watchUrl: typeof driveService.getWatchUrl === 'function' ? driveService.getWatchUrl(a.proofDriveId) : null,
-      previewUrl: typeof driveService.getPreviewUrl === 'function' ? driveService.getPreviewUrl(a.proofDriveId) : null,
-    }));
-    const certificates = (student.certificates || []).map((c) => ({
-      ...c,
-      fileUrl: c.fileDriveId ? `/api/public/media/certificate/${c.fileDriveId}` : null,
-      previewUrl: typeof driveService.getPreviewUrl === 'function' ? driveService.getPreviewUrl(c.fileDriveId) : null,
-      watchUrl: typeof driveService.getWatchUrl === 'function' ? driveService.getWatchUrl(c.fileDriveId) : null,
-    }));
+    const introVideos = (student.introVideos || []).map((v) => {
+      const { thumbnail: _t, ...rest } = v;
+      return {
+        ...rest,
+        streamUrl: `/api/public/videos/stream/${v.id}`,
+        thumbnailUrl: v.driveFileId ? `/api/public/media/thumbnail/video/${v.id}?v=${encodeURIComponent(v.driveFileId)}` : null,
+        watchUrl: typeof driveService.getWatchUrl === 'function' ? driveService.getWatchUrl(v.driveFileId) : null,
+        previewUrl: typeof driveService.getPreviewUrl === 'function' ? driveService.getPreviewUrl(v.driveFileId) : null,
+      };
+    });
+    const resumes = (student.resumes || []).map((r) => {
+      const { thumbnail: _t, ...rest } = r;
+      return {
+        ...rest,
+        fileUrl: r.driveFileId ? `/api/public/media/resume/${r.id}` : null,
+        thumbnailUrl: r.driveFileId ? `/api/public/media/thumbnail/resume/${r.id}?v=${encodeURIComponent(r.driveFileId)}` : null,
+        previewUrl: typeof driveService.getPreviewUrl === 'function' ? driveService.getPreviewUrl(r.driveFileId) : null,
+        watchUrl: typeof driveService.getWatchUrl === 'function' ? driveService.getWatchUrl(r.driveFileId) : null,
+      };
+    });
+    const achievements = (student.achievements || []).map((a) => {
+      const { thumbnail: _t, ...rest } = a;
+      return {
+        ...rest,
+        proofUrl: a.proofUrl || (a.proofDriveId ? `/api/public/media/achievement/${a.id}` : null),
+        thumbnailUrl: a.proofDriveId ? `/api/public/media/thumbnail/achievement/${a.id}?v=${encodeURIComponent(a.proofDriveId)}` : null,
+        watchUrl: typeof driveService.getWatchUrl === 'function' ? driveService.getWatchUrl(a.proofDriveId) : null,
+        previewUrl: typeof driveService.getPreviewUrl === 'function' ? driveService.getPreviewUrl(a.proofDriveId) : null,
+      };
+    });
+    const certificates = (student.certificates || []).map((c) => {
+      const { thumbnail: _t, ...rest } = c;
+      return {
+        ...rest,
+        fileUrl: c.fileDriveId ? `/api/public/media/certificate/${c.id}` : null,
+        thumbnailUrl: c.fileDriveId ? `/api/public/media/thumbnail/certificate/${c.id}?v=${encodeURIComponent(c.fileDriveId)}` : null,
+        previewUrl: typeof driveService.getPreviewUrl === 'function' ? driveService.getPreviewUrl(c.fileDriveId) : null,
+        watchUrl: typeof driveService.getWatchUrl === 'function' ? driveService.getWatchUrl(c.fileDriveId) : null,
+      };
+    });
 
     res.json({
       ...student,
@@ -397,7 +413,14 @@ router.get('/moderation', async (req: Request, res: Response) => {
       include: { student: true },
       orderBy: { submittedAt: 'desc' },
     });
-    res.json({ videos, resumes: [], achievements: [], certificates: [] });
+    const mappedVideos = videos.map((v) => {
+      const { thumbnail: _t, ...rest } = v;
+      return {
+        ...rest,
+        thumbnailUrl: v.driveFileId ? `/api/public/media/thumbnail/video/${v.id}?v=${encodeURIComponent(v.driveFileId)}` : null,
+      };
+    });
+    res.json({ videos: mappedVideos, resumes: [], achievements: [], certificates: [] });
   } catch (err: any) {
     res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
   }

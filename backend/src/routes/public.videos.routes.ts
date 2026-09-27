@@ -24,6 +24,7 @@ const PUBLIC_VIDEO_WHERE = {
 /** Serialise a video record into the shape the public showcase consumes. */
 function serializePublicVideo(video: {
   id: string;
+  driveFileId?: string | null;
   submittedAt: Date;
   publishedAt: Date | null;
   sizeMb: number | null;
@@ -41,6 +42,9 @@ function serializePublicVideo(video: {
     sizeMb: video.sizeMb,
     // Streamed through the backend so the Drive file ID is never exposed.
     streamUrl: `/api/public/videos/stream/${encodeURIComponent(video.id)}`,
+    thumbnailUrl: video.driveFileId
+      ? `/api/public/media/thumbnail/video/${encodeURIComponent(video.id)}?v=${encodeURIComponent(video.driveFileId)}`
+      : null,
     profileUrl: `/students/${encodeURIComponent(video.student.rollNo)}`,
   };
 }
@@ -53,7 +57,15 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
 
     const videos = await prisma.introVideo.findMany({
       where: { ...PUBLIC_VIDEO_WHERE, driveFileId: { not: null } },
-      include: { student: { select: { name: true, rollNo: true, year: true, section: true } } },
+      select: {
+        id: true,
+        driveFileId: true,
+        submittedAt: true,
+        publishedAt: true,
+        sizeMb: true,
+        studentId: true,
+        student: { select: { name: true, rollNo: true, year: true, section: true } },
+      },
       orderBy: [{ publishedAt: 'desc' }, { submittedAt: 'desc' }],
       take: limit,
     });

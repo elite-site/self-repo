@@ -223,8 +223,9 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
               <div className="bg-black rounded-2xl overflow-hidden aspect-video max-w-3xl">
                 <video
                   src={resolveMediaUrl(introVideo.streamUrl)}
+                  poster={introVideo.thumbnailUrl ? resolveMediaUrl(introVideo.thumbnailUrl) : undefined}
                   controls
-                  preload="metadata"
+                  preload="none"
                   playsInline
                   className="w-full h-full object-contain"
                 />
@@ -299,11 +300,22 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
                   {certificates.map((c: any) => (
                     <div
                       key={c.id}
-                      className="p-3 bg-neutral-50 rounded-xl border border-neutral-200/70 flex items-center justify-between text-xs"
+                      className="p-3 bg-neutral-50 rounded-xl border border-neutral-200/70 flex items-center justify-between text-xs gap-3"
                     >
-                      <div className="space-y-0.5">
-                        <div className="font-bold text-neutral-800">{c.title}</div>
-                        <div className="text-[11px] text-neutral-500">{c.issuer}</div>
+                      {c.thumbnailUrl && (
+                        <div className="w-14 h-10 rounded-lg bg-neutral-200 overflow-hidden shrink-0 border border-neutral-200/60">
+                          <img
+                            src={resolveMediaUrl(c.thumbnailUrl)}
+                            alt={c.title}
+                            loading="lazy"
+                            decoding="async"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      )}
+                      <div className="space-y-0.5 min-w-0 flex-1">
+                        <div className="font-bold text-neutral-800 truncate">{c.title}</div>
+                        <div className="text-[11px] text-neutral-500 truncate">{c.issuer}</div>
                       </div>
                       {(c.viewUrl || c.fileUrl) && (
                         <a
@@ -393,7 +405,18 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
                       key={a.id}
                       className="p-4 rounded-xl border border-neutral-200 bg-neutral-50/60 flex items-start justify-between gap-4"
                     >
-                      <div className="space-y-1 text-xs">
+                      {a.thumbnailUrl && (
+                        <div className="w-16 h-12 rounded-lg bg-neutral-200 overflow-hidden shrink-0 border border-neutral-200/60 mt-0.5">
+                          <img
+                            src={resolveMediaUrl(a.thumbnailUrl)}
+                            alt={a.title}
+                            loading="lazy"
+                            decoding="async"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      )}
+                      <div className="space-y-1 text-xs min-w-0 flex-1">
                         <div className="font-bold text-[#0B192C] text-sm">{a.title}</div>
                         <p className="text-neutral-600">{a.description}</p>
                         <div className="text-[11px] text-neutral-400 font-mono pt-1">

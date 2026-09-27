@@ -1175,15 +1175,19 @@ router.get('/moderation/videos', async (req, res) => {
       include: { student: true },
       orderBy: { submittedAt: 'desc' },
     });
-    res.json(videos.map(v => ({
-      ...v,
-      studentName: v.student?.name || 'Unknown',
-      studentRoll: v.student?.rollNo || 'Unknown',
-      title: `${v.student?.name} (${v.student?.rollNo})`,
-      fileUrl: v.driveFileId ? `/api/public/media/video/${v.driveFileId}` : null,
-      isPublic: Boolean(v.isPublic),
-      publicUrl: v.isPublic && v.status === 'APPROVED' ? `/api/public/videos/stream/${v.id}` : null,
-    })));
+    res.json(videos.map(v => {
+      const { thumbnail: _t, ...rest } = v;
+      return {
+        ...rest,
+        studentName: v.student?.name || 'Unknown',
+        studentRoll: v.student?.rollNo || 'Unknown',
+        title: `${v.student?.name} (${v.student?.rollNo})`,
+        fileUrl: v.driveFileId ? `/api/public/media/video/${v.driveFileId}` : null,
+        thumbnailUrl: v.driveFileId ? `/api/public/media/thumbnail/video/${v.id}?v=${encodeURIComponent(v.driveFileId)}` : null,
+        isPublic: Boolean(v.isPublic),
+        publicUrl: v.isPublic && v.status === 'APPROVED' ? `/api/public/videos/stream/${v.id}` : null,
+      };
+    }));
   } catch (err: any) {
     return httpError(res, 500, err, "SERVER_ERROR");
   }
@@ -1195,13 +1199,17 @@ router.get('/moderation/resumes', async (req, res) => {
       where: { status: { in: ['PENDING', 'UNDER_REVIEW'] } },
       include: { student: true }
     });
-    res.json(resumes.map(r => ({
-      ...r,
-      studentName: r.student?.name || 'Unknown',
-      studentRoll: r.student?.rollNo || 'Unknown',
-      title: `${r.student?.name} (${r.student?.rollNo})`,
-      fileUrl: r.driveFileId ? `/api/public/media/resume/${r.driveFileId}` : null,
-    })));
+    res.json(resumes.map(r => {
+      const { thumbnail: _t, ...rest } = r;
+      return {
+        ...rest,
+        studentName: r.student?.name || 'Unknown',
+        studentRoll: r.student?.rollNo || 'Unknown',
+        title: `${r.student?.name} (${r.student?.rollNo})`,
+        fileUrl: r.driveFileId ? `/api/public/media/resume/${r.id}` : null,
+        thumbnailUrl: r.driveFileId ? `/api/public/media/thumbnail/resume/${r.id}?v=${encodeURIComponent(r.driveFileId)}` : null,
+      };
+    }));
   } catch (err: any) {
     return httpError(res, 500, err, "SERVER_ERROR");
   }
@@ -1215,9 +1223,11 @@ router.get('/moderation/achievements', async (req, res) => {
       orderBy: { createdAt: 'desc' }
     });
     res.json(achievements.map(a => {
-      const proofUrl = a.proofUrl || (a.proofDriveId ? `/api/public/media/achievement/${a.proofDriveId}` : null);
+      const { thumbnail: _t, ...rest } = a;
+      const proofUrl = a.proofUrl || (a.proofDriveId ? `/api/public/media/achievement/${a.id}` : null);
+      const thumbnailUrl = a.proofDriveId ? `/api/public/media/thumbnail/achievement/${a.id}?v=${encodeURIComponent(a.proofDriveId)}` : null;
       return {
-        ...a,
+        ...rest,
         studentName: a.student?.name || 'Unknown',
         studentRoll: a.student?.rollNo || 'Unknown',
         submittedAt: a.createdAt,
@@ -1227,6 +1237,7 @@ router.get('/moderation/achievements', async (req, res) => {
         category: a.category?.name,
         proofUrl,
         fileUrl: proofUrl,
+        thumbnailUrl,
       };
     }));
   } catch (err: any) {
@@ -1241,13 +1252,17 @@ router.get('/moderation/certificates', async (req, res) => {
       include: { student: true },
       orderBy: { createdAt: 'desc' }
     });
-    res.json(certificates.map(c => ({
-      ...c,
-      studentName: c.student?.name || 'Unknown',
-      studentRoll: c.student?.rollNo || 'Unknown',
-      submittedAt: c.createdAt,
-      fileUrl: c.fileDriveId ? `/api/public/media/certificate/${c.fileDriveId}` : null
-    })));
+    res.json(certificates.map(c => {
+      const { thumbnail: _t, ...rest } = c;
+      return {
+        ...rest,
+        studentName: c.student?.name || 'Unknown',
+        studentRoll: c.student?.rollNo || 'Unknown',
+        submittedAt: c.createdAt,
+        fileUrl: c.fileDriveId ? `/api/public/media/certificate/${c.id}` : null,
+        thumbnailUrl: c.fileDriveId ? `/api/public/media/thumbnail/certificate/${c.id}?v=${encodeURIComponent(c.fileDriveId)}` : null,
+      };
+    }));
   } catch (err: any) {
     return httpError(res, 500, err, "SERVER_ERROR");
   }

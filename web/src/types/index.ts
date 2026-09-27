@@ -28,6 +28,7 @@ export interface StudentIntroVideo {
   mimeType: string | null;
   sizeMb: number | null;
   hasFile: boolean;
+  thumbnailUrl?: string | null;
 }
 
 /** An approved + published video as exposed on the public showcase. */
@@ -41,6 +42,7 @@ export interface PublicIntroVideo {
   publishedAt: string | null;
   sizeMb: number | null;
   streamUrl: string;
+  thumbnailUrl?: string | null;
   profileUrl: string;
 }
 
@@ -93,6 +95,7 @@ export interface Achievement {
   viewUrl?: string;
   watchUrl?: string;
   previewUrl?: string;
+  thumbnailUrl?: string | null;
   status: 'DRAFT' | 'PENDING' | 'APPROVED' | 'REJECTED' | 'CHANGES_REQUESTED';
   reviewNote?: string | null;
 }

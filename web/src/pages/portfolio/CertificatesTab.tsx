@@ -161,7 +161,7 @@ export const CertificatesTab: React.FC = () => {
               <div className="space-y-3">
                 <div className="w-full aspect-[4/3] bg-neutral-100 rounded-xl overflow-hidden flex items-center justify-center border border-neutral-200/60 relative">
                   {c.thumbnailUrl ? (
-                    <img src={c.thumbnailUrl} alt={c.title} loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                    <img src={resolveMediaUrl(c.thumbnailUrl)} alt={c.title} loading="lazy" decoding="async" className="w-full h-full object-cover" />
                   ) : (
                     <FileText className="w-10 h-10 text-neutral-400" />
                   )}

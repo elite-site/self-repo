@@ -264,9 +264,21 @@ export const ResumePage: React.FC = () => {
         <div className="space-y-4">
           <div className="bg-white border border-[#E2E8F0] rounded-2xl p-4 flex items-center justify-between shadow-xs">
             <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-blue-50 text-blue-600">
-                <FileText className="w-5 h-5" />
-              </div>
+              {resumeData.thumbnailUrl ? (
+                <div className="w-10 h-14 rounded-lg bg-neutral-100 overflow-hidden shrink-0 border border-neutral-200 shadow-2xs">
+                  <img
+                    src={resolveMediaUrl(resumeData.thumbnailUrl)}
+                    alt="Resume thumbnail"
+                    loading="lazy"
+                    decoding="async"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              ) : (
+                <div className="p-2.5 rounded-xl bg-blue-50 text-blue-600">
+                  <FileText className="w-5 h-5" />
+                </div>
+              )}
               <div>
                 <h4 className="font-bold text-xs text-[#0B192C]">{resumeData.filename || 'resume.pdf'}</h4>
                 <span className="text-[11px] text-neutral-400 font-mono">

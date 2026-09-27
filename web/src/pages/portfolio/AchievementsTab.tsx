@@ -149,8 +149,20 @@ export const AchievementsTab: React.FC = () => {
               key={a.id}
               className="p-5 border border-[#E2E8F0] rounded-2xl bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-neutral-300 transition-all text-left"
             >
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
+              <div className="flex items-start sm:items-center gap-4 flex-1 min-w-0">
+                {a.thumbnailUrl && (
+                  <div className="w-16 h-12 rounded-xl bg-neutral-100 overflow-hidden shrink-0 border border-neutral-200">
+                    <img
+                      src={resolveMediaUrl(a.thumbnailUrl)}
+                      alt={a.title}
+                      loading="lazy"
+                      decoding="async"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                )}
+                <div className="space-y-1 flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
                   <h3 className="font-bold text-sm text-[#0B192C]">{a.title}</h3>
                   <span
                     className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
@@ -194,6 +206,7 @@ export const AchievementsTab: React.FC = () => {
                   )}
                 </div>
               </div>
+            </div>
 
               <div className="flex items-center gap-1 self-end sm:self-center">
                 <button

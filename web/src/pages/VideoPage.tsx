@@ -765,6 +765,7 @@ export const VideoPage: React.FC = () => {
                   ref={videoRef}
                   key={playbackUrl}
                   src={playbackUrl}
+                  poster={video?.thumbnailUrl ? resolveMediaUrl(video.thumbnailUrl) : undefined}
                   controls
                   playsInline
                   preload="metadata"

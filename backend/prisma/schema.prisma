@@ -441,6 +441,7 @@ model Achievement {
   achievedAt   DateTime?
   proofDriveId String? // proof file uploaded to Drive
   proofUrl     String? // verification proof URL or external credential link
+  thumbnail    Bytes?  // compressed WebP thumbnail preview
 
   status     ContentStatus @default(PENDING)
   reviewNote String?
@@ -466,6 +467,7 @@ model Certificate {
   issuer      String?
   issuedAt    DateTime?
   fileDriveId String? // certificate file on Drive
+  thumbnail   Bytes?  // compressed WebP thumbnail preview
 
   status     ContentStatus @default(PENDING)
   reviewNote String?
@@ -490,6 +492,7 @@ model IntroVideo {
   mimeType    String?
   sizeMb      Float?
   filename    String?
+  thumbnail   Bytes?  // compressed WebP thumbnail preview
 
   status     ContentStatus @default(PENDING)
   reviewNote String?
@@ -521,6 +524,7 @@ model Resume {
   driveFileId String?
   filename    String?
   sizeMb      Float?
+  thumbnail   Bytes?  // compressed WebP thumbnail preview
 
   status     ContentStatus @default(PENDING)
   reviewNote String?

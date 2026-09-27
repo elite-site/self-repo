@@ -70,6 +70,9 @@ function serializeStudentView(student: {
           mimeType: introVideo.mimeType || null,
           sizeMb: introVideo.sizeMb ?? null,
           hasFile: Boolean(introVideo.driveFileId),
+          thumbnailUrl: introVideo.driveFileId
+            ? `/api/public/media/thumbnail/video/${introVideo.id}?v=${encodeURIComponent(introVideo.driveFileId)}`
+            : null,
         }
       : null,
   };
@@ -425,6 +428,15 @@ router.post(
       const sizeMb = parseFloat((videoFile.size / (1024 * 1024)).toFixed(2));
       let keptIntroVideoId: string | null = null;
       try {
+        let thumbnailBuffer: Buffer | null = null;
+        if (uploadResult.videoDriveId && typeof driveService.generateThumbnail === 'function') {
+          try {
+            thumbnailBuffer = await driveService.generateThumbnail(uploadResult.videoDriveId, 'video');
+          } catch (thumbErr) {
+            console.warn('Could not generate thumbnail for intro video at upload:', thumbErr);
+          }
+        }
+
         const existingIntroVideo = await prisma.introVideo.findFirst({
           where: { studentId: student.id },
           orderBy: { submittedAt: 'desc' },
@@ -438,6 +450,7 @@ router.post(
               filename: videoFile.originalname,
               mimeType: videoFile.mimetype,
               sizeMb,
+              thumbnail: thumbnailBuffer,
               status: 'PENDING',
               reviewNote: null,
               reviewedBy: null,
@@ -460,6 +473,7 @@ router.post(
               filename: videoFile.originalname,
               mimeType: videoFile.mimetype,
               sizeMb,
+              thumbnail: thumbnailBuffer,
               status: 'PENDING',
               submittedAt: new Date(),
               isActive: true,
@@ -994,13 +1008,17 @@ router.get('/resume', requireStudentAuth, async (req, res) => {
     }
 
     res.json(resumes.map(r => {
-      const { driveFileId: _d, ...rest } = r;
+      const { driveFileId: _d, thumbnail: _t, ...rest } = r;
       const viewUrl = r.driveFileId ? `/api/public/media/resume/${r.id}` : null;
+      const thumbnailUrl = r.driveFileId
+        ? `/api/public/media/thumbnail/resume/${r.id}?v=${encodeURIComponent(r.driveFileId)}`
+        : null;
       return {
         ...rest,
         hasFile: Boolean(r.driveFileId),
         viewUrl,
         fileUrl: viewUrl,
+        thumbnailUrl,
       };
     }));
   } catch (err: any) {
@@ -1062,6 +1080,15 @@ router.post('/resume', requireStudentAuth, resumeUpload, async (req: Request, re
 
     const sizeMb = parseFloat((resumeFile.size / (1024 * 1024)).toFixed(2));
 
+    let thumbnailBuffer: Buffer | null = null;
+    if (driveFileId && typeof driveService.generateThumbnail === 'function') {
+      try {
+        thumbnailBuffer = await driveService.generateThumbnail(driveFileId, 'resume');
+      } catch (thumbErr) {
+        console.warn('Could not generate thumbnail for resume at upload:', thumbErr);
+      }
+    }
+
     const resume = existingResume
       ? await prisma.resume.update({
           where: { id: existingResume.id },
@@ -1069,6 +1096,7 @@ router.post('/resume', requireStudentAuth, resumeUpload, async (req: Request, re
             driveFileId,
             filename: resumeFile.originalname,
             sizeMb,
+            thumbnail: thumbnailBuffer,
             status: 'APPROVED',
             isPublic: true,
             reviewNote: null,
@@ -1083,20 +1111,25 @@ router.post('/resume', requireStudentAuth, resumeUpload, async (req: Request, re
             driveFileId,
             filename: resumeFile.originalname,
             sizeMb,
+            thumbnail: thumbnailBuffer,
             status: 'APPROVED',
             isPublic: true,
             submittedAt: new Date(),
           },
         });
 
-    const { driveFileId: _d, ...rest } = resume;
+    const { driveFileId: _d, thumbnail: _t, ...rest } = resume;
     const viewUrl = `/api/public/media/resume/${resume.id}`;
+    const thumbnailUrl = driveFileId
+      ? `/api/public/media/thumbnail/resume/${resume.id}?v=${encodeURIComponent(driveFileId)}`
+      : null;
 
     res.status(201).json({
       ...rest,
       hasFile: true,
       viewUrl,
       fileUrl: viewUrl,
+      thumbnailUrl,
     });
   } catch (err: any) {
     console.error('Error uploading resume:', err);

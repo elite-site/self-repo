@@ -134,7 +134,7 @@ router.get('/:rollNo', async (req: Request, res: Response) => {
           where: { status: 'APPROVED', isPublic: true, driveFileId: { not: null } },
           take: 1,
           orderBy: { publishedAt: 'desc' },
-          select: { id: true, submittedAt: true, publishedAt: true, sizeMb: true },
+          select: { id: true, submittedAt: true, publishedAt: true, sizeMb: true, driveFileId: true },
         }
       }
     });
@@ -159,35 +159,56 @@ router.get('/:rollNo', async (req: Request, res: Response) => {
       profile: maskedProfile,
       introVideos: undefined,
       introVideo: introVideo
-        ? { ...introVideo, streamUrl: `/api/public/videos/stream/${introVideo.id}` }
+        ? {
+            id: introVideo.id,
+            submittedAt: introVideo.submittedAt,
+            publishedAt: introVideo.publishedAt,
+            sizeMb: introVideo.sizeMb,
+            streamUrl: `/api/public/videos/stream/${introVideo.id}`,
+            thumbnailUrl: introVideo.driveFileId
+              ? `/api/public/media/thumbnail/video/${introVideo.id}?v=${encodeURIComponent(introVideo.driveFileId)}`
+              : null,
+          }
         : null,
       achievements: student.achievements.map((a: any) => {
-        const { proofDriveId: _p, ...rest } = a;
+        const { proofDriveId: _p, thumbnail: _t, ...rest } = a;
         const viewUrl = a.proofDriveId
           ? `/api/public/media/achievement/${a.id}`
           : (a.proofUrl || null);
+        const thumbnailUrl = a.proofDriveId
+          ? `/api/public/media/thumbnail/achievement/${a.id}?v=${encodeURIComponent(a.proofDriveId)}`
+          : null;
         return {
           ...rest,
           viewUrl,
           proofUrl: viewUrl,
+          thumbnailUrl,
         };
       }),
       certificates: student.certificates.map((c: any) => {
-        const { fileDriveId: _f, ...rest } = c;
+        const { fileDriveId: _f, thumbnail: _t, ...rest } = c;
         const viewUrl = c.fileDriveId ? `/api/public/media/certificate/${c.id}` : null;
+        const thumbnailUrl = c.fileDriveId
+          ? `/api/public/media/thumbnail/certificate/${c.id}?v=${encodeURIComponent(c.fileDriveId)}`
+          : null;
         return {
           ...rest,
           viewUrl,
           fileUrl: viewUrl,
+          thumbnailUrl,
         };
       }),
       resumes: student.resumes.map((r: any) => {
-        const { driveFileId: _d, ...rest } = r;
+        const { driveFileId: _d, thumbnail: _t, ...rest } = r;
         const viewUrl = r.driveFileId ? `/api/public/media/resume/${r.id}` : null;
+        const thumbnailUrl = r.driveFileId
+          ? `/api/public/media/thumbnail/resume/${r.id}?v=${encodeURIComponent(r.driveFileId)}`
+          : null;
         return {
           ...rest,
           viewUrl,
           fileUrl: viewUrl,
+          thumbnailUrl,
         };
       }),
     };

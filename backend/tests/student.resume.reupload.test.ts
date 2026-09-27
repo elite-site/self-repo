@@ -46,6 +46,7 @@ vi.mock('../src/services/drive.service', () => ({
     deleteFileById: vi.fn(),
     cleanupFailedUpload: vi.fn(),
     streamDriveFile: vi.fn(),
+    generateThumbnail: vi.fn().mockResolvedValue(Buffer.from('fake-webp')),
     getWatchUrl: vi.fn().mockImplementation((id: string) => id ? `https://drive.google.com/file/d/${id}/view` : null),
     getPreviewUrl: vi.fn().mockImplementation((id: string) => id ? `https://drive.google.com/file/d/${id}/preview` : null),
   },

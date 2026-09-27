@@ -115,6 +115,7 @@ export const PublicVideoShowcase: React.FC<PublicVideoShowcaseProps> = ({
                     playerRefs.current[video.id] = el;
                   }}
                   src={resolveMediaUrl(video.streamUrl)}
+                  poster={video.thumbnailUrl ? resolveMediaUrl(video.thumbnailUrl) : undefined}
                   controls
                   preload="none"
                   playsInline
