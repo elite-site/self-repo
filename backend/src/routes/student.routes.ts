@@ -6,7 +6,7 @@ import path from 'path';
 import { env } from '../config/env';
 import { prisma } from '../lib/prisma';
 import { requireStudentAuth, STUDENT_SESSION_COOKIE_NAME } from '../middleware/studentAuth';
-import { studentLoginRateLimiter } from '../middleware/rateLimiter';
+import { studentLoginRateLimiter, submissionRateLimiter } from '../middleware/rateLimiter';
 import { submissionUploadMiddleware, resumeUpload } from '../middleware/upload';
 import { ValidationService } from '../services/validation.service';
 import { driveService } from '../services/drive.service';
@@ -257,29 +257,30 @@ router.post('/logout', (_req: Request, res: Response): void => {
 // GET /api/student/me — current student profile + submission status + admin review
 router.get('/me', requireStudentAuth, async (req: Request, res: Response): Promise<void> => {
   try {
-    const student = await prisma.student.findUnique({
-      where: { id: req.student!.studentId },
+    const studentId = req.student!.studentId;
+    const rollNo = req.student?.rollNo;
+
+    // Parallelize queries across database connections to minimize latency under concurrency
+    const studentPromise = prisma.student.findUnique({
+      where: { id: studentId },
     });
 
-    if (!student) {
-      res.status(404).json({ error: 'NOT_FOUND', message: 'Student account not found.' });
-      return;
-    }
-
-    const submission = await prisma.submission.findFirst({
-      where: { rollNo: student.rollNo },
-      orderBy: { submittedAt: 'desc' },
-      select: {
-        id: true,
-        status: true,
-        submittedAt: true,
-        videoDriveId: true,
-        reviewText: true,
-        reviewPros: true,
-        reviewCons: true,
-        reviewedAt: true,
-      },
-    });
+    const submissionPromise = rollNo
+      ? prisma.submission.findFirst({
+          where: { rollNo },
+          orderBy: { submittedAt: 'desc' },
+          select: {
+            id: true,
+            status: true,
+            submittedAt: true,
+            videoDriveId: true,
+            reviewText: true,
+            reviewPros: true,
+            reviewCons: true,
+            reviewedAt: true,
+          },
+        })
+      : Promise.resolve(null);
 
     // The intro-video panel is an enrichment on top of the student's identity,
     // so it must never be able to fail the whole request. This query selects
@@ -287,10 +288,9 @@ router.get('/me', requireStudentAuth, async (req: Request, res: Response): Promi
     // (or the DB is briefly unavailable) it throws, and a 500 here makes the
     // portal treat the session as invalid and bounce the student back to login.
     // Degrade to "no video" instead.
-    let introVideo: any = null;
-    try {
-      introVideo = await prisma.introVideo.findFirst({
-        where: { studentId: student.id },
+    const introVideoPromise = prisma.introVideo
+      .findFirst({
+        where: { studentId },
         orderBy: { submittedAt: 'desc' },
         select: {
           id: true,
@@ -306,13 +306,43 @@ router.get('/me', requireStudentAuth, async (req: Request, res: Response): Promi
           sizeMb: true,
           driveFileId: true,
         },
+      })
+      .catch((err: any) => {
+        console.error(
+          '[GET /student/me] intro video lookup failed; serving profile without it. ' +
+            'If this is "column does not exist", run: npx prisma migrate deploy',
+          err?.message ?? err,
+        );
+        return null;
       });
-    } catch (err: any) {
-      console.error(
-        '[GET /student/me] intro video lookup failed; serving profile without it. ' +
-          'If this is "column does not exist", run: npx prisma migrate deploy',
-        err?.message ?? err,
-      );
+
+    let [student, submission, introVideo] = await Promise.all([
+      studentPromise,
+      submissionPromise,
+      introVideoPromise,
+    ]);
+
+    if (!student) {
+      res.status(404).json({ error: 'NOT_FOUND', message: 'Student account not found.' });
+      return;
+    }
+
+    // In case rollNo was missing from the JWT or differs, query submission with student.rollNo
+    if (!submission && student.rollNo && student.rollNo !== rollNo) {
+      submission = await prisma.submission.findFirst({
+        where: { rollNo: student.rollNo },
+        orderBy: { submittedAt: 'desc' },
+        select: {
+          id: true,
+          status: true,
+          submittedAt: true,
+          videoDriveId: true,
+          reviewText: true,
+          reviewPros: true,
+          reviewCons: true,
+          reviewedAt: true,
+        },
+      });
     }
 
     // Never cache student session/profile data so submissions, reviews,
@@ -333,6 +363,7 @@ router.get('/me', requireStudentAuth, async (req: Request, res: Response): Promi
 router.post(
   '/submission',
   requireStudentAuth,
+  submissionRateLimiter,
   submissionUploadMiddleware,
   async (req: Request, res: Response): Promise<void> => {
     try {
@@ -791,6 +822,7 @@ router.get('/submission/media/video', requireStudentAuth, async (req: Request, r
 router.post(
   '/submission/video-stream',
   requireStudentAuth,
+  submissionRateLimiter,
   async (req: Request, res: Response): Promise<void> => {
     try {
       // ── 1. Auth & student lookup ─────────────────────────────────────────
@@ -1026,7 +1058,7 @@ router.get('/resume', requireStudentAuth, async (req, res) => {
   }
 });
 
-router.post('/resume', requireStudentAuth, resumeUpload, async (req: Request, res: Response): Promise<void> => {
+router.post('/resume', requireStudentAuth, submissionRateLimiter, resumeUpload, async (req: Request, res: Response): Promise<void> => {
   try {
     const studentId = (req as any).studentId;
     const resumeFile = req.file || (req.files as any)?.resume?.[0] || (req.files as any)?.file?.[0];

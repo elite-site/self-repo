@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import path from 'path';
 import { requireStudentAuth } from '../middleware/studentAuth';
+import { submissionRateLimiter } from '../middleware/rateLimiter';
 import { prisma } from '../lib/prisma';
 import { certificateUpload, proofUpload } from '../middleware/upload';
 import { driveService } from '../services/drive.service';
@@ -174,7 +175,7 @@ router.get('/achievements', async (req: Request, res: Response) => {
   }
 });
 
-router.post('/achievements', handleProofUpload, async (req: Request, res: Response) => {
+router.post('/achievements', submissionRateLimiter, handleProofUpload, async (req: Request, res: Response) => {
   try {
     const studentId = (req as any).studentId;
     let {
@@ -277,7 +278,7 @@ router.post('/achievements', handleProofUpload, async (req: Request, res: Respon
   }
 });
 
-router.put('/achievements/:id', handleProofUpload, async (req: Request, res: Response) => {
+router.put('/achievements/:id', submissionRateLimiter, handleProofUpload, async (req: Request, res: Response) => {
   try {
     const studentId = (req as any).studentId;
     let {
@@ -417,7 +418,7 @@ router.get('/certificates', async (req: Request, res: Response) => {
   }
 });
 
-router.post('/certificates', certificateUpload, async (req: Request, res: Response) => {
+router.post('/certificates', submissionRateLimiter, certificateUpload, async (req: Request, res: Response) => {
   try {
     const studentId = (req as any).studentId;
     const file = req.file;

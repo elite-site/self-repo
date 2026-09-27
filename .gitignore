@@ -8,5 +8,8 @@ storage/
 .local-pg/
 *.log
 *.zip
+*.xlsx
+*.xls
+Students_Master_List.xlsx
 assests/
 assets/stitch/

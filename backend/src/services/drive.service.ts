@@ -846,6 +846,11 @@ export class DriveService {
         },
       );
 
+      driveReq.setTimeout(60000, () => {
+        driveReq.destroy(new Error('[Drive] Upload timed out after 60s of inactivity'));
+        reject(new Error('Upload timed out: Google Drive connection inactive'));
+      });
+
       driveReq.on('error', (err) =>
         reject(new Error(`[Drive] Pipe error: ${err.message}`)),
       );

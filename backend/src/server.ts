@@ -25,6 +25,7 @@ import adminAuthRoutes from './routes/admin.auth.routes';
 import adminApiRoutes from './routes/admin.api.routes';
 import adminPortalRoutes from './routes/admin.portal.routes';
 import adminAcademicYearRoutes from './routes/admin.academic-year.routes';
+import { startAnnouncementScheduler } from './jobs/announcementScheduler';
 
 const app = express();
 
@@ -113,9 +114,10 @@ app.use(cookieParser());
 
 // Gzip/Brotli compress all JSON/text responses — reduces payload 60-80%,
 // critical when 200 concurrent students poll the dashboard simultaneously.
+// Level 1 delivers ~75% compression ratio with minimal CPU overhead on shared/free cores.
 app.use(
   compression({
-    level: 6,            // balance CPU cost vs. ratio
+    level: 1,            // low CPU cost on shared/free cores
     threshold: 1024,     // only compress responses > 1 KB
     filter: (req: express.Request, res: express.Response) => {
       // Never compress streaming video responses — already compressed
@@ -140,7 +142,19 @@ app.get('/health', (_req, res) => {
 });
 
 // Readiness probe for Render/Railway: DB + Drive must both respond.
+// Caches probe result for 30s to avoid hammering Google Drive & DB on frequent platform health pings.
+let lastReadyProbeTime = 0;
+let cachedReadyResult: { statusCode: number; body: Record<string, any> } | null = null;
+const READY_CACHE_TTL_MS = 30_000;
+
 app.get('/ready', async (_req, res) => {
+  const now = Date.now();
+  if (cachedReadyResult && (now - lastReadyProbeTime) < READY_CACHE_TTL_MS) {
+    return res
+      .status(cachedReadyResult.statusCode)
+      .json(cachedReadyResult.body);
+  }
+
   const probe: Record<string, 'ok' | 'down'> = { db: 'down', drive: 'down' };
   try {
     await prisma.$queryRaw`SELECT 1`;
@@ -155,9 +169,14 @@ app.get('/ready', async (_req, res) => {
     /* keep down */
   }
   const ready = probe.db === 'ok' && probe.drive === 'ok';
-  res
-    .status(ready ? 200 : 503)
-    .json({ status: ready ? 'ok' : 'unready', ...probe, timestamp: new Date().toISOString() });
+  const body = { status: ready ? 'ok' : 'unready', ...probe, timestamp: new Date().toISOString() };
+  cachedReadyResult = {
+    statusCode: ready ? 200 : 503,
+    body,
+  };
+  lastReadyProbeTime = now;
+
+  res.status(ready ? 200 : 503).json(body);
 });
 
 // 1. Public API routes (existing submission form + new public directory)
@@ -261,6 +280,7 @@ if (webBuildPath) {
 app.use(errorHandler);
 
 async function autoMigratePendingItems() {
+  if (process.env.AUTO_MIGRATE_PENDING !== 'true') return;
   try {
     const [resumeRes, achRes, certRes, profRes] = await Promise.all([
       prisma.resume.updateMany({
@@ -298,8 +318,13 @@ if (process.env.NODE_ENV !== 'test') {
     console.log(`📡 Public API:    http://localhost:${port}/api`);
     console.log(`🛡️ Admin Portal:  http://localhost:${port}/admin`);
 
-    // Run backlog auto-approval migration for existing items
-    autoMigratePendingItems().catch(() => {});
+    // Start background announcement scheduler
+    startAnnouncementScheduler();
+
+    // Run backlog auto-approval migration only when explicitly enabled via env var
+    if (process.env.AUTO_MIGRATE_PENDING === 'true') {
+      autoMigratePendingItems().catch(() => {});
+    }
 
     // Ensure all stored Drive files and folders have viewer permissions in the background
     if (typeof driveService.ensureAllFilesViewerAccess === 'function') {
