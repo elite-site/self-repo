@@ -10,112 +10,103 @@ export default {
       // ── ELITE Academic Portal Design System ────────────────────────────
       // Source: assests/stitch_multi_page_branded_website/elite_academic_portal_design_system/DESIGN.md
       colors: {
-        // ── Material design surface scale ──
-        surface:                    '#f8f9ff',
-        'surface-dim':              '#cbdbf5',
-        'surface-bright':           '#f8f9ff',
-        'surface-container-lowest': '#ffffff',
-        'surface-container-low':    '#eff4ff',
-        'surface-container':        '#e5eeff',
-        'surface-container-high':   '#dce9ff',
-        'surface-container-highest':'#d3e4fe',
-        'on-surface':               '#0b1c30',
-        'on-surface-variant':       '#44474c',
-        'inverse-surface':          '#213145',
-        'inverse-on-surface':       '#eaf1ff',
-        'surface-variant':          '#d3e4fe',
+        // ── Primary brand: Indigo (#4F46E5) ──
+        primary: {
+          DEFAULT: '#4F46E5',
+          deep:    '#3730A3',
+          hover:   '#3730A3',
+          pale:    '#E0E7FF',
+          50:      '#EEF2FF',
+          100:     '#E0E7FF',
+          200:     '#C7D2FE',
+          300:     '#A5B4FC',
+          400:     '#818CF8',
+          500:     '#6366F1',
+          600:     '#4F46E5',
+          700:     '#4338CA',
+          800:     '#3730A3',
+          900:     '#312E81',
+        },
+        'on-primary': '#FFFFFF',
+        'primary-deep': '#3730A3',
+        'primary-pale': '#E0E7FF',
+        'primary-container': '#3730A3',
+        'on-primary-container': '#E0E7FF',
 
-        // ── Primary (deep midnight navy) ──
-        primary:              '#000000',   // design overrides to #0B192C below via semantic alias
-        'on-primary':         '#ffffff',
-        'primary-container':  '#0e1c2f',
-        'on-primary-container': '#77849c',
-        'inverse-primary':    '#bac7e1',
-        'primary-fixed':      '#d6e3fe',
-        'primary-fixed-dim':  '#bac7e1',
-        'on-primary-fixed':   '#0e1c2f',
-        'on-primary-fixed-variant': '#3a475c',
+        // ── Accent / secondary brand: Rose (#E11D48) ──
+        accent: {
+          DEFAULT: '#E11D48',
+          hover:   '#BE123C',
+          dark:    '#BE123C',
+          pale:    '#FFE4E6',
+          50:      '#FFF1F2',
+          100:     '#FFE4E6',
+          200:     '#FECDD3',
+          300:     '#FDA4AF',
+          400:     '#FB7185',
+          500:     '#F43F5E',
+          600:     '#E11D48',
+          700:     '#BE123C',
+          800:     '#9F1239',
+          900:     '#881337',
+        },
+        'accent-hover': '#BE123C',
+        secondary: '#E11D48',
+        'on-secondary': '#FFFFFF',
 
-        // ── Secondary (crimson red) ──
-        secondary:              '#bb0112',
-        'on-secondary':         '#ffffff',
-        'secondary-container':  '#e02928',
-        'on-secondary-container': '#fffbff',
-        'secondary-fixed':      '#ffdad6',
-        'secondary-fixed-dim':  '#ffb4ab',
-        'on-secondary-fixed':   '#410002',
-        'on-secondary-fixed-variant': '#93000b',
-
-        // ── Tertiary ──
-        tertiary:              '#000000',
-        'on-tertiary':         '#ffffff',
-        'tertiary-container':  '#00174b',
-        'on-tertiary-container': '#497cff',
-        'tertiary-fixed':      '#dbe1ff',
-        'tertiary-fixed-dim':  '#b4c5ff',
-        'on-tertiary-fixed':   '#00174b',
-        'on-tertiary-fixed-variant': '#003ea8',
-
-        // ── Error ──
-        error:              '#ba1a1a',
-        'on-error':         '#ffffff',
-        'error-container':  '#ffdad6',
-        'on-error-container': '#93000a',
-
-        // ── Outline / border ──
-        outline:          '#75777d',
-        'outline-variant': '#c5c6cd',
-        'surface-tint':   '#525f75',
-
-        // ── Semantic canvas & text ──
-        'surface-canvas': '#F8FAFC',
+        // ── Canvas, surfaces & borders ──
+        'surface-canvas': '#F7F8FC',
         'surface-card':   '#FFFFFF',
-        'border-subtle':  '#E2E8F0',
+        'border-subtle':  '#E4E7F2',
         'border-strong':  '#CBD5E1',
+
+        // ── Typography scale colors ──
         'text-primary':   '#0F172A',
         'text-secondary': '#475569',
         'text-muted':     '#94A3B8',
 
-        // ── Semantic status tokens (icon + text, never color alone) ──
+        // ── Semantic status tokens (untouched) ──
         'status-draft':    '#64748B',
         'status-pending':  '#D97706',
         'status-review':   '#7C3AED',
         'status-approved': '#059669',
-        'status-rejected': '#DC2626',
+        'status-rejected': '#E11D48',
         'status-changes':  '#EA580C',
 
-        // ── Legacy `elite.*` aliases — keep so existing components don't break ──
+        // ── Semantic aliases & backwards compatibility ──
         elite: {
           white:     '#FFFFFF',
-          offwhite:  '#FAFAFA',
-          red:       '#DC2626',   // updated to match design system crimson
-          darkred:   '#B5121B',
-          black:     '#0B192C',   // updated to match primary navy
+          offwhite:  '#F7F8FC',
+          red:       '#E11D48',   // Rose accent
+          darkred:   '#BE123C',   // Rose hover
+          black:     '#0F172A',
           darkgray:  '#475569',
-          lightgray: '#E2E8F0',
-          border:    '#E2E8F0',
+          lightgray: '#E4E7F2',
+          border:    '#E4E7F2',
           muted:     '#94A3B8',
-          navy:      '#0B192C',
-          crimson:   '#DC2626',
+          navy:      '#312E81',
+          crimson:   '#E11D48',
+          indigo:    '#4F46E5',
+          rose:      '#E11D48',
         },
       },
 
-      // ── Typography — Inter scale from DESIGN.md ──
+      // ── Typography: Sora (Headings) + Plus Jakarta Sans (Body/UI) ──
       fontFamily: {
-        sans:           ['Inter', 'system-ui', 'sans-serif'],
-        // Keep legacy aliases
-        display:        ['Inter', 'system-ui', 'sans-serif'],
-        'label-lg':     ['Inter', 'system-ui', 'sans-serif'],
-        'label-md':     ['Inter', 'system-ui', 'sans-serif'],
-        'label-sm':     ['Inter', 'system-ui', 'sans-serif'],
-        'headline-xl':  ['Inter', 'system-ui', 'sans-serif'],
-        'headline-lg':  ['Inter', 'system-ui', 'sans-serif'],
-        'headline-md':  ['Inter', 'system-ui', 'sans-serif'],
-        'headline-sm':  ['Inter', 'system-ui', 'sans-serif'],
-        'body-lg':      ['Inter', 'system-ui', 'sans-serif'],
-        'body-md':      ['Inter', 'system-ui', 'sans-serif'],
-        'body-sm':      ['Inter', 'system-ui', 'sans-serif'],
-        'data-mono':    ['Inter', 'system-ui', 'sans-serif'],
+        sans:           ['"Plus Jakarta Sans"', 'system-ui', '-apple-system', 'sans-serif'],
+        heading:        ['Sora', 'system-ui', 'sans-serif'],
+        display:        ['Sora', 'system-ui', 'sans-serif'],
+        'label-lg':     ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+        'label-md':     ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+        'label-sm':     ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+        'headline-xl':  ['Sora', 'system-ui', 'sans-serif'],
+        'headline-lg':  ['Sora', 'system-ui', 'sans-serif'],
+        'headline-md':  ['Sora', 'system-ui', 'sans-serif'],
+        'headline-sm':  ['Sora', 'system-ui', 'sans-serif'],
+        'body-lg':      ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+        'body-md':      ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+        'body-sm':      ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+        'data-mono':    ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
       },
 
       fontSize: {
@@ -134,14 +125,15 @@ export default {
         'data-mono':   ['13px', { lineHeight: '18px', fontWeight: '400' }],
       },
 
-      // ── Border radius — academic soft-rectilinear ──
+      // ── Border radius — rounded-but-not-bubbly (6–12px range, cards 8px) ──
       borderRadius: {
-        DEFAULT: '0.25rem',   // 4px — inputs, buttons, badges
-        sm:      '0.125rem',  // 2px
-        md:      '0.375rem',  // 6px
-        lg:      '0.5rem',    // 8px — cards, previews
-        xl:      '0.75rem',   // 12px — modals, drawers
-        full:    '9999px',    // avatars, pills
+        DEFAULT: '6px',
+        sm:      '4px',
+        md:      '6px',
+        lg:      '8px',     // Standard card radius
+        xl:      '12px',    // Larger containers / modals
+        '2xl':   '14px',
+        full:    '9999px',  // Pills and avatars
       },
 
       // ── Spacing tokens ──

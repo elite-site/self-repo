@@ -85,7 +85,7 @@ export const AdminThemeProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       {/* SCOPED ADMIN ROOT: Dark class is applied ONLY to this container */}
       <div
         id="admin-root"
-        className={`min-h-screen ${isDark ? 'dark bg-neutral-950 text-slate-100' : 'bg-[#f8fafc] text-neutral-900'} w-full transition-colors`}
+        className={`min-h-screen ${isDark ? 'dark bg-neutral-950 text-slate-100' : 'bg-[#F7F8FC] text-[#0F172A]'} w-full transition-colors`}
       >
         {children}
       </div>

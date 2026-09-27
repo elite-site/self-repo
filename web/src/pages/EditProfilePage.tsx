@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, Link, useOutletContext } from 'react-router-dom';
 import {
-  User,
   Camera,
   Save,
   Loader2,
@@ -15,9 +14,9 @@ import {
   ArrowLeft,
   GraduationCap,
   ShieldAlert,
-  Sparkles,
   Crop
 } from 'lucide-react';
+import { BrandedLoading } from '../components/BrandedLoading';
 import { api, resolveMediaUrl } from '../services/api';
 import { normalizeSocialLink, type SocialLinkKind } from '../utils/socialLinks';
 import type { StudentOutletContext } from '../components/layout/StudentLayout';
@@ -240,33 +239,32 @@ export const EditProfilePage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="space-y-6 animate-pulse select-none">
-        <div className="h-10 bg-slate-200 rounded w-1/4"></div>
-        <div className="h-64 bg-slate-200 rounded-2xl w-full"></div>
+      <div className="py-24">
+        <BrandedLoading fullScreen={false} message="Loading Student Profile..." />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 text-left">
       {/* HEADER WITH BACK LINK */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Link
             to="/profile"
-            className="p-2 rounded-xl border border-neutral-200 hover:bg-neutral-100 text-neutral-600 transition-colors"
+            className="p-2 rounded-lg border border-[#E4E7F2] hover:bg-[#F7F8FC] text-[#475569] hover:text-[#0F172A] transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div>
-            <h1 className="text-xl sm:text-2xl font-black text-[#0B192C]">Edit Student Profile</h1>
-            <p className="text-xs text-neutral-500">Update your biography, technical stack, and social links</p>
+            <h1 className="text-xl sm:text-2xl font-black text-[#0F172A] font-heading">Edit Student Profile</h1>
+            <p className="text-xs text-[#475569]">Update your biography, technical stack, and social links</p>
           </div>
         </div>
 
         <button
           onClick={() => navigate('/profile')}
-          className="text-xs font-bold text-neutral-500 hover:text-[#0B192C] px-3 py-1.5 rounded-lg hover:bg-neutral-100"
+          className="text-xs font-bold text-[#475569] hover:text-[#0F172A] px-3 py-1.5 rounded-lg hover:bg-[#F7F8FC] transition-colors cursor-pointer"
         >
           Cancel
         </button>
@@ -274,14 +272,14 @@ export const EditProfilePage: React.FC = () => {
 
       {/* FEEDBACK BANNERS */}
       {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-2xl text-red-800 text-xs flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
+        <div className="p-4 bg-rose-50 border border-rose-200 rounded-lg text-rose-800 text-xs flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
           <span>{error}</span>
         </div>
       )}
 
       {success && (
-        <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl text-emerald-800 text-xs flex items-center gap-2">
+        <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-xs flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
           <span>Profile saved successfully! Redirecting to profile...</span>
         </div>
@@ -289,12 +287,12 @@ export const EditProfilePage: React.FC = () => {
 
       <form onSubmit={handleSave} className="space-y-6">
         {/* SECTION 1: PHOTO & AVATAR CARD */}
-        <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6 shadow-sm space-y-4">
-          <h2 className="text-sm font-bold text-[#0B192C]">Profile Photo</h2>
+        <div className="bg-white border border-[#E4E7F2] rounded-lg p-6 shadow-[0_1px_2px_rgba(15,23,42,0.04)] space-y-4">
+          <h2 className="text-sm font-bold text-[#0F172A] font-heading">Profile Photo</h2>
           <div className="flex flex-col sm:flex-row items-center gap-5">
             <div className="relative group">
               {profile?.photoUrl ? (
-                <div className="relative w-24 h-24 rounded-2xl overflow-hidden border-2 border-neutral-200 shadow-sm">
+                <div className="relative w-24 h-24 rounded-lg overflow-hidden border border-[#E4E7F2] shadow-xs">
                   <img
                     src={resolveMediaUrl(profile.photoUrl)}
                     alt={profile.name}
@@ -313,7 +311,7 @@ export const EditProfilePage: React.FC = () => {
                   )}
                 </div>
               ) : (
-                <div className="w-24 h-24 rounded-2xl bg-[#0B192C] text-white flex items-center justify-center font-black text-2xl shadow-sm">
+                <div className="w-24 h-24 rounded-lg bg-[#4F46E5] text-white flex items-center justify-center font-black text-2xl shadow-xs font-heading">
                   {profile?.name
                     ? profile.name
                         .split(' ')
@@ -325,8 +323,8 @@ export const EditProfilePage: React.FC = () => {
                 </div>
               )}
               {uploadingPhoto && (
-                <div className="absolute inset-0 bg-black/50 rounded-2xl flex items-center justify-center text-white">
-                  <Loader2 className="w-6 h-6 animate-spin" />
+                <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center text-white">
+                  <Loader2 className="w-6 h-6 animate-spin text-[#4F46E5]" />
                 </div>
               )}
             </div>
@@ -344,9 +342,9 @@ export const EditProfilePage: React.FC = () => {
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploadingPhoto}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-[#0B192C] text-xs font-bold transition-colors cursor-pointer"
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#F7F8FC] hover:bg-neutral-100 border border-[#E4E7F2] text-[#0F172A] text-xs font-bold transition-colors cursor-pointer"
                 >
-                  <Camera className="w-4 h-4 text-neutral-600" />
+                  <Camera className="w-4 h-4 text-[#475569]" />
                   <span>{uploadingPhoto ? 'Uploading...' : profile?.photoUrl ? 'Change Photo' : 'Upload Photo'}</span>
                 </button>
                 {profile?.photoUrl && (
@@ -354,28 +352,28 @@ export const EditProfilePage: React.FC = () => {
                     type="button"
                     onClick={handleRepositionPhoto}
                     disabled={uploadingPhoto}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl border border-neutral-300 hover:bg-neutral-50 text-[#0B192C] text-xs font-bold transition-colors cursor-pointer"
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg border border-[#E4E7F2] hover:bg-[#F7F8FC] text-[#0F172A] text-xs font-bold transition-colors cursor-pointer"
                   >
-                    <Crop className="w-4 h-4 text-[#DC2626]" />
+                    <Crop className="w-4 h-4 text-[#4F46E5]" />
                     <span>Reposition Photo</span>
                   </button>
                 )}
               </div>
-              <p className="text-[11px] text-neutral-400">
+              <p className="text-[11px] text-[#94A3B8]">
                 Recommended: Square image, max 5MB. Visible on public directory and resume card.
               </p>
-              {photoError && <p className="text-[11px] text-red-600 font-semibold">{photoError}</p>}
+              {photoError && <p className="text-[11px] text-rose-600 font-semibold">{photoError}</p>}
             </div>
           </div>
         </div>
 
         {/* SECTION 2: BIOGRAPHY */}
-        <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6 shadow-sm space-y-3">
+        <div className="bg-white border border-[#E4E7F2] rounded-lg p-6 shadow-[0_1px_2px_rgba(15,23,42,0.04)] space-y-3">
           <div className="flex items-center justify-between">
-            <label className="text-sm font-bold text-[#0B192C]">Personal Biography & Focus</label>
+            <label className="text-sm font-bold text-[#0F172A] font-heading">Personal Biography & Focus</label>
             <span
               className={`text-xs font-mono ${
-                bio.length >= 280 ? 'text-[#DC2626] font-bold' : 'text-neutral-400'
+                bio.length >= 280 ? 'text-[#E11D48] font-bold' : 'text-[#94A3B8]'
               }`}
             >
               {bio.length}/300
@@ -387,40 +385,40 @@ export const EditProfilePage: React.FC = () => {
             maxLength={300}
             rows={4}
             placeholder="Share a short introduction: your areas of interest, engineering goals, and technical passions..."
-            className="w-full p-3 bg-neutral-50 border border-[#CBD5E1] rounded-xl text-xs text-[#0B192C] focus:outline-none focus:border-[#DC2626] focus:bg-white transition-all leading-relaxed"
+            className="w-full p-3 bg-white border border-[#E4E7F2] rounded-lg text-xs text-[#0F172A] focus:outline-none focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5] transition-all leading-relaxed placeholder-[#94A3B8]"
           />
-          <p className="text-[11px] text-neutral-400">
+          <p className="text-[11px] text-[#94A3B8]">
             Keep it clear and professional. This appears on your showcase card in the student directory.
           </p>
         </div>
 
         {/* SECTION 3: TECHNICAL SKILLS */}
-        <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6 shadow-sm space-y-4">
+        <div className="bg-white border border-[#E4E7F2] rounded-lg p-6 shadow-[0_1px_2px_rgba(15,23,42,0.04)] space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-sm font-bold text-[#0B192C]">Technical Skills & Stacks</h2>
-              <p className="text-xs text-neutral-500">Pick from common department skills or enter custom ones</p>
+              <h2 className="text-sm font-bold text-[#0F172A] font-heading">Technical Skills & Stacks</h2>
+              <p className="text-xs text-[#475569]">Pick from common department skills or enter custom ones</p>
             </div>
-            <span className="text-xs font-mono font-bold text-[#DC2626] bg-red-50 px-2 py-0.5 rounded-full">
+            <span className="text-xs font-mono font-bold text-[#3730A3] bg-[#E0E7FF] px-2.5 py-0.5 rounded-full border border-[#4F46E5]/20">
               {skills.length} Selected
             </span>
           </div>
 
           {/* Current Skills Chips */}
-          <div className="flex flex-wrap gap-2 min-h-[42px] p-3 rounded-xl bg-neutral-50 border border-neutral-200">
+          <div className="flex flex-wrap gap-2 min-h-[42px] p-3 rounded-lg bg-[#F7F8FC] border border-[#E4E7F2]">
             {skills.length === 0 ? (
-              <span className="text-xs text-neutral-400 italic">No skills selected yet. Select or type below.</span>
+              <span className="text-xs text-[#94A3B8] italic">No skills selected yet. Select or type below.</span>
             ) : (
               skills.map((s) => (
                 <span
                   key={s}
-                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white border border-[#CBD5E1] text-xs font-bold text-[#0B192C] shadow-2xs"
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white border border-[#E4E7F2] text-xs font-bold text-[#0F172A] shadow-xs"
                 >
                   <span>{s}</span>
                   <button
                     type="button"
                     onClick={() => removeSkill(s)}
-                    className="p-0.5 text-neutral-400 hover:text-red-600 transition-colors cursor-pointer"
+                    className="p-0.5 text-[#94A3B8] hover:text-[#E11D48] transition-colors cursor-pointer"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
@@ -442,13 +440,13 @@ export const EditProfilePage: React.FC = () => {
                 }
               }}
               placeholder="Type a skill and press enter (e.g. Next.js, Kubernetes)"
-              className="flex-1 p-2.5 bg-white border border-[#CBD5E1] rounded-xl text-xs focus:outline-none focus:border-[#DC2626]"
+              className="flex-1 p-2.5 bg-white border border-[#E4E7F2] rounded-lg text-xs text-[#0F172A] focus:outline-none focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5] placeholder-[#94A3B8]"
             />
             <button
               type="button"
               onClick={() => addSkill(customSkill)}
               disabled={!customSkill.trim()}
-              className="px-4 py-2.5 bg-neutral-100 hover:bg-neutral-200 disabled:opacity-40 text-[#0B192C] rounded-xl text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5"
+              className="px-4 py-2.5 bg-[#4F46E5] hover:bg-[#3730A3] disabled:opacity-40 text-white rounded-lg text-xs font-bold transition-opacity cursor-pointer flex items-center gap-1.5 shadow-xs"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Add</span>
@@ -457,7 +455,7 @@ export const EditProfilePage: React.FC = () => {
 
           {/* Suggestions */}
           <div className="space-y-2 pt-1">
-            <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">
+            <span className="text-[11px] font-bold text-[#94A3B8] uppercase tracking-wider">
               Quick Suggestions
             </span>
             <div className="flex flex-wrap gap-1.5">
@@ -466,7 +464,7 @@ export const EditProfilePage: React.FC = () => {
                   key={s}
                   type="button"
                   onClick={() => addSkill(s)}
-                  className="px-2.5 py-1 rounded-lg bg-neutral-100 hover:bg-red-50 hover:text-[#DC2626] text-neutral-600 text-xs font-medium transition-colors cursor-pointer"
+                  className="px-2.5 py-1 rounded-lg bg-[#F7F8FC] border border-[#E4E7F2] hover:border-[#4F46E5] hover:text-[#4F46E5] text-[#475569] text-xs font-medium transition-colors cursor-pointer"
                 >
                   + {s}
                 </button>
@@ -476,12 +474,12 @@ export const EditProfilePage: React.FC = () => {
         </div>
 
         {/* SECTION 4: PROFESSIONAL & REPOSITORY LINKS */}
-        <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6 shadow-sm space-y-4">
-          <h2 className="text-sm font-bold text-[#0B192C]">Professional & Social Links</h2>
+        <div className="bg-white border border-[#E4E7F2] rounded-lg p-6 shadow-[0_1px_2px_rgba(15,23,42,0.04)] space-y-4">
+          <h2 className="text-sm font-bold text-[#0F172A] font-heading">Professional & Social Links</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-neutral-700 flex items-center gap-1.5">
-                <Github className="w-3.5 h-3.5 text-neutral-500" />
+              <label className="text-xs font-bold text-[#475569] flex items-center gap-1.5">
+                <Github className="w-3.5 h-3.5 text-[#475569]" />
                 <span>GitHub URL</span>
               </label>
               <input
@@ -493,15 +491,15 @@ export const EditProfilePage: React.FC = () => {
                 onChange={(e) => setGithubUrl(e.target.value)}
                 onBlur={(e) => setGithubUrl(applyLink('github', e.target.value))}
                 placeholder="jane, @jane or github.com/jane"
-                className="w-full p-2.5 bg-neutral-50 border border-[#CBD5E1] rounded-xl text-xs focus:outline-none focus:border-[#DC2626] focus:bg-white"
+                className="w-full p-2.5 bg-white border border-[#E4E7F2] rounded-lg text-xs text-[#0F172A] focus:outline-none focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5]"
               />
               {linkErrors.github && (
-                <span className="text-[11px] text-[#DC2626]">{linkErrors.github}</span>
+                <span className="text-[11px] text-[#E11D48]">{linkErrors.github}</span>
               )}
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-neutral-700 flex items-center gap-1.5">
+              <label className="text-xs font-bold text-[#475569] flex items-center gap-1.5">
                 <Linkedin className="w-3.5 h-3.5 text-blue-600" />
                 <span>LinkedIn URL</span>
               </label>
@@ -514,15 +512,15 @@ export const EditProfilePage: React.FC = () => {
                 onChange={(e) => setLinkedinUrl(e.target.value)}
                 onBlur={(e) => setLinkedinUrl(applyLink('linkedin', e.target.value))}
                 placeholder="jane, @jane or linkedin.com/in/jane"
-                className="w-full p-2.5 bg-neutral-50 border border-[#CBD5E1] rounded-xl text-xs focus:outline-none focus:border-[#DC2626] focus:bg-white"
+                className="w-full p-2.5 bg-white border border-[#E4E7F2] rounded-lg text-xs text-[#0F172A] focus:outline-none focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5]"
               />
               {linkErrors.linkedin && (
-                <span className="text-[11px] text-[#DC2626]">{linkErrors.linkedin}</span>
+                <span className="text-[11px] text-[#E11D48]">{linkErrors.linkedin}</span>
               )}
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-neutral-700 flex items-center gap-1.5">
+              <label className="text-xs font-bold text-[#475569] flex items-center gap-1.5">
                 <Globe className="w-3.5 h-3.5 text-emerald-600" />
                 <span>Portfolio Website</span>
               </label>
@@ -535,19 +533,19 @@ export const EditProfilePage: React.FC = () => {
                 onChange={(e) => setPortfolioUrl(e.target.value)}
                 onBlur={(e) => setPortfolioUrl(applyLink('portfolio', e.target.value))}
                 placeholder="yourportfolio.dev or https://yourportfolio.dev"
-                className="w-full p-2.5 bg-neutral-50 border border-[#CBD5E1] rounded-xl text-xs focus:outline-none focus:border-[#DC2626] focus:bg-white"
+                className="w-full p-2.5 bg-white border border-[#E4E7F2] rounded-lg text-xs text-[#0F172A] focus:outline-none focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5]"
               />
               {linkErrors.portfolio && (
-                <span className="text-[11px] text-[#DC2626]">{linkErrors.portfolio}</span>
+                <span className="text-[11px] text-[#E11D48]">{linkErrors.portfolio}</span>
               )}
             </div>
           </div>
         </div>
 
         {/* SECTION 5: READ-ONLY ACADEMIC RECORDS NOTICE */}
-        <div className="bg-neutral-50 border border-[#E2E8F0] rounded-2xl p-6 text-xs text-neutral-600 space-y-3">
-          <div className="flex items-center gap-2 font-bold text-[#0B192C]">
-            <GraduationCap className="w-4 h-4 text-[#DC2626]" />
+        <div className="bg-[#F7F8FC] border border-[#E4E7F2] rounded-lg p-6 text-xs text-[#475569] space-y-3">
+          <div className="flex items-center gap-2 font-bold text-[#0F172A] font-heading">
+            <GraduationCap className="w-4 h-4 text-[#4F46E5]" />
             <span>Academic Records Verification Notice</span>
           </div>
           <p className="leading-relaxed">
@@ -559,7 +557,7 @@ export const EditProfilePage: React.FC = () => {
           <div>
             <Link
               to="/profile"
-              className="inline-flex items-center gap-1 font-bold text-[#DC2626] hover:underline"
+              className="inline-flex items-center gap-1 font-bold text-[#4F46E5] hover:text-[#3730A3] transition-colors"
             >
               <span>Go to Profile to Request Changes</span>
               <ShieldAlert className="w-3.5 h-3.5" />
@@ -571,14 +569,14 @@ export const EditProfilePage: React.FC = () => {
         <div className="flex items-center justify-end gap-3 pt-2">
           <Link
             to="/profile"
-            className="px-5 py-2.5 rounded-xl border border-neutral-200 text-xs font-bold text-neutral-600 hover:bg-neutral-100 transition-colors"
+            className="px-5 py-2.5 rounded-lg border border-[#E4E7F2] text-xs font-bold text-[#475569] hover:bg-[#F7F8FC] transition-colors"
           >
             Cancel
           </Link>
           <button
             type="submit"
             disabled={saving}
-            className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#DC2626] hover:bg-[#B5121B] text-white text-xs font-bold transition-all shadow-md disabled:opacity-50 cursor-pointer"
+            className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-[#4F46E5] hover:bg-[#3730A3] text-white text-xs font-bold transition-all shadow-xs disabled:opacity-50 cursor-pointer"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             <span>Save Profile</span>

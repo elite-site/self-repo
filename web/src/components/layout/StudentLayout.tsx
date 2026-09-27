@@ -23,11 +23,11 @@ export interface StudentOutletContext {
 
 export const StudentLayout: React.FC<StudentLayoutProps> = ({ session, onLogout, onPhotoChange }) => {
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col font-sans">
+    <div className="min-h-screen bg-[#F7F8FC] flex flex-col font-sans">
       <StudentHeader session={session} onLogout={onLogout} />
-      <div className="flex-1 flex overflow-hidden w-full h-[calc(100vh-61px)]">
+      <div className="flex-1 flex overflow-hidden w-full h-[calc(100vh-65px)]">
         <StudentSidebar />
-        <main className="flex-1 overflow-y-auto bg-[#F8FAFC] p-4 sm:p-6 lg:p-8 pb-20 md:pb-8">
+        <main className="flex-1 overflow-y-auto bg-[#F7F8FC] p-6 sm:p-8 pb-24 md:pb-8">
           <div className="w-full max-w-[1400px] mx-auto">
             <Outlet context={{ onPhotoChange } satisfies StudentOutletContext} />
           </div>

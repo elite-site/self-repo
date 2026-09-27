@@ -11,7 +11,7 @@ import { AdminStats, AdminUser, Submission } from './types';
 import { adminApi } from './services/api';
 import { useTheme } from './context/ThemeContext';
 
-import { Loader2 } from 'lucide-react';
+
 
 // Lazy Loaded Pages
 const Moderation = React.lazy(() => import('./pages/Moderation').then((m) => ({ default: m.Moderation })));
@@ -29,12 +29,10 @@ const RolesPermissions = React.lazy(() => import('./pages/RolesPermissions').the
 const AuditLogs = React.lazy(() => import('./pages/AuditLogs').then((m) => ({ default: m.AuditLogs })));
 const Settings = React.lazy(() => import('./pages/Settings').then((m) => ({ default: m.Settings })));
 const StudentDetail = React.lazy(() => import('./pages/StudentDetail').then((m) => ({ default: m.StudentDetail })));
+import { BrandedLoading } from './components/BrandedLoading';
 
 const PageLoadingFallback: React.FC = () => (
-  <div className="flex flex-col items-center justify-center min-h-[350px] gap-3">
-    <Loader2 className="w-8 h-8 animate-spin text-elite-red" />
-    <span className="text-xs font-semibold text-neutral-400">Loading module...</span>
-  </div>
+  <BrandedLoading message="Loading Module" fullScreen={false} />
 );
 
 export const App: React.FC = () => {
@@ -146,14 +144,7 @@ export const App: React.FC = () => {
   };
 
   if (authChecking) {
-    return (
-      <div className="min-h-screen bg-[#fafafa] dark:bg-neutral-950 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-2 border-elite-red border-t-transparent rounded-full animate-spin" />
-          <span className="text-xs text-neutral-500 dark:text-neutral-400 font-medium">Verifying organizer session...</span>
-        </div>
-      </div>
-    );
+    return <BrandedLoading message="Verifying Organizer Session" />;
   }
 
   if (!user) {

@@ -3,7 +3,6 @@ import { useParams, Link } from 'react-router-dom';
 import { api, resolveMediaUrl } from '../../services/api';
 import { StudentSession } from '../../types';
 import {
-  Loader2,
   ArrowLeft,
   Github,
   Linkedin,
@@ -13,13 +12,13 @@ import {
   Briefcase,
   ShieldCheck,
   ExternalLink,
-  Calendar,
   CheckCircle2,
   Video as VideoIcon,
   Sparkles
 } from 'lucide-react';
 import { Navbar } from '../../components/Navbar';
 import { Footer } from '../../components/Footer';
+import { BrandedLoading } from '../../components/BrandedLoading';
 import { getPhotoStyle } from '../../utils/photoStyle';
 
 interface PublicProfileProps {
@@ -44,10 +43,10 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F8FAFC] flex flex-col justify-between">
+      <div className="min-h-screen bg-[#F7F8FC] flex flex-col justify-between">
         <Navbar session={session} onLogout={onLogout} />
         <div className="flex-1 flex items-center justify-center py-32">
-          <Loader2 className="w-8 h-8 animate-spin text-elite-red" />
+          <BrandedLoading fullScreen={false} message="Loading Student Profile..." />
         </div>
         <Footer />
       </div>
@@ -56,21 +55,21 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
 
   if (!student) {
     return (
-      <div className="min-h-screen bg-[#F8FAFC] flex flex-col justify-between">
+      <div className="min-h-screen bg-[#F7F8FC] flex flex-col justify-between">
         <Navbar session={session} onLogout={onLogout} />
         <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
-          <div className="w-16 h-16 rounded-2xl bg-red-50 text-elite-red flex items-center justify-center mb-4">
+          <div className="w-16 h-16 rounded-lg bg-rose-50 text-[#E11D48] flex items-center justify-center mb-4">
             <ShieldCheck className="w-8 h-8" />
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-[#0B192C] mb-2 font-display">
+          <h1 className="text-2xl sm:text-3xl font-bold text-[#0F172A] mb-2 font-heading">
             Student Not Found
           </h1>
-          <p className="text-slate-500 mb-6 max-w-md text-xs sm:text-sm">
+          <p className="text-[#475569] mb-6 max-w-md text-xs sm:text-sm">
             The profile you are looking for does not exist in our department roster.
           </p>
           <Link
             to="/"
-            className="px-6 py-2.5 bg-neutral-900 hover:bg-neutral-800 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-colors"
+            className="px-6 py-2.5 bg-[#4F46E5] hover:bg-[#3730A3] text-white font-bold text-xs uppercase tracking-wider rounded-lg transition-opacity"
           >
             Back to Home
           </Link>
@@ -87,7 +86,6 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
   const certificates = student.certificates || [];
   const resumes = student.resumes || [];
   const hasResume = resumes.length > 0;
-  // Only an approved + published video is returned by the public API.
   const introVideo = student.introVideo || null;
 
   const hasNoData =
@@ -107,28 +105,28 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
     .join('');
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col font-sans text-left">
+    <div className="min-h-screen bg-[#F7F8FC] flex flex-col font-sans text-left text-[#0F172A]">
       <Navbar session={session} onLogout={onLogout} />
 
       {/* TOP HEADER */}
-      <div className="bg-[#0B192C] pt-12 pb-28 text-white">
+      <div className="bg-white border-b border-[#E4E7F2] py-6">
         <div className="max-w-6xl mx-auto px-6 sm:px-10">
           <Link
-            to="/"
-            className="inline-flex items-center gap-2 text-slate-400 hover:text-white text-xs font-semibold uppercase tracking-wider transition-colors"
+            to="/students"
+            className="inline-flex items-center gap-2 text-[#475569] hover:text-[#4F46E5] text-xs font-semibold uppercase tracking-wider transition-colors"
           >
-            <ArrowLeft className="w-4 h-4 text-elite-red" />
-            <span>Back to Home</span>
+            <ArrowLeft className="w-4 h-4 text-[#4F46E5]" />
+            <span>Back to Student Directory</span>
           </Link>
         </div>
       </div>
 
       {/* MAIN PROFILE CARD */}
-      <main className="flex-1 max-w-6xl mx-auto px-6 sm:px-10 -mt-20 w-full pb-20 space-y-8">
-        <div className="bg-white rounded-3xl shadow-sm border border-[#E2E8F0] p-6 sm:p-10 space-y-6">
+      <main className="flex-1 max-w-6xl mx-auto px-6 sm:px-10 py-8 w-full pb-20 space-y-8">
+        <div className="bg-white rounded-lg shadow-[0_1px_2px_rgba(15,23,42,0.04)] border border-[#E4E7F2] p-6 sm:p-8 space-y-6">
           <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 sm:gap-8">
             {/* Avatar */}
-            <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-2xl bg-[#0B192C] text-white flex items-center justify-center font-bold text-3xl shadow-md overflow-hidden shrink-0 border-4 border-white">
+            <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-lg bg-[#EEF2FF] text-[#4F46E5] flex items-center justify-center font-bold text-3xl shadow-xs overflow-hidden shrink-0 border border-[#E4E7F2]">
               {profile.viewUrl || profile.photoUrl ? (
                 <img
                   src={resolveMediaUrl(profile.viewUrl || profile.photoUrl)}
@@ -143,22 +141,22 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
             {/* Student Info */}
             <div className="flex-1 text-center sm:text-left space-y-2">
               <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2.5">
-                <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0B192C] font-display tracking-tight">
+                <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0F172A] font-heading tracking-tight">
                   {student.name}
                 </h1>
-                <span className="text-xs font-mono font-bold text-neutral-500 bg-neutral-100 px-2.5 py-1 rounded-md">
+                <span className="text-xs font-semibold text-[#475569] bg-[#F7F8FC] px-2.5 py-1 rounded-md border border-[#E4E7F2]">
                   {student.rollNo}
                 </span>
               </div>
 
-              <div className="text-xs sm:text-sm font-semibold text-neutral-600 flex flex-wrap items-center justify-center sm:justify-start gap-2">
-                <span className="text-elite-red font-bold">
+              <div className="text-xs sm:text-sm font-semibold text-[#475569] flex flex-wrap items-center justify-center sm:justify-start gap-2">
+                <span className="text-[#E11D48] font-bold">
                   Year {student.year || 1} · Section {student.section || 'A'}
                 </span>
                 <span>•</span>
                 <span>Department of Information Technology</span>
                 <span>•</span>
-                <span className="text-neutral-500">SASI</span>
+                <span className="text-[#94A3B8]">SASI</span>
               </div>
 
               {/* Professional Links */}
@@ -168,7 +166,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
                     href={profile.githubUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="p-2 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-neutral-800 transition-colors"
+                    className="p-2 rounded-lg bg-[#F7F8FC] hover:bg-[#EEF2FF] border border-[#E4E7F2] text-[#0F172A] transition-colors"
                     title="GitHub Profile"
                   >
                     <Github className="w-4 h-4" />
@@ -179,7 +177,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
                     href={profile.linkedinUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="p-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 transition-colors"
+                    className="p-2 rounded-lg bg-[#EEF2FF] hover:bg-[#E0E7FF] border border-[#C7D2FE] text-[#4F46E5] transition-colors"
                     title="LinkedIn Profile"
                   >
                     <Linkedin className="w-4 h-4" />
@@ -190,7 +188,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
                     href={profile.portfolioUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="p-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 transition-colors"
+                    className="p-2 rounded-lg bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 transition-colors"
                     title="Personal Portfolio Website"
                   >
                     <Globe className="w-4 h-4" />
@@ -204,7 +202,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
               <div className="shrink-0 pt-2 sm:pt-0">
                 <Link
                   to={`/students/${student.rollNo}/resume`}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-neutral-900 hover:bg-elite-red text-white text-xs font-bold uppercase tracking-wider rounded-xl transition-colors shadow-sm"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#4F46E5] hover:bg-[#3730A3] text-white text-xs font-bold uppercase tracking-wider rounded-lg transition-opacity shadow-xs"
                 >
                   <FileText className="w-4 h-4" />
                   <span>View Resume</span>
@@ -215,12 +213,12 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
 
           {/* Published introduction video */}
           {introVideo?.streamUrl && (
-            <div className="pt-6 border-t border-neutral-100">
-              <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2">
-                <VideoIcon className="w-3.5 h-3.5" />
-                Introduction Video
+            <div className="pt-6 border-t border-[#E4E7F2]">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[#475569] mb-3 flex items-center gap-2 font-heading">
+                <VideoIcon className="w-3.5 h-3.5 text-[#4F46E5]" />
+                <span>Introduction Video</span>
               </h3>
-              <div className="bg-black rounded-2xl overflow-hidden aspect-video max-w-3xl">
+              <div className="bg-black rounded-lg overflow-hidden aspect-video max-w-3xl">
                 <video
                   src={resolveMediaUrl(introVideo.streamUrl)}
                   poster={introVideo.thumbnailUrl ? resolveMediaUrl(introVideo.thumbnailUrl) : undefined}
@@ -235,11 +233,11 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
 
           {/* Biography */}
           {(profile.biography || profile.bio) && (
-            <div className="pt-6 border-t border-neutral-100">
-              <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-slate-400 mb-2">
+            <div className="pt-6 border-t border-[#E4E7F2]">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[#475569] mb-2 font-heading">
                 Biography
               </h3>
-              <p className="text-sm text-neutral-700 leading-relaxed max-w-4xl">
+              <p className="text-sm text-[#475569] leading-relaxed max-w-4xl">
                 {profile.biography || profile.bio}
               </p>
             </div>
@@ -247,14 +245,14 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
 
           {/* EMPTY PROFILE STATE */}
           {hasNoData && (
-            <div className="pt-8 border-t border-neutral-100 flex flex-col items-center justify-center text-center py-8 sm:py-12 px-4">
-              <div className="w-14 h-14 rounded-2xl bg-neutral-100 text-neutral-500 flex items-center justify-center mb-3">
-                <Sparkles className="w-6 h-6 text-elite-red" />
+            <div className="pt-8 border-t border-[#E4E7F2] flex flex-col items-center justify-center text-center py-8 sm:py-12 px-4">
+              <div className="w-14 h-14 rounded-lg bg-[#EEF2FF] text-[#4F46E5] flex items-center justify-center mb-3">
+                <Sparkles className="w-6 h-6 text-[#E11D48]" />
               </div>
-              <h3 className="text-base sm:text-lg font-bold text-[#0B192C] mb-1">
+              <h3 className="text-base sm:text-lg font-bold text-[#0F172A] font-heading mb-1">
                 This student hasn't updated their profile yet.
               </h3>
-              <p className="text-xs sm:text-sm text-neutral-500 max-w-md leading-relaxed">
+              <p className="text-xs sm:text-sm text-[#475569] max-w-md leading-relaxed">
                 This official student profile is linked to the department roster. When {student.name?.split(' ')[0] || 'the student'} updates their bio, technical skills, projects, or achievements, they will appear here.
               </p>
             </div>
@@ -266,12 +264,12 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
           {/* LEFT: SKILLS */}
           <div className="lg:col-span-1 space-y-6">
-            <div className="bg-white rounded-2xl p-6 border border-[#E2E8F0] shadow-xs space-y-4">
-              <h3 className="text-sm font-bold text-[#0B192C] flex items-center gap-2 uppercase tracking-wide">
+            <div className="bg-white rounded-lg p-6 border border-[#E4E7F2] shadow-[0_1px_2px_rgba(15,23,42,0.04)] space-y-4">
+              <h3 className="text-sm font-bold text-[#0F172A] font-heading flex items-center gap-2 uppercase tracking-wide">
                 <span>Technical Skills</span>
               </h3>
               {skillsList.length === 0 ? (
-                <p className="text-xs text-neutral-400 italic">No skills listed yet.</p>
+                <p className="text-xs text-[#94A3B8] italic">No skills listed yet.</p>
               ) : (
                 <div className="flex flex-wrap gap-2">
                   {skillsList.map((sk: any, idx: number) => {
@@ -279,7 +277,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
                     return (
                       <span
                         key={idx}
-                        className="px-3 py-1 bg-neutral-100 border border-neutral-200 text-neutral-800 rounded-lg text-xs font-mono font-medium"
+                        className="px-3 py-1 bg-[#EEF2FF] border border-[#E0E7FF] text-[#4F46E5] rounded-md text-xs font-semibold"
                       >
                         {name}
                       </span>
@@ -291,19 +289,19 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
 
             {/* CERTIFICATES */}
             {certificates.length > 0 && (
-              <div className="bg-white rounded-2xl p-6 border border-[#E2E8F0] shadow-xs space-y-4">
-                <h3 className="text-sm font-bold text-[#0B192C] flex items-center gap-2 uppercase tracking-wide">
-                  <ShieldCheck className="w-4 h-4 text-elite-red" />
+              <div className="bg-white rounded-lg p-6 border border-[#E4E7F2] shadow-[0_1px_2px_rgba(15,23,42,0.04)] space-y-4">
+                <h3 className="text-sm font-bold text-[#0F172A] font-heading flex items-center gap-2 uppercase tracking-wide">
+                  <ShieldCheck className="w-4 h-4 text-[#4F46E5]" />
                   <span>Verified Certificates</span>
                 </h3>
                 <div className="space-y-3">
                   {certificates.map((c: any) => (
                     <div
                       key={c.id}
-                      className="p-3 bg-neutral-50 rounded-xl border border-neutral-200/70 flex items-center justify-between text-xs gap-3"
+                      className="p-3 bg-[#F7F8FC] rounded-lg border border-[#E4E7F2] flex items-center justify-between text-xs gap-3"
                     >
                       {c.thumbnailUrl && (
-                        <div className="w-14 h-10 rounded-lg bg-neutral-200 overflow-hidden shrink-0 border border-neutral-200/60">
+                        <div className="w-14 h-10 rounded-md bg-neutral-200 overflow-hidden shrink-0 border border-[#E4E7F2]">
                           <img
                             src={resolveMediaUrl(c.thumbnailUrl)}
                             alt={c.title}
@@ -314,15 +312,15 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
                         </div>
                       )}
                       <div className="space-y-0.5 min-w-0 flex-1">
-                        <div className="font-bold text-neutral-800 truncate">{c.title}</div>
-                        <div className="text-[11px] text-neutral-500 truncate">{c.issuer}</div>
+                        <div className="font-bold text-[#0F172A] truncate">{c.title}</div>
+                        <div className="text-[11px] text-[#475569] truncate">{c.issuer}</div>
                       </div>
                       {(c.viewUrl || c.fileUrl) && (
                         <a
                           href={resolveMediaUrl(c.viewUrl || c.fileUrl)}
                           target="_blank"
                           rel="noreferrer"
-                          className="inline-flex items-center gap-1 text-[11px] font-bold text-[#DC2626] hover:underline shrink-0 ml-2"
+                          className="inline-flex items-center gap-1 text-[11px] font-bold text-[#4F46E5] hover:underline shrink-0 ml-2"
                         >
                           <span>View</span>
                           <ExternalLink className="w-3 h-3" />
@@ -338,24 +336,24 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
           {/* RIGHT: PROJECTS & ACHIEVEMENTS */}
           <div className="lg:col-span-2 space-y-8">
             {/* PROJECTS */}
-            <div className="bg-white rounded-2xl p-6 sm:p-8 border border-[#E2E8F0] shadow-xs space-y-5">
-              <h3 className="text-base font-bold text-[#0B192C] flex items-center gap-2 uppercase tracking-wide">
-                <Briefcase className="w-4 h-4 text-elite-red" />
+            <div className="bg-white rounded-lg p-6 sm:p-8 border border-[#E4E7F2] shadow-[0_1px_2px_rgba(15,23,42,0.04)] space-y-5">
+              <h3 className="text-base font-bold text-[#0F172A] font-heading flex items-center gap-2 uppercase tracking-wide">
+                <Briefcase className="w-4 h-4 text-[#4F46E5]" />
                 <span>Featured Projects ({projects.length})</span>
               </h3>
 
               {projects.length === 0 ? (
-                <p className="text-xs text-neutral-400 italic py-4">No projects showcased yet.</p>
+                <p className="text-xs text-[#94A3B8] italic py-4">No projects showcased yet.</p>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {projects.map((p: any) => (
                     <div
                       key={p.id}
-                      className="p-5 rounded-xl border border-[#E2E8F0] bg-neutral-50/50 flex flex-col justify-between space-y-3"
+                      className="p-5 rounded-lg border border-[#E4E7F2] bg-[#F7F8FC] flex flex-col justify-between space-y-3"
                     >
                       <div className="space-y-2">
-                        <h4 className="font-bold text-sm text-[#0B192C]">{p.title}</h4>
-                        <p className="text-xs text-neutral-600 line-clamp-3 leading-relaxed">
+                        <h4 className="font-bold text-sm text-[#0F172A] font-heading">{p.title}</h4>
+                        <p className="text-xs text-[#475569] line-clamp-3 leading-relaxed">
                           {p.description}
                         </p>
                         {p.techStack && p.techStack.length > 0 && (
@@ -363,7 +361,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
                             {p.techStack.map((t: string) => (
                               <span
                                 key={t}
-                                className="text-[10px] font-mono bg-white border border-neutral-200 px-2 py-0.5 rounded text-neutral-600"
+                                className="text-[10px] bg-white border border-[#E4E7F2] px-2 py-0.5 rounded text-[#475569]"
                               >
                                 {t}
                               </span>
@@ -373,12 +371,12 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
                       </div>
 
                       {p.githubUrl && (
-                        <div className="pt-2 border-t border-neutral-200/60">
+                        <div className="pt-2 border-t border-[#E4E7F2]">
                           <a
                             href={p.githubUrl}
                             target="_blank"
                             rel="noreferrer"
-                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-elite-red hover:underline"
+                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#4F46E5] hover:underline"
                           >
                             <Github className="w-3.5 h-3.5" />
                             <span>View Source</span>
@@ -393,9 +391,9 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
 
             {/* ACHIEVEMENTS */}
             {achievements.length > 0 && (
-              <div className="bg-white rounded-2xl p-6 sm:p-8 border border-[#E2E8F0] shadow-xs space-y-5">
-                <h3 className="text-base font-bold text-[#0B192C] flex items-center gap-2 uppercase tracking-wide">
-                  <Award className="w-4 h-4 text-elite-red" />
+              <div className="bg-white rounded-lg p-6 sm:p-8 border border-[#E4E7F2] shadow-[0_1px_2px_rgba(15,23,42,0.04)] space-y-5">
+                <h3 className="text-base font-bold text-[#0F172A] font-heading flex items-center gap-2 uppercase tracking-wide">
+                  <Award className="w-4 h-4 text-amber-500" />
                   <span>Endorsed Achievements</span>
                 </h3>
 
@@ -403,10 +401,10 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
                   {achievements.map((a: any) => (
                     <div
                       key={a.id}
-                      className="p-4 rounded-xl border border-neutral-200 bg-neutral-50/60 flex items-start justify-between gap-4"
+                      className="p-4 rounded-lg border border-[#E4E7F2] bg-[#F7F8FC] flex items-start justify-between gap-4"
                     >
                       {a.thumbnailUrl && (
-                        <div className="w-16 h-12 rounded-lg bg-neutral-200 overflow-hidden shrink-0 border border-neutral-200/60 mt-0.5">
+                        <div className="w-16 h-12 rounded-md bg-neutral-200 overflow-hidden shrink-0 border border-[#E4E7F2] mt-0.5">
                           <img
                             src={resolveMediaUrl(a.thumbnailUrl)}
                             alt={a.title}
@@ -417,9 +415,9 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
                         </div>
                       )}
                       <div className="space-y-1 text-xs min-w-0 flex-1">
-                        <div className="font-bold text-[#0B192C] text-sm">{a.title}</div>
-                        <p className="text-neutral-600">{a.description}</p>
-                        <div className="text-[11px] text-neutral-400 font-mono pt-1">
+                        <div className="font-bold text-[#0F172A] text-sm font-heading">{a.title}</div>
+                        <p className="text-[#475569]">{a.description}</p>
+                        <div className="text-[11px] text-[#94A3B8] pt-1">
                           {a.organization} · {a.date ? new Date(a.date).toLocaleDateString() : ''}
                         </div>
                       </div>
@@ -429,7 +427,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
                             href={resolveMediaUrl(a.viewUrl || a.proofUrl)}
                             target="_blank"
                             rel="noreferrer"
-                            className="inline-flex items-center gap-1 text-[11px] font-bold text-[#DC2626] hover:underline"
+                            className="inline-flex items-center gap-1 text-[11px] font-bold text-[#4F46E5] hover:underline"
                           >
                             <span>Proof</span>
                             <ExternalLink className="w-3 h-3" />
@@ -456,4 +454,3 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
 };
 
 export default PublicStudentProfilePage;
-

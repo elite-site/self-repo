@@ -25,12 +25,10 @@ const TeamsPage = lazy(() => import('./pages/TeamsPage'));
 const VotingPage = lazy(() => import('./pages/VotingPage'));
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
 const AnnouncementDetailPage = lazy(() => import('./pages/AnnouncementDetailPage'));
+import { BrandedLoading } from './components/BrandedLoading';
 
 const RouteLoadingFallback: React.FC = () => (
-  <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center p-8">
-    <div className="w-8 h-8 border-2 border-elite-red border-t-transparent rounded-full animate-spin" />
-    <span className="mt-3 text-xs font-mono font-medium text-neutral-400 uppercase tracking-wider">Loading...</span>
-  </div>
+  <BrandedLoading message="Loading ELITE Portal" />
 );
 
 const AuthWrapper: React.FC = () => {
@@ -128,11 +126,7 @@ const AuthWrapper: React.FC = () => {
   }, [navigate]);
 
   if (authChecking) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-elite-red border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
+    return <BrandedLoading message="Verifying Student Session" />;
   }
 
   // A server-side failure must not masquerade as a logout. Offer a retry instead

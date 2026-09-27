@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Menu, X, LogOut, ChevronDown, ArrowRight, LayoutDashboard, User } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
+import { Menu, X, LogOut, ChevronDown, ArrowRight, LayoutDashboard, User, Users } from 'lucide-react';
 import { StudentSession } from '../types';
 import { api } from '../services/api';
 
@@ -46,7 +46,7 @@ export const Navbar: React.FC<NavbarProps> = ({ session, onLogout }) => {
   };
 
   return (
-    <nav className="w-full bg-[#0B192C] border-b border-neutral-800 sticky top-0 z-40 shadow-md">
+    <nav className="w-full bg-white/95 backdrop-blur-md border-b border-[#E4E7F2] sticky top-0 z-40 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
       <div className="max-w-[1400px] mx-auto px-4 sm:px-8 flex items-center justify-between h-16 sm:h-18">
         {/* LEFT: BRANDING & LOGOS */}
         <Link to="/" className="flex items-center gap-3 sm:gap-4 group">
@@ -80,16 +80,29 @@ export const Navbar: React.FC<NavbarProps> = ({ session, onLogout }) => {
               />
             </picture>
           </div>
-          <div className="border-l border-neutral-700 pl-3 text-left">
-            <div className="flex items-center gap-1.5">
-              <span className="text-base font-black tracking-tight text-[#DC2626]">ELITE</span>
-              <span className="text-base font-bold tracking-tight text-white">STUDENT PORTAL</span>
+          <div className="border-l border-[#E4E7F2] pl-3 text-left">
+            <div className="flex items-center gap-1.5 font-heading">
+              <span className="text-base font-extrabold tracking-tight text-[#E11D48]">ELITE</span>
+              <span className="text-base font-bold tracking-tight text-[#0F172A]">STUDENT PORTAL</span>
             </div>
-            <div className="text-[10px] text-neutral-400 font-medium tracking-wide hidden sm:block">
+            <div className="text-[10px] text-[#94A3B8] font-medium tracking-wide hidden sm:block">
               Dept of Information Technology · SASI
             </div>
           </div>
         </Link>
+
+        {/* CENTER / DESKTOP NAV LINKS */}
+        <div className="hidden md:flex items-center gap-6 text-xs font-semibold text-[#475569]">
+          <Link
+            to="/students"
+            className={`transition-colors hover:text-[#4F46E5] flex items-center gap-1.5 ${
+              location.pathname.startsWith('/students') ? 'text-[#4F46E5] font-bold' : ''
+            }`}
+          >
+            <Users className="w-3.5 h-3.5" />
+            <span>Student Directory</span>
+          </Link>
+        </div>
 
         {/* RIGHT: AUTH CTA / PROFILE CHIP */}
         <div className="hidden md:flex items-center gap-4">
@@ -97,7 +110,7 @@ export const Navbar: React.FC<NavbarProps> = ({ session, onLogout }) => {
             <div className="flex items-center gap-3">
               <Link
                 to="/dashboard"
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#DC2626] hover:bg-[#B5121B] text-white text-xs font-bold transition-all shadow-sm"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#4F46E5] hover:bg-[#3730A3] text-white text-xs font-bold transition-opacity shadow-xs"
               >
                 <LayoutDashboard className="w-3.5 h-3.5" />
                 <span>Go to Dashboard</span>
@@ -107,30 +120,30 @@ export const Navbar: React.FC<NavbarProps> = ({ session, onLogout }) => {
               <div className="relative" ref={chipRef}>
                 <button
                   onClick={() => setProfileOpen(!profileOpen)}
-                  className="flex items-center gap-2 p-1.5 rounded-full bg-neutral-800 hover:bg-neutral-700 text-white transition-colors cursor-pointer border border-neutral-700"
+                  className="flex items-center gap-2 p-1.5 rounded-full bg-[#F7F8FC] hover:bg-[#EEF2FF] text-[#0F172A] transition-colors cursor-pointer border border-[#E4E7F2]"
                 >
-                  <span className="w-7 h-7 rounded-full bg-[#DC2626] text-white flex items-center justify-center text-xs font-extrabold">
+                  <span className="w-7 h-7 rounded-full bg-[#EEF2FF] text-[#4F46E5] border border-[#E0E7FF] flex items-center justify-center text-xs font-extrabold font-heading">
                     {initials}
                   </span>
-                  <ChevronDown className="w-3.5 h-3.5 text-neutral-400 mr-1" />
+                  <ChevronDown className="w-3.5 h-3.5 text-[#94A3B8] mr-1" />
                 </button>
 
                 {profileOpen && (
-                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-2xl border border-neutral-200 py-2 z-50 text-left">
-                    <div className="px-4 py-2 border-b border-neutral-100">
-                      <div className="text-xs font-bold text-[#0B192C] truncate">{session.student.name}</div>
-                      <div className="text-[10px] text-neutral-500 font-mono">{session.student.rollNo}</div>
+                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl border border-[#E4E7F2] py-2 z-50 text-left">
+                    <div className="px-4 py-2 border-b border-[#E4E7F2]">
+                      <div className="text-xs font-bold text-[#0F172A] font-heading truncate">{session.student.name}</div>
+                      <div className="text-[10px] text-[#94A3B8]">{session.student.rollNo}</div>
                     </div>
                     <Link
                       to="/profile"
                       onClick={() => setProfileOpen(false)}
-                      className="block px-4 py-2 text-xs font-medium text-neutral-700 hover:bg-neutral-50"
+                      className="block px-4 py-2 text-xs font-medium text-[#475569] hover:bg-[#F7F8FC] hover:text-[#4F46E5]"
                     >
                       My Profile
                     </Link>
                     <button
                       onClick={handleLogout}
-                      className="w-full flex items-center gap-2 px-4 py-2 text-xs font-bold text-red-600 hover:bg-red-50 text-left cursor-pointer border-t border-neutral-100 mt-1"
+                      className="w-full flex items-center gap-2 px-4 py-2 text-xs font-bold text-[#E11D48] hover:bg-rose-50 text-left cursor-pointer border-t border-[#E4E7F2] mt-1"
                     >
                       <LogOut className="w-3.5 h-3.5" />
                       <span>Sign Out</span>
@@ -142,7 +155,7 @@ export const Navbar: React.FC<NavbarProps> = ({ session, onLogout }) => {
           ) : (
             <button
               onClick={handleSignIn}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#DC2626] hover:bg-[#B5121B] text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#4F46E5] hover:bg-[#3730A3] text-white text-xs font-bold transition-opacity shadow-xs cursor-pointer"
             >
               <span>Student Sign In</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -151,18 +164,18 @@ export const Navbar: React.FC<NavbarProps> = ({ session, onLogout }) => {
         </div>
 
         {/* MOBILE MENU TOGGLE */}
-        <div className="flex md:hidden items-center gap-2 text-white">
+        <div className="flex md:hidden items-center gap-2">
           {session && (
             <Link
               to="/dashboard"
-              className="px-2.5 py-1 rounded-lg bg-[#DC2626] text-white text-xs font-bold"
+              className="px-2.5 py-1 rounded-lg bg-[#4F46E5] text-white text-xs font-bold"
             >
               Dashboard
             </Link>
           )}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-2 text-neutral-300 hover:text-white hover:bg-neutral-800 rounded-lg transition-colors"
+            className="p-2 text-[#475569] hover:text-[#0F172A] hover:bg-[#F7F8FC] rounded-lg transition-colors"
             aria-label="Toggle menu"
           >
             {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -172,39 +185,49 @@ export const Navbar: React.FC<NavbarProps> = ({ session, onLogout }) => {
 
       {/* MOBILE DROPDOWN */}
       {mobileMenuOpen && (
-        <div className="md:hidden bg-[#0B192C] border-t border-neutral-800 px-6 py-4 space-y-3 text-white text-xs font-bold uppercase tracking-wider text-left shadow-2xl">
+        <div className="md:hidden bg-white border-t border-[#E4E7F2] px-6 py-4 space-y-3 text-xs font-semibold text-left shadow-xl">
           {session && (
-            <div className="flex items-center gap-3 py-2 border-b border-neutral-800 pb-3">
-              <span className="w-8 h-8 rounded-full bg-[#DC2626] text-white flex items-center justify-center text-xs font-extrabold shrink-0">
+            <div className="flex items-center gap-3 py-2 border-b border-[#E4E7F2] pb-3">
+              <span className="w-8 h-8 rounded-full bg-[#EEF2FF] text-[#4F46E5] border border-[#E0E7FF] flex items-center justify-center text-xs font-extrabold font-heading shrink-0">
                 {initials}
               </span>
               <div className="min-w-0">
-                <div className="truncate text-white">{session.student.name}</div>
-                <div className="text-neutral-400 font-mono normal-case text-[10px]">{session.student.rollNo}</div>
+                <div className="truncate text-[#0F172A] font-bold font-heading">{session.student.name}</div>
+                <div className="text-[#94A3B8] normal-case text-[10px]">{session.student.rollNo}</div>
               </div>
             </div>
           )}
+
+          <Link
+            to="/students"
+            onClick={() => setMobileMenuOpen(false)}
+            className="w-full flex items-center gap-3 py-2 text-[#475569] hover:text-[#4F46E5]"
+          >
+            <Users className="w-4 h-4 text-[#4F46E5]" />
+            <span>Student Directory</span>
+          </Link>
+
           {session ? (
             <>
               <Link
                 to="/dashboard"
                 onClick={() => setMobileMenuOpen(false)}
-                className="w-full flex items-center gap-3 py-2 text-neutral-300 hover:text-white"
+                className="w-full flex items-center gap-3 py-2 text-[#475569] hover:text-[#4F46E5]"
               >
-                <LayoutDashboard className="w-4 h-4 text-[#DC2626]" />
+                <LayoutDashboard className="w-4 h-4 text-[#4F46E5]" />
                 <span>Dashboard</span>
               </Link>
               <Link
                 to="/profile"
                 onClick={() => setMobileMenuOpen(false)}
-                className="w-full flex items-center gap-3 py-2 text-neutral-300 hover:text-white"
+                className="w-full flex items-center gap-3 py-2 text-[#475569] hover:text-[#4F46E5]"
               >
-                <User className="w-4 h-4 text-[#DC2626]" />
+                <User className="w-4 h-4 text-[#4F46E5]" />
                 <span>My Profile</span>
               </Link>
               <button
                 onClick={handleLogout}
-                className="w-full flex items-center gap-3 py-2 text-left text-red-400 hover:text-red-300 cursor-pointer border-t border-neutral-800 pt-3"
+                className="w-full flex items-center gap-3 py-2 text-left text-[#E11D48] hover:text-[#BE123C] cursor-pointer border-t border-[#E4E7F2] pt-3"
               >
                 <LogOut className="w-4 h-4" />
                 <span>Sign Out</span>
@@ -216,7 +239,7 @@ export const Navbar: React.FC<NavbarProps> = ({ session, onLogout }) => {
                 setMobileMenuOpen(false);
                 handleSignIn();
               }}
-              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#DC2626] text-white font-bold cursor-pointer"
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-[#4F46E5] text-white font-bold cursor-pointer"
             >
               <span>Student Sign In</span>
               <ArrowRight className="w-4 h-4" />

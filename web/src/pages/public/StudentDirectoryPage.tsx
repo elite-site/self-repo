@@ -2,9 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { api, resolveMediaUrl } from '../../services/api';
 import { StudentSession } from '../../types';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Search, Filter, Loader2, Users, ArrowRight, Sparkles, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Filter, Users, ArrowRight, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Navbar } from '../../components/Navbar';
 import { Footer } from '../../components/Footer';
+import { BrandedLoading } from '../../components/BrandedLoading';
 import { getPhotoStyle } from '../../utils/photoStyle';
 
 interface StudentDirectoryProps {
@@ -125,20 +126,20 @@ export const StudentDirectoryPage: React.FC<StudentDirectoryProps> = ({ session,
   const hasActiveFilters = search || yearFilter !== 'ALL' || sectionFilter !== 'ALL' || skillFilter || statusFilter !== 'ALL';
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col font-sans text-left">
+    <div className="min-h-screen bg-[#F7F8FC] flex flex-col font-sans text-left text-[#0F172A]">
       <Navbar session={session} onLogout={onLogout} />
 
       {/* HEADER BANNER */}
-      <div className="bg-[#0B192C] text-white py-14 sm:py-16">
+      <div className="bg-white border-b border-[#E4E7F2] py-12 sm:py-14">
         <div className="max-w-7xl mx-auto px-6 sm:px-10 text-center space-y-3">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-500/15 text-red-400 border border-red-500/30 text-xs font-mono font-bold tracking-widest uppercase">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-50 text-[#E11D48] border border-rose-200 text-xs font-mono font-bold tracking-widest uppercase">
             <Users className="w-3.5 h-3.5" />
             <span>VERIFIED IT DIRECTORY</span>
           </div>
-          <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight font-display">
+          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight font-heading text-[#0F172A]">
             Student Directory
           </h1>
-          <p className="text-slate-300 max-w-2xl mx-auto text-xs sm:text-sm leading-relaxed">
+          <p className="text-[#475569] max-w-2xl mx-auto text-xs sm:text-sm leading-relaxed">
             Discover verified students, technical projects, engineering portfolios, and department credentials.
           </p>
         </div>
@@ -149,16 +150,16 @@ export const StudentDirectoryPage: React.FC<StudentDirectoryProps> = ({ session,
         <div className="flex flex-col lg:flex-row gap-8 items-start">
           {/* LEFT SIDEBAR: FILTERS */}
           <aside className="w-full lg:w-72 shrink-0 space-y-5">
-            <div className="bg-white p-6 rounded-2xl border border-[#E2E8F0] shadow-xs space-y-5">
-              <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
-                <h3 className="font-bold text-sm text-[#0B192C] flex items-center gap-2">
-                  <Filter className="w-4 h-4 text-elite-red" />
+            <div className="bg-white p-6 rounded-lg border border-[#E4E7F2] shadow-[0_1px_2px_rgba(15,23,42,0.04)] space-y-5">
+              <div className="flex items-center justify-between border-b border-[#E4E7F2] pb-3">
+                <h3 className="font-bold text-sm text-[#0F172A] font-heading flex items-center gap-2">
+                  <Filter className="w-4 h-4 text-[#4F46E5]" />
                   <span>Filter Directory</span>
                 </h3>
                 {hasActiveFilters && (
                   <button
                     onClick={resetFilters}
-                    className="text-xs text-elite-red hover:underline font-semibold cursor-pointer"
+                    className="text-xs text-[#E11D48] hover:underline font-semibold cursor-pointer"
                   >
                     Reset
                   </button>
@@ -166,7 +167,7 @@ export const StudentDirectoryPage: React.FC<StudentDirectoryProps> = ({ session,
               </div>
 
               <div>
-                <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                <div className="text-[11px] font-bold text-[#475569] uppercase tracking-wider mb-1.5">
                   Student Status
                 </div>
                 <div className="grid grid-cols-3 gap-1.5" role="group" aria-label="Student status">
@@ -178,10 +179,10 @@ export const StudentDirectoryPage: React.FC<StudentDirectoryProps> = ({ session,
                         type="button"
                         aria-pressed={isActive}
                         onClick={() => setStatusFilter(option.value)}
-                        className={`min-h-10 px-2 py-2 rounded-xl border text-[11px] font-bold transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-elite-red focus:ring-offset-2 ${
+                        className={`min-h-10 px-2 py-2 rounded-lg border text-[11px] font-bold transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:ring-offset-2 ${
                           isActive
-                            ? 'bg-[#0B192C] text-white border-[#0B192C]'
-                            : 'bg-neutral-50 text-slate-600 border-[#E2E8F0] hover:bg-neutral-100'
+                            ? 'bg-[#4F46E5] text-white border-[#4F46E5]'
+                            : 'bg-[#F7F8FC] text-[#475569] border-[#E4E7F2] hover:bg-[#EEF2FF]'
                         }`}
                       >
                         {option.label}
@@ -193,13 +194,13 @@ export const StudentDirectoryPage: React.FC<StudentDirectoryProps> = ({ session,
 
               {/* Year Filter */}
               <div>
-                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">
+                <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1.5">
                   Academic Year
                 </label>
                 <select
                   value={yearFilter}
                   onChange={(e) => setYearFilter(e.target.value)}
-                  className="w-full p-2.5 bg-neutral-50 border border-[#E2E8F0] rounded-xl text-xs text-[#0B192C] font-medium focus:outline-none focus:border-elite-red"
+                  className="w-full p-2.5 bg-[#F7F8FC] border border-[#E4E7F2] rounded-lg text-xs text-[#0F172A] font-medium focus:outline-none focus:border-[#4F46E5]"
                 >
                   <option value="ALL">All Years</option>
                   <option value="1">1st Year</option>
@@ -211,7 +212,7 @@ export const StudentDirectoryPage: React.FC<StudentDirectoryProps> = ({ session,
 
               {/* Section Filter */}
               <div>
-                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">
+                <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1.5">
                   Class Section
                 </label>
                 <select
@@ -220,7 +221,7 @@ export const StudentDirectoryPage: React.FC<StudentDirectoryProps> = ({ session,
                     setSectionFilter(e.target.value);
                     setPage(1);
                   }}
-                  className="w-full p-2.5 bg-neutral-50 border border-[#E2E8F0] rounded-xl text-xs text-[#0B192C] font-medium focus:outline-none focus:border-elite-red cursor-pointer"
+                  className="w-full p-2.5 bg-[#F7F8FC] border border-[#E4E7F2] rounded-lg text-xs text-[#0F172A] font-medium focus:outline-none focus:border-[#4F46E5] cursor-pointer"
                 >
                   <option value="ALL">All Sections</option>
                   <option value="A">Section A</option>
@@ -231,7 +232,7 @@ export const StudentDirectoryPage: React.FC<StudentDirectoryProps> = ({ session,
 
               {/* Skill Filter */}
               <div>
-                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">
+                <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1.5">
                   Filter by Skill
                 </label>
                 <select
@@ -240,7 +241,7 @@ export const StudentDirectoryPage: React.FC<StudentDirectoryProps> = ({ session,
                     setSkillFilter(e.target.value);
                     setPage(1);
                   }}
-                  className="w-full p-2.5 bg-neutral-50 border border-[#E2E8F0] rounded-xl text-xs text-[#0B192C] font-medium focus:outline-none focus:border-elite-red cursor-pointer"
+                  className="w-full p-2.5 bg-[#F7F8FC] border border-[#E4E7F2] rounded-lg text-xs text-[#0F172A] font-medium focus:outline-none focus:border-[#4F46E5] cursor-pointer"
                 >
                   <option value="">All Technical Skills</option>
                   {availableSkills.map((sk) => (
@@ -257,13 +258,13 @@ export const StudentDirectoryPage: React.FC<StudentDirectoryProps> = ({ session,
           <div className="flex-1 w-full space-y-6">
             {/* Search Bar */}
             <div className="relative">
-              <Search className="w-4 h-4 absolute left-4 top-3.5 text-slate-400" />
+              <Search className="w-4 h-4 absolute left-4 top-3.5 text-[#94A3B8]" />
               <input
                 type="text"
                 placeholder="Search by student name, roll number, or skill (e.g. React, Python)..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-11 pr-4 py-3 bg-white border border-[#E2E8F0] rounded-xl shadow-xs text-xs text-[#0B192C] font-medium focus:outline-none focus:border-elite-red"
+                className="w-full pl-11 pr-4 py-3 bg-white border border-[#E4E7F2] rounded-lg shadow-[0_1px_2px_rgba(15,23,42,0.04)] text-xs text-[#0F172A] font-medium focus:outline-none focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5]"
               />
               {search && (
                 <button
@@ -276,7 +277,7 @@ export const StudentDirectoryPage: React.FC<StudentDirectoryProps> = ({ session,
                       setSearchParams(nextParams, { replace: true });
                     }
                   }}
-                  className="absolute right-3.5 top-3 text-slate-400 hover:text-slate-600 cursor-pointer"
+                  className="absolute right-3.5 top-3 text-[#94A3B8] hover:text-[#475569] cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -285,20 +286,20 @@ export const StudentDirectoryPage: React.FC<StudentDirectoryProps> = ({ session,
 
             {/* RESULTS */}
             {loading ? (
-              <div className="flex justify-center py-24">
-                <Loader2 className="w-8 h-8 animate-spin text-elite-red" />
+              <div className="py-16">
+                <BrandedLoading fullScreen={false} message="Loading Student Directory..." />
               </div>
             ) : students.length === 0 ? (
-              <div className="text-center py-20 px-6 bg-white border border-[#E2E8F0] rounded-2xl space-y-3">
-                <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto text-slate-400">
+              <div className="text-center py-20 px-6 bg-white border border-[#E4E7F2] rounded-lg space-y-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+                <div className="w-12 h-12 rounded-lg bg-[#EEF2FF] text-[#4F46E5] flex items-center justify-center mx-auto">
                   <Users className="w-6 h-6" />
                 </div>
-                <h3 className="font-bold text-base text-[#0B192C]">
+                <h3 className="font-bold text-base text-[#0F172A] font-heading">
                   {search || hasActiveFilters
                     ? 'No students match your search criteria.'
                     : 'No public student profiles yet.'}
                 </h3>
-                <p className="text-xs text-slate-400 max-w-sm mx-auto leading-relaxed">
+                <p className="text-xs text-[#475569] max-w-sm mx-auto leading-relaxed">
                   {search || hasActiveFilters
                     ? 'Try searching with a different skill, name, or roll number.'
                     : 'As students update their portfolios, they will appear in this directory.'}
@@ -306,7 +307,7 @@ export const StudentDirectoryPage: React.FC<StudentDirectoryProps> = ({ session,
                 {hasActiveFilters && (
                   <button
                     onClick={resetFilters}
-                    className="px-4 py-2 bg-neutral-900 hover:bg-neutral-800 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                    className="px-4 py-2 bg-[#4F46E5] hover:bg-[#3730A3] text-white rounded-lg text-xs font-bold transition-opacity cursor-pointer"
                   >
                     Clear All Filters
                   </button>
@@ -315,31 +316,26 @@ export const StudentDirectoryPage: React.FC<StudentDirectoryProps> = ({ session,
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {students.map((s: any) => {
-                  // Root-relative API paths must be resolved against the API
-                  // origin; the portal and API are served from different origins
-                  // in production, so a bare path would 404.
                   const photoUrl = s.profile?.photoUrl || s.photoUrl
                     ? resolveMediaUrl(s.profile?.photoUrl || s.photoUrl!)
                     : null;
                   const skillsList = s.profile?.skills || s.skills || [];
-                   const initials = (s.name || '')
-                     .split(' ')
-                     .filter(Boolean)
-                     .slice(0, 2)
-                     .map((w: string) => w[0]?.toUpperCase())
-                     .join('');
-                   const graduationYear =
-                     typeof s.graduatedAt === 'string' ? s.graduatedAt.match(/^\d{4}/)?.[0] : undefined;
+                  const initials = (s.name || '')
+                    .split(' ')
+                    .filter(Boolean)
+                    .slice(0, 2)
+                    .map((w: string) => w[0]?.toUpperCase())
+                    .join('');
 
-                   return (
+                  return (
                     <Link
                       to={`/students/${s.rollNo}`}
                       key={s.id || s.rollNo}
-                      className="bg-white border border-[#E2E8F0] rounded-2xl p-6 hover:shadow-md hover:border-neutral-300 transition-all group flex flex-col justify-between"
+                      className="bg-white border border-[#E4E7F2] rounded-lg p-6 hover:shadow-md hover:border-[#4F46E5]/40 transition-all group flex flex-col justify-between"
                     >
                       <div className="space-y-4">
                         <div className="flex items-center justify-between">
-                          <div className="w-14 h-14 rounded-2xl bg-[#0B192C] text-white flex items-center justify-center font-bold text-base shadow-sm group-hover:bg-elite-red transition-colors overflow-hidden">
+                          <div className="w-14 h-14 rounded-lg bg-[#EEF2FF] text-[#4F46E5] flex items-center justify-center font-bold text-base shadow-xs group-hover:bg-[#4F46E5] group-hover:text-white transition-colors overflow-hidden">
                             {photoUrl ? (
                               <img
                                 src={photoUrl}
@@ -352,16 +348,16 @@ export const StudentDirectoryPage: React.FC<StudentDirectoryProps> = ({ session,
                               initials || 'IT'
                             )}
                           </div>
-                          <span className="text-[11px] font-mono font-semibold bg-neutral-100 text-neutral-600 px-2.5 py-1 rounded-full border border-neutral-200/60">
+                          <span className="text-[11px] font-semibold bg-[#F7F8FC] text-[#475569] px-2.5 py-1 rounded-full border border-[#E4E7F2]">
                             Year {s.year || 1} · Sec {s.section || 'A'}
                           </span>
                         </div>
 
                         <div>
-                          <h3 className="font-bold text-base text-[#0B192C] group-hover:text-elite-red transition-colors line-clamp-1">
+                          <h3 className="font-bold text-base text-[#0F172A] font-heading group-hover:text-[#4F46E5] transition-colors line-clamp-1">
                             {s.name}
                           </h3>
-                          <div className="text-xs font-mono text-neutral-400 mt-0.5">
+                          <div className="text-xs text-[#94A3B8] mt-0.5">
                             {s.rollNo}
                           </div>
                         </div>
@@ -373,14 +369,14 @@ export const StudentDirectoryPage: React.FC<StudentDirectoryProps> = ({ session,
                               return (
                                 <span
                                   key={idx}
-                                  className="text-[10px] font-mono font-medium px-2 py-0.5 rounded-md bg-neutral-100 text-neutral-700"
+                                  className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-[#EEF2FF] text-[#4F46E5]"
                                 >
                                   {skillName}
                                 </span>
                               );
                             })}
                             {skillsList.length > 3 && (
-                              <span className="text-[10px] font-mono font-medium px-1.5 py-0.5 rounded-md bg-neutral-50 text-neutral-400">
+                              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-[#F7F8FC] text-[#94A3B8]">
                                 +{skillsList.length - 3}
                               </span>
                             )}
@@ -388,7 +384,7 @@ export const StudentDirectoryPage: React.FC<StudentDirectoryProps> = ({ session,
                         )}
                       </div>
 
-                      <div className="pt-4 mt-4 border-t border-neutral-100 flex items-center justify-between text-xs font-bold text-elite-red group-hover:translate-x-0.5 transition-transform">
+                      <div className="pt-4 mt-4 border-t border-[#E4E7F2] flex items-center justify-between text-xs font-bold text-[#4F46E5] group-hover:translate-x-0.5 transition-transform">
                         <span>View Profile</span>
                         <ArrowRight className="w-3.5 h-3.5" />
                       </div>
@@ -398,30 +394,30 @@ export const StudentDirectoryPage: React.FC<StudentDirectoryProps> = ({ session,
 
                 {/* PAGINATION CONTROLS */}
                 {total > 0 && (
-                  <div className="col-span-full flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t border-[#E2E8F0] mt-2">
-                    <div className="text-xs font-mono text-neutral-500">
-                      Showing <span className="font-bold text-[#0B192C]">{(page - 1) * limit + 1}</span>–
-                      <span className="font-bold text-[#0B192C]">{Math.min(page * limit, total)}</span> of{' '}
-                      <span className="font-bold text-[#0B192C]">{total}</span> students
+                  <div className="col-span-full flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t border-[#E4E7F2] mt-2">
+                    <div className="text-xs text-[#475569]">
+                      Showing <span className="font-bold text-[#0F172A]">{(page - 1) * limit + 1}</span>–
+                      <span className="font-bold text-[#0F172A]">{Math.min(page * limit, total)}</span> of{' '}
+                      <span className="font-bold text-[#0F172A]">{total}</span> students
                     </div>
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
                         onClick={() => setPage((p) => Math.max(1, p - 1))}
                         disabled={page <= 1 || loading}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[#E2E8F0] bg-white text-xs font-bold text-neutral-700 hover:bg-neutral-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-xs"
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[#E4E7F2] bg-white text-xs font-bold text-[#475569] hover:bg-[#F7F8FC] transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-xs"
                       >
                         <ChevronLeft className="w-3.5 h-3.5" />
                         <span>Previous</span>
                       </button>
-                      <span className="text-xs font-medium text-neutral-600 px-2 font-mono">
+                      <span className="text-xs font-medium text-[#475569] px-2">
                         Page {page} of {totalPages}
                       </span>
                       <button
                         type="button"
                         onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                         disabled={page >= totalPages || loading}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[#E2E8F0] bg-white text-xs font-bold text-neutral-700 hover:bg-neutral-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-xs"
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[#E4E7F2] bg-white text-xs font-bold text-[#475569] hover:bg-[#F7F8FC] transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-xs"
                       >
                         <span>Next</span>
                         <ChevronRight className="w-3.5 h-3.5" />
@@ -441,4 +437,3 @@ export const StudentDirectoryPage: React.FC<StudentDirectoryProps> = ({ session,
 };
 
 export default StudentDirectoryPage;
-

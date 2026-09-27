@@ -15,39 +15,44 @@
   }
 
   body {
-    background-color: #F8FAFC;  /* surface-canvas */
+    background-color: #F7F8FC;  /* surface-canvas */
     color: #0F172A;              /* text-primary */
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overflow-x: hidden;
     width: 100%;
   }
 
-  /* Form elements inherit Inter */
+  h1, h2, h3, h4, h5, h6, .font-heading, .font-display {
+    font-family: 'Sora', system-ui, sans-serif;
+  }
+
+  /* Form elements inherit Plus Jakarta Sans */
   input, select, textarea, button {
     font-family: inherit;
   }
 
-  /* Accessible focus ring — navy, not browser default */
+  /* Accessible focus ring — Indigo */
   *:focus-visible {
-    outline: 2px solid #0B192C;
+    outline: 2px solid #4F46E5;
     outline-offset: 2px;
   }
 }
 
 /* ── CSS custom properties ─────────────────────────────────── */
 :root {
-  /* Core brand */
-  --elite-navy:    #0B192C;
-  --elite-crimson: #DC2626;
-  --elite-blue:    #2563EB;
-  --elite-slate:   #64748B;
+  /* Core brand tokens */
+  --primary-brand: #4F46E5;
+  --primary-deep:  #3730A3;
+  --primary-pale:  #E0E7FF;
+  --accent-rose:   #E11D48;
+  --accent-dark:   #BE123C;
 
-  /* Surfaces */
-  --surface-canvas: #F8FAFC;
+  /* Surfaces & Borders */
+  --surface-canvas: #F7F8FC;
   --surface-card:   #FFFFFF;
-  --border-subtle:  #E2E8F0;
+  --border-subtle:  #E4E7F2;
   --border-strong:  #CBD5E1;
 
   /* Text */
@@ -60,7 +65,7 @@
   --status-pending:  #D97706;
   --status-review:   #7C3AED;
   --status-approved: #059669;
-  --status-rejected: #DC2626;
+  --status-rejected: #E11D48;
   --status-changes:  #EA580C;
 
   /* Elevation shadows */
@@ -68,7 +73,7 @@
   --shadow-card-hover: 0 4px 6px -1px rgba(15, 23, 42, 0.06), 0 2px 4px -2px rgba(15, 23, 42, 0.04);
   --shadow-drawer:     0 20px 25px -5px rgba(15, 23, 42, 0.1);
   --shadow-modal:      0 25px 50px -12px rgba(15, 23, 42, 0.25);
-  --modal-backdrop:    rgba(11, 25, 44, 0.4);
+  --modal-backdrop:    rgba(15, 23, 42, 0.4);
 
   /* Motion */
   --dur-fast: 120ms;
@@ -76,9 +81,28 @@
   --ease:     cubic-bezier(0.2, 0, 0, 1);
 }
 
+/* ── Indeterminate Progress Animation ───────────────────────── */
+@keyframes indeterminate-progress {
+  0% {
+    left: -35%;
+    width: 35%;
+  }
+  50% {
+    left: 40%;
+    width: 50%;
+  }
+  100% {
+    left: 100%;
+    width: 25%;
+  }
+}
+.animate-indeterminate {
+  animation: indeterminate-progress 1.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
 /* ── Scrollbar ─────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: #F8FAFC; }
+::-webkit-scrollbar-track { background: #F7F8FC; }
 ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
 
@@ -86,47 +110,46 @@
 /* Usage: <span class="elite-badge elite-badge--approved">Approved</span> */
 @layer components {
   .elite-badge {
-    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded text-label-sm font-label-sm;
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-xs font-semibold;
   }
   .elite-badge--draft    { @apply bg-slate-100  text-status-draft;    }
   .elite-badge--pending  { @apply bg-amber-50   text-status-pending;  }
   .elite-badge--review   { @apply bg-purple-50  text-status-review;   }
   .elite-badge--approved { @apply bg-emerald-50 text-status-approved; }
-  .elite-badge--rejected { @apply bg-red-50     text-status-rejected; }
+  .elite-badge--rejected { @apply bg-rose-50    text-status-rejected; }
   .elite-badge--changes  { @apply bg-orange-50  text-status-changes;  }
 
-  /* Standard card */
+  /* Standard card: white surface, 1px #E4E7F2 border, subtle shadow, 8px radius */
   .elite-card {
-    @apply bg-surface-card border border-border-subtle rounded-lg shadow-card;
+    @apply bg-white border border-[#E4E7F2] rounded-lg shadow-card;
   }
 
-  /* Primary button — navy */
+  /* Primary CTA button — solid indigo #4F46E5, white text, subtle hover opacity fade */
   .elite-btn-primary {
-    @apply inline-flex items-center gap-space-xs px-space-md py-space-sm
-           bg-primary text-on-primary font-label-lg text-label-lg
-           rounded hover:opacity-90 transition-opacity shadow-sm;
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5
+           bg-[#4F46E5] hover:bg-[#4338CA] text-white font-semibold text-sm
+           rounded-lg transition-all duration-150 shadow-sm hover:opacity-95 active:scale-[0.99] cursor-pointer;
   }
 
-  /* Accent / CTA button — crimson */
+  /* Secondary / Accent CTA button — solid rose #E11D48, reserved for one clear action */
   .elite-btn-accent {
-    @apply inline-flex items-center gap-space-xs px-space-md py-space-sm
-           bg-secondary text-on-secondary font-label-lg text-label-lg
-           rounded hover:opacity-90 transition-opacity shadow-sm;
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5
+           bg-[#E11D48] hover:bg-[#BE123C] text-white font-semibold text-sm
+           rounded-lg transition-all duration-150 shadow-sm hover:opacity-95 active:scale-[0.99] cursor-pointer;
   }
 
-  /* Outline button */
+  /* Subtle outline button */
   .elite-btn-outline {
-    @apply inline-flex items-center gap-space-xs px-space-md py-space-sm
-           bg-surface-card border border-border-strong text-text-primary
-           font-label-lg text-label-lg rounded
-           hover:bg-surface-container-low transition-colors;
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5
+           bg-white border border-[#E4E7F2] text-[#0F172A] hover:bg-[#F7F8FC] hover:border-[#CBD5E1]
+           font-semibold text-sm rounded-lg transition-all duration-150 shadow-card cursor-pointer;
   }
 
   /* Standard input */
   .elite-input {
-    @apply w-full bg-surface-card border border-border-strong rounded px-space-sm py-space-sm
-           text-body-md text-text-primary placeholder:text-text-muted
-           focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-0
+    @apply w-full bg-white border border-[#E4E7F2] rounded-lg px-3 py-2
+           text-sm text-[#0F172A] placeholder:text-[#94A3B8]
+           focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-[#4F46E5]
            transition-shadow;
   }
 }

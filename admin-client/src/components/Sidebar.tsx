@@ -121,31 +121,34 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab, onLogo
     setCollapsed((c) => ({ ...c, [label]: !c[label] }));
 
   return (
-    <aside className="w-60 bg-white dark:bg-neutral-900 border-r border-neutral-200 dark:border-neutral-800 flex flex-col shrink-0 h-screen sticky top-0 text-left z-30 select-none transition-colors">
+    <aside className="w-60 bg-white dark:bg-neutral-900 border-r border-[#E4E7F2] dark:border-neutral-800 flex flex-col shrink-0 h-screen sticky top-0 text-left z-30 select-none transition-colors">
       <div className="flex flex-col h-full overflow-y-auto">
         {/* BRAND */}
-        <div className="p-4 border-b border-neutral-100 dark:border-neutral-800 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-red-50 dark:bg-red-950/40 text-[#DC2626] flex items-center justify-center shrink-0 border border-red-100 dark:border-red-900/40">
-            <UserRound className="w-4 h-4" />
+        <div className="p-4 border-b border-[#E4E7F2] dark:border-neutral-800 flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-[#EEF2FF] dark:bg-indigo-950/50 text-[#4F46E5] dark:text-[#818CF8] flex items-center justify-center shrink-0 border border-[#E0E7FF] dark:border-indigo-900/40">
+            <UserRound strokeWidth={1.75} className="w-4 h-4" />
           </div>
           <div>
-            <div className="text-sm font-extrabold text-[#DC2626] tracking-tight leading-tight">ELITE Portal</div>
-            <div className="text-[10px] text-neutral-400 font-semibold uppercase tracking-wider">Admin Control</div>
+            <div className="flex items-center gap-1 font-heading text-sm font-extrabold tracking-tight leading-tight">
+              <span className="text-[#E11D48]">ELITE</span>
+              <span className="text-[#0F172A] dark:text-white">Portal</span>
+            </div>
+            <div className="text-[10px] text-[#94A3B8] font-semibold uppercase tracking-wider">Admin Control</div>
           </div>
         </div>
 
         {/* NAV GROUPS */}
-        <nav className="flex-1 p-2 space-y-0.5 overflow-y-auto">
+        <nav className="flex-1 p-2.5 space-y-1 overflow-y-auto">
           {navGroups.map((group) => {
             const isOpen = !collapsed[group.label];
             const hasActive = group.items.some((i) => i.id === activeTab);
             return (
-              <div key={group.label} className="mb-1">
+              <div key={group.label} className="mb-2">
                 <button
                   onClick={() => toggle(group.label)}
-                  className="w-full flex items-center justify-between px-2 py-1.5 text-[10px] font-bold text-neutral-400 dark:text-neutral-400 uppercase tracking-widest hover:text-neutral-600 dark:hover:text-neutral-200 transition-colors cursor-pointer"
+                  className="w-full flex items-center justify-between px-2.5 py-1.5 font-heading text-[10px] font-bold text-[#94A3B8] dark:text-neutral-400 uppercase tracking-widest hover:text-[#475569] dark:hover:text-neutral-200 transition-colors cursor-pointer"
                 >
-                  <span className={hasActive ? 'text-[#DC2626]' : ''}>{group.label}</span>
+                  <span className={hasActive ? 'text-[#4F46E5] dark:text-[#818CF8]' : ''}>{group.label}</span>
                   {isOpen ? (
                     <ChevronDown className="w-3 h-3" />
                   ) : (
@@ -153,7 +156,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab, onLogo
                   )}
                 </button>
                 {isOpen && (
-                  <div className="space-y-0.5">
+                  <div className="space-y-0.5 mt-0.5">
                     {group.items.map((item) => {
                       const Icon = item.icon;
                       const isActive = activeTab === item.id;
@@ -161,15 +164,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab, onLogo
                         <button
                           key={item.id}
                           onClick={() => onSelectTab(item.id)}
-                          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer ${
                             isActive
-                              ? 'bg-red-50 dark:bg-red-950/40 text-[#DC2626] font-bold'
-                              : 'text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100/70 dark:hover:bg-neutral-800/60'
+                              ? 'bg-[#EEF2FF] dark:bg-indigo-950/50 text-[#4F46E5] dark:text-[#818CF8] font-semibold shadow-[inset_0_0_0_1px_rgba(79,70,229,0.15)]'
+                              : 'text-[#475569] dark:text-neutral-300 hover:text-[#0F172A] dark:hover:text-white hover:bg-[#F7F8FC] dark:hover:bg-neutral-800/60'
                           }`}
                         >
-                          <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-[#DC2626]' : 'text-neutral-400'}`} />
-                          <span>{item.label}</span>
-                          {isActive && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-[#DC2626]" />}
+                          <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-[#4F46E5] dark:text-[#818CF8]' : 'text-[#94A3B8]'}`} />
+                          <span className="truncate">{item.label}</span>
+                          {isActive && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-[#4F46E5] dark:bg-[#818CF8]" />}
                         </button>
                       );
                     })}
@@ -181,15 +184,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab, onLogo
         </nav>
 
         {/* FOOTER */}
-        <div className="p-3 border-t border-neutral-100 dark:border-neutral-800">
+        <div className="p-3 border-t border-[#E4E7F2] dark:border-neutral-800">
           <button
             onClick={onLogout}
-            className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-neutral-500 dark:text-neutral-400 hover:text-[#DC2626] dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition-colors cursor-pointer"
+            className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-[#475569] dark:text-neutral-400 hover:text-[#E11D48] dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors cursor-pointer"
           >
-            <LogOut className="w-3.5 h-3.5" />
+            <LogOut strokeWidth={1.75} className="w-3.5 h-3.5" />
             <span>Logout</span>
           </button>
-          <div className="text-[10px] text-neutral-400 dark:text-neutral-500 text-center font-mono mt-2">
+          <div className="text-[10px] text-[#94A3B8] dark:text-neutral-500 text-center font-mono mt-2">
             ELITE Admin v2.0
           </div>
         </div>

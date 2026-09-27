@@ -19,9 +19,9 @@
 
 @layer base {
   body {
-    background-color: #F8FAFC;
+    background-color: #F7F8FC;
     color: #0F172A;
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
@@ -29,32 +29,37 @@
     width: 100%;
   }
 
+  h1, h2, h3, h4, h5, h6, .font-heading, .font-display {
+    font-family: 'Sora', system-ui, sans-serif;
+  }
+
   input, select, textarea, button {
     font-family: inherit;
   }
 
   *:focus-visible {
-    outline: 2px solid #DC2626;
+    outline: 2px solid #4F46E5;
     outline-offset: 2px;
   }
 }
 
 /* ── Light Mode Default Custom Properties ───────────────────── */
 #admin-root {
-  --admin-bg: #F8FAFC;
+  --admin-bg: #F7F8FC;
   --admin-sidebar: #FFFFFF;
   --admin-header: #FFFFFF;
   --admin-card: #FFFFFF;
   --admin-card-elevated: #FFFFFF;
   --admin-input: #FFFFFF;
-  --admin-border: #E2E8F0;
+  --admin-border: #E4E7F2;
   --admin-border-subtle: #F1F5F9;
   --admin-text: #0F172A;
   --admin-text-secondary: #475569;
   --admin-text-muted: #94A3B8;
-  --admin-accent: #DC2626;
+  --admin-accent: #E11D48;
+  --admin-primary: #4F46E5;
   --admin-table-row: #FFFFFF;
-  --admin-table-hover: #F8FAFC;
+  --admin-table-hover: #F7F8FC;
 }
 
 /* ── Professional Deep-Dark Surface System (Admin Scoped) ────── */
@@ -70,7 +75,8 @@
   --admin-text: #F3F5F7;
   --admin-text-secondary: #9BA3AF;
   --admin-text-muted: #6F7785;
-  --admin-accent: #E5252A;
+  --admin-accent: #F43F5E;
+  --admin-primary: #6366F1;
   --admin-table-row: #11151C;
   --admin-table-hover: #151A22;
 }
@@ -239,8 +245,26 @@
 }
 
 /* Dark Scrollbars */
+@keyframes indeterminate-progress {
+  0% {
+    left: -35%;
+    width: 35%;
+  }
+  50% {
+    left: 40%;
+    width: 50%;
+  }
+  100% {
+    left: 100%;
+    width: 25%;
+  }
+}
+.animate-indeterminate {
+  animation: indeterminate-progress 1.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
 ::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: #F8FAFC; }
+::-webkit-scrollbar-track { background: #F7F8FC; }
 ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
 

@@ -1,13 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  User,
   Edit3,
   ExternalLink,
   AlertCircle,
   CheckCircle2,
-  Clock,
-  XCircle,
   Github,
   Linkedin,
   Globe,
@@ -22,12 +19,12 @@ import {
   Loader2,
   X,
   RefreshCw,
-  Building,
   GraduationCap
 } from 'lucide-react';
 import { api, resolveMediaUrl } from '../services/api';
 import { StudentProfile, Project, Certificate, Achievement } from '../types';
 import { getPhotoStyle } from '../utils/photoStyle';
+import { BrandedLoading } from '../components/BrandedLoading';
 
 export const ProfilePage: React.FC = () => {
   const [profile, setProfile] = useState<StudentProfile | null>(null);
@@ -98,32 +95,21 @@ export const ProfilePage: React.FC = () => {
     setFieldName(field);
     setRequestedValue('');
     setReason('');
-    setReqSuccess(false);
     setReqError(null);
+    setReqSuccess(false);
     setModalOpen(true);
   };
 
   const handleSubmitChangeRequest = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!requestedValue.trim() || !reason.trim() || !profile) return;
+    if (!requestedValue.trim() || !reason.trim()) return;
+
     setSubmittingReq(true);
     setReqError(null);
-
-    const currentValue =
-      fieldName === 'name'
-        ? profile.name
-        : fieldName === 'section'
-        ? profile.section
-        : fieldName === 'year'
-        ? String(profile.year)
-        : fieldName === 'branch'
-        ? profile.branch
-        : profile.rollNo;
 
     try {
       await api.submitChangeRequest({
         fieldName,
-        currentValue,
         requestedValue: requestedValue.trim(),
         reason: reason.trim(),
       });
@@ -141,28 +127,24 @@ export const ProfilePage: React.FC = () => {
 
   if (loading && !profile) {
     return (
-      <div className="space-y-6 animate-pulse select-none">
-        <div className="h-44 bg-slate-200 rounded-2xl w-full"></div>
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-8 h-96 bg-slate-200 rounded-2xl"></div>
-          <div className="lg:col-span-4 h-96 bg-slate-200 rounded-2xl"></div>
-        </div>
+      <div className="py-24">
+        <BrandedLoading fullScreen={false} message="Loading Student Profile..." />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 text-[#0F172A]">
       {/* ERROR BANNER WITH INLINE RETRY */}
       {error && (
-        <div className="flex items-center justify-between p-4 bg-red-50 border border-red-200 rounded-2xl text-red-800 text-sm">
+        <div className="flex items-center justify-between p-4 bg-rose-50 border border-rose-200 rounded-lg text-rose-800 text-sm">
           <div className="flex items-center gap-3">
-            <AlertCircle className="w-5 h-5 text-red-600 shrink-0" />
+            <AlertCircle className="w-5 h-5 text-[#E11D48] shrink-0" />
             <span>{error}</span>
           </div>
           <button
             onClick={fetchProfileData}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#E11D48] hover:bg-[#BE123C] text-white rounded-lg text-xs font-bold transition-colors cursor-pointer"
           >
             <RefreshCw className="w-3.5 h-3.5" />
             <span>Try Again</span>
@@ -171,11 +153,11 @@ export const ProfilePage: React.FC = () => {
       )}
 
       {/* 1. LARGE PROFILE BANNER HEADER */}
-      <div className="bg-white border border-[#E2E8F0] rounded-2xl overflow-hidden shadow-sm">
+      <div className="bg-white border border-[#E4E7F2] rounded-lg overflow-hidden shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
         {/* Top Crimson Banner Accent */}
-        <div className="h-28 sm:h-36 bg-gradient-to-r from-[#0B192C] via-[#1E293B] to-[#B5121B] relative px-6 sm:px-8 flex items-end">
+        <div className="h-28 sm:h-36 bg-gradient-to-r from-[#1E1B4B] via-[#312E81] to-[#3730A3] relative px-6 sm:px-8 flex items-end">
           <div className="absolute top-4 right-4 flex items-center gap-2">
-            <span className="text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-white/80 bg-black/20 backdrop-blur-sm px-2.5 py-1 rounded-lg border border-white/10">
+            <span className="text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-white/90 bg-white/10 backdrop-blur-sm px-2.5 py-1 rounded-lg border border-white/20">
               Verified Student Account
             </span>
           </div>
@@ -187,7 +169,7 @@ export const ProfilePage: React.FC = () => {
             {/* Avatar */}
             <div className="relative">
               {profile?.photoUrl ? (
-                <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-2xl overflow-hidden border-4 border-white shadow-md bg-white shrink-0">
+                <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-lg overflow-hidden border-4 border-white shadow-md bg-white shrink-0">
                   <img
                     src={resolveMediaUrl(profile.photoUrl)}
                     alt={profile.name}
@@ -195,7 +177,7 @@ export const ProfilePage: React.FC = () => {
                   />
                 </div>
               ) : (
-                <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-2xl bg-[#0B192C] text-white flex items-center justify-center font-black text-3xl sm:text-4xl border-4 border-white shadow-md shrink-0">
+                <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-lg bg-[#EEF2FF] text-[#4F46E5] flex items-center justify-center font-black text-3xl sm:text-4xl border-4 border-white shadow-md shrink-0 font-heading">
                   {profile?.name
                     ? profile.name
                         .split(' ')
@@ -212,14 +194,14 @@ export const ProfilePage: React.FC = () => {
             <div className="flex flex-wrap items-center gap-2.5">
               <Link
                 to={`/students/${profile?.rollNo || ''}`}
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-[#CBD5E1] text-[#0B192C] hover:bg-neutral-50 text-xs font-bold transition-colors"
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-[#E4E7F2] text-[#0F172A] hover:bg-[#F7F8FC] text-xs font-bold transition-colors"
               >
                 <span>Public Showcase</span>
-                <ExternalLink className="w-3.5 h-3.5 text-neutral-400" />
+                <ExternalLink className="w-3.5 h-3.5 text-[#94A3B8]" />
               </Link>
               <Link
                 to="/profile/edit"
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#DC2626] hover:bg-[#B5121B] text-white text-xs font-bold transition-all shadow-sm"
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#E11D48] hover:bg-[#BE123C] text-white text-xs font-bold transition-opacity shadow-xs"
               >
                 <Edit3 className="w-3.5 h-3.5" />
                 <span>Edit Profile</span>
@@ -230,22 +212,22 @@ export const ProfilePage: React.FC = () => {
           {/* Name & Academic Tags */}
           <div className="space-y-3">
             <div className="flex flex-wrap items-center gap-2.5">
-              <h1 className="text-2xl sm:text-3xl font-black text-[#0B192C] tracking-tight">
+              <h1 className="text-2xl sm:text-3xl font-black text-[#0F172A] font-heading tracking-tight">
                 {profile?.name || 'Student'}
               </h1>
-              <span className="text-xs font-mono font-bold text-neutral-600 bg-neutral-100 px-2.5 py-1 rounded-md">
+              <span className="text-xs font-semibold text-[#475569] bg-[#F7F8FC] px-2.5 py-1 rounded-md border border-[#E4E7F2]">
                 {profile?.rollNo || 'IT Portal'}
               </span>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-neutral-600">
-              <span className="bg-red-50 text-[#DC2626] px-2.5 py-1 rounded-md font-bold">
+            <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-[#475569]">
+              <span className="bg-rose-50 text-[#E11D48] border border-rose-100 px-2.5 py-1 rounded-md font-bold">
                 Year {profile?.year || '1'} · Section {profile?.section || 'A'}
               </span>
-              <span className="bg-neutral-100 px-2.5 py-1 rounded-md">
+              <span className="bg-[#F7F8FC] border border-[#E4E7F2] px-2.5 py-1 rounded-md">
                 {profile?.branch || 'Information Technology'}
               </span>
-              <span className="bg-neutral-100 px-2.5 py-1 rounded-md">
+              <span className="bg-[#F7F8FC] border border-[#E4E7F2] px-2.5 py-1 rounded-md">
                 Sasi Institute of Technology & Engineering
               </span>
             </div>
@@ -253,11 +235,11 @@ export const ProfilePage: React.FC = () => {
             {/* Bio */}
             <div className="pt-2">
               {profile?.bio || (profile as any)?.biography ? (
-                <p className="text-sm text-neutral-700 leading-relaxed max-w-4xl bg-neutral-50/80 p-4 rounded-xl border border-neutral-100 italic">
+                <p className="text-sm text-[#475569] leading-relaxed max-w-4xl bg-[#F7F8FC] p-4 rounded-lg border border-[#E4E7F2] italic">
                   "{profile?.bio || (profile as any)?.biography}"
                 </p>
               ) : (
-                <p className="text-xs text-neutral-400 italic bg-neutral-50 p-3 rounded-xl border border-dashed border-neutral-200">
+                <p className="text-xs text-[#94A3B8] italic bg-[#F7F8FC] p-3 rounded-lg border border-dashed border-[#E4E7F2]">
                   No biography provided yet. Click "Edit Profile" to add your introduction, career interests, and technical focus.
                 </p>
               )}
@@ -270,7 +252,7 @@ export const ProfilePage: React.FC = () => {
                   href={profile.githubUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-100 hover:bg-neutral-200 text-xs font-bold text-neutral-800 transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#F7F8FC] hover:bg-[#EEF2FF] border border-[#E4E7F2] text-xs font-bold text-[#0F172A] transition-colors"
                 >
                   <Github className="w-3.5 h-3.5" />
                   <span>GitHub</span>
@@ -281,7 +263,7 @@ export const ProfilePage: React.FC = () => {
                   href={profile.linkedinUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-xs font-bold text-blue-700 transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#EEF2FF] hover:bg-[#E0E7FF] border border-[#C7D2FE] text-xs font-bold text-[#4F46E5] transition-colors"
                 >
                   <Linkedin className="w-3.5 h-3.5" />
                   <span>LinkedIn</span>
@@ -292,14 +274,14 @@ export const ProfilePage: React.FC = () => {
                   href={profile.portfolioUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-xs font-bold text-emerald-800 transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-xs font-bold text-emerald-800 transition-colors"
                 >
                   <Globe className="w-3.5 h-3.5" />
                   <span>Portfolio Site</span>
                 </a>
               )}
               {!profile?.githubUrl && !profile?.linkedinUrl && !profile?.portfolioUrl && (
-                <span className="text-xs text-neutral-400 italic">
+                <span className="text-xs text-[#94A3B8] italic">
                   No professional links added. Add your GitHub or LinkedIn in Edit Profile.
                 </span>
               )}
@@ -313,15 +295,15 @@ export const ProfilePage: React.FC = () => {
         {/* LEFT COLUMN: SKILLS, PROJECTS & ACHIEVEMENTS (7 cols) */}
         <div className="lg:col-span-7 space-y-6">
           {/* TECHNICAL SKILLS CARD */}
-          <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6 shadow-sm space-y-4">
+          <div className="bg-white border border-[#E4E7F2] rounded-lg p-6 shadow-[0_1px_2px_rgba(15,23,42,0.04)] space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-[#DC2626]" />
-                <h2 className="text-base font-bold text-[#0B192C]">Technical Skills & Stacks</h2>
+                <Sparkles className="w-5 h-5 text-[#4F46E5]" />
+                <h2 className="text-base font-bold text-[#0F172A] font-heading">Technical Skills & Stacks</h2>
               </div>
               <Link
                 to="/profile/edit"
-                className="text-xs font-bold text-[#DC2626] hover:text-[#B5121B] flex items-center gap-0.5"
+                className="text-xs font-bold text-[#4F46E5] hover:text-[#3730A3] flex items-center gap-0.5"
               >
                 <span>Manage Skills</span>
                 <ChevronRight className="w-3.5 h-3.5" />
@@ -333,22 +315,22 @@ export const ProfilePage: React.FC = () => {
                 {profile.skills.map((skill) => (
                   <span
                     key={skill}
-                    className="px-3 py-1.5 bg-neutral-100 hover:bg-neutral-200 border border-neutral-200 text-neutral-800 rounded-xl text-xs font-bold transition-colors"
+                    className="px-3 py-1.5 bg-[#EEF2FF] border border-[#E0E7FF] text-[#4F46E5] rounded-md text-xs font-semibold"
                   >
                     {skill}
                   </span>
                 ))}
               </div>
             ) : (
-              <div className="text-center py-6 px-4 bg-neutral-50 rounded-xl border border-dashed border-neutral-200">
-                <Sparkles className="w-6 h-6 text-neutral-300 mx-auto mb-1.5" />
-                <div className="text-xs font-semibold text-neutral-600">No technical skills added yet</div>
-                <p className="text-[11px] text-neutral-400 mt-0.5 mb-3">
+              <div className="text-center py-6 px-4 bg-[#F7F8FC] rounded-lg border border-dashed border-[#E4E7F2]">
+                <Sparkles className="w-6 h-6 text-[#94A3B8] mx-auto mb-1.5" />
+                <div className="text-xs font-semibold text-[#475569]">No technical skills added yet</div>
+                <p className="text-[11px] text-[#94A3B8] mt-0.5 mb-3">
                   Highlight languages, frameworks, databases, and developer tools.
                 </p>
                 <Link
                   to="/profile/edit"
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#DC2626] text-white rounded-lg text-xs font-bold hover:bg-[#B5121B]"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#4F46E5] text-white rounded-lg text-xs font-bold hover:bg-[#3730A3]"
                 >
                   <span>Add Skills</span>
                 </Link>
@@ -357,18 +339,18 @@ export const ProfilePage: React.FC = () => {
           </div>
 
           {/* PROJECT SHOWCASE PREVIEW */}
-          <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6 shadow-sm space-y-4">
+          <div className="bg-white border border-[#E4E7F2] rounded-lg p-6 shadow-[0_1px_2px_rgba(15,23,42,0.04)] space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <FolderGit2 className="w-5 h-5 text-purple-600" />
+                <FolderGit2 className="w-5 h-5 text-[#4F46E5]" />
                 <div>
-                  <h2 className="text-base font-bold text-[#0B192C]">Featured Projects</h2>
-                  <p className="text-xs text-neutral-500">Live builds & repositories</p>
+                  <h2 className="text-base font-bold text-[#0F172A] font-heading">Featured Projects</h2>
+                  <p className="text-xs text-[#475569]">Live builds & repositories</p>
                 </div>
               </div>
               <Link
                 to="/portfolio"
-                className="text-xs font-bold text-purple-600 hover:text-purple-700 flex items-center gap-0.5"
+                className="text-xs font-bold text-[#4F46E5] hover:text-[#3730A3] flex items-center gap-0.5"
               >
                 <span>View All ({projects.length})</span>
                 <ChevronRight className="w-3.5 h-3.5" />
@@ -376,15 +358,15 @@ export const ProfilePage: React.FC = () => {
             </div>
 
             {projects.length === 0 ? (
-              <div className="text-center py-8 px-4 bg-neutral-50 rounded-xl border border-dashed border-neutral-200">
-                <FolderGit2 className="w-8 h-8 text-neutral-300 mx-auto mb-2" />
-                <div className="text-xs font-bold text-neutral-700">No projects added yet</div>
-                <p className="text-[11px] text-neutral-400 mt-0.5 mb-3">
+              <div className="text-center py-8 px-4 bg-[#F7F8FC] rounded-lg border border-dashed border-[#E4E7F2]">
+                <FolderGit2 className="w-8 h-8 text-[#94A3B8] mx-auto mb-2" />
+                <div className="text-xs font-bold text-[#475569]">No projects added yet</div>
+                <p className="text-[11px] text-[#94A3B8] mt-0.5 mb-3">
                   Showcase software applications, AI models, hardware builds, or academic projects.
                 </p>
                 <Link
                   to="/portfolio"
-                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-purple-600 text-white rounded-xl text-xs font-bold hover:bg-purple-700 transition-colors shadow-sm"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#4F46E5] text-white rounded-lg text-xs font-bold hover:bg-[#3730A3] transition-colors shadow-xs"
                 >
                   <span>Add Project</span>
                 </Link>
@@ -394,7 +376,7 @@ export const ProfilePage: React.FC = () => {
                 {projects.slice(0, 4).map((proj) => (
                   <div
                     key={proj.id}
-                    className="border border-[#E2E8F0] rounded-xl p-4 flex flex-col justify-between hover:border-neutral-300 transition-all bg-white"
+                    className="border border-[#E4E7F2] rounded-lg p-4 flex flex-col justify-between hover:border-[#4F46E5]/40 transition-all bg-[#F7F8FC]"
                   >
                     <div className="space-y-1.5">
                       <div className="flex items-center justify-between">
@@ -402,22 +384,24 @@ export const ProfilePage: React.FC = () => {
                           className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
                             proj.status === 'APPROVED'
                               ? 'bg-emerald-100 text-emerald-800'
+                              : proj.status === 'REJECTED'
+                              ? 'bg-rose-100 text-rose-800'
                               : 'bg-amber-100 text-amber-800'
                           }`}
                         >
                           {proj.status}
                         </span>
                       </div>
-                      <h4 className="text-xs font-bold text-[#0B192C] line-clamp-1">{proj.title}</h4>
-                      <p className="text-[11px] text-neutral-500 line-clamp-2">{proj.description}</p>
+                      <h4 className="text-xs font-bold text-[#0F172A] font-heading line-clamp-1">{proj.title}</h4>
+                      <p className="text-[11px] text-[#475569] line-clamp-2">{proj.description}</p>
                     </div>
 
-                    <div className="pt-3 mt-2 border-t border-neutral-100 flex items-center justify-between text-xs">
+                    <div className="pt-3 mt-2 border-t border-[#E4E7F2] flex items-center justify-between text-xs">
                       <div className="flex flex-wrap gap-1 max-w-[150px] overflow-hidden">
                         {proj.techStack?.slice(0, 2).map((t) => (
                           <span
                             key={t}
-                            className="text-[9px] font-mono bg-neutral-100 text-neutral-600 px-1.5 py-0.5 rounded"
+                            className="text-[9px] bg-white border border-[#E4E7F2] text-[#475569] px-1.5 py-0.5 rounded"
                           >
                             {t}
                           </span>
@@ -428,7 +412,7 @@ export const ProfilePage: React.FC = () => {
                           href={proj.githubUrl}
                           target="_blank"
                           rel="noreferrer"
-                          className="text-neutral-500 hover:text-[#0B192C]"
+                          className="text-[#475569] hover:text-[#4F46E5]"
                         >
                           <Github className="w-3.5 h-3.5" />
                         </a>
@@ -441,18 +425,18 @@ export const ProfilePage: React.FC = () => {
           </div>
 
           {/* ACHIEVEMENTS & CERTIFICATES SUMMARY */}
-          <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6 shadow-sm space-y-4">
+          <div className="bg-white border border-[#E4E7F2] rounded-lg p-6 shadow-[0_1px_2px_rgba(15,23,42,0.04)] space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Award className="w-5 h-5 text-amber-600" />
+                <Award className="w-5 h-5 text-amber-500" />
                 <div>
-                  <h2 className="text-base font-bold text-[#0B192C]">Honors & Certifications</h2>
-                  <p className="text-xs text-neutral-500">Verified credentials & awards</p>
+                  <h2 className="text-base font-bold text-[#0F172A] font-heading">Honors & Certifications</h2>
+                  <p className="text-xs text-[#475569]">Verified credentials & awards</p>
                 </div>
               </div>
               <Link
                 to="/portfolio"
-                className="text-xs font-bold text-amber-600 hover:text-amber-700 flex items-center gap-0.5"
+                className="text-xs font-bold text-[#4F46E5] hover:text-[#3730A3] flex items-center gap-0.5"
               >
                 <span>Manage ({achievements.length + certificates.length})</span>
                 <ChevronRight className="w-3.5 h-3.5" />
@@ -460,10 +444,10 @@ export const ProfilePage: React.FC = () => {
             </div>
 
             {achievements.length === 0 && certificates.length === 0 ? (
-              <div className="text-center py-6 px-4 bg-neutral-50 rounded-xl border border-dashed border-neutral-200">
-                <Award className="w-6 h-6 text-neutral-300 mx-auto mb-1.5" />
-                <div className="text-xs font-semibold text-neutral-600">No credentials uploaded yet</div>
-                <p className="text-[11px] text-neutral-400 mt-0.5">
+              <div className="text-center py-6 px-4 bg-[#F7F8FC] rounded-lg border border-dashed border-[#E4E7F2]">
+                <Award className="w-6 h-6 text-[#94A3B8] mx-auto mb-1.5" />
+                <div className="text-xs font-semibold text-[#475569]">No credentials uploaded yet</div>
+                <p className="text-[11px] text-[#94A3B8] mt-0.5">
                   Upload competition awards, hackathon ranks, and industry certifications.
                 </p>
               </div>
@@ -472,13 +456,13 @@ export const ProfilePage: React.FC = () => {
                 {achievements.slice(0, 3).map((ach) => (
                   <div
                     key={ach.id}
-                    className="p-3 rounded-xl border border-[#E2E8F0] flex items-center justify-between bg-white"
+                    className="p-3 rounded-lg border border-[#E4E7F2] flex items-center justify-between bg-[#F7F8FC]"
                   >
                     <div>
-                      <h4 className="text-xs font-bold text-[#0B192C]">{ach.title}</h4>
-                      <p className="text-[11px] text-neutral-500">{ach.organization || ach.category}</p>
+                      <h4 className="text-xs font-bold text-[#0F172A] font-heading">{ach.title}</h4>
+                      <p className="text-[11px] text-[#475569]">{ach.organization || ach.category}</p>
                     </div>
-                    <span className="text-[10px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full">
+                    <span className="text-[10px] font-bold text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
                       {ach.status}
                     </span>
                   </div>
@@ -486,13 +470,13 @@ export const ProfilePage: React.FC = () => {
                 {certificates.slice(0, 2).map((cert) => (
                   <div
                     key={cert.id}
-                    className="p-3 rounded-xl border border-[#E2E8F0] flex items-center justify-between bg-white"
+                    className="p-3 rounded-lg border border-[#E4E7F2] flex items-center justify-between bg-[#F7F8FC]"
                   >
                     <div>
-                      <h4 className="text-xs font-bold text-[#0B192C]">{cert.title}</h4>
-                      <p className="text-[11px] text-neutral-500">{cert.issuer}</p>
+                      <h4 className="text-xs font-bold text-[#0F172A] font-heading">{cert.title}</h4>
+                      <p className="text-[11px] text-[#475569]">{cert.issuer}</p>
                     </div>
-                    <span className="text-[10px] font-bold text-blue-800 bg-blue-50 px-2 py-0.5 rounded-full">
+                    <span className="text-[10px] font-bold text-indigo-800 bg-[#EEF2FF] border border-[#E0E7FF] px-2 py-0.5 rounded-full">
                       {cert.status}
                     </span>
                   </div>
@@ -505,103 +489,103 @@ export const ProfilePage: React.FC = () => {
         {/* RIGHT COLUMN: ACADEMIC DETAILS, DELIVERABLES & CHANGE REQUESTS (5 cols) */}
         <div className="lg:col-span-5 space-y-6">
           {/* OFFICIAL ACADEMIC INFORMATION */}
-          <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6 shadow-sm space-y-4">
+          <div className="bg-white border border-[#E4E7F2] rounded-lg p-6 shadow-[0_1px_2px_rgba(15,23,42,0.04)] space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <GraduationCap className="w-5 h-5 text-[#0B192C]" />
-                <h2 className="text-base font-bold text-[#0B192C]">Academic Records</h2>
+                <GraduationCap className="w-5 h-5 text-[#4F46E5]" />
+                <h2 className="text-base font-bold text-[#0F172A] font-heading">Academic Records</h2>
               </div>
               <button
                 onClick={() => handleOpenModal('name')}
-                className="text-xs font-bold text-[#DC2626] hover:underline cursor-pointer"
+                className="text-xs font-bold text-[#E11D48] hover:underline cursor-pointer"
               >
                 Request Change
               </button>
             </div>
 
-            <div className="space-y-3 divide-y divide-neutral-100 text-xs">
+            <div className="space-y-3 divide-y divide-[#E4E7F2] text-xs">
               <div className="flex items-center justify-between pt-2">
-                <span className="text-neutral-500 font-medium">Roll Number</span>
-                <span className="font-mono font-bold text-[#0B192C]">{profile?.rollNo || '—'}</span>
+                <span className="text-[#475569] font-medium">Roll Number</span>
+                <span className="font-semibold text-[#0F172A]">{profile?.rollNo || '—'}</span>
               </div>
               <div className="flex items-center justify-between pt-2">
-                <span className="text-neutral-500 font-medium">Full Name</span>
-                <span className="font-bold text-[#0B192C]">{profile?.name || '—'}</span>
+                <span className="text-[#475569] font-medium">Full Name</span>
+                <span className="font-bold text-[#0F172A]">{profile?.name || '—'}</span>
               </div>
               <div className="flex items-center justify-between pt-2">
-                <span className="text-neutral-500 font-medium">Year & Section</span>
-                <span className="font-bold text-[#0B192C]">
+                <span className="text-[#475569] font-medium">Year & Section</span>
+                <span className="font-bold text-[#0F172A]">
                   Year {profile?.year || '—'}, Section {profile?.section || '—'}
                 </span>
               </div>
               <div className="flex items-center justify-between pt-2">
-                <span className="text-neutral-500 font-medium">Department</span>
-                <span className="font-bold text-[#0B192C]">{profile?.branch || 'IT'}</span>
+                <span className="text-[#475569] font-medium">Department</span>
+                <span className="font-bold text-[#0F172A]">{profile?.branch || 'IT'}</span>
               </div>
               <div className="flex items-center justify-between pt-2">
-                <span className="text-neutral-500 font-medium">College Email</span>
-                <span className="font-mono text-neutral-700 truncate max-w-[180px]">
+                <span className="text-[#475569] font-medium">College Email</span>
+                <span className="text-[#475569] truncate max-w-[180px]">
                   {profile?.email || '—'}
                 </span>
               </div>
               <div className="flex items-center justify-between pt-2">
-                <span className="text-neutral-500 font-medium">Institution</span>
-                <span className="font-bold text-[#0B192C]">SASI Institute</span>
+                <span className="text-[#475569] font-medium">Institution</span>
+                <span className="font-bold text-[#0F172A]">SASI Institute</span>
               </div>
             </div>
 
             <div className="pt-2">
               <button
                 onClick={() => handleOpenModal('name')}
-                className="w-full py-2 px-3 rounded-xl border border-dashed border-neutral-300 hover:border-neutral-400 bg-neutral-50 text-[11px] font-bold text-neutral-600 hover:text-[#0B192C] transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                className="w-full py-2 px-3 rounded-lg border border-dashed border-[#E4E7F2] hover:border-[#4F46E5] bg-[#F7F8FC] text-[11px] font-bold text-[#475569] hover:text-[#4F46E5] transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
               >
-                <ShieldAlert className="w-3.5 h-3.5 text-neutral-400" />
+                <ShieldAlert className="w-3.5 h-3.5 text-[#94A3B8]" />
                 <span>Incorrect record? Submit Official Change Request</span>
               </button>
             </div>
           </div>
 
           {/* DELIVERABLES STATUS: VIDEO & RESUME */}
-          <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6 shadow-sm space-y-4">
-            <h2 className="text-base font-bold text-[#0B192C]">Portal Deliverables</h2>
+          <div className="bg-white border border-[#E4E7F2] rounded-lg p-6 shadow-[0_1px_2px_rgba(15,23,42,0.04)] space-y-4">
+            <h2 className="text-base font-bold text-[#0F172A] font-heading">Portal Deliverables</h2>
 
             {/* Video status item */}
-            <div className="flex items-center justify-between p-3.5 rounded-xl border border-neutral-100 bg-neutral-50/60">
+            <div className="flex items-center justify-between p-3.5 rounded-lg border border-[#E4E7F2] bg-[#F7F8FC]">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-red-50 text-[#DC2626]">
+                <div className="p-2 rounded-lg bg-rose-50 text-[#E11D48]">
                   <Video className="w-4 h-4" />
                 </div>
                 <div>
-                  <h4 className="text-xs font-bold text-[#0B192C]">Introduction Video</h4>
-                  <span className="text-[10px] text-neutral-500">
+                  <h4 className="text-xs font-bold text-[#0F172A] font-heading">Introduction Video</h4>
+                  <span className="text-[10px] text-[#475569]">
                     {profile?.submission?.status ? `Status: ${profile.submission.status}` : 'Not submitted'}
                   </span>
                 </div>
               </div>
               <Link
                 to="/intro-video"
-                className="px-3 py-1.5 rounded-lg bg-white border border-neutral-200 hover:bg-neutral-50 text-xs font-bold text-[#0B192C] transition-colors"
+                className="px-3 py-1.5 rounded-lg bg-white border border-[#E4E7F2] hover:bg-[#EEF2FF] text-xs font-bold text-[#4F46E5] transition-colors"
               >
                 {profile?.submission?.videoUploaded ? 'View / Replace' : 'Upload'}
               </Link>
             </div>
 
             {/* Resume status item */}
-            <div className="flex items-center justify-between p-3.5 rounded-xl border border-neutral-100 bg-neutral-50/60">
+            <div className="flex items-center justify-between p-3.5 rounded-lg border border-[#E4E7F2] bg-[#F7F8FC]">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-blue-50 text-blue-600">
+                <div className="p-2 rounded-lg bg-[#EEF2FF] text-[#4F46E5]">
                   <FileText className="w-4 h-4" />
                 </div>
                 <div>
-                  <h4 className="text-xs font-bold text-[#0B192C]">PDF Resume</h4>
-                  <span className="text-[10px] text-neutral-500">
+                  <h4 className="text-xs font-bold text-[#0F172A] font-heading">PDF Resume</h4>
+                  <span className="text-[10px] text-[#475569]">
                     {(resume?.fileUrl || resume?.driveFileId) ? 'Uploaded Document' : 'Pending upload'}
                   </span>
                 </div>
               </div>
               <Link
                 to="/resume"
-                className="px-3 py-1.5 rounded-lg bg-white border border-neutral-200 hover:bg-neutral-50 text-xs font-bold text-[#0B192C] transition-colors"
+                className="px-3 py-1.5 rounded-lg bg-white border border-[#E4E7F2] hover:bg-[#EEF2FF] text-xs font-bold text-[#4F46E5] transition-colors"
               >
                 {(resume?.fileUrl || resume?.driveFileId) ? 'View / Replace' : 'Upload'}
               </Link>
@@ -610,16 +594,16 @@ export const ProfilePage: React.FC = () => {
 
           {/* CHANGE REQUESTS AUDIT LOG */}
           {changeRequests.length > 0 && (
-            <div className="bg-white border border-[#E2E8F0] rounded-2xl p-6 shadow-sm space-y-3">
-              <h2 className="text-sm font-bold text-[#0B192C]">Submitted Change Requests</h2>
+            <div className="bg-white border border-[#E4E7F2] rounded-lg p-6 shadow-[0_1px_2px_rgba(15,23,42,0.04)] space-y-3">
+              <h2 className="text-sm font-bold text-[#0F172A] font-heading">Submitted Change Requests</h2>
               <div className="space-y-2">
                 {changeRequests.map((cr) => (
                   <div
                     key={cr.id}
-                    className="p-3 rounded-xl border border-neutral-100 bg-neutral-50/60 text-xs space-y-1"
+                    className="p-3 rounded-lg border border-[#E4E7F2] bg-[#F7F8FC] text-xs space-y-1"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-[#0B192C] uppercase text-[10px]">
+                      <span className="font-bold text-[#0F172A] uppercase text-[10px]">
                         Field: {cr.fieldName}
                       </span>
                       <span
@@ -627,18 +611,18 @@ export const ProfilePage: React.FC = () => {
                           cr.status === 'APPROVED'
                             ? 'bg-emerald-100 text-emerald-800'
                             : cr.status === 'REJECTED'
-                            ? 'bg-red-100 text-red-800'
+                            ? 'bg-rose-100 text-rose-800'
                             : 'bg-amber-100 text-amber-800'
                         }`}
                       >
                         {cr.status}
                       </span>
                     </div>
-                    <div className="text-[11px] text-neutral-600">
-                      Requested: <span className="font-semibold text-neutral-900">{cr.requestedValue}</span>
+                    <div className="text-[11px] text-[#475569]">
+                      Requested: <span className="font-semibold text-[#0F172A]">{cr.requestedValue}</span>
                     </div>
                     {cr.reason && (
-                      <p className="text-[10px] text-neutral-400 italic">"{cr.reason}"</p>
+                      <p className="text-[10px] text-[#94A3B8] italic">"{cr.reason}"</p>
                     )}
                   </div>
                 ))}
@@ -651,15 +635,15 @@ export const ProfilePage: React.FC = () => {
       {/* 3. MODAL DIALOG: REQUEST ACADEMIC DETAIL CHANGE */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-neutral-200 animate-in fade-in zoom-in-95 duration-150 text-left">
-            <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
+          <div className="bg-white rounded-lg max-w-lg w-full p-6 shadow-2xl border border-[#E4E7F2] animate-in fade-in zoom-in-95 duration-150 text-left">
+            <div className="flex items-center justify-between pb-3 border-b border-[#E4E7F2]">
               <div className="flex items-center gap-2">
-                <ShieldAlert className="w-5 h-5 text-[#DC2626]" />
-                <h3 className="text-base font-bold text-[#0B192C]">Request Academic Record Correction</h3>
+                <ShieldAlert className="w-5 h-5 text-[#E11D48]" />
+                <h3 className="text-base font-bold text-[#0F172A] font-heading">Request Academic Record Correction</h3>
               </div>
               <button
                 onClick={() => setModalOpen(false)}
-                className="p-1.5 text-neutral-400 hover:text-neutral-700 rounded-lg hover:bg-neutral-100 cursor-pointer"
+                className="p-1.5 text-[#94A3B8] hover:text-[#0F172A] rounded-lg hover:bg-[#F7F8FC] cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -668,28 +652,28 @@ export const ProfilePage: React.FC = () => {
             {reqSuccess ? (
               <div className="py-8 text-center space-y-3">
                 <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto" />
-                <h4 className="text-base font-bold text-[#0B192C]">Request Submitted Successfully!</h4>
-                <p className="text-xs text-neutral-500 max-w-xs mx-auto">
+                <h4 className="text-base font-bold text-[#0F172A] font-heading">Request Submitted Successfully!</h4>
+                <p className="text-xs text-[#475569] max-w-xs mx-auto">
                   Your request has been routed to department administrators for verification.
                 </p>
               </div>
             ) : (
               <form onSubmit={handleSubmitChangeRequest} className="space-y-4 pt-4">
                 {reqError && (
-                  <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-center gap-2">
+                  <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-xs text-[#E11D48] flex items-center gap-2">
                     <AlertCircle className="w-4 h-4 shrink-0" />
                     <span>{reqError}</span>
                   </div>
                 )}
 
                 <div>
-                  <label className="block text-xs font-bold text-[#0B192C] mb-1.5">
+                  <label className="block text-xs font-bold text-[#0F172A] mb-1.5 font-heading">
                     Field to Correct
                   </label>
                   <select
                     value={fieldName}
                     onChange={(e) => setFieldName(e.target.value)}
-                    className="w-full p-2.5 bg-neutral-50 border border-[#CBD5E1] rounded-xl text-xs font-semibold focus:outline-none focus:border-[#DC2626]"
+                    className="w-full p-2.5 bg-[#F7F8FC] border border-[#E4E7F2] rounded-lg text-xs font-semibold focus:outline-none focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5]"
                   >
                     <option value="name">Full Name</option>
                     <option value="year">Year of Study</option>
@@ -700,7 +684,7 @@ export const ProfilePage: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-[#0B192C] mb-1.5">
+                  <label className="block text-xs font-bold text-[#0F172A] mb-1.5 font-heading">
                     Requested New Value
                   </label>
                   <input
@@ -709,12 +693,12 @@ export const ProfilePage: React.FC = () => {
                     value={requestedValue}
                     onChange={(e) => setRequestedValue(e.target.value)}
                     placeholder="Enter the correct spelling or value"
-                    className="w-full p-2.5 bg-white border border-[#CBD5E1] rounded-xl text-xs focus:outline-none focus:border-[#DC2626]"
+                    className="w-full p-2.5 bg-white border border-[#E4E7F2] rounded-lg text-xs focus:outline-none focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5]"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-[#0B192C] mb-1.5">
+                  <label className="block text-xs font-bold text-[#0F172A] mb-1.5 font-heading">
                     Reason for Correction
                   </label>
                   <textarea
@@ -723,7 +707,7 @@ export const ProfilePage: React.FC = () => {
                     value={reason}
                     onChange={(e) => setReason(e.target.value)}
                     placeholder="Explain why this change is necessary (e.g. Typo in admission records, section transfer)..."
-                    className="w-full p-2.5 bg-white border border-[#CBD5E1] rounded-xl text-xs focus:outline-none focus:border-[#DC2626]"
+                    className="w-full p-2.5 bg-white border border-[#E4E7F2] rounded-lg text-xs focus:outline-none focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5]"
                   />
                 </div>
 
@@ -731,14 +715,14 @@ export const ProfilePage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setModalOpen(false)}
-                    className="px-4 py-2 rounded-xl text-xs font-bold text-neutral-600 hover:bg-neutral-100 transition-colors cursor-pointer"
+                    className="px-4 py-2 rounded-lg text-xs font-bold text-[#475569] hover:bg-[#F7F8FC] transition-colors cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={submittingReq || !requestedValue.trim() || !reason.trim()}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#DC2626] hover:bg-[#B5121B] text-white text-xs font-bold transition-all disabled:opacity-50 cursor-pointer shadow-sm"
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#4F46E5] hover:bg-[#3730A3] text-white text-xs font-bold transition-all disabled:opacity-50 cursor-pointer shadow-xs"
                   >
                     {submittingReq ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
                     <span>Submit Request</span>

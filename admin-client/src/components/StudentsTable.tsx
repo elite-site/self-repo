@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { StudentsResponse, Student, Submission } from '../types';
 import { adminApi } from '../services/api';
+import { BrandedLoading } from './BrandedLoading';
 
 interface StudentsTableProps {
   activeEventId: string;
@@ -119,16 +120,16 @@ export const StudentsTable: React.FC<StudentsTableProps> = ({
   return (
     <div className="space-y-6 text-left">
       {/* 1. HEADER & REFRESH */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-200 dark:border-neutral-800 pb-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#E4E7F2] dark:border-[#252B35] pb-5">
         <div>
-          <div className="text-xs font-mono font-bold tracking-widest text-elite-red uppercase flex items-center gap-1.5">
+          <div className="text-[11px] font-mono font-bold tracking-widest text-[#E11D48] dark:text-[#F43F5E] uppercase flex items-center gap-1.5">
             <Users className="w-3.5 h-3.5" />
-            Student Roster
+            <span>Student Roster</span>
           </div>
-          <h1 className="text-3xl font-extrabold text-elite-black dark:text-white font-display tracking-tight mt-1">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0F172A] dark:text-white font-heading tracking-tight mt-1">
             ALL STUDENTS
           </h1>
-          <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1 font-normal">
+          <p className="text-xs text-[#475569] dark:text-[#9BA3AF] mt-1 font-normal">
             Full IT-Department roster imported from the Excel sheet, with upload status and responses.
           </p>
         </div>
@@ -136,16 +137,16 @@ export const StudentsTable: React.FC<StudentsTableProps> = ({
         <div className="flex items-center gap-2">
           <button
             onClick={loadStudents}
-            className="inline-flex items-center gap-2 px-3.5 py-2 bg-white dark:bg-neutral-900 hover:bg-neutral-50 dark:hover:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-200 text-xs font-semibold rounded-lg transition-colors shadow-sm cursor-pointer self-start sm:self-auto"
+            className="inline-flex items-center gap-2 px-3.5 py-2 bg-white dark:bg-[#11151C] hover:bg-[#F7F8FC] dark:hover:bg-[#151A22] border border-[#E4E7F2] dark:border-[#252B35] text-[#475569] dark:text-neutral-200 text-xs font-semibold rounded-lg transition-colors shadow-xs cursor-pointer self-start sm:self-auto"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-elite-red' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-[#4F46E5]' : ''}`} />
             <span>Refresh Roster</span>
           </button>
 
           <button
             onClick={() => window.open(adminApi.getStudentsExportUrl(activeEventId), '_blank')}
-            className="inline-flex items-center gap-2 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition-colors shadow-sm cursor-pointer self-start sm:self-auto"
-            title="Download the full student roster, with all submission and review information, as an Excel (.xlsx) file"
+            className="inline-flex items-center gap-2 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition-colors shadow-xs cursor-pointer self-start sm:self-auto"
+            title="Download the full student roster as an Excel (.xlsx) file"
           >
             <FileSpreadsheet className="w-3.5 h-3.5" />
             <span>Download All Students (Excel)</span>
@@ -154,20 +155,20 @@ export const StudentsTable: React.FC<StudentsTableProps> = ({
       </div>
 
       {/* 2. SEARCH & FILTERS BAR */}
-      <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-4 shadow-sm flex flex-wrap items-center gap-3">
+      <div className="bg-white dark:bg-[#11151C] border border-[#E4E7F2] dark:border-[#252B35] rounded-lg p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)] flex flex-wrap items-center gap-3">
         <form onSubmit={handleSearchSubmit} className="relative flex-1 min-w-[220px]">
-          <Search className="w-4 h-4 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <Search className="w-4 h-4 text-[#94A3B8] absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             placeholder="Search by name or roll number..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-[#fafafa] dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg pl-9 pr-4 py-2 text-xs text-neutral-900 dark:text-white placeholder:text-neutral-400 focus:outline-none focus:border-elite-red transition-colors"
+            className="w-full bg-[#F7F8FC] dark:bg-[#0D1117] border border-[#E4E7F2] dark:border-[#252B35] rounded-lg pl-9 pr-4 py-2 text-xs text-[#0F172A] dark:text-white placeholder:text-[#94A3B8] focus:outline-none focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5] transition-colors"
           />
         </form>
 
         <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex items-center gap-1.5 text-xs text-neutral-500 dark:text-neutral-400 font-medium">
+          <div className="flex items-center gap-1.5 text-xs text-[#475569] dark:text-[#9BA3AF] font-medium">
             <SlidersHorizontal className="w-3.5 h-3.5" />
             <span>Filter:</span>
           </div>
@@ -175,7 +176,7 @@ export const StudentsTable: React.FC<StudentsTableProps> = ({
           <select
             value={sectionFilter}
             onChange={(e) => { setSectionFilter(e.target.value); setPage(1); }}
-            className="bg-[#fafafa] dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg px-2.5 py-1.5 text-xs text-neutral-800 dark:text-neutral-200 focus:outline-none focus:border-elite-red cursor-pointer"
+            className="bg-[#F7F8FC] dark:bg-[#0D1117] border border-[#E4E7F2] dark:border-[#252B35] rounded-lg px-2.5 py-1.5 text-xs text-[#0F172A] dark:text-neutral-200 focus:outline-none focus:border-[#4F46E5] cursor-pointer"
           >
             <option value="">All Sections</option>
             <option value="A">Section A</option>
@@ -185,7 +186,7 @@ export const StudentsTable: React.FC<StudentsTableProps> = ({
           <select
             value={yearFilter}
             onChange={(e) => { setYearFilter(e.target.value); setPage(1); }}
-            className="bg-[#fafafa] dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg px-2.5 py-1.5 text-xs text-neutral-800 dark:text-neutral-200 focus:outline-none focus:border-elite-red cursor-pointer"
+            className="bg-[#F7F8FC] dark:bg-[#0D1117] border border-[#E4E7F2] dark:border-[#252B35] rounded-lg px-2.5 py-1.5 text-xs text-[#0F172A] dark:text-neutral-200 focus:outline-none focus:border-[#4F46E5] cursor-pointer"
           >
             <option value="">All Years</option>
             <option value="2">2nd Year</option>
@@ -196,7 +197,7 @@ export const StudentsTable: React.FC<StudentsTableProps> = ({
           <select
             value={uploadedFilter}
             onChange={(e) => { setUploadedFilter(e.target.value); setPage(1); }}
-            className="bg-[#fafafa] dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg px-2.5 py-1.5 text-xs text-neutral-800 dark:text-neutral-200 focus:outline-none focus:border-elite-red cursor-pointer"
+            className="bg-[#F7F8FC] dark:bg-[#0D1117] border border-[#E4E7F2] dark:border-[#252B35] rounded-lg px-2.5 py-1.5 text-xs text-[#0F172A] dark:text-neutral-200 focus:outline-none focus:border-[#4F46E5] cursor-pointer"
           >
             <option value="">All Uploads</option>
             <option value="yes">Has Video</option>
@@ -206,16 +207,15 @@ export const StudentsTable: React.FC<StudentsTableProps> = ({
       </div>
 
       {/* 3. ROSTER TABLE */}
-      <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl overflow-hidden shadow-sm">
+      <div className="bg-white dark:bg-[#11151C] border border-[#E4E7F2] dark:border-[#252B35] rounded-lg overflow-hidden shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
         {loading ? (
-          <div className="p-16 text-center text-neutral-500 dark:text-neutral-400 flex flex-col items-center gap-2">
-            <div className="w-6 h-6 border-2 border-elite-red border-t-transparent rounded-full animate-spin" />
-            <span className="text-xs font-medium">Loading student roster...</span>
+          <div className="p-12">
+            <BrandedLoading fullScreen={false} message="Loading Student Roster..." />
           </div>
         ) : !data || data.data.length === 0 ? (
           <div className="p-16 text-center space-y-2">
-            <p className="text-sm font-semibold text-neutral-800 dark:text-neutral-200">No students found</p>
-            <p className="text-xs text-neutral-500 dark:text-neutral-400">
+            <p className="text-sm font-semibold text-[#0F172A] dark:text-neutral-200 font-heading">No students found</p>
+            <p className="text-xs text-[#475569] dark:text-[#9BA3AF]">
               Try adjusting your search query or filters.
             </p>
           </div>
@@ -223,16 +223,16 @@ export const StudentsTable: React.FC<StudentsTableProps> = ({
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
-                <tr className="bg-[#fafafa] dark:bg-neutral-800/80 border-b border-neutral-200 dark:border-neutral-700 text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
-                  <th className="py-3 px-5">Student</th>
-                  <th className="py-3 px-4">Roll Number</th>
-                  <th className="py-3 px-4">Year & Section</th>
-                  <th className="py-3 px-4">Upload Time</th>
-                  <th className="py-3 px-4">Response</th>
-                  <th className="py-3 px-5 text-right">Action</th>
+                <tr className="bg-[#F7F8FC] dark:bg-[#0D1117] border-b border-[#E4E7F2] dark:border-[#252B35] text-[11px] font-bold text-[#475569] dark:text-[#9BA3AF] uppercase tracking-wider">
+                  <th className="py-3.5 px-5">Student</th>
+                  <th className="py-3.5 px-4">Roll Number</th>
+                  <th className="py-3.5 px-4">Year & Section</th>
+                  <th className="py-3.5 px-4">Upload Time</th>
+                  <th className="py-3.5 px-4">Response</th>
+                  <th className="py-3.5 px-5 text-right">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
+              <tbody className="divide-y divide-[#E4E7F2] dark:divide-[#252B35]">
                 {data.data.map((student) => {
                   const reviewed = student.submission?.reviewedAt != null && (
                     Boolean(student.submission.reviewText) ||
@@ -243,24 +243,24 @@ export const StudentsTable: React.FC<StudentsTableProps> = ({
                     <tr
                       key={student.id}
                       onClick={() => handleView(student)}
-                      className="hover:bg-[#fcfcfc] dark:hover:bg-neutral-800/50 transition-colors cursor-pointer group"
+                      className="hover:bg-[#F7F8FC] dark:hover:bg-[#151A22] transition-colors cursor-pointer group"
                     >
                       <td className="py-3.5 px-5">
-                        <div className="font-bold text-neutral-900 dark:text-white group-hover:text-elite-red transition-colors">
+                        <div className="font-bold text-[#0F172A] dark:text-white group-hover:text-[#4F46E5] dark:group-hover:text-[#818CF8] transition-colors">
                           {student.name}
                         </div>
-                        <div className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5">
+                        <div className="text-[11px] text-[#475569] dark:text-[#9BA3AF] mt-0.5">
                           {studentYearLabel(student.year)} Year • Section {student.section} • {student.branch}
                         </div>
                       </td>
 
-                      <td className="py-3.5 px-4 font-mono font-semibold text-neutral-700 dark:text-neutral-300">
+                      <td className="py-3.5 px-4 font-semibold text-[#475569] dark:text-neutral-300">
                         {student.rollNo}
                       </td>
 
-                      <td className="py-3.5 px-4 text-neutral-700 dark:text-neutral-300">
-                        <span className="font-semibold text-neutral-900 dark:text-white">{studentYearLabel(student.year)}</span>
-                        <span className="text-neutral-400 dark:text-neutral-600 mx-1.5">•</span>
+                      <td className="py-3.5 px-4 text-[#475569] dark:text-neutral-300">
+                        <span className="font-semibold text-[#0F172A] dark:text-white">{studentYearLabel(student.year)}</span>
+                        <span className="text-[#94A3B8] mx-1.5">•</span>
                         <span>Sec {student.section}</span>
                       </td>
 
@@ -271,7 +271,7 @@ export const StudentsTable: React.FC<StudentsTableProps> = ({
                             {formatTime(student.submission.submittedAt)}
                           </span>
                         ) : (
-                          <span className="text-neutral-400 dark:text-neutral-500 text-[11px] font-semibold">NOT SUBMITTED</span>
+                          <span className="text-[#94A3B8] text-[11px] font-semibold">NOT SUBMITTED</span>
                         )}
                       </td>
 
@@ -287,7 +287,7 @@ export const StudentsTable: React.FC<StudentsTableProps> = ({
                             Pending review
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1.5 text-neutral-400 dark:text-neutral-500 text-[11px] font-medium">
+                          <span className="inline-flex items-center gap-1.5 text-[#94A3B8] text-[11px] font-medium">
                             <span className="w-2 h-2 rounded-full bg-neutral-300 dark:bg-neutral-600 inline-block" />
                             Awaiting upload
                           </span>
@@ -297,7 +297,7 @@ export const StudentsTable: React.FC<StudentsTableProps> = ({
                       <td className="py-3.5 px-5 text-right">
                         <button
                           onClick={(e) => { e.stopPropagation(); handleView(student); }}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-neutral-100 dark:bg-neutral-800 group-hover:bg-elite-red group-hover:text-white rounded text-neutral-700 dark:text-neutral-300 font-semibold text-xs transition-colors cursor-pointer"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#EEF2FF] dark:bg-[#4F46E5]/20 text-[#4F46E5] dark:text-[#818CF8] hover:bg-[#4F46E5] hover:text-white rounded-lg font-semibold text-xs transition-colors cursor-pointer"
                         >
                           <Eye className="w-3.5 h-3.5" />
                           <span>View Profile</span>
@@ -313,11 +313,11 @@ export const StudentsTable: React.FC<StudentsTableProps> = ({
 
         {/* 4. PAGINATION CONTROLS */}
         {data && data.pagination.totalPages > 1 && (
-          <div className="p-4 bg-[#fafafa] dark:bg-neutral-800/80 border-t border-neutral-200 dark:border-neutral-700 flex items-center justify-between text-xs text-neutral-600 dark:text-neutral-400">
+          <div className="p-4 bg-[#F7F8FC] dark:bg-[#0D1117] border-t border-[#E4E7F2] dark:border-[#252B35] flex items-center justify-between text-xs text-[#475569] dark:text-[#9BA3AF]">
             <div className="flex items-center gap-3">
               <span>
-                Showing page <span className="font-bold text-neutral-900 dark:text-white">{data.pagination.page}</span> of{' '}
-                <span className="font-bold text-neutral-900 dark:text-white">{data.pagination.totalPages}</span>
+                Showing page <span className="font-bold text-[#0F172A] dark:text-white">{data.pagination.page}</span> of{' '}
+                <span className="font-bold text-[#0F172A] dark:text-white">{data.pagination.totalPages}</span>
               </span>
               <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 text-emerald-700 dark:text-emerald-400 font-bold">
                 <Clapperboard className="w-3 h-3" />
@@ -329,14 +329,14 @@ export const StudentsTable: React.FC<StudentsTableProps> = ({
               <button
                 disabled={page <= 1}
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
-                className="p-1.5 rounded border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-200 disabled:opacity-40 transition-colors cursor-pointer"
+                className="p-1.5 rounded-lg border border-[#E4E7F2] dark:border-[#252B35] bg-white dark:bg-[#11151C] hover:bg-[#F7F8FC] dark:hover:bg-[#151A22] text-[#475569] dark:text-neutral-200 disabled:opacity-40 transition-colors cursor-pointer"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
               <button
                 disabled={page >= data.pagination.totalPages}
                 onClick={() => setPage((p) => p + 1)}
-                className="p-1.5 rounded border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-200 disabled:opacity-40 transition-colors cursor-pointer"
+                className="p-1.5 rounded-lg border border-[#E4E7F2] dark:border-[#252B35] bg-white dark:bg-[#11151C] hover:bg-[#F7F8FC] dark:hover:bg-[#151A22] text-[#475569] dark:text-neutral-200 disabled:opacity-40 transition-colors cursor-pointer"
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
