@@ -32,7 +32,7 @@ describe('Supabase Pooler & Database URL Tuning', () => {
 
     expect(parsed.searchParams.get('pgbouncer')).toBe('true');
     expect(parsed.searchParams.get('statement_cache_size')).toBe('0');
-    expect(parsed.searchParams.get('connection_limit')).toBe('15');
+    expect(parsed.searchParams.get('connection_limit')).toBe('5');
     expect(parsed.searchParams.get('pool_timeout')).toBe('15');
     expect(parsed.searchParams.get('connect_timeout')).toBe('10');
   });
@@ -44,7 +44,7 @@ describe('Supabase Pooler & Database URL Tuning', () => {
 
     expect(parsed.searchParams.get('pgbouncer')).toBe('true');
     expect(parsed.searchParams.get('statement_cache_size')).toBe('0');
-    expect(parsed.searchParams.get('connection_limit')).toBe('15');
+    expect(parsed.searchParams.get('connection_limit')).toBe('5');
   });
 
   it('detects pooler by explicit pgbouncer=true query parameter', () => {
@@ -54,7 +54,7 @@ describe('Supabase Pooler & Database URL Tuning', () => {
 
     expect(parsed.searchParams.get('pgbouncer')).toBe('true');
     expect(parsed.searchParams.get('statement_cache_size')).toBe('0');
-    expect(parsed.searchParams.get('connection_limit')).toBe('15');
+    expect(parsed.searchParams.get('connection_limit')).toBe('5');
   });
 
   it('preserves existing connection_limit if already configured by user', () => {
@@ -72,8 +72,8 @@ describe('Supabase Pooler & Database URL Tuning', () => {
     const parsed = new URL(tuned);
 
     expect(parsed.searchParams.get('pgbouncer')).toBeNull();
-    expect(parsed.searchParams.get('statement_cache_size')).toBe('100');
-    expect(parsed.searchParams.get('connection_limit')).toBe('20');
+    expect(parsed.searchParams.get('statement_cache_size')).toBe('20');
+    expect(parsed.searchParams.get('connection_limit')).toBe('5');
   });
 
   it('handles invalid / non-URL string gracefully without throwing', () => {

@@ -6,6 +6,7 @@ import app from '../src/server';
 import { env } from '../src/config/env';
 import { prisma } from '../src/lib/prisma';
 import { driveService } from '../src/services/drive.service';
+import { clearVideoListCache } from '../src/routes/public.videos.routes';
 
 vi.mock('../src/lib/prisma', () => ({
   prisma: {
@@ -36,6 +37,13 @@ vi.mock('../src/services/drive.service', () => ({
     streamDriveFile: vi.fn(),
     deleteFileById: vi.fn(),
     deleteVideo: vi.fn(),
+    // The stream route prefers a Drive redirect and falls back to streaming
+    // when the file is not confirmed `anyone`-readable. Defaulting these to
+    // "no redirect available" keeps the existing Range/seek assertions
+    // exercising the streaming fallback, which is what they were written for.
+    canRedirectToDrive: vi.fn(() => true),
+    getDirectLink: vi.fn(() => null),
+    isPubliclyReadable: vi.fn(async () => false),
   },
 }));
 
@@ -64,6 +72,9 @@ const streamRow = {
 describe('Public introduction videos are approval-gated', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // The public video list is served from a module-level TTL cache, so it has
+    // to be reset between tests or one test's result is returned to the next.
+    clearVideoListCache();
   });
 
   describe('GET /api/public/videos', () => {

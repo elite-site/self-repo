@@ -1,7 +1,19 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
+import { TtlCache } from '../utils/ttlCache';
 
 const router = Router();
+
+/**
+ * Public read caches. Every value stored here is already public and identical
+ * for all callers, which is the only thing that makes sharing it across
+ * requests safe. Nothing student-scoped may go through these.
+ *
+ * Entries are bounded: roll numbers are unbounded input, so a per-student cache
+ * would otherwise grow until it exhausted the heap.
+ */
+const studentListCache = new TtlCache<unknown>(20_000, 100);
+const skillsCache = new TtlCache<unknown>(300_000, 4);
 
 router.get('/', async (req: Request, res: Response) => {
   try {
@@ -56,52 +68,74 @@ router.get('/', async (req: Request, res: Response) => {
     const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 50));
     const skip = (page - 1) * limit;
 
-    const [total, students] = await Promise.all([
-      prisma.student.count({ where }),
-      prisma.student.findMany({
-        where,
-        select: {
-          id: true,
-          rollNo: true,
-          name: true,
-          year: true,
-          section: true,
-          status: true,
-          graduatedAt: true,
-          profile: {
-            select: {
-              id: true,
-              photoUrl: true,
-              photoOffsetX: true,
-              photoOffsetY: true,
-              photoZoom: true,
-              biography: true,
-              skills: { include: { skill: true } }
+    // Keyed on every input that reaches the `where` clause, sorted so that
+    // `?year=3&section=A` and `?section=A&year=3` share one entry. Without this
+    // a burst of visitors to the public directory is a burst of identical
+    // count+findMany pairs; with it, the second visitor onward is served from
+    // memory. The 20s window is short because this directory is the page whose
+    // contents change when a student is approved or graduates.
+    const cacheKey = [
+      'students',
+      status || '',
+      year || '',
+      section || '',
+      search || '',
+      skillName || '',
+      JSON.stringify(skillsFilter ?? []),
+      String(page),
+      String(limit),
+    ].join('|');
+
+    const payload = await studentListCache.wrap(cacheKey, async () => {
+      const [total, students] = await Promise.all([
+        prisma.student.count({ where }),
+        prisma.student.findMany({
+          where,
+          select: {
+            id: true,
+            rollNo: true,
+            name: true,
+            year: true,
+            section: true,
+            status: true,
+            graduatedAt: true,
+            profile: {
+              select: {
+                id: true,
+                photoUrl: true,
+                photoOffsetX: true,
+                photoOffsetY: true,
+                photoZoom: true,
+                biography: true,
+                skills: { include: { skill: true } }
+              }
             }
-          }
-        },
-        orderBy: [{ year: 'desc' }, { section: 'asc' }, { rollNo: 'asc' }],
-        skip,
-        take: limit
-      })
-    ]);
+          },
+          orderBy: [{ year: 'desc' }, { section: 'asc' }, { rollNo: 'asc' }],
+          skip,
+          take: limit
+        })
+      ]);
 
-    const mapped = students.map(s => {
-      const profile = s.profile ? {
-        ...s.profile,
-        photoUrl: s.profile.photoUrl ? `/api/public/media/photo/${s.profile.id || s.id}` : null,
-        viewUrl: s.profile.photoUrl ? `/api/public/media/photo/${s.profile.id || s.id}` : null,
-      } : null;
-      return { ...s, profile };
+      const mapped = students.map(s => {
+        const profile = s.profile ? {
+          ...s.profile,
+          photoUrl: s.profile.photoUrl ? `/api/public/media/photo/${s.profile.id || s.id}` : null,
+          viewUrl: s.profile.photoUrl ? `/api/public/media/photo/${s.profile.id || s.id}` : null,
+        } : null;
+        return { ...s, profile };
+      });
+
+      return {
+        students: mapped,
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit)
+      };
     });
 
-    res.json({
-      students: mapped,
-      total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit)
-    });
+    res.json(payload);
   } catch (err: any) {
     res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
   }
@@ -110,11 +144,11 @@ router.get('/', async (req: Request, res: Response) => {
 // GET /api/public/students/skills — searchable skill categories and items
 router.get('/skills', async (_req: Request, res: Response) => {
   try {
-    const skills = await prisma.skill.findMany({
+    const skills = await skillsCache.wrap('all', () => prisma.skill.findMany({
       where: { isActive: true },
       select: { id: true, name: true, category: true },
       orderBy: { name: 'asc' }
-    });
+    }));
     res.setHeader('Cache-Control', 'public, max-age=300');
     res.json(skills);
   } catch (err: any) {
@@ -122,56 +156,80 @@ router.get('/skills', async (_req: Request, res: Response) => {
   }
 });
 
+/**
+ * The public profile query, hoisted so its result type can be derived for the
+ * cache. `thumbnail` blobs are intentionally not selected; they are served by
+ * /api/public/media/thumbnail/:type/:id so profile loads stay light.
+ */
+const loadPublicProfile = (rollNo: string) =>
+  prisma.student.findUnique({
+    where: { rollNo },
+    include: {
+      profile: { include: { skills: { include: { skill: true } } } },
+      projects: { orderBy: { displayOrder: 'asc' }, take: 100 },
+      achievements: {
+        where: { status: 'APPROVED' },
+        orderBy: { achievedAt: 'desc' },
+        take: 100,
+        select: {
+          id: true, studentId: true, categoryId: true, title: true, description: true,
+          organization: true, achievedAt: true, proofDriveId: true, proofUrl: true,
+          status: true, reviewNote: true, reviewedBy: true, reviewedAt: true,
+          isPublic: true, createdAt: true, updatedAt: true, category: true,
+        },
+      },
+      certificates: {
+        where: { status: 'APPROVED', isPublic: true },
+        take: 100,
+        select: {
+          id: true, studentId: true, title: true, issuer: true, issuedAt: true,
+          fileDriveId: true, status: true, reviewNote: true, reviewedBy: true,
+          reviewedAt: true, isPublic: true, createdAt: true, updatedAt: true,
+        },
+      },
+      resumes: {
+        where: { status: 'APPROVED' },
+        take: 1,
+        orderBy: { submittedAt: 'desc' },
+        select: {
+          id: true, studentId: true, driveFileId: true, filename: true, sizeMb: true,
+          status: true, reviewNote: true, reviewedBy: true, reviewedAt: true,
+          isActive: true, isPublic: true, submittedAt: true, updatedAt: true,
+        },
+      },
+      // Only an approved + published video is ever attached to a public
+      // profile, so a pending or unapproved recording stays invisible.
+      introVideos: {
+        where: { status: 'APPROVED', isPublic: true, driveFileId: { not: null } },
+        take: 1,
+        orderBy: { publishedAt: 'desc' },
+        select: { id: true, submittedAt: true, publishedAt: true, sizeMb: true, driveFileId: true, status: true, isPublic: true },
+      }
+    }
+  });
+
+type PublicProfile = NonNullable<Awaited<ReturnType<typeof loadPublicProfile>>>;
+
+const studentProfileCache = new TtlCache<PublicProfile | null>(30_000, 200);
+
+/** Resets the public read caches. Exported so tests are not order-dependent. */
+export const clearPublicStudentCaches = (): void => {
+  studentListCache.clear();
+  studentProfileCache.clear();
+  skillsCache.clear();
+};
+
 router.get('/:rollNo', async (req: Request, res: Response) => {
   try {
     res.setHeader('Cache-Control', 'public, max-age=60');
-    const student = await prisma.student.findUnique({
-      where: { rollNo: req.params.rollNo },
-      include: {
-        profile: { include: { skills: { include: { skill: true } } } },
-        projects: { orderBy: { displayOrder: 'asc' }, take: 100 },
-        // `thumbnail` blobs are intentionally not selected here; they are served
-        // by /api/public/media/thumbnail/:type/:id so profile loads stay light.
-        achievements: {
-          where: { status: 'APPROVED' },
-          orderBy: { achievedAt: 'desc' },
-          take: 100,
-          select: {
-            id: true, studentId: true, categoryId: true, title: true, description: true,
-            organization: true, achievedAt: true, proofDriveId: true, proofUrl: true,
-            status: true, reviewNote: true, reviewedBy: true, reviewedAt: true,
-            isPublic: true, createdAt: true, updatedAt: true, category: true,
-          },
-        },
-        certificates: {
-          where: { status: 'APPROVED', isPublic: true },
-          take: 100,
-          select: {
-            id: true, studentId: true, title: true, issuer: true, issuedAt: true,
-            fileDriveId: true, status: true, reviewNote: true, reviewedBy: true,
-            reviewedAt: true, isPublic: true, createdAt: true, updatedAt: true,
-          },
-        },
-        resumes: {
-          where: { status: 'APPROVED' },
-          take: 1,
-          orderBy: { submittedAt: 'desc' },
-          select: {
-            id: true, studentId: true, driveFileId: true, filename: true, sizeMb: true,
-            status: true, reviewNote: true, reviewedBy: true, reviewedAt: true,
-            isActive: true, isPublic: true, submittedAt: true, updatedAt: true,
-          },
-        },
-        // Only an approved + published video is ever attached to a public
-        // profile, so a pending or unapproved recording stays invisible.
-        introVideos: {
-          where: { status: 'APPROVED', isPublic: true, driveFileId: { not: null } },
-          take: 1,
-          orderBy: { publishedAt: 'desc' },
-          select: { id: true, submittedAt: true, publishedAt: true, sizeMb: true, driveFileId: true, status: true, isPublic: true },
-        }
-      }
-    });
+    // Only the query is cached, not the assembled response. The mapping below is
+    // pure in-memory work, so re-running it per request is free, and it keeps
+    // every URL-shaping decision in one place instead of freezing today's
+    // output into the cache.
+    const student = await studentProfileCache.wrap(
+      req.params.rollNo,
+      () => loadPublicProfile(req.params.rollNo),
+    );
     if (!student || (student.status !== 'ACTIVE' && student.status !== 'GRADUATED')) {
       return res.status(404).json({ error: 'NOT_FOUND', message: 'Student not found' });
     }

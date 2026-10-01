@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
 import { driveService } from '../services/drive.service';
+import { TtlCache } from '../utils/ttlCache';
 
 /**
  * Public introduction-video showcase.
@@ -40,7 +41,10 @@ function serializePublicVideo(video: {
     submittedAt: video.submittedAt,
     publishedAt: video.publishedAt,
     sizeMb: video.sizeMb,
-    // Streamed through the backend so the Drive file ID is never exposed.
+    // Routed through the backend so a stable, id-free URL is what the public
+    // page sees. The handler answers with a redirect to Drive's CDN rather than
+    // streaming the bytes, so this stays a cheap hop instead of becoming the
+    // thing every viewer downloads through.
     streamUrl: `/api/public/videos/stream/${encodeURIComponent(video.id)}`,
     thumbnailUrl: video.driveFileId
       ? `/api/public/media/thumbnail/video/${encodeURIComponent(video.id)}?v=${encodeURIComponent(video.driveFileId)}`
@@ -49,42 +53,67 @@ function serializePublicVideo(video: {
   };
 }
 
+/**
+ * The showcase list. Every visitor to the public page asks for this, so a burst
+ * of traffic would otherwise be a burst of identical list+count queries. The TTL
+ * collapses that to one query per window; the `Cache-Control` header below still
+ * handles repeat visits from an individual browser.
+ */
+const videoListCache = new TtlCache<{ items: unknown[]; total: number }>(30_000, 50);
+
+/** Resets the showcase list cache. Exported so tests are not order-dependent. */
+export const clearVideoListCache = (): void => videoListCache.clear();
+
+const listPublishedVideos = (limit: number) =>
+  Promise.all([
+    prisma.introVideo.findMany({
+      where: { ...PUBLIC_VIDEO_WHERE, driveFileId: { not: null } },
+      select: {
+        id: true,
+        driveFileId: true,
+        submittedAt: true,
+        publishedAt: true,
+        sizeMb: true,
+        studentId: true,
+        student: { select: { name: true, rollNo: true, year: true, section: true } },
+      },
+      orderBy: [{ publishedAt: 'desc' }, { submittedAt: 'desc' }],
+      take: limit,
+    }),
+    prisma.introVideo.count({
+      where: { ...PUBLIC_VIDEO_WHERE, driveFileId: { not: null } },
+    }),
+  ]).then(([videos, total]) => ({ items: videos.map(serializePublicVideo), total }));
+
 // GET /api/public/videos — approved + published introduction videos
 router.get('/', async (req: Request, res: Response): Promise<void> => {
   try {
     const rawLimit = parseInt(String(req.query.limit), 10);
     const limit = Number.isNaN(rawLimit) || rawLimit <= 0 ? 24 : Math.min(rawLimit, 60);
 
-    const [videos, total] = await Promise.all([
-      prisma.introVideo.findMany({
-        where: { ...PUBLIC_VIDEO_WHERE, driveFileId: { not: null } },
-        select: {
-          id: true,
-          driveFileId: true,
-          submittedAt: true,
-          publishedAt: true,
-          sizeMb: true,
-          studentId: true,
-          student: { select: { name: true, rollNo: true, year: true, section: true } },
-        },
-        orderBy: [{ publishedAt: 'desc' }, { submittedAt: 'desc' }],
-        take: limit,
-      }),
-      prisma.introVideo.count({
-        where: { ...PUBLIC_VIDEO_WHERE, driveFileId: { not: null } },
-      }),
-    ]);
+    const payload = await videoListCache.wrap(`list:${limit}`, () => listPublishedVideos(limit));
 
     res.setHeader('Cache-Control', 'public, max-age=60');
-    res.json({ items: videos.map(serializePublicVideo), total });
+    res.json(payload);
   } catch (err: any) {
     console.error('Error fetching public videos:', err);
     res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
   }
 });
 
-// GET /api/public/videos/stream/:id — stream one published video.
-// Resolves the Drive file server-side so the public page never sees a file ID.
+// GET /api/public/videos/stream/:id — serve one published video.
+//
+// This is the endpoint a showcase visitor's `<video>` element actually hits, so
+// it is the one that decides how many concurrent viewers the deployment can
+// hold. It answers with a 302 to Drive's CDN whenever the file is confirmed
+// `anyone`-readable, which removes both the download and the per-viewer socket
+// from this process: the work becomes one small redirect per viewer instead of a
+// 25 MB stream through a single small instance. The streaming branch below stays
+// as the fallback for files Drive will not serve anonymously.
+//
+// Note this does not actually keep the Drive file ID secret. It is already in
+// the public payload as the `?v=` cache-buster on `thumbnailUrl`, and these
+// files are `anyone`-readable by design, so the id is not a capability.
 router.get('/stream/:id', async (req: Request, res: Response): Promise<void> => {
   try {
     const video = await prisma.introVideo.findFirst({
@@ -102,6 +131,17 @@ router.get('/stream/:id', async (req: Request, res: Response): Promise<void> => 
 
     if (req.headers['if-none-match'] === etag) {
       res.status(304).end();
+      return;
+    }
+
+    // Prefer the redirect. `<video>` ignores Content-Disposition, so Drive's
+    // attachment response still plays inline, and Drive honours Range, so
+    // seeking keeps working without this process parsing a single byte.
+    const directLink = driveService.getDirectLink(fileId);
+    if (directLink && (await driveService.isPubliclyReadable(fileId))) {
+      res.setHeader('Cache-Control', 'public, max-age=300');
+      res.setHeader('ETag', etag);
+      res.redirect(302, directLink);
       return;
     }
 

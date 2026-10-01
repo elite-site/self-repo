@@ -31,6 +31,12 @@ vi.mock('../src/lib/prisma', () => ({
 vi.mock('../src/services/drive.service', () => ({
   driveService: {
     streamDriveFile: vi.fn(),
+    // Videos are served by redirect when Drive can serve them anonymously.
+    // Defaulting this off keeps the existing assertions exercising the
+    // streaming proxy, which is what this suite is about.
+    canRedirectToDrive: vi.fn(() => false),
+    getDirectLink: vi.fn(() => null),
+    isPubliclyReadable: vi.fn(async () => false),
   },
 }));
 

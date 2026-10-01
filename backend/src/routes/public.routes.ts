@@ -14,6 +14,13 @@ const router = Router();
 const EVENT_ID = 'self-introduction-2026';
 const EVENT_NAME = 'Self Introduction';
 
+/**
+ * Media types handed to the browser as a Drive redirect instead of being
+ * streamed through this process. See the comment on the redirect in
+ * `GET /public/media/:type/:fileId` for why video is the only member.
+ */
+const REDIRECTABLE_TYPES = new Set(['video']);
+
 // GET /api/branches
 router.get('/branches', (_req: Request, res: Response) => {
   res.json({ branches: BRANCHES });
@@ -504,6 +511,31 @@ router.get('/public/media/:type/:fileId', async (req: Request, res: Response): P
       res.setHeader('ETag', etag);
       res.status(304).end();
       return;
+    }
+
+    // Redirect rather than proxy, for the one payload that is large enough to
+    // matter: video. A 25 MB intro video streamed through this process costs an
+    // inbound Drive read plus an outbound write per viewer, so concurrent
+    // viewers compete for this instance's bandwidth no matter how fast the
+    // database is. A 302 hands the transfer to Drive's CDN instead.
+    //
+    // Videos only, deliberately:
+    //   - PDFs and images are small, and this route is also what renders a
+    //     resume inside an iframe. Drive answers `export=download` with an
+    //     attachment disposition, which would turn inline viewing into a
+    //     download. Small payloads are not the bottleneck.
+    //   - The permission check keeps the proxy as a fallback, so a file that is
+    //     not `anyone`-readable still streams rather than 403ing from Drive.
+    if (REDIRECTABLE_TYPES.has(type) && driveService.canRedirectToDrive()) {
+      const directLink = driveService.getDirectLink(targetDriveFileId);
+      if (directLink && (await driveService.isPubliclyReadable(targetDriveFileId))) {
+        res.setHeader('Cache-Control', 'private, max-age=3600');
+        res.setHeader('ETag', etag);
+        res.redirect(302, directLink);
+        return;
+      }
+      // Not publicly readable (or a failed check): fall through to streaming,
+      // which authenticates as the service account and still works.
     }
 
     const rangeHeader = req.headers.range;

@@ -77,6 +77,8 @@ export class DriveService {
   private oauthClient: InstanceType<typeof google.auth.OAuth2> | null = null;
   private serviceAccountAuth: InstanceType<typeof google.auth.GoogleAuth> | null = null;
   private viewerPermissionCache = new Set<string>();
+  /** fileId -> expiry timestamp, for files confirmed NOT to be `anyone`-readable. */
+  private negativePermissionCache = new Map<string, number>();
   private folderMemoryCache = new Map<string, string>();
 
   constructor() {
@@ -898,6 +900,119 @@ export class DriveService {
       ]).catch((err) => {
         console.warn('[Drive] Pre-creating category folders notice:', err?.message || err);
       });
+    }
+  }
+
+  /**
+   * Whether a file can be handed to the browser as a plain Drive link.
+   *
+   * False in mock/local mode, where the bytes only exist on this disk and there
+   * is no Drive URL to redirect to. Callers use this to decide between a
+   * redirect and the streaming proxy.
+   */
+  public canRedirectToDrive(): boolean {
+    return !this.isMock && !!this.drive;
+  }
+
+  /**
+   * A direct link to a Drive file that is already shared `anyone`/reader, so
+   * Drive serves the bytes itself instead of this process proxying them.
+   *
+   * Returns `null` for mock ids and when Drive is unavailable, which is the
+   * caller's signal to fall back to {@link streamDriveFile}.
+   *
+   * ## Why this matters
+   *
+   * Streaming a video through this process means the bytes cross this instance
+   * twice: once inbound from Drive, once outbound to the viewer. On a single
+   * small instance that caps concurrency at whatever the instance's bandwidth
+   * allows, no matter how fast the database is. Redirecting hands the transfer
+   * to Drive's CDN and reduces this process's share of the work to a 302.
+   *
+   * ## The `confirm=t` parameter
+   *
+   * Without it Drive answers large files with an HTML "can't scan for viruses,
+   * are you sure you want to download?" interstitial instead of the file. That
+   * page is HTML, so a `<video>` element gets a decode error and a PDF viewer
+   * gets a broken frame. `confirm=t` asks for the file itself. This is safe
+   * here precisely because these files are already `anyone`-readable by design,
+   * so the interstitial is protecting a file the recipient could fetch anyway.
+   *
+   * ## Range requests
+   *
+   * This endpoint honours `Range`, which is what lets `<video>` seek and what
+   * stops a browser downloading an entire file before playing it. Redirecting
+   * preserves seeking; the streaming proxy had to implement that by hand.
+   */
+  public getDirectLink(fileId?: string | null): string | null {
+    if (!fileId || !this.canRedirectToDrive()) return null;
+    if (fileId.startsWith('mock_') || fileId.startsWith('drive_')) return null;
+    return `https://drive.usercontent.google.com/download?id=${encodeURIComponent(fileId)}&export=download&confirm=t`;
+  }
+
+  /**
+   * Whether a file is known to be readable by anyone with the link.
+   *
+   * Synchronous view over what this process has already confirmed. Returns
+   * `false` for "not yet confirmed" as well as for "confirmed not public", so
+   * callers that need certainty should use {@link isPubliclyReadable}.
+   */
+  public isKnownPublic(fileId?: string | null): boolean {
+    if (!fileId) return false;
+    return this.viewerPermissionCache.has(fileId);
+  }
+
+  /**
+   * Whether Drive would let an anonymous browser read this file directly.
+   *
+   * Redirecting to a file that is *not* `anyone`-readable produces a 403 from
+   * Drive where a proxied response would have worked, because the proxy reads
+   * through the service account. That failure is invisible in the server logs
+   * and looks to the student like a broken video, so it has to be ruled out
+   * before redirecting.
+   *
+   * The check costs one Drive `permissions.list` call, but only once per file
+   * per process:
+   *   - already granted in this process -> answered from `viewerPermissionCache`
+   *   - already confirmed not public    -> answered from a short negative cache
+   *   - otherwise                       -> one API call, then cached
+   *
+   * Negative results expire rather than sticking forever, because
+   * `setViewerPermission` runs asynchronously after upload and would otherwise
+   * be unable to correct a premature "no".
+   */
+  public async isPubliclyReadable(fileId?: string | null): Promise<boolean> {
+    if (!fileId || this.isMock || !this.drive) return false;
+    if (this.viewerPermissionCache.has(fileId)) return true;
+
+    const negative = this.negativePermissionCache.get(fileId);
+    if (negative !== undefined) {
+      if (Date.now() < negative) return false;
+      this.negativePermissionCache.delete(fileId);
+    }
+
+    try {
+      const res = await this.drive.permissions.list({
+        fileId,
+        fields: 'permissions(type,role)',
+        supportsAllDrives: true,
+        pageSize: 100,
+      });
+      const anyone = (res.data.permissions || []).some(
+        (p) => p.type === 'anyone' && (p.role === 'reader' || p.role === 'writer'),
+      );
+      if (anyone) {
+        this.viewerPermissionCache.add(fileId);
+      } else {
+        this.negativePermissionCache.set(fileId, Date.now() + 60_000);
+      }
+      return anyone;
+    } catch (err: any) {
+      // An API failure is not evidence of a private file. Leave it uncached so
+      // the next request retries, and report "not safe to redirect" so the
+      // caller proxies this time.
+      console.warn(`[Drive] Permission check failed for ${fileId}: ${err?.message || err}`);
+      return false;
     }
   }
 
