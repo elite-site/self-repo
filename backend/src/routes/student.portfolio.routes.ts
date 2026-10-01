@@ -181,8 +181,8 @@ router.post('/achievements', async (req: Request, res: Response) => {
         achievedAt: (date || achievedAt) ? new Date(date || achievedAt) : new Date(),
         organization: organization || organizationName || null,
         categoryId: categoryId || null,
-        status: 'APPROVED',
-        isPublic: true
+        status: 'PENDING',
+        isPublic: false
       }
     });
 
@@ -217,8 +217,8 @@ router.put('/achievements/:id', async (req: Request, res: Response) => {
     if (status !== undefined) {
       updateData.status = status;
     } else {
-      updateData.status = 'APPROVED';
-      updateData.isPublic = true;
+      updateData.status = 'PENDING';
+      updateData.isPublic = false;
       updateData.reviewNote = null;
     }
 
@@ -326,8 +326,8 @@ router.post('/certificates', submissionRateLimiter, certificateUpload, async (re
         issuedAt: req.body.issueDate || req.body.issuedAt ? new Date(req.body.issueDate || req.body.issuedAt) : new Date(),
         fileDriveId: driveFileId,
         thumbnail: null,
-        status: 'APPROVED',
-        isPublic: true
+        status: 'PENDING',
+        isPublic: false
       }
     });
 

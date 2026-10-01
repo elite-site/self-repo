@@ -417,6 +417,8 @@ export type ModerationType = 'videos' | 'resumes' | 'certificates' | 'achievemen
 export interface ModerationDecisionData {
   action: 'approve' | 'reject' | 'changes' | 'hide' | string;
   reason?: string;
+  /** Optional note recorded when approving, so the audit trail says why it passed. */
+  approvalNote?: string;
   publish?: boolean;
 }
 

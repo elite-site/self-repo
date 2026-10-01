@@ -112,6 +112,7 @@ export const Moderation: React.FC = () => {
   // Decision Form State
   const [action, setAction] = useState<'approve' | 'reject' | 'changes' | 'hide' | null>(null);
   const [reason, setReason] = useState('');
+  const [approvalNote, setApprovalNote] = useState('');
   const [publishOnApprove, setPublishOnApprove] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState<{ message: string; type?: 'success' | 'error' } | null>(null);
@@ -206,6 +207,7 @@ export const Moderation: React.FC = () => {
     if (selectedItem) {
       setAction(null);
       setReason('');
+      setApprovalNote('');
       setPublishOnApprove(true);
     }
   }, [selectedItem?.id]);
@@ -262,6 +264,7 @@ export const Moderation: React.FC = () => {
       await adminApi.moderationDecision(typeKey, selectedItem.id, {
         action,
         reason: reason.trim() || undefined,
+        approvalNote: approvalNote.trim() || undefined,
         publish: action === 'approve' ? publishOnApprove : false,
       });
 
@@ -576,12 +579,12 @@ export const Moderation: React.FC = () => {
       {/* UNIFIED REVIEW DOSSIER (MODAL / OVERLAY) - Media ONLY loads when selectedItem is active */}
       {selectedItem && (
         <div
-          className="fixed inset-0 z-modal bg-scrim/80 flex items-center justify-center p-3 sm:p-6 overflow-y-auto backdrop-blur-xs animate-fade-in"
+          className="fixed inset-0 z-modal bg-scrim/90 backdrop-blur-xs animate-fade-in"
           role="dialog"
           aria-modal="true"
           aria-labelledby="review-modal-title"
         >
-          <div className="surface w-full max-w-5xl rounded-2xl border border-edge shadow-modal overflow-hidden flex flex-col max-h-[92vh]">
+          <div className="h-full w-full flex flex-col bg-surface">
             {/* Modal Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-edge bg-surface-sunken shrink-0">
               <div className="flex items-center gap-3 min-w-0">
@@ -642,7 +645,8 @@ export const Moderation: React.FC = () => {
             </div>
 
             {/* Modal Body: Two-Column Unified Layout */}
-            <div className="flex-1 overflow-y-auto p-5 sm:p-6 grid grid-cols-1 lg:grid-cols-5 gap-6">
+            <div className="flex-1 min-h-0 overflow-y-auto">
+              <div className="h-full w-full max-w-[1800px] mx-auto p-4 sm:p-6 lg:p-8 grid grid-cols-1 lg:grid-cols-5 gap-6">
               {/* LEFT COLUMN: Media / Artifact Evidence Viewer */}
               <div className="lg:col-span-3 space-y-4">
                 {/* Media Action Strip */}
@@ -962,6 +966,24 @@ export const Moderation: React.FC = () => {
                     </div>
                   )}
 
+                  {/* Approval Note (Optional, For Approve) */}
+                  {action === 'approve' && (
+                    <div className="space-y-1.5 animate-fade-in">
+                      <label htmlFor="moderation-approval-note" className="label text-label-sm font-bold flex items-center justify-between">
+                        <span>Approval Note</span>
+                        <span className="text-ink-muted font-normal">Optional</span>
+                      </label>
+                      <textarea
+                        id="moderation-approval-note"
+                        value={approvalNote}
+                        onChange={(e) => setApprovalNote(e.target.value)}
+                        rows={2}
+                        placeholder="Why this passed review (visible to the student as feedback)... "
+                        className="textarea text-body-sm w-full"
+                      />
+                    </div>
+                  )}
+
                   {/* Publish on Profile Option (For Approve) */}
                   {action === 'approve' && (
                     <label className="flex items-start gap-2.5 p-3 rounded-lg border border-status-approved/30 bg-status-bg-approved cursor-pointer animate-fade-in">
@@ -1022,6 +1044,7 @@ export const Moderation: React.FC = () => {
                     <span><kbd className="px-1.5 py-0.5 rounded bg-surface-sunken border border-edge font-mono font-bold">Esc</kbd> Close</span>
                   </div>
                 </div>
+              </div>
               </div>
             </div>
           </div>

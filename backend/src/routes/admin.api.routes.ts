@@ -1295,7 +1295,6 @@ router.get(['/moderation', '/moderation/items'], async (req: Request, res: Respo
       const resumes = await prisma.resume.findMany({
         where: {
           status: { in: statuses as any },
-          driveFileId: { not: null },
         },
         include: { student: true },
         orderBy: { submittedAt: 'desc' },
@@ -1333,7 +1332,6 @@ router.get(['/moderation', '/moderation/items'], async (req: Request, res: Respo
       const certs = await prisma.certificate.findMany({
         where: {
           status: { in: statuses as any },
-          fileDriveId: { not: null },
         },
         include: { student: true },
         orderBy: { createdAt: 'desc' },
@@ -1624,7 +1622,7 @@ router.get('/moderation/projects', async (req, res) => {
 
 router.patch('/moderation/videos/:id', async (req, res) => {
   try {
-    const { action, reason, publish } = req.body;
+    const { action, reason, approvalNote, publish } = req.body;
     const video = await prisma.introVideo.findUnique({
       where: { id: req.params.id },
       include: { student: { select: { id: true, name: true } } },
@@ -1643,6 +1641,11 @@ router.patch('/moderation/videos/:id', async (req, res) => {
       ? 'HIDDEN'
       : 'CHANGES_REQUESTED';
     const note = reason ? String(reason) : null;
+    // A single `reviewNote` column carries whichever message the admin wrote:
+    // the approval note when approving, otherwise the reason for the decision.
+    const reviewNote = status === 'APPROVED'
+      ? (approvalNote ? String(approvalNote) : null)
+      : note;
 
     // Approval publishes the video on the public page; a rejection un-publishes
     // it so nothing is visible before approval.
@@ -1650,7 +1653,7 @@ router.patch('/moderation/videos/:id', async (req, res) => {
 
     const data: Record<string, unknown> = {
       status,
-      reviewNote: note,
+      reviewNote,
       reviewedAt: new Date(),
       reviewedBy: req.adminUser?.username || req.adminUser?.email || null,
     };
@@ -1751,7 +1754,7 @@ router.patch('/moderation/videos/:id/visibility', async (req, res) => {
 
 router.patch('/moderation/resumes/:id', async (req, res) => {
   try {
-    const { action, reason, publish } = req.body;
+    const { action, reason, approvalNote, publish } = req.body;
     const resume = await prisma.resume.findUnique({
       where: { id: req.params.id },
       include: { student: { select: { id: true, name: true } } },
@@ -1775,7 +1778,7 @@ router.patch('/moderation/resumes/:id', async (req, res) => {
       where: { id: req.params.id },
       data: {
         status,
-        reviewNote: reason ? String(reason) : null,
+        reviewNote: status === 'APPROVED' ? (approvalNote ? String(approvalNote) : null) : (reason ? String(reason) : null),
         reviewedAt: new Date(),
         reviewedBy: req.adminUser?.username || req.adminUser?.email || null,
         isPublic: publishApproved,
@@ -1819,7 +1822,7 @@ router.patch('/moderation/resumes/:id', async (req, res) => {
 
 router.patch('/moderation/achievements/:id', async (req, res) => {
   try {
-    const { action, reason, publish } = req.body;
+    const { action, reason, approvalNote, publish } = req.body;
     const ach = await prisma.achievement.findUnique({
       where: { id: req.params.id },
       include: { student: { select: { id: true, name: true } } },
@@ -1843,7 +1846,7 @@ router.patch('/moderation/achievements/:id', async (req, res) => {
       where: { id: req.params.id },
       data: {
         status,
-        reviewNote: reason ? String(reason) : null,
+        reviewNote: status === 'APPROVED' ? (approvalNote ? String(approvalNote) : null) : (reason ? String(reason) : null),
         reviewedAt: new Date(),
         reviewedBy: req.adminUser?.username || req.adminUser?.email || null,
         isPublic: publishApproved,
@@ -1887,7 +1890,7 @@ router.patch('/moderation/achievements/:id', async (req, res) => {
 
 router.patch('/moderation/certificates/:id', async (req, res) => {
   try {
-    const { action, reason, publish } = req.body;
+    const { action, reason, approvalNote, publish } = req.body;
     const cert = await prisma.certificate.findUnique({
       where: { id: req.params.id },
       include: { student: { select: { id: true, name: true } } },
@@ -1911,7 +1914,7 @@ router.patch('/moderation/certificates/:id', async (req, res) => {
       where: { id: req.params.id },
       data: {
         status,
-        reviewNote: reason ? String(reason) : null,
+        reviewNote: status === 'APPROVED' ? (approvalNote ? String(approvalNote) : null) : (reason ? String(reason) : null),
         reviewedAt: new Date(),
         reviewedBy: req.adminUser?.username || req.adminUser?.email || null,
         isPublic: publishApproved,
@@ -1955,7 +1958,7 @@ router.patch('/moderation/certificates/:id', async (req, res) => {
 
 router.patch('/moderation/projects/:id', async (req, res) => {
   try {
-    const { action, reason, publish } = req.body;
+    const { action, reason, approvalNote, publish } = req.body;
     const project = await prisma.project.findUnique({
       where: { id: req.params.id },
       include: { student: { select: { id: true, name: true } } },
@@ -1979,7 +1982,7 @@ router.patch('/moderation/projects/:id', async (req, res) => {
       where: { id: req.params.id },
       data: {
         status,
-        reviewNote: reason ? String(reason) : null,
+        reviewNote: status === 'APPROVED' ? (approvalNote ? String(approvalNote) : null) : (reason ? String(reason) : null),
         reviewedAt: new Date(),
         reviewedBy: req.adminUser?.username || req.adminUser?.email || null,
         isPublic: publishApproved,
