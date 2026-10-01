@@ -26,7 +26,9 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({ session, onLogout,
   return (
     <div className="min-h-[100dvh] bg-surface-canvas flex flex-col font-sans">
       <StudentHeader session={session} onLogout={onLogout} />
-      <div className="flex-1 flex overflow-hidden w-full min-h-[calc(100vh-var(--header,4rem))]">
+      {/* 100dvh, not 100vh: on mobile the address bar collapses/expands and a
+          vh-based minimum leaves the bottom of the page under the browser UI. */}
+      <div className="flex-1 flex overflow-hidden w-full min-h-[calc(100dvh-var(--header,4rem))]">
         <StudentSidebar />
         <main className="flex-1 overflow-y-auto bg-surface-canvas p-6 sm:p-8 pb-24 md:pb-8 pt-header">
           <div className="w-full max-w-canvas mx-auto">

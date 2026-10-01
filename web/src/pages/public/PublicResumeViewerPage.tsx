@@ -47,22 +47,22 @@ export const PublicResumeViewerPage: React.FC<PublicResumeViewerProps> = ({ sess
     <div className="min-h-[100dvh] bg-surface-canvas flex flex-col">
       <Navbar session={session} onLogout={onLogout} />
 
-      <div className="bg-surface-inverse text-ink-inverse py-4 px-6 sm:px-10 flex items-center justify-between border-b border-edge-inverse">
+      <div className="bg-surface-inverse text-ink-inverse py-4 px-4 sm:px-10 flex flex-wrap items-center justify-between gap-3 border-b border-edge-inverse">
         <Link
           to={`/students/${rollNo}`}
-          className="inline-flex items-center gap-2 text-ink-inverse/70 hover:text-on-primary text-label-sm font-semibold uppercase tracking-wider transition-colors"
+          className="inline-flex items-center gap-2 text-ink-inverse/70 hover:text-on-primary text-label-sm font-semibold uppercase tracking-wider transition-colors min-h-[44px]"
         >
           <ArrowLeft className="w-4 h-4 text-ink-inverse/70" aria-hidden="true" />
           <span>Back to Profile</span>
         </Link>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 min-w-0">
           {resumeUrl && (
             <>
               <a
                 href={resumeUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface-raised hover:bg-surface-sunken text-ink hover:text-ink-brand rounded-lg text-label-sm font-bold transition-colors"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface-raised hover:bg-surface-sunken text-ink hover:text-ink-brand rounded-lg text-label-sm font-bold transition-colors min-h-[44px]"
               >
                 <ExternalLink className="w-3.5 h-3.5 text-ink-inverse/70" aria-hidden="true" />
                 <span>Open in Tab</span>
@@ -71,16 +71,16 @@ export const PublicResumeViewerPage: React.FC<PublicResumeViewerProps> = ({ sess
                 href={`${resumeUrl}${resumeUrl.includes('?') ? '&' : '?'}download=1`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface-raised hover:bg-surface-sunken text-ink hover:text-ink-brand rounded-lg text-label-sm font-bold transition-colors"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface-raised hover:bg-surface-sunken text-ink hover:text-ink-brand rounded-lg text-label-sm font-bold transition-colors min-h-[44px]"
               >
                 <Download className="w-3.5 h-3.5 text-ink-inverse/70" aria-hidden="true" />
                 <span>Download PDF</span>
               </a>
             </>
           )}
-          <div className="text-label-sm font-mono font-bold text-ink-inverse/70 flex items-center gap-2">
-            <FileText className="w-4 h-4 text-ink-inverse/70" aria-hidden="true" />
-            <span>{studentName ? `${studentName}, resume`  : 'Curriculum Vitae'}</span>
+          <div className="text-label-sm font-mono font-bold text-ink-inverse/70 flex items-center gap-2 min-w-0">
+            <FileText className="w-4 h-4 text-ink-inverse/70 shrink-0" aria-hidden="true" />
+            <span className="truncate">{studentName ? `${studentName}, resume`  : 'Curriculum Vitae'}</span>
           </div>
         </div>
       </div>

@@ -44,7 +44,8 @@ export const PortfolioPage: React.FC = () => {
 
       <div className="surface flex flex-col">
         <div
-          className="border-b border-edge px-4 flex gap-1 bg-surface-sunken"
+          className="border-b border-edge px-4 flex gap-1 bg-surface-sunken overflow-x-auto"
+          style={{ WebkitOverflowScrolling: 'touch' }}
           role="tablist"
           aria-label="Portfolio sections"
           ref={tabsRef}
@@ -61,14 +62,14 @@ export const PortfolioPage: React.FC = () => {
               onKeyDown={(e) => handleKeyDown(e, index)}
               onClick={() => setActiveTab(tab.id)}
               className={({ isActive }) =>
-                `btn ${isActive ? 'btn-primary' : 'btn-ghost'} py-3 px-4 text-xs font-semibold`
+                `btn ${isActive ? 'btn-primary' : 'btn-ghost'} py-3 px-4 text-xs font-semibold shrink-0 whitespace-nowrap`
               }
             >
               {tab.label}
             </NavLink>
           ))}
         </div>
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           <Routes>
             <Route path="/" element={<Navigate to="projects" replace />} />
             <Route

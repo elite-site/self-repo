@@ -146,3 +146,52 @@
   -webkit-overflow-scrolling: touch;
   width: 100%;
 }
+
+/* ── Mobile foundations ─────────────────────────────────────
+   viewport-fit=cover in index.html lets the page paint under the notch, which
+   only makes sense if fixed bars respect the safe-area insets. */
+:root {
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-left: env(safe-area-inset-left, 0px);
+  --safe-area-right: env(safe-area-inset-right, 0px);
+}
+
+/* `safe-area-pb` is referenced by the bottom nav but was never defined, so the
+   inset was silently dropped and the last nav row sat under the home indicator. */
+.safe-area-pb {
+  padding-bottom: var(--safe-area-bottom);
+}
+.safe-area-pt {
+  padding-top: var(--safe-area-top);
+}
+/* Fallback for a browser with no safe-area support. */
+@supports not (padding-bottom: env(safe-area-inset-bottom)) {
+  .safe-area-pb { padding-bottom: 0.5rem; }
+}
+
+/* iOS Safari otherwise inflates text in landscape, which breaks the grid rows
+   the layout depends on. */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* iOS zooms the page when a focused field is under 16px, and the user is then
+   stranded mid-form. Enforced only on small screens so desktop density is
+   unchanged. */
+@media (max-width: 767px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+/* Long unbroken strings (emails, Drive file names, URLs) are the most common
+   source of horizontal scroll on narrow screens. */
+img,
+video,
+svg {
+  max-width: 100%;
+}

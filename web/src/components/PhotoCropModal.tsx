@@ -132,7 +132,7 @@ export const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
         }
       }}
     >
-      <div className="surface bg-surface rounded-xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-5 sm:p-6 shadow-modal border border-edge animate-scale-in flex flex-col gap-4 text-left my-auto" onClick={(e) => e.stopPropagation()}>
+      <div className="surface bg-surface rounded-xl max-w-lg w-full max-h-[90dvh] overflow-y-auto p-5 sm:p-6 shadow-modal border border-edge animate-scale-in flex flex-col gap-4 text-left my-auto" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-edge">
           <div className="flex items-center gap-2.5">

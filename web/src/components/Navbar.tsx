@@ -26,6 +26,22 @@ export const Navbar: React.FC<NavbarProps> = ({ session, onLogout }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Navigating with the drawer open left it hanging over the new page, and the
+  // page behind it kept scrolling under the student's finger.
+  useEffect(() => {
+    setMobileMenuOpen(false);
+    setProfileOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [mobileMenuOpen]);
+
   const initials = session
     ? session.student.name
         .split(' ')
@@ -189,6 +205,7 @@ export const Navbar: React.FC<NavbarProps> = ({ session, onLogout }) => {
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="p-2 text-ink-secondary hover:text-ink hover:bg-surface-sunken rounded-lg transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
             aria-label="Toggle menu"
+            aria-expanded={mobileMenuOpen}
           >
             {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>

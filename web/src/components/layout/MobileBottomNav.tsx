@@ -91,7 +91,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ onLogout }) =>
           />
 
           {/* Sheet Drawer */}
-          <div className="relative bg-surface rounded-t-xl shadow-drawer border-t border-edge max-h-[85vh] overflow-y-auto p-5 space-y-4 animate-slide-in-up text-left">
+          <div className="relative bg-surface rounded-t-xl shadow-drawer border-t border-edge max-h-[85dvh] overflow-y-auto p-5 pb-[calc(1.25rem+var(--safe-area-bottom))] space-y-4 animate-slide-in-up text-left">
             {/* Sheet Handle & Header */}
             <div className="flex items-center justify-between pb-3 border-b border-edge">
               <div className="flex items-center gap-2">
