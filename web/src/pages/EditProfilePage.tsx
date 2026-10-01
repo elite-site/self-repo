@@ -28,6 +28,7 @@ const PhotoCropModal = lazy(() =>
 );
 import { getPhotoStyle } from '../utils/photoStyle';
 import { LeetCodeIcon, CodeChefIcon } from '../components/icons/PlatformIcons';
+import { useToast } from '../components/Toast';
 
 const COMMON_SKILLS = [
   'Python',
@@ -51,6 +52,7 @@ const COMMON_SKILLS = [
 ];
 
 export const EditProfilePage: React.FC = () => {
+  const { showToast } = useToast();
   const [profile, setProfile] = useState<StudentProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -99,7 +101,10 @@ export const EditProfilePage: React.FC = () => {
         setPortfolioUrl(data.portfolioUrl || '');
         setSkills(Array.isArray(data.skills) ? data.skills : []);
       })
-      .catch(() => setError('Failed to load profile. Please refresh.'))
+      .catch(() => {
+        setError('Failed to load profile. Please refresh.');
+        showToast('Failed to load profile. Please refresh.', 'error');
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -110,12 +115,15 @@ export const EditProfilePage: React.FC = () => {
     // Validate original file: must be a supported image under 5MB
     if (!file.type.startsWith('image/')) {
       setPhotoError('Please select a valid image file (JPEG, PNG, WEBP).');
+      showToast('Please select a valid image file (JPEG, PNG, WEBP).', 'error');
       e.target.value = '';
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      setPhotoError('Image must be under 5MB.');
+      const notice = `Image must be under 5MB (yours is ${(file.size / (1024 * 1024)).toFixed(1)}MB).`;
+      setPhotoError(notice);
+      showToast(notice, 'error');
       e.target.value = '';
       return;
     }
@@ -135,9 +143,12 @@ export const EditProfilePage: React.FC = () => {
         setIsCropModalOpen(true);
       } else {
         setPhotoError('The photo was uploaded but no image URL was returned. Please try again.');
+        showToast('The photo was uploaded but no image URL was returned. Please try again.', 'error');
       }
     } catch (err: any) {
-      setPhotoError(err.response?.data?.message || 'Failed to upload photo. Please try again.');
+      const notice = err.response?.data?.message || 'Failed to upload photo. Please try again.';
+      setPhotoError(notice);
+      showToast(notice, 'error');
     } finally {
       setUploadingPhoto(false);
       e.target.value = '';
@@ -165,6 +176,7 @@ export const EditProfilePage: React.FC = () => {
     } catch (err: any) {
       const errorMsg = err.response?.data?.message || err.message || 'Failed to save photo position.';
       setPhotoError(errorMsg);
+      showToast(errorMsg, 'error');
       throw new Error(errorMsg);
     }
   };
@@ -220,6 +232,7 @@ export const EditProfilePage: React.FC = () => {
     setLinkErrors(errors);
     if (Object.keys(errors).length > 0) {
       setError('Please correct the highlighted links before saving.');
+      showToast('Please correct the highlighted links before saving.', 'error');
       setSaving(false);
       return;
     }
@@ -240,11 +253,14 @@ export const EditProfilePage: React.FC = () => {
         api.updateSkills(skills),
       ]);
       setSuccess(true);
+      showToast('Profile saved.');
       setTimeout(() => {
         navigate('/profile');
       }, 1000);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to save changes. Please try again.');
+      const notice = err.response?.data?.message || 'Failed to save changes. Please try again.';
+      setError(notice);
+      showToast(notice, 'error');
     } finally {
       setSaving(false);
     }

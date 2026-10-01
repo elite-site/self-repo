@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { api, resolveMediaUrl, UploadProgressInfo } from '../services/api';
 import { StudentIntroVideo, StudentSubmission } from '../types';
 import { useSession } from '../context/SessionContext';
+import { useToast } from '../components/Toast';
 import {
   UploadCloud,
   AlertCircle,
@@ -53,6 +54,7 @@ interface VideoMeta {
 
 export const VideoPage: React.FC = () => {
   const { session } = useSession();
+  const { showToast } = useToast();
   const [submission, setSubmission] = useState<StudentSubmission | null>(null);
   const [video, setVideo] = useState<StudentIntroVideo | null>(null);
   const [maxVideoSizeMb, setMaxVideoSizeMb] = useState<number>(DEFAULT_MAX_VIDEO_MB);
@@ -117,7 +119,10 @@ export const VideoPage: React.FC = () => {
         setSubmission(null);
       }
     } catch {
-      if (isInitial) setError('Could not load introduction video status.');
+      if (isInitial) {
+        setError('Could not load introduction video status.');
+        showToast('Could not load introduction video status.', 'error');
+      }
     } finally {
       setLoading(false);
     }
@@ -236,9 +241,13 @@ export const VideoPage: React.FC = () => {
     try {
       const res = await api.setVideoPublic(next);
       setVideo((prev) => (prev ? { ...prev, isPublic: res.isPublic, publishedAt: res.isPublic ? new Date().toISOString() : null } : prev));
-      setPublishNotice(res.message || (next ? 'Your video is now public.' : 'Your video is no longer public.'));
+      const notice = res.message || (next ? 'Your video is now public.' : 'Your video is no longer public.');
+      setPublishNotice(notice);
+      showToast(notice);
     } catch (err: any) {
-      setPublishNotice(err?.response?.data?.message || 'Could not update public visibility.');
+      const notice = err?.response?.data?.message || 'Could not update public visibility.';
+      setPublishNotice(notice);
+      showToast(notice, 'error');
     } finally {
       setPublishing(false);
     }
@@ -258,10 +267,14 @@ export const VideoPage: React.FC = () => {
       setSubmission(null);
       setUploadSuccess(false);
       setError(null);
-      setDeleteNotice(res.message || 'Your introduction video has been deleted.');
+      const notice = res.message || 'Your introduction video has been deleted.';
+      setDeleteNotice(notice);
+      showToast(notice);
       await loadSubmission(true);
     } catch (err: any) {
-      setError(err?.response?.data?.message || 'Could not delete your video. Please try again.');
+      const notice = err?.response?.data?.message || 'Could not delete your video. Please try again.';
+      setError(notice);
+      showToast(notice, 'error');
     } finally {
       setDeleting(false);
     }
@@ -370,6 +383,7 @@ export const VideoPage: React.FC = () => {
     setUploadProgress(0);
     setUploadStats(null);
     setError('Upload cancelled.');
+    showToast('Upload cancelled.', 'info');
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -379,11 +393,18 @@ export const VideoPage: React.FC = () => {
 
     if (!file.type.startsWith('video/')) {
       setError('Please select a valid video file (MP4, WebM, MOV).');
+      showToast('Please select a valid video file (MP4, WebM, MOV).', 'error');
       return;
     }
 
     if (file.size > maxVideoSizeMb * 1024 * 1024) {
+      // This is the most common rejection here, and it is the one students
+      // least expect: the file picker shows no size, so the inline error below
+      // the button is easy to miss while the page is scrolled to the recorder
+      // tips. Toast it, and name the actual size so the gap is obvious.
+      const message = `Video file must be under ${maxVideoSizeMb}MB (yours is ${(file.size / (1024 * 1024)).toFixed(1)}MB).`;
       setError(`Video file must be under ${maxVideoSizeMb}MB.`);
+      showToast(message, 'error');
       return;
     }
 
@@ -446,6 +467,8 @@ export const VideoPage: React.FC = () => {
         reviewCons: [],
         reviewedAt: null,
       }));
+      setUploadSuccess(true);
+      showToast(res.message || 'Your introduction video has been submitted for review.');
       // A new take overrides the old video, so it goes back to moderation and
       // is no longer public until it is approved again.
       setVideo((prev) =>
@@ -470,7 +493,9 @@ export const VideoPage: React.FC = () => {
       if (err.name === 'AbortError' || err.message?.includes('cancelled')) {
         setError('Upload cancelled.');
       } else {
-        setError(err.message || 'Failed to upload video. Please try again.');
+        const notice = err.message || 'Failed to upload video. Please try again.';
+        setError(notice);
+        showToast(notice, 'error');
       }
     } finally {
       setUploading(false);

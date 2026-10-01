@@ -4,8 +4,10 @@ import { api, resolveMediaUrl } from '../../services/api';
 import { Certificate } from '../../types';
 import { UploadCloud, Loader2, FileText, AlertCircle, Trash2, X, ExternalLink, Globe, EyeOff } from 'lucide-react';
 import { BrandedLoading } from '../../components/BrandedLoading';
+import { useToast } from '../../components/Toast';
 
 export const CertificatesTab: React.FC = () => {
+  const { showToast } = useToast();
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -33,6 +35,7 @@ export const CertificatesTab: React.FC = () => {
       if (Array.isArray(data)) setCertificates(data);
     } catch {
       setError('Could not load certificates.');
+      showToast('Could not load certificates.', 'error');
     } finally {
       setLoading(false);
     }
@@ -65,6 +68,7 @@ export const CertificatesTab: React.FC = () => {
     e.preventDefault();
     if (!title.trim()) {
       setModalError('Please provide a certificate title.');
+      showToast('Please provide a certificate title.', 'error');
       return;
     }
     setUploading(true);
@@ -79,9 +83,12 @@ export const CertificatesTab: React.FC = () => {
     try {
       await api.uploadCertificate(formData);
       setModalOpen(false);
+      showToast(`${title.trim()} added.`);
       loadCertificates();
     } catch (err: any) {
-      setModalError(err.response?.data?.message || 'Failed to upload certificate.');
+      const notice = err.response?.data?.message || 'Failed to upload certificate.';
+      setModalError(notice);
+      showToast(notice, 'error');
     } finally {
       setUploading(false);
     }
@@ -91,9 +98,10 @@ export const CertificatesTab: React.FC = () => {
     if (!window.confirm('Delete this certificate?')) return;
     try {
       await api.deleteCertificate(id);
+      showToast('Certificate deleted.');
       loadCertificates();
     } catch {
-      alert('Failed to delete certificate.');
+      showToast('Failed to delete certificate.', 'error');
     }
   };
 
@@ -113,7 +121,8 @@ export const CertificatesTab: React.FC = () => {
       setCertificates((prev) =>
         prev.map((c) => (c.id === id ? { ...c, isPublic: !newIsPublic } : c))
       );
-      alert(err.response?.data?.message || 'Failed to update certificate visibility.');
+      const notice = err.response?.data?.message || 'Failed to update certificate visibility.';
+      showToast(notice, 'error');
     } finally {
       setTogglingId(null);
     }

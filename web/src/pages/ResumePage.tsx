@@ -11,8 +11,10 @@ import {
   Trash2
 } from 'lucide-react';
 import { BrandedLoading } from '../components/BrandedLoading';
+import { useToast } from '../components/Toast';
 
 export const ResumePage: React.FC = () => {
+  const { showToast } = useToast();
   const [resumeData, setResumeData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -35,8 +37,11 @@ export const ResumePage: React.FC = () => {
       setError(null);
       // Show a transient notice by reloading (will show empty state)
       await loadResume();
+      showToast('Your resume has been deleted.');
     } catch (err: any) {
-      setError(err?.response?.data?.message || 'Could not delete your resume. Please try again.');
+      const notice = err?.response?.data?.message || 'Could not delete your resume. Please try again.';
+      setError(notice);
+      showToast(notice, 'error');
     } finally {
       setDeleting(false);
     }
@@ -54,6 +59,7 @@ export const ResumePage: React.FC = () => {
       }
     } catch {
       setError('Could not load resume document status.');
+      showToast('Could not load resume document status.', 'error');
     } finally {
       setLoading(false);
     }
@@ -68,11 +74,17 @@ export const ResumePage: React.FC = () => {
     if (!file) return;
 
     if (file.type !== 'application/pdf') {
+      // Must return, not just set the error: without it a non-PDF falls through
+      // to the upload and the student watches a rejected file upload anyway.
       setError('Only PDF documents are accepted for resumes.');
+      showToast('Only PDF documents are accepted for resumes.', 'error');
+      return;
     }
 
     if (file.size > 10 * 1024 * 1024) {
-      setError('Resume PDF must be under 10MB.');
+      const notice = `Resume PDF must be under 10MB (yours is ${(file.size / (1024 * 1024)).toFixed(1)}MB).`;
+      setError(notice);
+      showToast(notice, 'error');
       return;
     }
 
@@ -86,9 +98,12 @@ export const ResumePage: React.FC = () => {
     try {
       await api.uploadResume(formData);
       setUploadSuccess(true);
+      showToast('Resume uploaded successfully!');
       await loadResume();
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to upload resume document.');
+      const notice = err.response?.data?.message || 'Failed to upload resume document.';
+      setError(notice);
+      showToast(notice, 'error');
     } finally {
       setUploading(false);
     }

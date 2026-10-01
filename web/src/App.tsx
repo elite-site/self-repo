@@ -3,6 +3,7 @@ import { Routes, Route, Navigate, Outlet, useNavigate, BrowserRouter } from 'rea
 import { StudentSession } from './types';
 import { PublicThemeProvider, StudentThemeProvider } from './context/ThemeContext';
 import { SessionProvider, useSession } from './context/SessionContext';
+import { ToastProvider } from './components/Toast';
 import { hasStoredToken } from './utils/sessionBootstrap';
 
 // Public Pages (isolated chunk for public visitors)
@@ -238,9 +239,11 @@ const AuthWrapper: React.FC = () => {
 export const App: React.FC = () => {
   return (
     <BrowserRouter>
-      <SessionProvider>
-        <AuthWrapper />
-      </SessionProvider>
+      <ToastProvider>
+        <SessionProvider>
+          <AuthWrapper />
+        </SessionProvider>
+      </ToastProvider>
     </BrowserRouter>
   );
 };
