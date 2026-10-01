@@ -998,11 +998,27 @@ router.post(
           where: { studentId: student.id },
           orderBy: { submittedAt: 'desc' },
         });
+
+        // A re-upload replaces the Drive file, so the stored preview belongs to
+        // the video the student just replaced. It has to be overwritten on every
+        // take: the thumbnail endpoint prefers a stored blob over regeneration,
+        // so leaving the old one in place keeps serving the previous frame
+        // forever even though the ETag has moved on. On a generation failure we
+        // store null rather than keeping the stale bytes, which lets the lazy
+        // path in /media/thumbnail regenerate from the new file on first view.
+        let thumbnailBuffer: Buffer | null = null;
+        try {
+          thumbnailBuffer = await driveService.generateThumbnail(driveFileId, 'video');
+        } catch (thumbErr) {
+          console.warn('Could not generate thumbnail for re-uploaded intro video:', thumbErr);
+        }
+
         const ivData = {
           driveFileId,
           filename: origFilename,
           mimeType: rawMime,
           sizeMb,
+          thumbnail: thumbnailBuffer,
           status: 'PENDING' as const,
           reviewNote: null,
           reviewedBy: null,
