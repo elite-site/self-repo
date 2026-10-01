@@ -198,7 +198,12 @@ model Event {
   registrationStart DateTime?
   registrationEnd   DateTime?
   eventDate         DateTime?
-  eligibilityYears  Int[]
+  // `@default([])` is required, not stylistic: the migration adds this column as
+  // `INTEGER[] NOT NULL DEFAULT '{}'`. Declaring it without a default here makes
+  // Prisma believe the database has no default, so the next `migrate dev`
+  // generates a spurious `ALTER COLUMN ... DROP DEFAULT` against a table whose
+  // rows all depend on that default.
+  eligibilityYears  Int[]       @default([])
   minCompletion     Int         @default(0)
   // Team registration. `teams` below is the per-event roster; these are the
   // creation-time constraints the wizard collects for it.
@@ -218,6 +223,12 @@ model Event {
   teams           Team[]
   votingCampaigns VotingCampaign[]
   emailLogs       EmailLog[]
+
+  // Declared here as well as in the migration SQL. Prisma introspects indexes as
+  // unmanaged objects when they exist in the database but not in the schema, and
+  // the next `migrate dev` would then generate a `DROP INDEX` for both.
+  @@index([status])
+  @@index([status, registrationEnd])
 }
 
 model Submission {

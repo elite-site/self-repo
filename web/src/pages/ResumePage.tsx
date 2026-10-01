@@ -78,6 +78,10 @@ export const ResumePage: React.FC = () => {
       // to the upload and the student watches a rejected file upload anyway.
       setError('Only PDF documents are accepted for resumes.');
       showToast('Only PDF documents are accepted for resumes.', 'error');
+      // Reset the input so re-picking the same file fires `change` again. The
+      // value is only cleared in the upload's `finally`, which a validation
+      // rejection never reaches.
+      e.target.value = '';
       return;
     }
 
@@ -85,6 +89,7 @@ export const ResumePage: React.FC = () => {
       const notice = `Resume PDF must be under 10MB (yours is ${(file.size / (1024 * 1024)).toFixed(1)}MB).`;
       setError(notice);
       showToast(notice, 'error');
+      e.target.value = '';
       return;
     }
 

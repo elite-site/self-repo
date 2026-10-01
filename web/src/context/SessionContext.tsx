@@ -53,11 +53,19 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     );
   }, []);
 
-  const verifySession = useCallback((onSettled: () => void) => {
+  const verifySession = useCallback((onSettled: () => void, isCancelled?: () => boolean) => {
     api
       .getMe()
-      .then((res) => setSession({ student: res.student }))
+      .then((res) => {
+        // Guard every write, not just `onSettled`. A verification that resolves
+        // after an unmount (or after a logout) would otherwise set a session for
+        // a token that is no longer in storage, rendering a signed-in UI that no
+        // longer corresponds to any credential.
+        if (isCancelled?.()) return;
+        setSession({ student: res.student });
+      })
       .catch((err) => {
+        if (isCancelled?.()) return;
         const failure = classifySessionFailure(err);
         if (failure.kind === 'unauthorized') {
           localStorage.removeItem(TOKEN_STORAGE_KEY);
@@ -92,9 +100,12 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
 
     setAuthChecking(true);
-    verifySession(() => {
-      if (!cancelled) setAuthChecking(false);
-    });
+    verifySession(
+      () => {
+        if (!cancelled) setAuthChecking(false);
+      },
+      () => cancelled,
+    );
     return () => {
       cancelled = true;
     };
@@ -106,6 +117,9 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     } catch {}
     localStorage.removeItem(TOKEN_STORAGE_KEY);
     setSession(null);
+    // Cleared so a logout after a failed verification cannot leave the "Unable to
+    // verify your session" screen showing for a visitor who is now signed out.
+    setSessionError(null);
   }, []);
 
   return (

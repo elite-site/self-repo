@@ -294,10 +294,9 @@ router.get('/public/events/:id', async (req: Request, res: Response): Promise<vo
     res.json({
       ...event,
       title: event.name,
-      date: event.createdAt,
-      type: 'GENERAL',
+      date: event.eventDate || event.createdAt,
       eligibility: `Year ${event.year || 'All'}`,
-      deadline: event.createdAt,
+      deadline: event.registrationEnd || event.createdAt,
       registrationFields: event.formFields
     });
   } catch (err: any) {
@@ -526,9 +525,15 @@ router.get('/public/media/:type/:fileId', async (req: Request, res: Response): P
     //     download. Small payloads are not the bottleneck.
     //   - The permission check keeps the proxy as a fallback, so a file that is
     //     not `anyone`-readable still streams rather than 403ing from Drive.
-    if (REDIRECTABLE_TYPES.has(type) && driveService.canRedirectToDrive()) {
-      const directLink = driveService.getDirectLink(targetDriveFileId);
-      if (directLink && (await driveService.isPubliclyReadable(targetDriveFileId))) {
+    //
+    // Gated on `resolvedDriveId`, not `targetDriveFileId`. When the database
+    // lookup misses, `targetDriveFileId` is whatever the caller put in the URL,
+    // and checking it would spend an outbound Drive `permissions.list` call on
+    // anonymous, attacker-chosen input. Only a file this app actually owns is
+    // worth redirecting.
+    if (resolvedDriveId && REDIRECTABLE_TYPES.has(type) && driveService.canRedirectToDrive()) {
+      const directLink = driveService.getDirectLink(resolvedDriveId);
+      if (directLink && (await driveService.isPubliclyReadable(resolvedDriveId))) {
         res.setHeader('Cache-Control', 'private, max-age=3600');
         res.setHeader('ETag', etag);
         res.redirect(302, directLink);

@@ -702,7 +702,13 @@ const EVENT_STATUSES = ['DRAFT', 'OPEN', 'CLOSED', 'ARCHIVED'] as const;
  * Returns either `{ ok: true, data }` or `{ ok: false, message }`. Callers
  * return 400 with the message rather than guessing at a default.
  */
-function parseEventPayload(body: any, { partial }: { partial: boolean }) {
+function parseEventPayload(rawBody: any, { partial }: { partial: boolean }) {
+  // A request with no JSON body leaves `req.body` undefined, which used to throw
+  // a TypeError here and surface as a 500 instead of a 400.
+  if (rawBody === undefined || rawBody === null || typeof rawBody !== 'object') {
+    return { ok: false as const, message: 'A JSON request body is required.' };
+  }
+  const body = rawBody as Record<string, any>;
   const data: Record<string, unknown> = {};
 
   const rawName = body.name ?? body.title;
@@ -754,7 +760,13 @@ function parseEventPayload(body: any, { partial }: { partial: boolean }) {
       data[field] = null;
       continue;
     }
-    const date = new Date(/^\d{4}-\d{2}-\d{2}$/.test(String(raw)) ? `${raw}T12:00:00` : raw);
+    // Must be a string. `new Date` also accepts numbers and booleans, coercing
+    // them to epoch-ish dates (`true` -> 1970-01-01), which stored a plausible
+    // but meaningless timestamp instead of rejecting the request.
+    if (typeof raw !== 'string') {
+      return { ok: false as const, message: `Invalid ${field} date.` };
+    }
+    const date = new Date(/^\d{4}-\d{2}-\d{2}$/.test(raw) ? `${raw}T12:00:00` : raw);
     if (Number.isNaN(date.getTime())) {
       return { ok: false as const, message: `Invalid ${field} date.` };
     }
@@ -790,7 +802,13 @@ function parseEventPayload(body: any, { partial }: { partial: boolean }) {
   }
 
   for (const field of ['notifyOnOpen', 'notifyReminder', 'teamEnabled'] as const) {
-    if (body[field] !== undefined) data[field] = Boolean(body[field]);
+    if (body[field] === undefined) continue;
+    // `Boolean("false")` is true, so a form-encoded or stringly-typed `"false"`
+    // would switch the flag on rather than off.
+    if (typeof body[field] !== 'boolean') {
+      return { ok: false as const, message: `${field} must be a boolean.` };
+    }
+    data[field] = body[field];
   }
 
   for (const field of ['teamMin', 'teamMax'] as const) {
@@ -802,9 +820,16 @@ function parseEventPayload(body: any, { partial }: { partial: boolean }) {
     data[field] = value;
   }
 
+  // Only comparable when both bounds are in this payload. A partial update that
+  // sends just one bound would otherwise compare a real number against
+  // `undefined`, which is always false, and write a min above the stored max.
+  // `PUT /events/:id` re-checks this against the merged row.
   if (
-    (body.teamMin !== undefined || body.teamMax !== undefined) &&
-    (data.teamMin as number) > (data.teamMax as number)
+    data.teamMin !== undefined &&
+    data.teamMax !== undefined &&
+    typeof data.teamMin === 'number' &&
+    typeof data.teamMax === 'number' &&
+    data.teamMin > data.teamMax
   ) {
     return { ok: false as const, message: 'Maximum team members cannot be lower than the minimum.' };
   }
@@ -864,6 +889,19 @@ router.put('/events/:id', async (req: Request, res: Response) => {
     const existing = await prisma.event.findUnique({ where: { id: req.params.id } });
     if (!existing) return res.status(404).json({ error: 'NOT_FOUND', message: 'Event not found' });
 
+    // Validate against the merged row, not just the payload. A request that
+    // sends only `teamMin` cannot be checked inside the parser (the other bound
+    // is not there yet), so `teamMin: 10` on an event whose max is 4 would pass
+    // both here and in Prisma.
+    const mergedMin = parsed.data.teamMin ?? existing.teamMin;
+    const mergedMax = parsed.data.teamMax ?? existing.teamMax;
+    if (mergedMin > mergedMax) {
+      return res.status(400).json({
+        error: 'BAD_REQUEST',
+        message: 'Maximum team members cannot be lower than the minimum.',
+      });
+    }
+
     const event = await prisma.event.update({
       where: { id: req.params.id },
       data: parsed.data as any,
@@ -875,41 +913,40 @@ router.put('/events/:id', async (req: Request, res: Response) => {
   }
 });
 
-router.post('/events/:id/publish', async (req: Request, res: Response) => {
+/**
+ * Sets an event's status.
+ *
+ * Existence is checked before the update because Prisma raises P2025 for an
+ * unknown id, which used to surface as a 500 carrying the raw driver message to
+ * the client. Distinguishing "no such event" from a real failure also stops the
+ * error handler from leaking internals in production.
+ */
+async function setEventStatus(req: Request, res: Response, status: 'OPEN' | 'CLOSED' | 'ARCHIVED') {
   try {
-    const event = await prisma.event.update({
+    const existing = await prisma.event.findUnique({
       where: { id: req.params.id },
-      data: { status: 'OPEN' },
+      select: { id: true },
     });
-    res.json(event);
-  } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
-  }
-});
+    if (!existing) {
+      return res.status(404).json({ error: 'NOT_FOUND', message: 'Event not found.' });
+    }
 
-router.post('/events/:id/close', async (req: Request, res: Response) => {
-  try {
     const event = await prisma.event.update({
       where: { id: req.params.id },
-      data: { status: 'CLOSED' },
+      data: { status },
     });
     res.json(event);
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error(`Error setting event ${req.params.id} to ${status}:`, err);
+    res.status(500).json({ error: 'SERVER_ERROR', message: 'Could not update the event.' });
   }
-});
+}
 
-router.post('/events/:id/archive', async (req: Request, res: Response) => {
-  try {
-    const event = await prisma.event.update({
-      where: { id: req.params.id },
-      data: { status: 'ARCHIVED' },
-    });
-    res.json(event);
-  } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
-  }
-});
+router.post('/events/:id/publish', (req: Request, res: Response) => setEventStatus(req, res, 'OPEN'));
+
+router.post('/events/:id/close', (req: Request, res: Response) => setEventStatus(req, res, 'CLOSED'));
+
+router.post('/events/:id/archive', (req: Request, res: Response) => setEventStatus(req, res, 'ARCHIVED'));
 
 router.get('/events/:id/registrations', async (req: Request, res: Response) => {
   try {

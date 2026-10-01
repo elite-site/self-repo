@@ -99,8 +99,14 @@ export const VideoPage: React.FC = () => {
     };
   }, []);
 
+  // Mirrors whether any submission data has been loaded. `loadSubmission` is
+  // memoized with no dependencies, so reading `submission` inside it would
+  // always see the value captured on first render (null), making a "refresh in
+  // place" request blank the whole page to the full-screen loader.
+  const hasSubmissionData = useRef(false);
+
   const loadSubmission = useCallback(async (isInitial = true) => {
-    if (isInitial && !submission) setLoading(true);
+    if (isInitial && !hasSubmissionData.current) setLoading(true);
     setError(null);
     try {
       const data = await api.getMe();
@@ -118,6 +124,7 @@ export const VideoPage: React.FC = () => {
       } else {
         setSubmission(null);
       }
+      hasSubmissionData.current = true;
     } catch {
       if (isInitial) {
         setError('Could not load introduction video status.');
@@ -282,9 +289,14 @@ export const VideoPage: React.FC = () => {
 
   // The session gate has already fetched `/me` for the whole app, and that same
   // payload carries the video, the submission and the size limit this page shows.
-  // Seed from it instead of issuing a second identical request on every visit.
-  // The ref keeps the seed to the first mount: `session` also changes when a photo
-  // is uploaded, and re-seeding then would overwrite fresher post-upload state.
+  // Paint from it immediately, then revalidate in the background.
+  //
+  // The revalidation is what makes this correct rather than merely fast: the
+  // session snapshot is from page load, so without it a student who uploaded or
+  // deleted a video and came back to this page would be shown the old state —
+  // an approved video that is now pending, or an empty dropzone for a video that
+  // exists. `isInitial: false` keeps it from flashing the loader over content
+  // that is already on screen.
   const seededFromSession = useRef(false);
   useEffect(() => {
     if (seededFromSession.current) return;
@@ -297,11 +309,13 @@ export const VideoPage: React.FC = () => {
     setVideo(cached.video ?? null);
     setMaxVideoSizeMb(cached.maxVideoSizeMb || DEFAULT_MAX_VIDEO_MB);
     setSubmission(cached.submission ?? null);
+    hasSubmissionData.current = true;
     if (!cached.video?.hasFile) {
       setLocalPreview(null);
       setPreviewError(false);
     }
     setLoading(false);
+    loadSubmission(false);
   }, [loadSubmission, session]);
 
   // Fast in-browser inspection of video file without any heavy dependencies
@@ -394,6 +408,11 @@ export const VideoPage: React.FC = () => {
     if (!file.type.startsWith('video/')) {
       setError('Please select a valid video file (MP4, WebM, MOV).');
       showToast('Please select a valid video file (MP4, WebM, MOV).', 'error');
+      // Reset the input so re-picking the same file fires `change` again. The
+      // value is only cleared in the upload's `finally`, which a validation
+      // rejection never reaches, so without this the student's second attempt
+      // silently does nothing.
+      e.target.value = '';
       return;
     }
 
@@ -405,6 +424,7 @@ export const VideoPage: React.FC = () => {
       const message = `Video file must be under ${maxVideoSizeMb}MB (yours is ${(file.size / (1024 * 1024)).toFixed(1)}MB).`;
       setError(`Video file must be under ${maxVideoSizeMb}MB.`);
       showToast(message, 'error');
+      e.target.value = '';
       return;
     }
 

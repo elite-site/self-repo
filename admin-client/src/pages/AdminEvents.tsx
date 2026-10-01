@@ -60,7 +60,10 @@ const emptyForm: FormState = {
 const fromEvent = (e: EventItem): FormState => ({
   name: e.name,
   description: e.description ?? '',
-  type: e.type && e.type !== 'GENERAL' ? e.type : 'HACKATHON',
+  // Preserve whatever the event already is, including the 'GENERAL' default.
+  // Mapping GENERAL onto a specific type here silently rewrote the type of
+  // every default event the moment an admin opened Edit and hit Save.
+  type: e.type || 'GENERAL',
   year: e.year ?? new Date().getFullYear(),
   registrationStart: toLocalInput(e.registrationStart),
   registrationEnd: toLocalInput(e.registrationEnd),
@@ -93,7 +96,11 @@ const EventWizard: React.FC<{
       description: form.description.trim(),
       type: form.type,
       year: form.year,
-      status: existing ? existing.status : 'OPEN',
+      // New events start as DRAFT, matching handleDuplicate and the existence of a
+      // separate publish action. Creating straight to OPEN made the event
+      // student-visible the instant the wizard finished, before an admin had
+      // reviewed or published it.
+      status: existing ? existing.status : 'DRAFT',
       registrationStart: form.registrationStart || null,
       registrationEnd: form.registrationEnd || null,
       eventDate: form.eventDate || null,

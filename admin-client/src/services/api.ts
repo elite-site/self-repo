@@ -297,7 +297,11 @@ export const adminApi = {
   },
 
   async setEventStatus(id: string, status: 'OPEN' | 'CLOSED' | 'ARCHIVED'): Promise<EventItem> {
-    const res = await client.post(`/admin/api/portal/events/${id}/${status.toLowerCase() === 'open' ? 'publish' : status.toLowerCase()}`);
+    // The status enum and the action verbs are not the same words: closing an
+    // event is `POST /close`, not `/closed`, and opening it is `publish`. Sending
+    // the raw lowercased status 404s on CLOSED.
+    const action = status === 'OPEN' ? 'publish' : status === 'CLOSED' ? 'close' : 'archive';
+    const res = await client.post(`/admin/api/portal/events/${id}/${action}`);
     return res.data;
   },
 

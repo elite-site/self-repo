@@ -28,10 +28,9 @@ router.get('/', async (req: Request, res: Response) => {
     res.json(events.map(e => ({
       ...e,
       title: e.name,
-      date: e.createdAt,
-      type: 'GENERAL',
+      date: e.eventDate || e.createdAt,
       eligibility: `Year ${e.year || 'All'}`,
-      deadline: e.createdAt
+      deadline: e.registrationEnd || e.createdAt
     })));
   } catch (err: any) {
     res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
@@ -53,10 +52,9 @@ router.get('/:id', async (req: Request, res: Response) => {
     res.json({
       ...event,
       title: event.name,
-      date: event.createdAt,
-      type: 'GENERAL',
+      date: event.eventDate || event.createdAt,
       eligibility: `Year ${event.year || 'All'}`,
-      deadline: event.createdAt,
+      deadline: event.registrationEnd || event.createdAt,
       registrationFields: event.formFields
     });
   } catch (err: any) {
@@ -87,6 +85,16 @@ router.post('/:id/register', async (req: Request, res: Response) => {
     });
     if (!event) {
       return res.status(404).json({ error: 'NOT_FOUND', message: 'Event not found' });
+    }
+    // Registration must be refused once an event is not open. The admin UI tells
+    // an admin that archiving an event stops registrations, and closing it is
+    // meaningless if students can still sign up, but the lookup above matched on
+    // id/slug alone and accepted DRAFT, CLOSED and ARCHIVED alike.
+    if (event.status !== 'OPEN') {
+      return res.status(403).json({
+        error: 'EVENT_NOT_OPEN',
+        message: `Registration is closed for this event (${event.status}).`,
+      });
     }
 
     const eventId = event.id;

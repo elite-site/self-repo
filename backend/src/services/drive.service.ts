@@ -68,6 +68,18 @@ export function parseContentRangeHeader(
   return { start, end, total: Number.isFinite(total) ? total : end + 1 };
 }
 
+/**
+ * How long a confirmed `anyone` grant is trusted before Drive is re-queried.
+ *
+ * Long enough that a viewer burst does not produce one `permissions.list` per
+ * request, short enough that a revoked grant is noticed within a single viewing
+ * session rather than persisting until the process restarts.
+ */
+const ANYONE_READABLE_TTL_MS = 10 * 60_000;
+
+/** Cap on tracked `anyone` grants, to bound memory on a small instance. */
+const MAX_TRACKED_ANYONE_FILES = 500;
+
 export class DriveService {
   private drive: drive_v3.Drive | null = null;
   private isMock = false;
@@ -77,6 +89,17 @@ export class DriveService {
   private oauthClient: InstanceType<typeof google.auth.OAuth2> | null = null;
   private serviceAccountAuth: InstanceType<typeof google.auth.GoogleAuth> | null = null;
   private viewerPermissionCache = new Set<string>();
+  /**
+   * Subset of `viewerPermissionCache` that is confirmed readable by *anyone*
+   * with the link, as opposed to merely readable by an authenticated member of
+   * the Workspace domain.
+   *
+   * These must stay separate. `setViewerPermission` falls back to `domain`
+   * sharing when the org policy blocks link sharing, and a domain-shared file is
+   * NOT anonymously readable, so recording that in the same set would make
+   * {@link isPubliclyReadable} hand out a redirect Drive answers with 403.
+   */
+  private anyoneReadableCache = new Map<string, number>();
   /** fileId -> expiry timestamp, for files confirmed NOT to be `anyone`-readable. */
   private negativePermissionCache = new Map<string, number>();
   private folderMemoryCache = new Map<string, string>();
@@ -348,12 +371,16 @@ export class DriveService {
         sendNotificationEmail: false,
       });
       this.viewerPermissionCache.add(fileOrFolderId);
+      this.rememberAnyoneReadable(fileOrFolderId);
       console.log(`[Drive] Public viewer access ('anyone') granted to: ${fileOrFolderId}`);
       return true;
     } catch (permErr: any) {
       const msg = permErr?.message || String(permErr);
       if (msg.includes('already exists') || msg.includes('duplicate')) {
+        // The 'anyone' grant is what collided, so this file is anonymously
+        // readable even though we did not create the permission ourselves.
         this.viewerPermissionCache.add(fileOrFolderId);
+        this.rememberAnyoneReadable(fileOrFolderId);
         return true;
       }
 
@@ -373,6 +400,9 @@ export class DriveService {
             supportsAllDrives: true,
             sendNotificationEmail: false,
           });
+          // Deliberately NOT added to `anyoneReadableCache`: a domain grant is
+          // only readable by an authenticated Workspace member, so redirecting
+          // an anonymous browser to this file would 403.
           this.viewerPermissionCache.add(fileOrFolderId);
           console.log(`[Drive] Domain (${env.GOOGLE_SSO_HD}) viewer access granted to: ${fileOrFolderId}`);
           return true;
@@ -951,18 +981,6 @@ export class DriveService {
   }
 
   /**
-   * Whether a file is known to be readable by anyone with the link.
-   *
-   * Synchronous view over what this process has already confirmed. Returns
-   * `false` for "not yet confirmed" as well as for "confirmed not public", so
-   * callers that need certainty should use {@link isPubliclyReadable}.
-   */
-  public isKnownPublic(fileId?: string | null): boolean {
-    if (!fileId) return false;
-    return this.viewerPermissionCache.has(fileId);
-  }
-
-  /**
    * Whether Drive would let an anonymous browser read this file directly.
    *
    * Redirecting to a file that is *not* `anyone`-readable produces a 403 from
@@ -973,17 +991,29 @@ export class DriveService {
    *
    * The check costs one Drive `permissions.list` call, but only once per file
    * per process:
-   *   - already granted in this process -> answered from `viewerPermissionCache`
-   *   - already confirmed not public    -> answered from a short negative cache
-   *   - otherwise                       -> one API call, then cached
+   *   - confirmed `anyone` by this process -> answered from `anyoneReadableCache`
+   *   - confirmed not public              -> answered from a short negative cache
+   *   - otherwise                         -> one API call, then cached
    *
-   * Negative results expire rather than sticking forever, because
-   * `setViewerPermission` runs asynchronously after upload and would otherwise
-   * be unable to correct a premature "no".
+   * Note this consults `anyoneReadableCache` and NOT `viewerPermissionCache`.
+   * The latter also holds domain-only grants, which an anonymous browser cannot
+   * read, so treating it as proof of public access would redirect to a 403 on
+   * any Workspace that blocks link sharing.
+   *
+   * Both caches expire. A permanent positive entry would keep issuing redirects
+   * for a file an admin had unshared; a permanent negative could not be
+   * corrected by the async `setViewerPermission` that runs after upload.
    */
   public async isPubliclyReadable(fileId?: string | null): Promise<boolean> {
     if (!fileId || this.isMock || !this.drive) return false;
-    if (this.viewerPermissionCache.has(fileId)) return true;
+    const known = this.anyoneReadableCache.get(fileId);
+    if (known !== undefined) {
+      if (Date.now() < known) return true;
+      // The grant may have been revoked since we last confirmed it. Re-check
+      // rather than trusting a stale positive, which is what would otherwise
+      // keep redirecting to a URL Drive now answers with 403.
+      this.anyoneReadableCache.delete(fileId);
+    }
 
     const negative = this.negativePermissionCache.get(fileId);
     if (negative !== undefined) {
@@ -1002,7 +1032,7 @@ export class DriveService {
         (p) => p.type === 'anyone' && (p.role === 'reader' || p.role === 'writer'),
       );
       if (anyone) {
-        this.viewerPermissionCache.add(fileId);
+        this.rememberAnyoneReadable(fileId);
       } else {
         this.negativePermissionCache.set(fileId, Date.now() + 60_000);
       }
@@ -1013,6 +1043,26 @@ export class DriveService {
       // caller proxies this time.
       console.warn(`[Drive] Permission check failed for ${fileId}: ${err?.message || err}`);
       return false;
+    }
+  }
+
+  /**
+   * Records a file as anonymously readable for a bounded window.
+   *
+   * Bounded rather than permanent on purpose. A grant can be revoked (an admin
+   * unshares the file, or Workspace policy tightens after the fact), and a
+   * permanent entry would keep handing out redirects to a URL Drive now
+   * answers with 403 — the exact failure this cache exists to prevent.
+   */
+  private rememberAnyoneReadable(fileId: string): void {
+    this.anyoneReadableCache.set(fileId, Date.now() + ANYONE_READABLE_TTL_MS);
+
+    // Same reasoning as `TtlCache.maxEntries`: unbounded growth on a 500 MB
+    // instance is its own outage, so the least recently written entry goes.
+    while (this.anyoneReadableCache.size > MAX_TRACKED_ANYONE_FILES) {
+      const oldest = this.anyoneReadableCache.keys().next();
+      if (oldest.done) break;
+      this.anyoneReadableCache.delete(oldest.value);
     }
   }
 

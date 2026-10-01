@@ -74,17 +74,22 @@ router.get('/', async (req: Request, res: Response) => {
     // count+findMany pairs; with it, the second visitor onward is served from
     // memory. The 20s window is short because this directory is the page whose
     // contents change when a student is approved or graduates.
-    const cacheKey = [
+    // JSON.stringify rather than a `|` join. A join is ambiguous: `search=x|y` and
+    // `skillName=z` collide with `search=x` and `skillName=y|z`, and whichever
+    // arrived first would be served for both. `search` is also trimmed, because
+    // the query trims it — keying on the raw value made `?search=%20react` a
+    // guaranteed miss against the identical query `?search=react` produced.
+    const cacheKey = JSON.stringify([
       'students',
       status || '',
       year || '',
       section || '',
-      search || '',
-      skillName || '',
-      JSON.stringify(skillsFilter ?? []),
-      String(page),
-      String(limit),
-    ].join('|');
+      search ? String(search).trim() : '',
+      skillName ? String(skillName).trim() : '',
+      skillsFilter ?? [],
+      page,
+      limit,
+    ]);
 
     const payload = await studentListCache.wrap(cacheKey, async () => {
       const [total, students] = await Promise.all([

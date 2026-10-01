@@ -106,10 +106,13 @@ export const EventDetailPage: React.FC = () => {
         ...res,
       });
       setModalOpen(false);
+      showToast('Registered successfully.', 'success');
       // Silently refresh in the background
       loadEventAndReg(false);
     } catch (err: any) {
-      setRegError(err.response?.data?.message || 'Failed to complete registration.');
+      const message = err.response?.data?.message || 'Failed to complete registration.';
+      setRegError(message);
+      showToast(message, 'error');
     } finally {
       setSubmitting(false);
     }

@@ -41,6 +41,8 @@
 export class TtlCache<T> {
   private readonly store = new Map<string, { value: T; expiresAt: number }>();
   private readonly inflight = new Map<string, Promise<T>>();
+  /** Bumped by `clear()`; lets an in-flight load detect that it was cancelled. */
+  private generation = 0;
 
   /**
    * @param ttlMs        how long a loaded value stays fresh
@@ -63,12 +65,14 @@ export class TtlCache<T> {
   }
 
   set(key: string, value: T): void {
-    // Re-inserting moves the key to the end of the Map's iteration order, which
-    // is what makes the eviction below approximate LRU rather than FIFO.
+    // Re-inserting moves the key to the end of the Map's iteration order.
     if (this.store.has(key)) this.store.delete(key);
     this.store.set(key, { value, expiresAt: Date.now() + this.ttlMs });
 
     while (this.store.size > this.maxEntries) {
+      // Least recently *written*, not least recently used: `get` does not
+      // re-insert. For short-TTL entries that are cheap to recompute this is
+      // adequate, but it is not LRU and should not be relied on as such.
       const oldest = this.store.keys().next();
       if (oldest.done) break;
       this.store.delete(oldest.value);
@@ -89,12 +93,18 @@ export class TtlCache<T> {
     const pending = this.inflight.get(key);
     if (pending) return pending;
 
+    // Capture the generation so a `clear()` during the load discards the result
+    // instead of writing it back after the clear has already returned.
+    const generation = this.generation;
     const promise = (async () => {
       try {
         const value = await load();
-        this.set(key, value);
+        if (this.generation === generation) this.set(key, value);
         return value;
       } finally {
+        // Unconditional: single-flight guarantees only one load per key at a
+        // time, so this cannot delete a newer request's entry. `clear()` may
+        // have emptied the map already, which is also fine.
         this.inflight.delete(key);
       }
     })();
@@ -103,13 +113,26 @@ export class TtlCache<T> {
     return promise;
   }
 
-  /** Drops every entry. Used by tests and by any manual cache bust. */
+  /**
+   * Drops every entry, including anything a still-running load would write.
+   *
+   * Bumping the generation is what makes this reliable as a cache bust: without
+   * it a loader that was already awaiting would call `set` after `clear()`
+   * returned and repopulate the entry the caller believed it had just removed.
+   */
   clear(): void {
+    this.generation += 1;
     this.store.clear();
     this.inflight.clear();
   }
 
-  /** Number of live, unexpired keys. Exposed for the cache-hit log line. */
+  /**
+   * Number of entries currently held, including expired-but-unread ones.
+   *
+   * It is the map's occupancy, not a count of usable values: an expired entry
+   * is dropped lazily on the next `get` for that key. `maxEntries` bounds this
+   * number, which is what keeps memory capped.
+   */
   get size(): number {
     return this.store.size;
   }
