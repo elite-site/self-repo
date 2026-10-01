@@ -688,25 +688,149 @@ router.get('/events', async (_req: Request, res: Response) => {
   }
 });
 
+/** Event types the admin wizard offers. Anything else is rejected. */
+const EVENT_TYPES = ['HACKATHON', 'WORKSHOP', 'COMPETITION', 'SEMINAR', 'OTHER'] as const;
+const EVENT_STATUSES = ['DRAFT', 'OPEN', 'CLOSED', 'ARCHIVED'] as const;
+
+/**
+ * Normalises and validates the scheduling/eligibility block of an event body.
+ *
+ * Every field here was previously collected by the admin wizard and then
+ * discarded, so it needs real parsing rather than a blind spread: an invalid
+ * date string would otherwise reach Prisma and surface as a 500.
+ *
+ * Returns either `{ ok: true, data }` or `{ ok: false, message }`. Callers
+ * return 400 with the message rather than guessing at a default.
+ */
+function parseEventPayload(body: any, { partial }: { partial: boolean }) {
+  const data: Record<string, unknown> = {};
+
+  const rawName = body.name ?? body.title;
+  if (rawName !== undefined || !partial) {
+    const name = typeof rawName === 'string' ? rawName.trim() : '';
+    if (!name) return { ok: false as const, message: 'Event title is required.' };
+    if (name.length > 200) return { ok: false as const, message: 'Event title must be 200 characters or fewer.' };
+    data.name = name;
+    data.slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  }
+
+  if (body.description !== undefined) {
+    data.description = typeof body.description === 'string' ? body.description.trim() || null : null;
+  }
+
+  if (body.type !== undefined) {
+    const type = String(body.type).toUpperCase();
+    if (type !== 'GENERAL' && !(EVENT_TYPES as readonly string[]).includes(type)) {
+      return { ok: false as const, message: `Unknown event type: ${body.type}` };
+    }
+    data.type = type;
+  }
+
+  if (body.year !== undefined) {
+    const year = parseInt(String(body.year), 10);
+    if (!Number.isFinite(year) || year < 2000 || year > 2100) {
+      return { ok: false as const, message: 'Year must be between 2000 and 2100.' };
+    }
+    data.year = year;
+  }
+
+  if (body.status !== undefined) {
+    const status = String(body.status).toUpperCase();
+    if (!(EVENT_STATUSES as readonly string[]).includes(status)) {
+      return { ok: false as const, message: `Unknown event status: ${body.status}` };
+    }
+    data.status = status;
+  }
+
+  // Dates arrive from <input type="datetime-local"> as `YYYY-MM-DDTHH:mm`,
+  // which is local time with no zone. `new Date(str)` parses that as local,
+  // but a bare date-only string is parsed as UTC midnight, which shifts the
+  // day backwards for anyone west of Greenwich. Pin date-only values to noon
+  // so the stored date always matches the day the admin typed.
+  for (const field of ['registrationStart', 'registrationEnd', 'eventDate'] as const) {
+    if (body[field] === undefined) continue;
+    const raw = body[field];
+    if (raw === null || raw === '') {
+      data[field] = null;
+      continue;
+    }
+    const date = new Date(/^\d{4}-\d{2}-\d{2}$/.test(String(raw)) ? `${raw}T12:00:00` : raw);
+    if (Number.isNaN(date.getTime())) {
+      return { ok: false as const, message: `Invalid ${field} date.` };
+    }
+    data[field] = date;
+  }
+
+  const start = data.registrationStart as Date | null | undefined;
+  const end = data.registrationEnd as Date | null | undefined;
+  // Only compare when the request supplied both, so a partial edit that sets
+  // just one bound is not rejected against an unknown other bound.
+  if (body.registrationStart !== undefined && body.registrationEnd !== undefined && start && end && start > end) {
+    return { ok: false as const, message: 'Registration end must be after registration start.' };
+  }
+
+  if (body.eligibilityYears !== undefined) {
+    if (!Array.isArray(body.eligibilityYears)) {
+      return { ok: false as const, message: 'Eligibility years must be a list.' };
+    }
+    const years: number[] = (body.eligibilityYears as unknown[]).map((y) => parseInt(String(y), 10));
+    if (years.some((y: number) => !Number.isFinite(y) || y < 1 || y > 4)) {
+      return { ok: false as const, message: 'Eligibility years must be between 1 and 4.' };
+    }
+    data.eligibilityYears = [...new Set(years)].sort((a: number, b: number) => a - b);
+  }
+
+  for (const field of ['minCompletion'] as const) {
+    if (body[field] === undefined) continue;
+    const value = parseInt(String(body[field]), 10);
+    if (!Number.isFinite(value) || value < 0 || value > 100) {
+      return { ok: false as const, message: 'Minimum profile completion must be between 0 and 100.' };
+    }
+    data[field] = value;
+  }
+
+  for (const field of ['notifyOnOpen', 'notifyReminder', 'teamEnabled'] as const) {
+    if (body[field] !== undefined) data[field] = Boolean(body[field]);
+  }
+
+  for (const field of ['teamMin', 'teamMax'] as const) {
+    if (body[field] === undefined) continue;
+    const value = parseInt(String(body[field]), 10);
+    if (!Number.isFinite(value) || value < 1 || value > 20) {
+      return { ok: false as const, message: `${field === 'teamMin' ? 'Minimum' : 'Maximum'} team members must be between 1 and 20.` };
+    }
+    data[field] = value;
+  }
+
+  if (
+    (body.teamMin !== undefined || body.teamMax !== undefined) &&
+    (data.teamMin as number) > (data.teamMax as number)
+  ) {
+    return { ok: false as const, message: 'Maximum team members cannot be lower than the minimum.' };
+  }
+
+  return { ok: true as const, data };
+}
+
 router.post('/events', async (req: Request, res: Response) => {
   try {
-    const { title, name, description, year, status } = req.body;
-    const eventName = title || name || 'New Event';
-    const slug = eventName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-    const id = `${slug}-${Date.now().toString().slice(-4)}`;
+    const parsed = parseEventPayload(req.body, { partial: false });
+    if (!parsed.ok) {
+      return res.status(400).json({ error: 'BAD_REQUEST', message: parsed.message });
+    }
+
+    // Matches the existing convention: a readable slug plus the last four
+    // digits of the epoch, so ids stay sortable and collision-resistant enough
+    // for admin-created events.
+    const id = `${parsed.data.slug}-${Date.now().toString().slice(-4)}`;
 
     const event = await prisma.event.create({
-      data: {
-        id,
-        name: eventName,
-        slug,
-        year: year ? parseInt(String(year), 10) : 2026,
-        status: status || 'OPEN',
-      },
+      data: { id, ...parsed.data } as any,
     });
     res.status(201).json(event);
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error('Error creating event:', err);
+    res.status(500).json({ error: 'SERVER_ERROR', message: 'Could not create the event.' });
   }
 });
 
@@ -729,18 +853,25 @@ router.get('/events/:id', async (req: Request, res: Response) => {
 
 router.put('/events/:id', async (req: Request, res: Response) => {
   try {
-    const { name, title, year, status } = req.body;
+    const parsed = parseEventPayload(req.body, { partial: true });
+    if (!parsed.ok) {
+      return res.status(400).json({ error: 'BAD_REQUEST', message: parsed.message });
+    }
+    if (Object.keys(parsed.data).length === 0) {
+      return res.status(400).json({ error: 'BAD_REQUEST', message: 'No fields to update.' });
+    }
+
+    const existing = await prisma.event.findUnique({ where: { id: req.params.id } });
+    if (!existing) return res.status(404).json({ error: 'NOT_FOUND', message: 'Event not found' });
+
     const event = await prisma.event.update({
       where: { id: req.params.id },
-      data: {
-        name: name || title,
-        year: year ? parseInt(String(year), 10) : undefined,
-        status,
-      },
+      data: parsed.data as any,
     });
     res.json(event);
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error('Error updating event:', err);
+    res.status(500).json({ error: 'SERVER_ERROR', message: 'Could not update the event.' });
   }
 });
 

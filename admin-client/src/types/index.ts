@@ -4,6 +4,38 @@ export interface EventItem {
   slug: string;
   year: number;
   status: 'DRAFT' | 'OPEN' | 'CLOSED' | 'ARCHIVED';
+  description?: string | null;
+  type?: string;
+  registrationStart?: string | null;
+  registrationEnd?: string | null;
+  eventDate?: string | null;
+  eligibilityYears?: number[];
+  minCompletion?: number;
+  teamEnabled?: boolean;
+  teamMin?: number;
+  teamMax?: number;
+  notifyOnOpen?: boolean;
+  notifyReminder?: boolean;
+  registrationCount?: number;
+}
+
+/** Payload for creating or updating an event. Only `name` is required. */
+export interface EventPayload {
+  name: string;
+  description?: string;
+  type?: string;
+  year?: number;
+  status?: string;
+  registrationStart?: string | null;
+  registrationEnd?: string | null;
+  eventDate?: string | null;
+  eligibilityYears?: number[];
+  minCompletion?: number;
+  teamEnabled?: boolean;
+  teamMin?: number;
+  teamMax?: number;
+  notifyOnOpen?: boolean;
+  notifyReminder?: boolean;
 }
 
 export type SubmissionRating = 'GOOD' | 'AVERAGE' | 'POOR';

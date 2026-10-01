@@ -4,24 +4,11 @@ import {
   AlertCircle, Loader2, CheckCircle, X, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { adminApi } from '../services/api';
-
-interface EventItem {
-  id: string;
-  title: string;
-  type: string;
-  status: string;
-  registrationStart: string;
-  registrationEnd: string;
-  eventDate: string;
-  registrationCount: number;
-  eligibility?: string;
-  description?: string;
-}
+import { EventItem, EventPayload } from '../types';
 
 const StatusBadge = ({ status }: { status: string }) => {
   const map: Record<string, { label: string; cls: string }> = {
     DRAFT: { label: 'Draft', cls: 'badge badge-draft' },
-    PUBLISHED: { label: 'Published', cls: 'badge badge-approved' },
     OPEN: { label: 'Open', cls: 'badge badge-approved' },
     CLOSED: { label: 'Closed', cls: 'badge badge-draft' },
     ARCHIVED: { label: 'Archived', cls: 'badge badge-draft' },
@@ -32,27 +19,106 @@ const StatusBadge = ({ status }: { status: string }) => {
 
 const steps = ['Basics', 'Dates', 'Eligibility', 'Form', 'Teams', 'Notifications', 'Review'];
 
-const CreateEventWizard: React.FC<{ onClose: () => void; onCreated: () => void }> = ({ onClose, onCreated }) => {
+const EVENT_TYPES = ['HACKATHON', 'WORKSHOP', 'COMPETITION', 'SEMINAR', 'OTHER'];
+
+/** ISO timestamp -> the `YYYY-MM-DDTHH:mm` string a `datetime-local` input needs. */
+const toLocalInput = (iso?: string | null) => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
+const formatDate = (iso?: string | null) => (iso ? new Date(iso).toLocaleDateString() : 'To be announced');
+
+interface FormState {
+  name: string;
+  description: string;
+  type: string;
+  year: number;
+  registrationStart: string;
+  registrationEnd: string;
+  eventDate: string;
+  eligibilityYears: string[];
+  minCompletion: number;
+  teamEnabled: boolean;
+  teamMin: number;
+  teamMax: number;
+  notifyOnOpen: boolean;
+  notifyReminder: boolean;
+}
+
+const emptyForm: FormState = {
+  name: '', description: '', type: 'HACKATHON', year: new Date().getFullYear(),
+  registrationStart: '', registrationEnd: '', eventDate: '',
+  eligibilityYears: [], minCompletion: 0,
+  teamEnabled: false, teamMin: 1, teamMax: 4,
+  notifyOnOpen: true, notifyReminder: true,
+};
+
+const fromEvent = (e: EventItem): FormState => ({
+  name: e.name,
+  description: e.description ?? '',
+  type: e.type && e.type !== 'GENERAL' ? e.type : 'HACKATHON',
+  year: e.year ?? new Date().getFullYear(),
+  registrationStart: toLocalInput(e.registrationStart),
+  registrationEnd: toLocalInput(e.registrationEnd),
+  eventDate: toLocalInput(e.eventDate),
+  eligibilityYears: (e.eligibilityYears ?? []).map(String),
+  minCompletion: e.minCompletion ?? 0,
+  teamEnabled: e.teamEnabled ?? false,
+  teamMin: e.teamMin ?? 1,
+  teamMax: e.teamMax ?? 4,
+  notifyOnOpen: e.notifyOnOpen ?? true,
+  notifyReminder: e.notifyReminder ?? true,
+});
+
+const EventWizard: React.FC<{
+  onClose: () => void;
+  onSaved: () => void;
+  existing?: EventItem;
+  notify: (message: string, type?: 'success' | 'error') => void;
+}> = ({ onClose, onSaved, existing, notify }) => {
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
-  const [form, setForm] = useState({
-    title: '', description: '', type: 'HACKATHON',
-    registrationStart: '', registrationEnd: '', eventDate: '',
-    eligibilityYears: [] as string[], minCompletion: 0,
-    teamEnabled: false, teamMin: 1, teamMax: 4,
-    notifyOnOpen: true, notifyReminder: true,
-  });
+  const [form, setForm] = useState<FormState>(existing ? fromEvent(existing) : emptyForm);
 
-  const update = (k: string, v: unknown) => setForm((f) => ({ ...f, [k]: v }));
+  const update = (k: keyof FormState, v: unknown) => setForm((f) => ({ ...f, [k]: v }));
 
   const handleSubmit = async () => {
     setSubmitting(true);
+    const payload: EventPayload = {
+      name: form.name.trim(),
+      description: form.description.trim(),
+      type: form.type,
+      year: form.year,
+      status: existing ? existing.status : 'OPEN',
+      registrationStart: form.registrationStart || null,
+      registrationEnd: form.registrationEnd || null,
+      eventDate: form.eventDate || null,
+      eligibilityYears: form.eligibilityYears.map(Number),
+      minCompletion: form.minCompletion,
+      teamEnabled: form.teamEnabled,
+      teamMin: form.teamMin,
+      teamMax: form.teamMax,
+      notifyOnOpen: form.notifyOnOpen,
+      notifyReminder: form.notifyReminder,
+    };
     try {
-      await adminApi.createEvent?.(form);
-      onCreated();
+      if (existing) {
+        await adminApi.updateEvent(existing.id, payload);
+        notify('Event saved.');
+      } else {
+        await adminApi.createEvent(payload);
+        notify(`${payload.name} created.`);
+      }
+      onSaved();
       onClose();
-    } catch {
-      // handle
+    } catch (err: any) {
+      // Previously swallowed by an empty catch, so a failed create looked
+      // exactly like a successful one: the wizard closed and nothing appeared.
+      notify(err?.response?.data?.message || 'Could not save the event.', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -60,10 +126,10 @@ const CreateEventWizard: React.FC<{ onClose: () => void; onCreated: () => void }
 
   return (
     <div className="fixed inset-0 z-modal bg-on-primary/40 flex items-center justify-center p-4 animate-fade-in" role="dialog" aria-modal="true" aria-labelledby="wizard-title">
-      <div className="surface w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col shadow-modal animate-scale-in">
+      <div className="surface w-full max-w-2xl max-h-[90dvh] overflow-hidden flex flex-col shadow-modal animate-scale-in">
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-edge">
-          <h2 id="wizard-title" className="text-headline-sm font-extrabold text-ink">Create Event</h2>
+          <h2 id="wizard-title" className="text-headline-sm font-extrabold text-ink">{existing ? 'Edit Event' : 'Create Event'}</h2>
           <button onClick={onClose} className="btn btn-ghost p-2" aria-label="Close wizard">
             <X className="w-5 h-5" aria-hidden="true" />
           </button>
@@ -90,18 +156,24 @@ const CreateEventWizard: React.FC<{ onClose: () => void; onCreated: () => void }
             <>
               <label htmlFor="event-title" className="block">
                 <span className="label">Title *</span>
-                <input id="event-title" value={form.title} onChange={e => update('title', e.target.value)} placeholder="Event title" className="input" aria-required="true" />
+                <input id="event-title" value={form.name} onChange={e => update('name', e.target.value)} placeholder="Event title" className="input" aria-required="true" />
               </label>
               <label htmlFor="event-description" className="block">
                 <span className="label">Description</span>
                 <textarea id="event-description" value={form.description} onChange={e => update('description', e.target.value)} rows={4} className="textarea resize-none" />
               </label>
-              <label htmlFor="event-type" className="block">
-                <span className="label">Event Type</span>
-                <select id="event-type" value={form.type} onChange={e => update('type', e.target.value)} className="select">
-                  {['HACKATHON', 'WORKSHOP', 'COMPETITION', 'SEMINAR', 'OTHER'].map(t => <option key={t}>{t}</option>)}
-                </select>
-              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <label htmlFor="event-type" className="block">
+                  <span className="label">Event Type</span>
+                  <select id="event-type" value={form.type} onChange={e => update('type', e.target.value)} className="select">
+                    {EVENT_TYPES.map(t => <option key={t}>{t}</option>)}
+                  </select>
+                </label>
+                <label htmlFor="event-year" className="block">
+                  <span className="label">Year</span>
+                  <input type="number" id="event-year" min={2000} max={2100} value={form.year} onChange={e => update('year', +e.target.value)} className="input" />
+                </label>
+              </div>
             </>
           )}
           {step === 1 && (
@@ -128,6 +200,7 @@ const CreateEventWizard: React.FC<{ onClose: () => void; onCreated: () => void }
                     </button>
                   ))}
                 </div>
+                <p className="text-label-sm text-ink-muted mt-2">Leave all unselected to allow every year.</p>
               </div>
               <label htmlFor="min-completion" className="block">
                 <span className="label">Min Profile Completion %</span>
@@ -136,9 +209,11 @@ const CreateEventWizard: React.FC<{ onClose: () => void; onCreated: () => void }
             </>
           )}
           {step === 3 && (
-            <div className="text-center py-8 text-ink-muted surface-sunken rounded-lg">
-              <p className="text-body-sm">Registration form builder (drag-and-drop fields) would appear here in full implementation.</p>
-            </div>
+            <>
+              <p className="text-body-sm text-ink-secondary">
+                Registration questions can be added after the event is created, from the event detail view.
+              </p>
+            </>
           )}
           {step === 4 && (
             <>
@@ -150,11 +225,11 @@ const CreateEventWizard: React.FC<{ onClose: () => void; onCreated: () => void }
                 <div className="grid grid-cols-2 gap-4">
                   <label htmlFor="team-min" className="block">
                     <span className="label">Min Members</span>
-                    <input type="number" id="team-min" min={1} value={form.teamMin} onChange={e => update('teamMin', +e.target.value)} className="input" />
+                    <input type="number" id="team-min" min={1} max={20} value={form.teamMin} onChange={e => update('teamMin', +e.target.value)} className="input" />
                   </label>
                   <label htmlFor="team-max" className="block">
                     <span className="label">Max Members</span>
-                    <input type="number" id="team-max" min={1} value={form.teamMax} onChange={e => update('teamMax', +e.target.value)} className="input" />
+                    <input type="number" id="team-max" min={1} max={20} value={form.teamMax} onChange={e => update('teamMax', +e.target.value)} className="input" />
                   </label>
                 </div>
               )}
@@ -176,11 +251,12 @@ const CreateEventWizard: React.FC<{ onClose: () => void; onCreated: () => void }
             <div className="space-y-3">
               <h3 className="text-label-md font-bold text-ink">Review</h3>
               <div className="surface-sunken rounded-lg p-4 space-y-2 text-body-sm">
-                <div><span className="font-semibold text-ink-secondary">Title:</span> <span className="text-ink ml-2">{form.title || 'To be announced'}</span></div>
+                <div><span className="font-semibold text-ink-secondary">Title:</span> <span className="text-ink ml-2">{form.name || 'To be announced'}</span></div>
                 <div><span className="font-semibold text-ink-secondary">Type:</span> <span className="text-ink ml-2">{form.type}</span></div>
                 <div><span className="font-semibold text-ink-secondary">Event Date:</span> <span className="text-ink ml-2">{form.eventDate || 'To be announced'}</span></div>
-                <div><span className="font-semibold text-ink-secondary">Registration:</span> <span className="text-ink ml-2">{form.registrationStart || 'To be announced'} → {form.registrationEnd || 'To be announced'}</span></div>
-                <div><span className="font-semibold text-ink-secondary">Teams:</span> <span className="text-ink ml-2">{form.teamEnabled ? `Yes (${form.teamMin}–${form.teamMax})` : 'No'}</span></div>
+                <div><span className="font-semibold text-ink-secondary">Registration:</span> <span className="text-ink ml-2">{form.registrationStart || 'To be announced'} to {form.registrationEnd || 'To be announced'}</span></div>
+                <div><span className="font-semibold text-ink-secondary">Eligible years:</span> <span className="text-ink ml-2">{form.eligibilityYears.length ? form.eligibilityYears.join(', ') : 'All years'}</span></div>
+                <div><span className="font-semibold text-ink-secondary">Teams:</span> <span className="text-ink ml-2">{form.teamEnabled ? `Yes (${form.teamMin}-${form.teamMax})` : 'No'}</span></div>
               </div>
             </div>
           )}
@@ -196,9 +272,9 @@ const CreateEventWizard: React.FC<{ onClose: () => void; onCreated: () => void }
               Next <ChevronRight className="w-4 h-4" aria-hidden="true" />
             </button>
           ) : (
-            <button onClick={handleSubmit} disabled={submitting || !form.title} className="btn btn-primary text-label-sm" aria-busy={submitting}>
+            <button onClick={handleSubmit} disabled={submitting || !form.name.trim()} className="btn btn-primary text-label-sm" aria-busy={submitting}>
               {submitting && <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />}
-              Publish Event
+              {existing ? 'Save Changes' : 'Create Event'}
             </button>
           )}
         </div>
@@ -207,28 +283,54 @@ const CreateEventWizard: React.FC<{ onClose: () => void; onCreated: () => void }
   );
 };
 
+const EventDetail: React.FC<{ event: EventItem; onClose: () => void }> = ({ event, onClose }) => (
+  <div className="fixed inset-0 z-modal bg-on-primary/40 flex items-center justify-center p-4 animate-fade-in" role="dialog" aria-modal="true" aria-labelledby="detail-title">
+    <div className="surface w-full max-w-lg max-h-[90dvh] overflow-hidden flex flex-col shadow-modal animate-scale-in">
+      <div className="flex items-center justify-between p-5 border-b border-edge">
+        <h2 id="detail-title" className="text-headline-sm font-extrabold text-ink">{event.name}</h2>
+        <button onClick={onClose} className="btn btn-ghost p-2" aria-label="Close details">
+          <X className="w-5 h-5" aria-hidden="true" />
+        </button>
+      </div>
+      <div className="flex-1 overflow-y-auto p-5 space-y-3 text-body-sm">
+        {event.description && <p className="text-ink-secondary">{event.description}</p>}
+        <div className="surface-sunken rounded-lg p-4 space-y-2">
+          <div><span className="font-semibold text-ink-secondary">Status:</span> <span className="text-ink ml-2"><StatusBadge status={event.status} /></span></div>
+          <div><span className="font-semibold text-ink-secondary">Type:</span> <span className="text-ink ml-2">{event.type || 'GENERAL'}</span></div>
+          <div><span className="font-semibold text-ink-secondary">Year:</span> <span className="text-ink ml-2">{event.year}</span></div>
+          <div><span className="font-semibold text-ink-secondary">Event date:</span> <span className="text-ink ml-2">{formatDate(event.eventDate)}</span></div>
+          <div><span className="font-semibold text-ink-secondary">Registration:</span> <span className="text-ink ml-2">{formatDate(event.registrationStart)} to {formatDate(event.registrationEnd)}</span></div>
+          <div><span className="font-semibold text-ink-secondary">Eligible years:</span> <span className="text-ink ml-2">{event.eligibilityYears?.length ? event.eligibilityYears.join(', ') : 'All years'}</span></div>
+          <div><span className="font-semibold text-ink-secondary">Min completion:</span> <span className="text-ink ml-2">{event.minCompletion ?? 0}%</span></div>
+          <div><span className="font-semibold text-ink-secondary">Teams:</span> <span className="text-ink ml-2">{event.teamEnabled ? `${event.teamMin ?? 1}-${event.teamMax ?? 4} members` : 'Disabled'}</span></div>
+          <div><span className="font-semibold text-ink-secondary">Notifications:</span> <span className="text-ink ml-2">{event.notifyOnOpen ? 'On open' : 'No open notice'}, {event.notifyReminder ? 'reminder on' : 'no reminder'}</span></div>
+          <div><span className="font-semibold text-ink-secondary">Registrations:</span> <span className="text-ink ml-2">{event.registrationCount ?? 0}</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
 export const AdminEvents: React.FC = () => {
   const [events, setEvents] = useState<EventItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showCreate, setShowCreate] = useState(false);
+  const [editing, setEditing] = useState<EventItem | null | undefined>(undefined);
+  const [viewing, setViewing] = useState<EventItem | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ message: string; type?: 'success' | 'error' } | null>(null);
+
+  const notify = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3500);
+  };
 
   const fetchEvents = async () => {
     setLoading(true);
     setError(null);
     try {
       const res = await adminApi.getEvents();
-      const mapped: EventItem[] = (res.events || []).map((e: any) => ({
-        id: e.id,
-        title: e.name || e.title || 'Untitled Event',
-        type: e.type || 'GENERAL',
-        status: e.status || 'OPEN',
-        registrationStart: e.createdAt,
-        registrationEnd: e.createdAt,
-        eventDate: e.createdAt,
-        registrationCount: e.registrationCount || 0,
-      }));
-      setEvents(mapped);
+      setEvents(res.events || []);
     } catch {
       setError('Failed to load events.');
     } finally {
@@ -238,9 +340,74 @@ export const AdminEvents: React.FC = () => {
 
   useEffect(() => { fetchEvents(); }, []);
 
+  const handleDuplicate = async (ev: EventItem) => {
+    setBusyId(ev.id);
+    try {
+      await adminApi.createEvent({
+        ...fromEvent(ev),
+        name: `${ev.name} (Copy)`,
+        // The dates were read back out of datetime-local inputs, so they are
+        // already in the `YYYY-MM-DDTHH:mm` shape the create endpoint parses.
+        registrationStart: toLocalInput(ev.registrationStart) || null,
+        registrationEnd: toLocalInput(ev.registrationEnd) || null,
+        eventDate: toLocalInput(ev.eventDate) || null,
+        eligibilityYears: ev.eligibilityYears ?? [],
+        description: ev.description ?? undefined,
+        status: 'DRAFT',
+      } as EventPayload);
+      notify(`Duplicated "${ev.name}".`);
+      await fetchEvents();
+    } catch (err: any) {
+      notify(err?.response?.data?.message || 'Could not duplicate the event.', 'error');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const handleArchive = async (ev: EventItem) => {
+    if (!window.confirm(`Archive "${ev.name}"? Students will no longer be able to register.`)) return;
+    setBusyId(ev.id);
+    try {
+      await adminApi.setEventStatus(ev.id, 'ARCHIVED');
+      notify(`Archived "${ev.name}".`);
+      await fetchEvents();
+    } catch (err: any) {
+      notify(err?.response?.data?.message || 'Could not archive the event.', 'error');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   return (
     <div className="space-y-6 page-enter">
-      {showCreate && <CreateEventWizard onClose={() => setShowCreate(false)} onCreated={fetchEvents} />}
+      {/* Toast Notification */}
+      {toast && (
+        <div
+          className={`fixed top-5 right-5 z-toast text-xs font-semibold px-4 py-3 rounded-lg shadow-modal animate-fade-in flex items-center gap-2 ${
+            toast.type === 'error'
+              ? 'bg-status-bg-rejected text-status-rejected border border-status-rejected/30'
+              : 'bg-surface-inverse text-ink-inverse'
+          }`}
+          role="alert"
+          aria-live="polite"
+        >
+          {toast.type === 'error'
+            ? <AlertCircle className="w-4 h-4 shrink-0" aria-hidden="true" />
+            : <CheckCircle className="w-4 h-4 shrink-0 text-emerald-400" aria-hidden="true" />}
+          <span>{toast.message}</span>
+        </div>
+      )}
+
+      {/* `undefined` means closed, `null` means creating, an item means editing. */}
+      {editing !== undefined && (
+        <EventWizard
+          existing={editing ?? undefined}
+          onClose={() => setEditing(undefined)}
+          onSaved={fetchEvents}
+          notify={notify}
+        />
+      )}
+      {viewing && <EventDetail event={viewing} onClose={() => setViewing(null)} />}
 
       <div className="flex items-center justify-between pb-2 border-b border-edge">
         <div className="flex items-center gap-3">
@@ -252,7 +419,7 @@ export const AdminEvents: React.FC = () => {
             <p className="text-body-sm text-ink-muted">Manage all department events</p>
           </div>
         </div>
-        <button onClick={() => setShowCreate(true)} className="btn btn-primary">
+        <button onClick={() => setEditing(null)} className="btn btn-primary">
           <Plus className="w-4 h-4" aria-hidden="true" /> Create Event
         </button>
       </div>
@@ -272,7 +439,7 @@ export const AdminEvents: React.FC = () => {
         <div className="flex flex-col items-center justify-center h-48 surface-sunken gap-3 text-center">
           <CalendarDays className="w-10 h-10 text-ink-muted" aria-hidden="true" />
           <p className="text-body-md font-semibold text-ink-secondary">No events yet</p>
-          <button onClick={() => setShowCreate(true)} className="btn btn-ghost text-body-sm">Create your first event</button>
+          <button onClick={() => setEditing(null)} className="btn btn-ghost text-body-sm">Create your first event</button>
         </div>
       ) : (
         <div className="surface overflow-hidden">
@@ -288,26 +455,58 @@ export const AdminEvents: React.FC = () => {
               <tbody className="divide-y divide-edge">
                 {events.map((ev) => (
                   <tr key={ev.id} className="hover:bg-surface-sunken transition-colors">
-                    <td className="px-4 py-3 font-semibold text-ink">{ev.title}</td>
-                    <td className="px-4 py-3 text-label-sm text-ink-muted">{ev.type}</td>
-                    <td className="px-4 py-3 text-label-sm text-ink-secondary">{ev.eventDate ? new Date(ev.eventDate).toLocaleDateString() : 'To be announced'}</td>
+                    <td className="px-4 py-3 font-semibold text-ink">{ev.name}</td>
+                    <td className="px-4 py-3 text-label-sm text-ink-muted">{ev.type || 'GENERAL'}</td>
+                    <td className="px-4 py-3 text-label-sm text-ink-secondary">{formatDate(ev.eventDate)}</td>
                     <td className="px-4 py-3 text-label-sm text-ink-secondary">
-                      {ev.registrationStart ? new Date(ev.registrationStart).toLocaleDateString() : 'To be announced'} →{' '}
-                      {ev.registrationEnd ? new Date(ev.registrationEnd).toLocaleDateString() : 'To be announced'}
+                      {formatDate(ev.registrationStart)} to {formatDate(ev.registrationEnd)}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1 text-label-sm font-semibold text-ink-secondary">
                         <Users className="w-3.5 h-3.5 text-ink-muted" aria-hidden="true" />
-                        {ev.registrationCount}
+                        {ev.registrationCount ?? 0}
                       </div>
                     </td>
                     <td className="px-4 py-3"><StatusBadge status={ev.status} /></td>
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-1" role="group" aria-label="Event actions">
-                        <button title="Edit" className="btn btn-ghost p-2" aria-label="Edit event"><Pencil className="w-3.5 h-3.5" aria-hidden="true" /></button>
-                        <button title="Duplicate" className="btn btn-ghost p-2" aria-label="Duplicate event"><Copy className="w-3.5 h-3.5" aria-hidden="true" /></button>
-                        <button title="View" className="btn btn-ghost p-2" aria-label="View event"><Eye className="w-3.5 h-3.5" aria-hidden="true" /></button>
-                        <button title="Archive" className="btn btn-ghost p-2" aria-label="Archive event"><Archive className="w-3.5 h-3.5" aria-hidden="true" /></button>
+                      <div className="flex items-center gap-1" role="group" aria-label={`Actions for ${ev.name}`}>
+                        <button
+                          onClick={() => setEditing(ev)}
+                          disabled={busyId === ev.id}
+                          title="Edit"
+                          className="btn btn-ghost p-2"
+                          aria-label={`Edit ${ev.name}`}
+                        >
+                          <Pencil className="w-3.5 h-3.5" aria-hidden="true" />
+                        </button>
+                        <button
+                          onClick={() => handleDuplicate(ev)}
+                          disabled={busyId === ev.id}
+                          title="Duplicate"
+                          className="btn btn-ghost p-2"
+                          aria-label={`Duplicate ${ev.name}`}
+                        >
+                          <Copy className="w-3.5 h-3.5" aria-hidden="true" />
+                        </button>
+                        <button
+                          onClick={() => setViewing(ev)}
+                          title="View"
+                          className="btn btn-ghost p-2"
+                          aria-label={`View ${ev.name}`}
+                        >
+                          <Eye className="w-3.5 h-3.5" aria-hidden="true" />
+                        </button>
+                        <button
+                          onClick={() => handleArchive(ev)}
+                          disabled={busyId === ev.id || ev.status === 'ARCHIVED'}
+                          title="Archive"
+                          className="btn btn-ghost p-2"
+                          aria-label={`Archive ${ev.name}`}
+                        >
+                          {busyId === ev.id
+                            ? <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />
+                            : <Archive className="w-3.5 h-3.5" aria-hidden="true" />}
+                        </button>
                       </div>
                     </td>
                   </tr>

@@ -191,9 +191,26 @@ model Event {
   slug        String
   year        Int          @default(2026)
   status      EventStatus  @default(OPEN)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  submissions Submission[]
+  // Scheduling and eligibility. These were collected by the admin create wizard
+  // but had nowhere to go, so every value it asked for was silently discarded.
+  description       String?
+  type              String      @default("GENERAL")
+  registrationStart DateTime?
+  registrationEnd   DateTime?
+  eventDate         DateTime?
+  eligibilityYears  Int[]
+  minCompletion     Int         @default(0)
+  // Team registration. `teams` below is the per-event roster; these are the
+  // creation-time constraints the wizard collects for it.
+  teamEnabled Boolean @default(false)
+  teamMin     Int      @default(1)
+  teamMax     Int      @default(4)
+  // Notification preferences, read by the announcement scheduler.
+  notifyOnOpen   Boolean @default(true)
+  notifyReminder Boolean @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  submissions    Submission[]
 
   // Relations to new portal models
   registrations   EventRegistration[]

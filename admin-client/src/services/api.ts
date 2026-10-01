@@ -7,6 +7,7 @@ import {
   EmailHistoryResponse,
   EmailTemplateItem,
   EventItem,
+  EventPayload,
   ModerationAchievementItem,
   ModerationCertificateItem,
   ModerationDecisionData,
@@ -277,8 +278,26 @@ export const adminApi = {
   },
 
   // Events
-  async createEvent(data: any): Promise<any> {
-    const res = await client.post('/admin/api/events', data);
+  //
+  // Write endpoints live under /admin/api/portal. Only the list endpoint is on
+  // /admin/api/events, so POSTing there 404s against a read-only route.
+  async createEvent(data: EventPayload): Promise<EventItem> {
+    const res = await client.post('/admin/api/portal/events', data);
+    return res.data;
+  },
+
+  async updateEvent(id: string, data: Partial<EventPayload>): Promise<EventItem> {
+    const res = await client.put(`/admin/api/portal/events/${id}`, data);
+    return res.data;
+  },
+
+  async getEvent(id: string): Promise<EventItem> {
+    const res = await client.get(`/admin/api/portal/events/${id}`);
+    return res.data;
+  },
+
+  async setEventStatus(id: string, status: 'OPEN' | 'CLOSED' | 'ARCHIVED'): Promise<EventItem> {
+    const res = await client.post(`/admin/api/portal/events/${id}/${status.toLowerCase() === 'open' ? 'publish' : status.toLowerCase()}`);
     return res.data;
   },
 

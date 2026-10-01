@@ -27,9 +27,19 @@ router.use(requireAdminAuth);
 router.get('/events', async (_req: Request, res: Response): Promise<Response | void> => {
   try {
     const events = await prisma.event.findMany({
+      // `registrationCount` is a Prisma aggregate, not a stored column, so it
+      // arrives as `_count.registrations`. The admin table reads it, so expose
+      // it under the name the client expects rather than making the client know
+      // about the aggregate shape.
+      include: { _count: { select: { registrations: true } } },
       orderBy: { createdAt: 'asc' },
     });
-    res.json({ events });
+    res.json({
+      events: events.map(({ _count, ...event }) => ({
+        ...event,
+        registrationCount: _count.registrations,
+      })),
+    });
   } catch (err: any) {
     console.error('Error fetching events list:', err);
     return httpError(res, 500, err, "FAILED_TO_FETCH_EVENTS");

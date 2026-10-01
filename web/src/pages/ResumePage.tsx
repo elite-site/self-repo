@@ -190,10 +190,10 @@ export const ResumePage: React.FC = () => {
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
               className="btn btn-secondary"
-              aria-label="Replace PDF resume"
+              aria-label="Replace your resume PDF"
             >
               <RotateCcw className="w-3.5 h-3.5" />
-              <span>Replace PDF</span>
+              <span>{resumeData.status === 'CHANGES_REQUESTED' ? 'Re-upload Resume' : 'Replace Resume'}</span>
             </button>
             <button
               onClick={handleDelete}
@@ -218,7 +218,7 @@ export const ResumePage: React.FC = () => {
             <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
             <div>
               <span className="font-bold">Faculty Revision Requested: </span>
-              <span>{resumeData.reviewNote || 'The admin requested updates on your resume. Please click "Replace PDF" to upload a revised copy.'}</span>
+              <span>{resumeData.reviewNote || 'The admin requested updates on your resume. Please upload a revised copy.'}</span>
             </div>
           </div>
           <button
@@ -286,7 +286,7 @@ export const ResumePage: React.FC = () => {
             disabled={uploading}
             className="btn btn-primary"
           >
-            {uploading ? 'Uploading...' : 'Select PDF File'}
+            {uploading ? 'Uploading...' : 'Upload Resume'}
           </button>
         </div>
       ) : (
