@@ -11,15 +11,20 @@ router.use(requireStudentAuth);
 router.get('/', async (req: Request, res: Response) => {
   try {
     const studentId = (req as any).studentId || req.student?.studentId;
-    const student = await prisma.student.findUnique({
-      where: { id: studentId }
-    });
+    const [student, events] = await Promise.all([
+      prisma.student.findUnique({
+        where: { id: studentId },
+        select: { id: true, status: true, year: true, section: true }
+      }),
+      prisma.event.findMany({
+        where: { status: 'OPEN' },
+        orderBy: { createdAt: 'desc' },
+        take: 100
+      }),
+    ]);
     if (!student) return res.status(404).json({ error: 'NOT_FOUND', message: 'Student not found' });
 
-    const events = await prisma.event.findMany({
-      where: { status: 'OPEN' },
-      orderBy: { createdAt: 'desc' }
-    });
+    res.set('Cache-Control', 'private, max-age=30, must-revalidate');
     res.json(events.map(e => ({
       ...e,
       title: e.name,

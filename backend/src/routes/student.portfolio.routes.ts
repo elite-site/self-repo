@@ -32,8 +32,10 @@ router.get('/projects', async (req: Request, res: Response) => {
   try {
     const projects = await prisma.project.findMany({
       where: { studentId: (req as any).studentId },
-      orderBy: { displayOrder: 'asc' }
+      orderBy: { displayOrder: 'asc' },
+      take: 100
     });
+    res.set('Cache-Control', 'private, max-age=30, must-revalidate');
     // Map technologies -> techStack for frontend compatibility
     res.json(projects.map(p => ({
       ...p,
@@ -140,14 +142,35 @@ router.delete('/projects/:id', async (req: Request, res: Response) => {
 
 router.get('/achievements', async (req: Request, res: Response) => {
   try {
+    // thumbnail blob is intentionally excluded; served by /api/public/media/thumbnail/:type/:id
     const achievements = await prisma.achievement.findMany({
       where: { studentId: (req as any).studentId },
-      include: { category: true },
-      orderBy: { achievedAt: 'desc' }
+      orderBy: { achievedAt: 'desc' },
+      take: 100,
+      select: {
+        id: true,
+        studentId: true,
+        categoryId: true,
+        title: true,
+        description: true,
+        organization: true,
+        achievedAt: true,
+        proofDriveId: true,
+        proofUrl: true,
+        status: true,
+        reviewNote: true,
+        reviewedBy: true,
+        reviewedAt: true,
+        isPublic: true,
+        createdAt: true,
+        updatedAt: true,
+        category: true,
+      },
     });
 
+    res.set('Cache-Control', 'private, max-age=30, must-revalidate');
     res.json(achievements.map(a => {
-      const { proofDriveId: _p, thumbnail: _t, ...rest } = a;
+      const { proofDriveId: _p, ...rest } = a;
       return {
         ...rest,
         date: a.achievedAt,
@@ -251,27 +274,42 @@ router.delete('/achievements/:id', async (req: Request, res: Response) => {
 
 router.get('/certificates', async (req: Request, res: Response) => {
   try {
+    // thumbnail blob is intentionally excluded; served by /api/public/media/thumbnail/:type/:id
     const certificates = await prisma.certificate.findMany({
       where: { studentId: (req as any).studentId },
-      orderBy: { issuedAt: 'desc' }
+      orderBy: { issuedAt: 'desc' },
+      take: 100,
+      select: {
+        id: true,
+        studentId: true,
+        title: true,
+        issuer: true,
+        issuedAt: true,
+        fileDriveId: true,
+        status: true,
+        reviewNote: true,
+        reviewedBy: true,
+        reviewedAt: true,
+        isPublic: true,
+        createdAt: true,
+        updatedAt: true,
+      },
     });
 
-    for (const c of certificates) {
-      if (c.fileDriveId && typeof driveService.setViewerPermission === 'function') {
-        driveService.setViewerPermission(c.fileDriveId).catch(() => {});
-      }
-    }
-
+    res.set('Cache-Control', 'private, max-age=30, must-revalidate');
     res.json(certificates.map(c => {
-      const { fileDriveId: _f, thumbnail: _t, ...rest } = c;
+      const { fileDriveId: _f, ...rest } = c;
       const viewUrl = c.fileDriveId ? `/api/public/media/certificate/${c.id}` : null;
+      const thumbnailUrl = c.fileDriveId
+        ? `/api/public/media/thumbnail/certificate/${c.id}?v=${encodeURIComponent(c.fileDriveId)}`
+        : null;
       return {
         ...rest,
         issueDate: c.issuedAt,
         hasFile: Boolean(c.fileDriveId),
         viewUrl,
         fileUrl: viewUrl,
-        thumbnailUrl: null,
+        thumbnailUrl,
       };
     }));
   } catch (err: any) {
@@ -318,6 +356,17 @@ router.post('/certificates', submissionRateLimiter, certificateUpload, async (re
       }
     }
 
+    // Generate a preview the same way resumes do. A failure here must never
+    // fail the upload — the thumbnail endpoint also generates one lazily.
+    let thumbnailBuffer: Buffer | null = null;
+    if (driveFileId) {
+      try {
+        thumbnailBuffer = await driveService.generateThumbnail(driveFileId, 'certificate');
+      } catch (thumbErr) {
+        console.warn('Could not generate thumbnail for certificate at upload:', thumbErr);
+      }
+    }
+
     const certificate = await prisma.certificate.create({
       data: {
         studentId,
@@ -325,7 +374,7 @@ router.post('/certificates', submissionRateLimiter, certificateUpload, async (re
         issuer: req.body.issuer || '',
         issuedAt: req.body.issueDate || req.body.issuedAt ? new Date(req.body.issueDate || req.body.issuedAt) : new Date(),
         fileDriveId: driveFileId,
-        thumbnail: null,
+        thumbnail: thumbnailBuffer,
         status: 'PENDING',
         isPublic: false
       }
@@ -340,7 +389,9 @@ router.post('/certificates', submissionRateLimiter, certificateUpload, async (re
       hasFile: Boolean(certificate.fileDriveId),
       viewUrl,
       fileUrl: viewUrl,
-      thumbnailUrl: null,
+      thumbnailUrl: certificate.fileDriveId
+        ? `/api/public/media/thumbnail/certificate/${certificate.id}?v=${encodeURIComponent(certificate.fileDriveId)}`
+        : null,
     });
   } catch (err: any) {
     res.status(500).json({ error: 'SERVER_ERROR', message: err.message });

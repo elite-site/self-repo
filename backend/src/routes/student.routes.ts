@@ -1074,19 +1074,31 @@ router.post(
 // --- Phase 3: Resume Routes ---
 router.get('/resume', requireStudentAuth, async (req, res) => {
   try {
+    // thumbnail blob is intentionally excluded; served by /api/public/media/thumbnail/:type/:id
     const resumes = await prisma.resume.findMany({
       where: { studentId: (req as any).studentId },
-      orderBy: { submittedAt: 'desc' }
+      orderBy: { submittedAt: 'desc' },
+      take: 100,
+      select: {
+        id: true,
+        studentId: true,
+        driveFileId: true,
+        filename: true,
+        sizeMb: true,
+        status: true,
+        reviewNote: true,
+        reviewedBy: true,
+        reviewedAt: true,
+        isActive: true,
+        isPublic: true,
+        submittedAt: true,
+        updatedAt: true,
+      },
     });
 
-    for (const r of resumes) {
-      if (r.driveFileId && typeof driveService.setViewerPermission === 'function') {
-        driveService.setViewerPermission(r.driveFileId).catch(() => {});
-      }
-    }
-
+    res.set('Cache-Control', 'private, max-age=30, must-revalidate');
     res.json(resumes.map(r => {
-      const { driveFileId: _d, thumbnail: _t, ...rest } = r;
+      const { driveFileId: _d, ...rest } = r;
       const viewUrl = r.driveFileId ? `/api/public/media/resume/${r.id}` : null;
       const thumbnailUrl = r.driveFileId
         ? `/api/public/media/thumbnail/resume/${r.id}?v=${encodeURIComponent(r.driveFileId)}`

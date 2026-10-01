@@ -55,24 +55,25 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
     const rawLimit = parseInt(String(req.query.limit), 10);
     const limit = Number.isNaN(rawLimit) || rawLimit <= 0 ? 24 : Math.min(rawLimit, 60);
 
-    const videos = await prisma.introVideo.findMany({
-      where: { ...PUBLIC_VIDEO_WHERE, driveFileId: { not: null } },
-      select: {
-        id: true,
-        driveFileId: true,
-        submittedAt: true,
-        publishedAt: true,
-        sizeMb: true,
-        studentId: true,
-        student: { select: { name: true, rollNo: true, year: true, section: true } },
-      },
-      orderBy: [{ publishedAt: 'desc' }, { submittedAt: 'desc' }],
-      take: limit,
-    });
-
-    const total = await prisma.introVideo.count({
-      where: { ...PUBLIC_VIDEO_WHERE, driveFileId: { not: null } },
-    });
+    const [videos, total] = await Promise.all([
+      prisma.introVideo.findMany({
+        where: { ...PUBLIC_VIDEO_WHERE, driveFileId: { not: null } },
+        select: {
+          id: true,
+          driveFileId: true,
+          submittedAt: true,
+          publishedAt: true,
+          sizeMb: true,
+          studentId: true,
+          student: { select: { name: true, rollNo: true, year: true, section: true } },
+        },
+        orderBy: [{ publishedAt: 'desc' }, { submittedAt: 'desc' }],
+        take: limit,
+      }),
+      prisma.introVideo.count({
+        where: { ...PUBLIC_VIDEO_WHERE, driveFileId: { not: null } },
+      }),
+    ]);
 
     res.setHeader('Cache-Control', 'public, max-age=60');
     res.json({ items: videos.map(serializePublicVideo), total });

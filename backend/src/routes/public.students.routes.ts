@@ -129,10 +129,39 @@ router.get('/:rollNo', async (req: Request, res: Response) => {
       where: { rollNo: req.params.rollNo },
       include: {
         profile: { include: { skills: { include: { skill: true } } } },
-        projects: { orderBy: { displayOrder: 'asc' } },
-        achievements: { where: { status: 'APPROVED' }, include: { category: true }, orderBy: { achievedAt: 'desc' } },
-        certificates: { where: { status: 'APPROVED', isPublic: true } },
-        resumes: { where: { status: 'APPROVED' }, take: 1, orderBy: { submittedAt: 'desc' } },
+        projects: { orderBy: { displayOrder: 'asc' }, take: 100 },
+        // `thumbnail` blobs are intentionally not selected here; they are served
+        // by /api/public/media/thumbnail/:type/:id so profile loads stay light.
+        achievements: {
+          where: { status: 'APPROVED' },
+          orderBy: { achievedAt: 'desc' },
+          take: 100,
+          select: {
+            id: true, studentId: true, categoryId: true, title: true, description: true,
+            organization: true, achievedAt: true, proofDriveId: true, proofUrl: true,
+            status: true, reviewNote: true, reviewedBy: true, reviewedAt: true,
+            isPublic: true, createdAt: true, updatedAt: true, category: true,
+          },
+        },
+        certificates: {
+          where: { status: 'APPROVED', isPublic: true },
+          take: 100,
+          select: {
+            id: true, studentId: true, title: true, issuer: true, issuedAt: true,
+            fileDriveId: true, status: true, reviewNote: true, reviewedBy: true,
+            reviewedAt: true, isPublic: true, createdAt: true, updatedAt: true,
+          },
+        },
+        resumes: {
+          where: { status: 'APPROVED' },
+          take: 1,
+          orderBy: { submittedAt: 'desc' },
+          select: {
+            id: true, studentId: true, driveFileId: true, filename: true, sizeMb: true,
+            status: true, reviewNote: true, reviewedBy: true, reviewedAt: true,
+            isActive: true, isPublic: true, submittedAt: true, updatedAt: true,
+          },
+        },
         // Only an approved + published video is ever attached to a public
         // profile, so a pending or unapproved recording stays invisible.
         introVideos: {
@@ -182,7 +211,7 @@ router.get('/:rollNo', async (req: Request, res: Response) => {
           }
         : null,
       achievements: student.achievements.map((a: any) => {
-        const { proofDriveId: _p, thumbnail: _t, ...rest } = a;
+        const { proofDriveId: _p, ...rest } = a;
         const viewUrl = a.proofDriveId
           ? `/api/public/media/achievement/${a.id}`
           : (a.proofUrl || null);
@@ -197,7 +226,7 @@ router.get('/:rollNo', async (req: Request, res: Response) => {
         };
       }),
       certificates: student.certificates.map((c: any) => {
-        const { fileDriveId: _f, thumbnail: _t, ...rest } = c;
+        const { fileDriveId: _f, ...rest } = c;
         const viewUrl = c.fileDriveId ? `/api/public/media/certificate/${c.id}` : null;
         const thumbnailUrl = c.fileDriveId
           ? `/api/public/media/thumbnail/certificate/${c.id}?v=${encodeURIComponent(c.fileDriveId)}`
@@ -210,7 +239,7 @@ router.get('/:rollNo', async (req: Request, res: Response) => {
         };
       }),
       resumes: student.resumes.map((r: any) => {
-        const { driveFileId: _d, thumbnail: _t, ...rest } = r;
+        const { driveFileId: _d, ...rest } = r;
         const viewUrl = r.driveFileId ? `/api/public/media/resume/${r.id}` : null;
         const thumbnailUrl = r.driveFileId
           ? `/api/public/media/thumbnail/resume/${r.id}?v=${encodeURIComponent(r.driveFileId)}`
