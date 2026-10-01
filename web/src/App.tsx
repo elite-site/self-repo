@@ -5,10 +5,9 @@ import { api } from './services/api';
 import { PublicThemeProvider, StudentThemeProvider } from './context/ThemeContext';
 import {
   TOKEN_STORAGE_KEY,
-  captureTokenFromUrl,
+  bootstrapToken,
   classifySessionFailure,
   hasStoredToken,
-  planSessionBootstrap,
 } from './utils/sessionBootstrap';
 
 // Public Pages (isolated chunk for public visitors)
@@ -40,12 +39,43 @@ const RouteLoadingFallback: React.FC = () => (
   <BrandedLoading message="Loading ELITE Portal" />
 );
 
+const LoginRoute: React.FC<{
+  session: StudentSession | null;
+  authChecking: boolean;
+  sessionError: string | null;
+  onRetry: () => void;
+}> = ({ session, authChecking, sessionError, onRetry }) => {
+  if (authChecking) {
+    return <BrandedLoading message="Signing in to Student Portal" />;
+  }
+  if (session) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  if (sessionError) {
+    return (
+      <div className="min-h-[100dvh] bg-surface flex items-center justify-center px-6">
+        <div className="max-w-md text-center">
+          <h1 className="text-lg font-black text-ink mb-2">Unable to verify your session</h1>
+          <p className="text-sm text-ink-secondary mb-6">{sessionError}</p>
+          <button
+            type="button"
+            onClick={onRetry}
+            className="px-5 py-2.5 rounded-xl bg-status-solid-rejected text-on-primary text-sm font-bold hover:bg-brand transition-colors cursor-pointer"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+  return <Navigate to="/" replace />;
+};
+
 const AuthWrapper: React.FC = () => {
   const [session, setSession] = useState<StudentSession | null>(null);
-  // With no token there is nothing to verify, so the app is ready immediately
-  // and no request is made at all. Public pages used to wait on a round trip
-  // whose only possible outcome was a 401.
-  const [authChecking, setAuthChecking] = useState(hasStoredToken);
+  // Synchronously bootstrap token from URL if returning from Google OAuth redirect,
+  // persisting it immediately into storage before any child routes mount or navigate.
+  const [authChecking, setAuthChecking] = useState(() => bootstrapToken().needsVerification);
   const [sessionError, setSessionError] = useState<string | null>(null);
   const navigate = useNavigate();
 
@@ -87,18 +117,7 @@ const AuthWrapper: React.FC = () => {
   useEffect(() => {
     let cancelled = false;
 
-    // Capture token from Google OAuth callback redirect if passed in URL
-    const { token: tokenFromUrl, cleanUrl } = captureTokenFromUrl(window.location.search);
-    if (tokenFromUrl) {
-      window.history.replaceState({}, document.title, cleanUrl);
-    }
-
-    const plan = planSessionBootstrap({
-      storedToken: hasStoredToken() ? localStorage.getItem(TOKEN_STORAGE_KEY) : null,
-      urlToken: tokenFromUrl,
-    });
-
-    if (!plan.needsVerification) {
+    if (!hasStoredToken()) {
       // Nothing to verify, so nothing to wait for. This is the branch that lets
       // a signed-out visitor paint a public page without a network round trip.
       setSession(null);
@@ -108,10 +127,6 @@ const AuthWrapper: React.FC = () => {
       };
     }
 
-    // A token exists and has not been checked yet, so the protected subtree
-    // waits. Note this also covers the OAuth callback path: the token just
-    // arrived and still has to be verified, which is what turns the callback
-    // into a real session.
     setAuthChecking(true);
     verifySession(() => {
       if (!cancelled) setAuthChecking(false);
@@ -177,12 +192,26 @@ const AuthWrapper: React.FC = () => {
         <Route
           path="/"
           element={
-            <PublicThemeProvider>
-              <HomePage session={session} onLogout={handleLogout} />
-            </PublicThemeProvider>
+            authChecking && hasStoredToken() ? (
+              <BrandedLoading message="Verifying Student Session" />
+            ) : (
+              <PublicThemeProvider>
+                <HomePage session={session} onLogout={handleLogout} />
+              </PublicThemeProvider>
+            )
           }
         />
-        <Route path="/login" element={<Navigate to="/" replace />} />
+        <Route
+          path="/login"
+          element={
+            <LoginRoute
+              session={session}
+              authChecking={authChecking}
+              sessionError={sessionError}
+              onRetry={retrySessionCheck}
+            />
+          }
+        />
         <Route
           path="/students"
           element={

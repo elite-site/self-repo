@@ -57,6 +57,39 @@ export function captureTokenFromUrl(
   };
 }
 
+/**
+ * Bootstrap the token synchronously on app init.
+ *
+ * Checks window.location.search for a fresh OAuth callback token,
+ * persists it immediately into storage, cleans the address bar, and determines
+ * if the app needs to verify an existing or fresh session.
+ *
+ * Running this synchronously BEFORE React routes mount prevents child redirects
+ * (like navigating from /login) from stripping ?token=... before it is saved.
+ */
+export function bootstrapToken(storage: TokenStorage = localStorage): {
+  token: string | null;
+  needsVerification: boolean;
+} {
+  let urlToken: string | null = null;
+  if (typeof window !== 'undefined' && window.location.search) {
+    const { token, cleanUrl } = captureTokenFromUrl(window.location.search, storage);
+    if (token) {
+      urlToken = token;
+      if (cleanUrl) {
+        window.history.replaceState({}, document.title, cleanUrl);
+      }
+    }
+  }
+
+  const storedToken = storage.getItem(TOKEN_STORAGE_KEY);
+  const token = urlToken ?? storedToken;
+  return {
+    token,
+    needsVerification: Boolean(token),
+  };
+}
+
 /** Session state that is knowable without talking to the server. */
 export type BootstrapSession = 'signed-out' | 'unknown';
 

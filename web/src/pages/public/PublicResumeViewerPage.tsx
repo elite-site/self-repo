@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { api, resolveMediaUrl } from '../../services/api';
 import { StudentSession } from '../../types';
-import { Loader2, ArrowLeft, FileText,  ExternalLink } from 'lucide-react';
+import { Loader2, ArrowLeft, FileText, ExternalLink, Download } from 'lucide-react';
 import { Navbar } from '../../components/Navbar';
 import { Footer } from '../../components/Footer';
 
@@ -57,15 +57,26 @@ export const PublicResumeViewerPage: React.FC<PublicResumeViewerProps> = ({ sess
         </Link>
         <div className="flex items-center gap-3">
           {resumeUrl && (
-            <a
-              href={`${resumeUrl}${resumeUrl.includes('?') ? '&' : '?'}download=1`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface-raised hover:bg-surface-sunken text-ink hover:text-ink-brand rounded-lg text-label-sm font-bold transition-colors"
-            >
-              <ExternalLink className="w-3.5 h-3.5 text-ink-inverse/70" aria-hidden="true" />
-              <span>Download PDF</span>
-            </a>
+            <>
+              <a
+                href={resumeUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface-raised hover:bg-surface-sunken text-ink hover:text-ink-brand rounded-lg text-label-sm font-bold transition-colors"
+              >
+                <ExternalLink className="w-3.5 h-3.5 text-ink-inverse/70" aria-hidden="true" />
+                <span>Open in Tab</span>
+              </a>
+              <a
+                href={`${resumeUrl}${resumeUrl.includes('?') ? '&' : '?'}download=1`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface-raised hover:bg-surface-sunken text-ink hover:text-ink-brand rounded-lg text-label-sm font-bold transition-colors"
+              >
+                <Download className="w-3.5 h-3.5 text-ink-inverse/70" aria-hidden="true" />
+                <span>Download PDF</span>
+              </a>
+            </>
           )}
           <div className="text-label-sm font-mono font-bold text-ink-inverse/70 flex items-center gap-2">
             <FileText className="w-4 h-4 text-ink-inverse/70" aria-hidden="true" />
@@ -80,10 +91,14 @@ export const PublicResumeViewerPage: React.FC<PublicResumeViewerProps> = ({ sess
             <Loader2 className="w-8 h-8 animate-spin text-ink-inverse" aria-hidden="true" />
           </div>
         ) : resumeUrl ? (
-          <div className="flex-1 w-full h-[calc(100vh-140px)]">
+          <div
+            className="w-full flex-1 flex flex-col"
+            style={{ minHeight: 'calc(100dvh - 140px)' }}
+          >
             <iframe
               src={resumeUrl}
-              className="w-full h-full border-0"
+              className="w-full flex-1 border-0"
+              style={{ width: '100%', minHeight: 'calc(100dvh - 140px)', height: '100%' }}
               title="Student Resume Document"
               allow="autoplay"
             />

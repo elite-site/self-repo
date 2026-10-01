@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   TOKEN_STORAGE_KEY,
+  bootstrapToken,
   captureTokenFromUrl,
   classifySessionFailure,
   hasStoredToken,
@@ -173,6 +174,41 @@ describe('captureTokenFromUrl', () => {
 
     expect(hasStoredToken(storage)).toBe(true);
     expect(planSessionBootstrap({ storedToken: storage.getItem(TOKEN_STORAGE_KEY) }).needsVerification).toBe(true);
+  });
+});
+
+describe('bootstrapToken', () => {
+  it('synchronously captures token from search query, persists it, and marks needsVerification true', () => {
+    window.history.replaceState({}, '', '/login?token=fresh-oauth-token');
+    const storage = fakeStorage();
+
+    const result = bootstrapToken(storage);
+
+    expect(result.token).toBe('fresh-oauth-token');
+    expect(result.needsVerification).toBe(true);
+    expect(storage.getItem(TOKEN_STORAGE_KEY)).toBe('fresh-oauth-token');
+    expect(window.location.search).toBe('');
+    expect(window.location.pathname).toBe('/login');
+  });
+
+  it('uses stored token when URL has no token', () => {
+    window.history.replaceState({}, '', '/');
+    const storage = fakeStorage({ [TOKEN_STORAGE_KEY]: 'existing-token' });
+
+    const result = bootstrapToken(storage);
+
+    expect(result.token).toBe('existing-token');
+    expect(result.needsVerification).toBe(true);
+  });
+
+  it('reports needsVerification false when neither URL nor storage has a token', () => {
+    window.history.replaceState({}, '', '/');
+    const storage = fakeStorage();
+
+    const result = bootstrapToken(storage);
+
+    expect(result.token).toBeNull();
+    expect(result.needsVerification).toBe(false);
   });
 });
 
