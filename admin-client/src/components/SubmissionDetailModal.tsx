@@ -317,7 +317,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
       >
         <div
           ref={modalRef}
-          className="surface surface-raised rounded-xl w-full max-w-5xl max-h-[calc(100vh-1.5rem)] sm:max-h-[calc(100vh-2rem)] md:max-h-[calc(100vh-3rem)] flex flex-col shadow-modal text-left overflow-hidden my-auto animate-scale-in"
+          className="surface surface-raised rounded-xl w-full max-w-5xl max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2rem)] md:max-h-[calc(100dvh-3rem)] flex flex-col shadow-modal text-left overflow-hidden my-auto animate-scale-in"
           role="dialog"
           aria-modal="true"
           aria-labelledby="modal-title"

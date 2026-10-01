@@ -1460,13 +1460,19 @@ router.get('/moderation/videos', async (req, res) => {
         status: { in: ['PENDING', 'UNDER_REVIEW', 'CHANGES_REQUESTED'] },
         driveFileId: { not: null },
       },
-      include: { student: true },
+      select: {
+        id: true, studentId: true, driveFileId: true, mimeType: true, sizeMb: true,
+        filename: true, status: true, reviewNote: true, reviewedBy: true,
+        reviewedAt: true, isActive: true, submittedAt: true, updatedAt: true,
+        isPublic: true, publishedAt: true, changeRequestedAt: true, changeRequestNote: true,
+        student: true,
+      },
       orderBy: { submittedAt: 'desc' },
+      take: 200,
     });
     res.json(videos.map(v => {
-      const { thumbnail: _t, ...rest } = v;
       return {
-        ...rest,
+        ...v,
         studentName: v.student?.name || 'Unknown',
         studentRoll: v.student?.rollNo || 'Unknown',
         title: `${v.student?.name} (${v.student?.rollNo})`,
@@ -1485,12 +1491,17 @@ router.get('/moderation/resumes', async (req, res) => {
   try {
     const resumes = await prisma.resume.findMany({
       where: { status: { in: ['PENDING', 'UNDER_REVIEW'] } },
-      include: { student: true }
+      take: 200,
+      select: {
+        id: true, studentId: true, driveFileId: true, filename: true, sizeMb: true,
+        status: true, reviewNote: true, reviewedBy: true, reviewedAt: true,
+        isActive: true, isPublic: true, submittedAt: true, updatedAt: true,
+        student: true,
+      }
     });
     res.json(resumes.map(r => {
-      const { thumbnail: _t, ...rest } = r;
       return {
-        ...rest,
+        ...r,
         studentName: r.student?.name || 'Unknown',
         studentRoll: r.student?.rollNo || 'Unknown',
         title: `${r.student?.name} (${r.student?.rollNo})`,
@@ -1507,20 +1518,33 @@ router.get('/moderation/achievements', async (req, res) => {
   try {
     const achievements = await prisma.achievement.findMany({
       where: { status: { in: ['PENDING', 'UNDER_REVIEW'] } },
-      include: { student: true, category: true },
+      take: 200,
+      select: {
+        id: true, studentId: true, categoryId: true, title: true, description: true,
+        organization: true, achievedAt: true, proofDriveId: true, proofUrl: true,
+        status: true, reviewNote: true, reviewedBy: true, reviewedAt: true,
+        isPublic: true, createdAt: true, updatedAt: true,
+        student: true, category: true,
+      },
       orderBy: { createdAt: 'desc' }
     });
     const projects = await prisma.project.findMany({
       where: { status: { in: ['PENDING', 'UNDER_REVIEW'] } },
-      include: { student: true },
+      take: 200,
+      select: {
+        id: true, studentId: true, title: true, description: true, technologies: true,
+        githubUrl: true, driveVideoUrl: true, displayOrder: true, status: true,
+        reviewNote: true, reviewedBy: true, reviewedAt: true, isPublic: true,
+        createdAt: true, updatedAt: true,
+        student: true,
+      },
       orderBy: { createdAt: 'desc' }
     });
     const mappedAchievements = achievements.map(a => {
-      const { thumbnail: _t, ...rest } = a;
       const proofUrl = a.proofUrl || (a.proofDriveId ? `/api/public/media/achievement/${a.id}` : null);
       const thumbnailUrl = a.proofDriveId ? `/api/public/media/thumbnail/achievement/${a.id}?v=${encodeURIComponent(a.proofDriveId)}` : null;
       return {
-        ...rest,
+        ...a,
         itemType: 'achievement' as const,
         studentName: a.student?.name || 'Unknown',
         studentRoll: a.student?.rollNo || 'Unknown',
@@ -1569,13 +1593,18 @@ router.get('/moderation/certificates', async (req, res) => {
   try {
     const certificates = await prisma.certificate.findMany({
       where: { status: { in: ['PENDING', 'UNDER_REVIEW'] } },
-      include: { student: true },
+      take: 200,
+      select: {
+        id: true, studentId: true, title: true, issuer: true, issuedAt: true,
+        fileDriveId: true, status: true, reviewNote: true, reviewedBy: true,
+        reviewedAt: true, isPublic: true, createdAt: true, updatedAt: true,
+        student: true,
+      },
       orderBy: { createdAt: 'desc' }
     });
     res.json(certificates.map(c => {
-      const { thumbnail: _t, ...rest } = c;
       return {
-        ...rest,
+        ...c,
         studentName: c.student?.name || 'Unknown',
         studentRoll: c.student?.rollNo || 'Unknown',
         submittedAt: c.createdAt,
