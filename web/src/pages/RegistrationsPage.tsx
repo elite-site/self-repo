@@ -4,8 +4,10 @@ import { api } from '../services/api';
 import { EventRegistration } from '../types';
 import { Loader2, CalendarX2, AlertCircle, Trash2, ExternalLink } from 'lucide-react';
 import { BrandedLoading } from '../components/BrandedLoading';
+import { useToast } from '../components/Toast';
 
 export const RegistrationsPage: React.FC = () => {
+  const { showToast } = useToast();
   const [regs, setRegs] = useState<EventRegistration[]>([]);
   const [loading, setLoading] = useState(true);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
@@ -37,9 +39,10 @@ export const RegistrationsPage: React.FC = () => {
     );
     try {
       await api.cancelRegistration(id);
+      showToast('Registration cancelled.');
       loadRegistrations(false);
     } catch {
-      alert('Failed to cancel registration.');
+      showToast('Failed to cancel registration.', 'error');
       loadRegistrations(false);
     } finally {
       setCancellingId(null);

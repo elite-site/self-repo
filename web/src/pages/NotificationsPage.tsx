@@ -17,8 +17,10 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { BrandedLoading } from '../components/BrandedLoading';
+import { useToast } from '../components/Toast';
 
 export const NotificationsPage: React.FC = () => {
+  const { showToast } = useToast();
   const [notifs, setNotifs] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [hasMore, setHasMore] = useState(false);
@@ -75,8 +77,9 @@ export const NotificationsPage: React.FC = () => {
     try {
       await api.markAllNotificationsRead();
       await loadNotifications(true);
+      showToast('All notifications marked as read.');
     } catch {
-      alert('Failed to mark all as read.');
+      showToast('Failed to mark all as read.', 'error');
     } finally {
       setMarkingAll(false);
     }

@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { api } from '../services/api';
 import { useSession } from '../context/SessionContext';
+import { useToast } from '../components/Toast';
 import { Event, EventRegistration } from '../types';
 import {
   Calendar,
@@ -22,6 +23,7 @@ import { BrandedLoading } from '../components/BrandedLoading';
 export const EventDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { session } = useSession();
+  const { showToast } = useToast();
   const navigate = useNavigate();
   const [event, setEvent] = useState<any | null>(null);
   const [registration, setRegistration] = useState<EventRegistration | null>(null);
@@ -121,9 +123,10 @@ export const EventDetailPage: React.FC = () => {
     try {
       await api.cancelRegistration(registration.id);
       setRegistration(null);
+      showToast('Registration cancelled.');
       loadEventAndReg(false);
     } catch {
-      alert('Failed to cancel registration.');
+      showToast('Failed to cancel registration.', 'error');
     } finally {
       setCancelling(false);
     }

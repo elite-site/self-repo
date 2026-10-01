@@ -4,8 +4,10 @@ import { api } from '../../services/api';
 import { Achievement } from '../../types';
 import { Plus, Trophy, Loader2, AlertCircle, Trash2, X, Calendar, Pencil } from 'lucide-react';
 import { BrandedLoading } from '../../components/BrandedLoading';
+import { useToast } from '../../components/Toast';
 
 export const AchievementsTab: React.FC = () => {
+  const { showToast } = useToast();
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -105,9 +107,10 @@ export const AchievementsTab: React.FC = () => {
     if (!window.confirm('Delete this achievement?')) return;
     try {
       await api.deleteAchievement(id);
+      showToast('Achievement deleted.');
       loadAchievements();
     } catch {
-      alert('Failed to delete achievement.');
+      showToast('Failed to delete achievement.', 'error');
     }
   };
 

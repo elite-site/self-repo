@@ -4,8 +4,10 @@ import { api } from '../../services/api';
 import { Project } from '../../types';
 import { Plus, Github, ExternalLink, Loader2, AlertCircle, Trash2, X, FolderGit2, Pencil } from 'lucide-react';
 import { BrandedLoading } from '../../components/BrandedLoading';
+import { useToast } from '../../components/Toast';
 
 export const ProjectsTab: React.FC = () => {
+  const { showToast } = useToast();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -113,9 +115,10 @@ export const ProjectsTab: React.FC = () => {
     if (!window.confirm('Are you sure you want to remove this project?')) return;
     try {
       await api.deleteProject(id);
+      showToast('Project removed.');
       loadProjects();
     } catch {
-      alert('Failed to delete project.');
+      showToast('Failed to delete project.', 'error');
     }
   };
 

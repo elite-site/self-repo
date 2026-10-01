@@ -3,8 +3,10 @@ import { createPortal } from 'react-dom';
 import { api } from '../services/api';
 import { Users, Loader2, Plus, UserPlus, Check, X, AlertCircle, Mail, Trash2 } from 'lucide-react';
 import { BrandedLoading } from '../components/BrandedLoading';
+import { useToast } from '../components/Toast';
 
 export const TeamsPage: React.FC = () => {
+  const { showToast } = useToast();
   const [teams, setTeams] = useState<any[]>([]);
   const [invitations, setInvitations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -117,18 +119,20 @@ export const TeamsPage: React.FC = () => {
   const handleAcceptInvite = async (id: string) => {
     try {
       await api.acceptInvitation(id);
+      showToast('Invitation accepted.');
       loadTeamsData();
     } catch {
-      alert('Failed to accept invitation.');
+      showToast('Failed to accept invitation.', 'error');
     }
   };
 
   const handleDeclineInvite = async (id: string) => {
     try {
       await api.declineInvitation(id);
+      showToast('Invitation declined.');
       loadTeamsData();
     } catch {
-      alert('Failed to decline invitation.');
+      showToast('Failed to decline invitation.', 'error');
     }
   };
 
