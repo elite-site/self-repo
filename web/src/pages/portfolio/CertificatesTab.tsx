@@ -197,6 +197,23 @@ export const CertificatesTab: React.FC = () => {
                   {getStatusBadge(c.status || 'PENDING')}
                 </div>
 
+                {c.thumbnailUrl ? (
+                  <a
+                    href={resolveMediaUrl(c.viewUrl || c.fileUrl)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block w-full h-32 rounded-lg bg-surface-sunken overflow-hidden border border-edge shadow-sm"
+                  >
+                    <img
+                      src={resolveMediaUrl(c.thumbnailUrl)}
+                      alt={`${c.title} preview`}
+                      loading="lazy"
+                      decoding="async"
+                      className="w-full h-full object-cover"
+                    />
+                  </a>
+                ) : null}
+
                 <div>
                   <h3 className="font-bold text-body-sm text-ink font-heading line-clamp-1" title={c.title}>
                     {c.title}

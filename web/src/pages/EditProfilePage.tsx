@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, lazy, Suspense } from 'react';
 import { useNavigate, Link, useOutletContext } from 'react-router-dom';
 import {
   Camera,
@@ -21,7 +21,11 @@ import { api, resolveMediaUrl } from '../services/api';
 import { normalizeSocialLink, type SocialLinkKind } from '../utils/socialLinks';
 import type { StudentOutletContext } from '../components/layout/StudentLayout';
 import { StudentProfile } from '../types';
-import { PhotoCropModal } from '../components/PhotoCropModal';
+// The cropper (and react-easy-crop) is only needed once the student opens the
+// crop dialog, so it must not sit in the profile page's initial chunk.
+const PhotoCropModal = lazy(() =>
+  import('../components/PhotoCropModal').then((m) => ({ default: m.PhotoCropModal })),
+);
 import { getPhotoStyle } from '../utils/photoStyle';
 import { LeetCodeIcon, CodeChefIcon } from '../components/icons/PlatformIcons';
 
@@ -646,14 +650,18 @@ export const EditProfilePage: React.FC = () => {
       </form>
 
       {/* PHOTO CROP & REPOSITION MODAL */}
-      <PhotoCropModal
-        isOpen={isCropModalOpen}
-        imageSrc={cropImageSrc}
-        initialPosition={profile}
-        onClose={handleCloseCropModal}
-        onSavePosition={handleSavePosition}
-        isSaving={uploadingPhoto}
-      />
+      {isCropModalOpen && (
+        <Suspense fallback={null}>
+          <PhotoCropModal
+            isOpen={isCropModalOpen}
+            imageSrc={cropImageSrc}
+            initialPosition={profile}
+            onClose={handleCloseCropModal}
+            onSavePosition={handleSavePosition}
+            isSaving={uploadingPhoto}
+          />
+        </Suspense>
+      )}
     </div>
   );
 };

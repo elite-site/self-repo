@@ -244,6 +244,8 @@ export const VotingPage: React.FC = () => {
                                   <img
                                     src={resolveMediaUrl(candPhoto)}
                                     alt=""
+                                    loading="lazy"
+                                    decoding="async"
                                     className="absolute inset-0 w-full h-full object-cover"
                                     onError={(e) => {
                                       (e.currentTarget as HTMLElement).style.display = 'none';
