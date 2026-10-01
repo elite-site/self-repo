@@ -334,20 +334,14 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
                       key={c.id}
                       className="p-3 bg-surface-sunken rounded-lg border border-edge flex items-center justify-between text-label-sm gap-3"
                     >
-                      {c.thumbnailUrl && (
-                        <div className="w-14 h-10 rounded-md bg-surface-inset overflow-hidden shrink-0 border border-edge">
-                          <img
-                            src={resolveMediaUrl(c.thumbnailUrl)}
-                            alt={c.title}
-                            loading="lazy"
-                            decoding="async"
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                      )}
                       <div className="space-y-0.5 min-w-0 flex-1">
                         <div className="font-bold text-ink truncate">{c.title}</div>
                         <div className="text-[11px] text-ink-muted truncate">{c.issuer}</div>
+                        {c.issueDate && (
+                          <div className="text-[11px] text-ink-muted">
+                            {new Date(c.issueDate).toLocaleDateString()}
+                          </div>
+                        )}
                       </div>
                       {(c.viewUrl || c.fileUrl) && (
                         <a
@@ -435,42 +429,22 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
                   {achievements.map((a: any) => (
                     <div
                       key={a.id}
-                      className="p-4 rounded-lg border border-edge bg-surface-sunken flex items-start justify-between gap-4"
+                      className="p-4 rounded-lg border border-edge bg-surface-sunken"
                     >
-                      {a.thumbnailUrl && (
-                        <div className="w-16 h-12 rounded-md bg-surface-inset overflow-hidden shrink-0 border border-edge mt-0.5">
-                          <img
-                            src={resolveMediaUrl(a.thumbnailUrl)}
-                            alt={a.title}
-                            loading="lazy"
-                            decoding="async"
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                      )}
-                      <div className="space-y-1 text-label-sm min-w-0 flex-1">
+                      <div className="space-y-1 text-label-sm">
                         <div className="font-bold text-ink text-body-sm font-heading">{a.title}</div>
-                        <p className="text-ink-secondary">{a.description}</p>
-                        <div className="text-[11px] text-ink-muted pt-1">
-                          {a.organization} · {a.date ? new Date(a.date).toLocaleDateString() : 'To be announced'}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        {(a.viewUrl || a.proofUrl) && (
-                          <a
-                            href={resolveMediaUrl(a.viewUrl || a.proofUrl)}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex items-center gap-1 text-[11px] font-bold text-brand hover:underline"
-                          >
-                            <span>Proof</span>
-                            <ExternalLink className="w-3 h-3" aria-hidden="true" />
-                          </a>
+                        {a.description && (
+                          <p className="text-ink-secondary">{a.description}</p>
                         )}
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-status-bg-approved text-status-approved border border-status-bg-approved text-[10px] font-bold">
-                          <CheckCircle2 className="w-3 h-3" aria-hidden="true" />
-                          Verified
-                        </span>
+                        <div className="text-[11px] text-ink-muted pt-1 flex items-center gap-2 flex-wrap">
+                          {a.organization && <span>{a.organization}</span>}
+                          {a.organization && a.date && <span>·</span>}
+                          {a.date && <span>{new Date(a.date).toLocaleDateString()}</span>}
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-status-bg-approved text-status-approved border border-status-bg-approved text-[10px] font-bold ml-auto">
+                            <CheckCircle2 className="w-3 h-3" aria-hidden="true" />
+                            Verified
+                          </span>
+                        </div>
                       </div>
                     </div>
                   ))}

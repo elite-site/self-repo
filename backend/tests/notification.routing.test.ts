@@ -44,8 +44,8 @@ describe('notification destination resolution', () => {
   });
 
   it('does not send a notification with a missing or root target to the homepage', () => {
-    expect(getNotificationDestination({ type: 'ANNOUNCEMENT', actionUrl: '/' })).toBe('/dashboard');
-    expect(getNotificationDestination({ type: 'UNKNOWN' })).toBe('/dashboard');
+    expect(getNotificationDestination({ type: 'ANNOUNCEMENT', actionUrl: '/' })).toBe('/notifications');
+    expect(getNotificationDestination({ type: 'UNKNOWN' })).toBe('/notifications');
   });
 
   it('keeps external HTTP links intact and uses the SPA router for internal links', () => {

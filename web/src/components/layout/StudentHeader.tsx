@@ -1,9 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
-import { Bell, LogOut, User, ChevronDown, Sparkles, CheckCircle2, CheckCheck } from 'lucide-react';
+import { Bell, LogOut, User, ChevronDown, Sparkles, CheckCheck } from 'lucide-react';
 import { StudentSession } from '../../types';
 import { api, resolveMediaUrl } from '../../services/api';
-import { getNotificationDestination, navigateToNotification } from '../../utils/notificationRouting';
 import { getPhotoStyle } from '../../utils/photoStyle';
 
 interface StudentHeaderProps {
@@ -76,14 +75,11 @@ export const StudentHeader: React.FC<StudentHeaderProps> = ({ session, onLogout 
   const handleSelectNotif = async (n: any) => {
     if (!n.isRead && n.status !== 'READ') {
       api.markNotificationRead(n.id).catch(() => {});
-      setNotifications((prev) =>
-        prev.map((item) => (item.id === n.id ? { ...item, isRead: true, status: 'READ' } : item))
-      );
       setUnreadCount((c) => Math.max(0, c - 1));
     }
+    setNotifications((prev) => prev.filter((item) => item.id !== n.id));
     setNotifOpen(false);
-    const destination = getNotificationDestination(n);
-    navigateToNotification(destination, navigate);
+    navigate('/notifications');
   };
 
   useEffect(() => {
@@ -223,18 +219,13 @@ export const StudentHeader: React.FC<StudentHeaderProps> = ({ session, onLogout 
 
                 {/* Notification List */}
                 <div className="max-h-80 overflow-y-auto divide-y divide-border">
-                  {notifications.length === 0 ? (
-                    <div className="py-10 px-4 text-center">
-                      <div className="w-10 h-10 rounded-full bg-status-bg-approved text-status-approved flex items-center justify-center mx-auto mb-2">
-                        <CheckCircle2 className="w-5 h-5" />
-                      </div>
-                      <div className="font-heading text-xs font-bold text-ink">You're all caught up.</div>
-                      <p className="text-[11px] text-ink-muted mt-0.5">
-                        No new announcements or moderation alerts right now.
-                      </p>
+                  {notifications.filter((n) => !n.isRead && n.status !== 'READ').length === 0 ? (
+                    <div className="p-6 text-center">
+                      <CheckCheck className="w-5 h-5 text-ink-muted mx-auto mb-2" />
+                      <p className="text-xs text-ink-muted">All caught up!</p>
                     </div>
                   ) : (
-                    notifications.slice(0, 6).map((n) => {
+                    notifications.filter((n) => !n.isRead && n.status !== 'READ').slice(0, 6).map((n) => {
                       const isUnread = !n.isRead && n.status !== 'READ';
                       return (
                         <div

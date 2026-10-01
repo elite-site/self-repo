@@ -1790,14 +1790,14 @@ router.patch('/moderation/resumes/:id', async (req, res) => {
           message: reason
             ? `Admin requested changes on your resume: "${reason}".`
             : 'Admin requested changes on your resume.',
-          actionUrl: '/dashboard/resume',
+          actionUrl: '/resume',
         });
       } else if (status === 'APPROVED') {
         await notifyStudent({
           studentId: resume.student.id,
           title: 'Resume Approved',
           message: 'Your resume has been approved.',
-          actionUrl: '/dashboard/resume',
+          actionUrl: '/resume',
         });
       } else if (status === 'REJECTED') {
         await notifyStudent({
@@ -1806,7 +1806,7 @@ router.patch('/moderation/resumes/:id', async (req, res) => {
           message: reason
             ? `Your resume was rejected. Faculty note: "${reason}".`
             : 'Your resume was rejected.',
-          actionUrl: '/dashboard/resume',
+          actionUrl: '/resume',
         });
       }
     }
@@ -1858,14 +1858,14 @@ router.patch('/moderation/achievements/:id', async (req, res) => {
           message: reason
             ? `Admin requested changes on your achievement "${ach.title}": "${reason}".`
             : `Admin requested changes on your achievement "${ach.title}".`,
-          actionUrl: '/dashboard/achievements',
+          actionUrl: '/portfolio/achievements',
         });
       } else if (status === 'APPROVED') {
         await notifyStudent({
           studentId: ach.student.id,
           title: 'Achievement Approved',
           message: `Your achievement "${ach.title}" has been approved.`,
-          actionUrl: '/dashboard/achievements',
+          actionUrl: '/portfolio/achievements',
         });
       } else if (status === 'REJECTED') {
         await notifyStudent({
@@ -1874,7 +1874,7 @@ router.patch('/moderation/achievements/:id', async (req, res) => {
           message: reason
             ? `Your achievement "${ach.title}" was rejected. Faculty note: "${reason}".`
             : `Your achievement "${ach.title}" was rejected.`,
-          actionUrl: '/dashboard/achievements',
+          actionUrl: '/portfolio/achievements',
         });
       }
     }
@@ -1926,14 +1926,14 @@ router.patch('/moderation/certificates/:id', async (req, res) => {
           message: reason
             ? `Admin requested changes on your certificate "${cert.title}": "${reason}".`
             : `Admin requested changes on your certificate "${cert.title}".`,
-          actionUrl: '/dashboard/certificates',
+          actionUrl: '/portfolio/certificates',
         });
       } else if (status === 'APPROVED') {
         await notifyStudent({
           studentId: cert.student.id,
           title: 'Certificate Approved',
           message: `Your certificate "${cert.title}" has been approved.`,
-          actionUrl: '/dashboard/certificates',
+          actionUrl: '/portfolio/certificates',
         });
       } else if (status === 'REJECTED') {
         await notifyStudent({
@@ -1942,7 +1942,7 @@ router.patch('/moderation/certificates/:id', async (req, res) => {
           message: reason
             ? `Your certificate "${cert.title}" was rejected. Faculty note: "${reason}".`
             : `Your certificate "${cert.title}" was rejected.`,
-          actionUrl: '/dashboard/certificates',
+          actionUrl: '/portfolio/certificates',
         });
       }
     }
@@ -1994,14 +1994,14 @@ router.patch('/moderation/projects/:id', async (req, res) => {
           message: reason
             ? `Admin requested changes on your project "${project.title}": "${reason}".`
             : `Admin requested changes on your project "${project.title}".`,
-          actionUrl: '/dashboard/projects',
+          actionUrl: '/portfolio/projects',
         });
       } else if (status === 'APPROVED') {
         await notifyStudent({
           studentId: project.student.id,
           title: 'Project Approved',
           message: `Your project "${project.title}" has been approved.`,
-          actionUrl: '/dashboard/projects',
+          actionUrl: '/portfolio/projects',
         });
       } else if (status === 'REJECTED') {
         await notifyStudent({
@@ -2010,7 +2010,7 @@ router.patch('/moderation/projects/:id', async (req, res) => {
           message: reason
             ? `Your project "${project.title}" was rejected. Faculty note: "${reason}".`
             : `Your project "${project.title}" was rejected.`,
-          actionUrl: '/dashboard/projects',
+          actionUrl: '/portfolio/projects',
         });
       }
     }

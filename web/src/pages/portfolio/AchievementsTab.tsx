@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { api, resolveMediaUrl } from '../../services/api';
+import { api } from '../../services/api';
 import { Achievement } from '../../types';
-import { Plus, Trophy, Loader2, AlertCircle, Trash2, X, Calendar, Pencil, ExternalLink } from 'lucide-react';
+import { Plus, Trophy, Loader2, AlertCircle, Trash2, X, Calendar, Pencil } from 'lucide-react';
 import { BrandedLoading } from '../../components/BrandedLoading';
 
 export const AchievementsTab: React.FC = () => {
@@ -182,28 +182,19 @@ export const AchievementsTab: React.FC = () => {
       ) : (
         <div className="space-y-3 animate-fade-in">
           {achievements.map((a) => (
-            <div
+      <div
               key={a.id}
               className="surface p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
             >
               <div className="flex items-start sm:items-center gap-4 flex-1 min-w-0">
-                {a.thumbnailUrl && (
-                  <div className="w-16 h-12 rounded-lg bg-surface-sunken overflow-hidden shrink-0 border border-edge">
-                    <img
-                      src={resolveMediaUrl(a.thumbnailUrl)}
-                      alt={a.title}
-                      loading="lazy"
-                      decoding="async"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                )}
                 <div className="space-y-1 flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <h3 className="font-bold text-body-sm text-ink font-heading">{a.title}</h3>
                     {getStatusBadge(a.status || 'PENDING')}
                   </div>
-                  <p className="text-body-sm text-ink-secondary">{a.description}</p>
+                  {a.description && (
+                    <p className="text-body-sm text-ink-secondary">{a.description}</p>
+                  )}
                   {a.status === 'CHANGES_REQUESTED' && (
                     <div className="p-2.5 bg-status-bg-changes border border-status-changes rounded-lg text-body-sm text-status-changes my-1.5">
                       <strong className="font-bold">Faculty Revision Note: </strong>
@@ -211,26 +202,12 @@ export const AchievementsTab: React.FC = () => {
                     </div>
                   )}
                   <div className="flex flex-wrap items-center gap-3 text-label-sm text-ink-muted pt-1">
-                    <span>{a.organization || 'Department'}</span>
-                    <span aria-hidden="true">·</span>
+                    {a.organization && <span>{a.organization}</span>}
+                    {a.organization && a.date && <span aria-hidden="true">·</span>}
                     <span className="flex items-center gap-1">
                       <Calendar className="w-3 h-3" aria-hidden="true" />
                       {a.date ? new Date(a.date).toLocaleDateString() : 'To be announced'}
                     </span>
-                    {(a.viewUrl || a.proofUrl) && (
-                      <>
-                        <span aria-hidden="true">·</span>
-                        <a
-                          href={resolveMediaUrl((a.viewUrl || a.proofUrl)!)}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1 text-label-sm font-bold text-brand hover:underline"
-                        >
-                          <span>Proof</span>
-                          <ExternalLink className="w-3 h-3" aria-hidden="true" />
-                        </a>
-                      </>
-                    )}
                   </div>
                 </div>
               </div>

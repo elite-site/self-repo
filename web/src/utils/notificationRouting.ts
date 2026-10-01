@@ -22,7 +22,7 @@ export interface NotificationRoutingTarget {
   content?: string | null;
 }
 
-const DEFAULT_DESTINATION = '/dashboard';
+const DEFAULT_DESTINATION = '/notifications';
 
 function textValue(value: unknown): string {
   if (typeof value === 'string') return value.trim();

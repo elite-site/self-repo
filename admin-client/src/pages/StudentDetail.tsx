@@ -687,34 +687,6 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
                         </span>
                       </>
                     )}
-                    {a.proofUrl && (
-                      <>
-                        <span>•</span>
-                        <a
-                          href={a.proofUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1 text-status-rejected font-bold hover:underline"
-                        >
-                          <span>Proof Document</span>
-                          <ExternalLink className="w-3 h-3" />
-                        </a>
-                      </>
-                    )}
-                    {a.watchUrl && (
-                      <>
-                        <span>•</span>
-                        <a
-                          href={a.watchUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1 text-status-approved font-bold hover:underline"
-                        >
-                          <span>Drive Proof</span>
-                          <ExternalLink className="w-3 h-3" />
-                        </a>
-                      </>
-                    )}
                   </div>
 
                   {a.status === 'CHANGES_REQUESTED' && (

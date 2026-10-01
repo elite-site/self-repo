@@ -63,15 +63,15 @@ export const CertificatesTab: React.FC = () => {
 
   const handleUploadCertificate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !selectedFile) {
-      setModalError('Please provide a certificate title and select a document.');
+    if (!title.trim()) {
+      setModalError('Please provide a certificate title.');
       return;
     }
     setUploading(true);
     setModalError(null);
 
     const formData = new FormData();
-    formData.append('file', selectedFile);
+    if (selectedFile) formData.append('file', selectedFile);
     formData.append('title', title.trim());
     formData.append('issuer', issuer.trim());
     formData.append('issueDate', issueDate || new Date().toISOString());
@@ -175,7 +175,7 @@ export const CertificatesTab: React.FC = () => {
           </div>
           <h3 className="text-body-lg font-bold text-ink font-heading">No certificates uploaded yet</h3>
           <p className="text-body-sm text-ink-secondary mt-1 max-w-sm mx-auto mb-4">
-            Upload course completion certificates, professional licenses, and exam scorecards in PDF or image format.
+            Add course completion certificates, professional licenses, and exam scorecards. You can attach a PDF or image, or just save the title and issuer.
           </p>
           <button
             onClick={handleOpenModal}
@@ -193,18 +193,7 @@ export const CertificatesTab: React.FC = () => {
               className="surface p-4 flex flex-col justify-between group"
             >
               <div className="space-y-3">
-                <div className="w-full aspect-[4/3] bg-surface-sunken rounded-lg overflow-hidden flex items-center justify-center border border-edge relative">
-                  {c.thumbnailUrl ? (
-                    <img
-                      src={resolveMediaUrl(c.thumbnailUrl)}
-                      alt={c.title}
-                      loading="lazy"
-                      decoding="async"
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <FileText className="w-10 h-10 text-ink-muted" aria-hidden="true" />
-                  )}
+                <div className="flex items-center justify-between gap-2">
                   {getStatusBadge(c.status || 'PENDING')}
                 </div>
 
@@ -366,16 +355,14 @@ export const CertificatesTab: React.FC = () => {
 
               <div>
                 <label className="label">
-                  Upload Document (PDF or Image) <span className="text-status-rejected" aria-hidden="true">*</span>
+                  Upload Document (PDF or Image) <span className="text-ink-muted text-[11px]">(optional)</span>
                 </label>
                 <input
                   type="file"
-                  required
                   ref={fileInputRef}
                   accept=".pdf,image/jpeg,image/png,image/webp"
                   onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
                   className="w-full text-label-sm text-ink-secondary file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-brand-soft file:text-brand hover:file:bg-brand-soft/80 cursor-pointer"
-                  aria-required="true"
                 />
               </div>
 
@@ -389,7 +376,7 @@ export const CertificatesTab: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  disabled={uploading || !title.trim() || !selectedFile}
+                  disabled={uploading || !title.trim()}
                   className="btn btn-primary"
                   aria-busy={uploading}
                 >

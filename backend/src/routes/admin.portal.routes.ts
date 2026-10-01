@@ -203,7 +203,7 @@ router.post('/students/:studentId/items/:type/:itemId/request-change', async (re
         studentId: student.id,
         title: 'Resume Revision Requested',
         message: `Admin requested changes on your resume: "${reasonText}". Please upload an updated PDF.`,
-        actionUrl: '/dashboard/resume',
+        actionUrl: '/resume',
       });
     } else if (normalizedType === 'achievement' || normalizedType === 'achievements') {
       const item = await prisma.achievement.findUnique({ where: { id: itemId } });
@@ -224,7 +224,7 @@ router.post('/students/:studentId/items/:type/:itemId/request-change', async (re
         studentId: student.id,
         title: 'Achievement Revision Requested',
         message: `Admin requested changes on your achievement "${item.title}": "${reasonText}".`,
-        actionUrl: '/dashboard/achievements',
+        actionUrl: '/portfolio/achievements',
       });
     } else if (normalizedType === 'certificate' || normalizedType === 'certificates') {
       const item = await prisma.certificate.findUnique({ where: { id: itemId } });
@@ -245,7 +245,7 @@ router.post('/students/:studentId/items/:type/:itemId/request-change', async (re
         studentId: student.id,
         title: 'Certificate Revision Requested',
         message: `Admin requested changes on your certificate "${item.title}": "${reasonText}".`,
-        actionUrl: '/dashboard/certificates',
+        actionUrl: '/portfolio/certificates',
       });
     } else if (normalizedType === 'project' || normalizedType === 'projects') {
       const item = await prisma.project.findUnique({ where: { id: itemId } });
@@ -266,7 +266,7 @@ router.post('/students/:studentId/items/:type/:itemId/request-change', async (re
         studentId: student.id,
         title: 'Project Revision Requested',
         message: `Admin requested changes on your project "${item.title}": "${reasonText}".`,
-        actionUrl: '/dashboard/projects',
+        actionUrl: '/portfolio/projects',
       });
     } else {
       return res.status(400).json({ error: 'BAD_REQUEST', message: `Unknown item type: ${type}` });
@@ -406,7 +406,7 @@ router.delete('/students/:studentId/items/:type/:itemId', async (req: Request, r
         message: reasonText
           ? `Your resume was removed by administrator. Reason: "${reasonText}".`
           : 'Your resume was removed by administrator.',
-        actionUrl: '/dashboard/resume',
+        actionUrl: '/resume',
       });
     } else if (normalizedType === 'achievement' || normalizedType === 'achievements') {
       const item = await prisma.achievement.findUnique({ where: { id: itemId } });
@@ -423,7 +423,7 @@ router.delete('/students/:studentId/items/:type/:itemId', async (req: Request, r
         message: reasonText
           ? `Your achievement "${item.title}" was removed by administrator. Reason: "${reasonText}".`
           : `Your achievement "${item.title}" was removed by administrator.`,
-        actionUrl: '/dashboard/achievements',
+        actionUrl: '/portfolio/achievements',
       });
     } else if (normalizedType === 'certificate' || normalizedType === 'certificates') {
       const item = await prisma.certificate.findUnique({ where: { id: itemId } });
@@ -440,7 +440,7 @@ router.delete('/students/:studentId/items/:type/:itemId', async (req: Request, r
         message: reasonText
           ? `Your certificate "${item.title}" was removed by administrator. Reason: "${reasonText}".`
           : `Your certificate "${item.title}" was removed by administrator.`,
-        actionUrl: '/dashboard/certificates',
+        actionUrl: '/portfolio/certificates',
       });
     } else if (normalizedType === 'project' || normalizedType === 'projects') {
       const item = await prisma.project.findUnique({ where: { id: itemId } });
@@ -454,7 +454,7 @@ router.delete('/students/:studentId/items/:type/:itemId', async (req: Request, r
         message: reasonText
           ? `Your project "${item.title}" was removed by administrator. Reason: "${reasonText}".`
           : `Your project "${item.title}" was removed by administrator.`,
-        actionUrl: '/dashboard/projects',
+        actionUrl: '/portfolio/projects',
       });
     } else {
       return res.status(400).json({ error: 'BAD_REQUEST', message: `Unknown item type: ${type}` });
