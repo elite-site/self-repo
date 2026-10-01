@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { api, resolveMediaUrl, UploadProgressInfo } from '../services/api';
 import { StudentIntroVideo, StudentSubmission } from '../types';
+import { useSession } from '../context/SessionContext';
 import {
   UploadCloud,
   AlertCircle,
@@ -51,6 +52,7 @@ interface VideoMeta {
 }
 
 export const VideoPage: React.FC = () => {
+  const { session } = useSession();
   const [submission, setSubmission] = useState<StudentSubmission | null>(null);
   const [video, setVideo] = useState<StudentIntroVideo | null>(null);
   const [maxVideoSizeMb, setMaxVideoSizeMb] = useState<number>(DEFAULT_MAX_VIDEO_MB);
@@ -265,9 +267,29 @@ export const VideoPage: React.FC = () => {
     }
   };
 
+  // The session gate has already fetched `/me` for the whole app, and that same
+  // payload carries the video, the submission and the size limit this page shows.
+  // Seed from it instead of issuing a second identical request on every visit.
+  // The ref keeps the seed to the first mount: `session` also changes when a photo
+  // is uploaded, and re-seeding then would overwrite fresher post-upload state.
+  const seededFromSession = useRef(false);
   useEffect(() => {
-    loadSubmission(true);
-  }, [loadSubmission]);
+    if (seededFromSession.current) return;
+    const cached = session?.student;
+    if (!cached) {
+      loadSubmission(true);
+      return;
+    }
+    seededFromSession.current = true;
+    setVideo(cached.video ?? null);
+    setMaxVideoSizeMb(cached.maxVideoSizeMb || DEFAULT_MAX_VIDEO_MB);
+    setSubmission(cached.submission ?? null);
+    if (!cached.video?.hasFile) {
+      setLocalPreview(null);
+      setPreviewError(false);
+    }
+    setLoading(false);
+  }, [loadSubmission, session]);
 
   // Fast in-browser inspection of video file without any heavy dependencies
   const inspectVideoFile = (file: File): Promise<VideoMeta> => {

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { api } from '../services/api';
+import { useSession } from '../context/SessionContext';
 import { Event, EventRegistration } from '../types';
 import {
   Calendar,
@@ -20,6 +21,7 @@ import { BrandedLoading } from '../components/BrandedLoading';
 
 export const EventDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const { session } = useSession();
   const navigate = useNavigate();
   const [event, setEvent] = useState<any | null>(null);
   const [registration, setRegistration] = useState<EventRegistration | null>(null);
@@ -67,6 +69,10 @@ export const EventDetailPage: React.FC = () => {
   };
 
   const requireSession = async (): Promise<boolean> => {
+    // This page is only reachable inside the authenticated shell, so the session
+    // gate has already verified the token. Re-probing with /me just to answer
+    // "am I signed in?" doubled the request for every registration attempt.
+    if (session) return true;
     try {
       await api.getMe();
       return true;

@@ -68,12 +68,51 @@ router.get('/students/:id', async (req: Request, res: Response) => {
       },
       include: {
         profile: { include: { skills: { include: { skill: true } } } },
-        projects: { orderBy: { displayOrder: 'asc' } },
-        achievements: { include: { category: true }, orderBy: { createdAt: 'desc' } },
-        certificates: { orderBy: { createdAt: 'desc' } },
-        introVideos: { orderBy: { submittedAt: 'desc' } },
-        resumes: { orderBy: { submittedAt: 'desc' } },
-        registrations: { include: { event: true, team: true } },
+        projects: { orderBy: { displayOrder: 'asc' }, take: 100 },
+        // `thumbnail` is deliberately not selected on any of the collections
+        // below. Each row would otherwise drag a WebP blob into memory only for
+        // the map below to throw it away; the previews are served by
+        // /api/public/media/thumbnail/:type/:id.
+        achievements: {
+          include: { category: true },
+          orderBy: { createdAt: 'desc' },
+          take: 100,
+          select: {
+            id: true, studentId: true, categoryId: true, title: true, description: true,
+            organization: true, achievedAt: true, proofDriveId: true, proofUrl: true,
+            status: true, reviewNote: true, reviewedBy: true, reviewedAt: true,
+            isPublic: true, createdAt: true, updatedAt: true, category: true,
+          },
+        },
+        certificates: {
+          orderBy: { createdAt: 'desc' },
+          take: 100,
+          select: {
+            id: true, studentId: true, title: true, issuer: true, issuedAt: true,
+            fileDriveId: true, status: true, reviewNote: true, reviewedBy: true,
+            reviewedAt: true, isPublic: true, createdAt: true, updatedAt: true,
+          },
+        },
+        introVideos: {
+          orderBy: { submittedAt: 'desc' },
+          take: 100,
+          select: {
+            id: true, studentId: true, driveFileId: true, mimeType: true, sizeMb: true,
+            filename: true, status: true, reviewNote: true, reviewedBy: true,
+            reviewedAt: true, isActive: true, submittedAt: true, updatedAt: true,
+            isPublic: true, publishedAt: true, changeRequestedAt: true, changeRequestNote: true,
+          },
+        },
+        resumes: {
+          orderBy: { submittedAt: 'desc' },
+          take: 100,
+          select: {
+            id: true, studentId: true, driveFileId: true, filename: true, sizeMb: true,
+            status: true, reviewNote: true, reviewedBy: true, reviewedAt: true,
+            isActive: true, isPublic: true, submittedAt: true, updatedAt: true,
+          },
+        },
+        registrations: { include: { event: true, team: true }, take: 100 },
       },
     });
     if (!student) return res.status(404).json({ error: 'NOT_FOUND', message: 'Student not found' });
@@ -83,9 +122,8 @@ router.get('/students/:id', async (req: Request, res: Response) => {
     });
 
     const introVideos = (student.introVideos || []).map((v) => {
-      const { thumbnail: _t, ...rest } = v;
       return {
-        ...rest,
+        ...v,
         streamUrl: `/api/public/videos/stream/${v.id}`,
         thumbnailUrl: (v.driveFileId && v.driveFileId.trim()) ? `/api/public/media/thumbnail/video/${v.id}?v=${encodeURIComponent(v.driveFileId.trim())}` : null,
         watchUrl: typeof driveService.getWatchUrl === 'function' ? driveService.getWatchUrl(v.driveFileId) : null,
@@ -93,9 +131,8 @@ router.get('/students/:id', async (req: Request, res: Response) => {
       };
     });
     const resumes = (student.resumes || []).map((r) => {
-      const { thumbnail: _t, ...rest } = r;
       return {
-        ...rest,
+        ...r,
         fileUrl: r.driveFileId ? `/api/public/media/resume/${r.id}` : null,
         thumbnailUrl: r.driveFileId ? `/api/public/media/thumbnail/resume/${r.id}?v=${encodeURIComponent(r.driveFileId)}` : null,
         previewUrl: typeof driveService.getPreviewUrl === 'function' ? driveService.getPreviewUrl(r.driveFileId) : null,
@@ -103,9 +140,8 @@ router.get('/students/:id', async (req: Request, res: Response) => {
       };
     });
     const achievements = (student.achievements || []).map((a) => {
-      const { thumbnail: _t, ...rest } = a;
       return {
-        ...rest,
+        ...a,
         proofUrl: a.proofUrl || (a.proofDriveId ? `/api/public/media/achievement/${a.id}` : null),
         thumbnailUrl: a.proofDriveId ? `/api/public/media/thumbnail/achievement/${a.id}?v=${encodeURIComponent(a.proofDriveId)}` : null,
         watchUrl: typeof driveService.getWatchUrl === 'function' ? driveService.getWatchUrl(a.proofDriveId) : null,
@@ -113,9 +149,8 @@ router.get('/students/:id', async (req: Request, res: Response) => {
       };
     });
     const certificates = (student.certificates || []).map((c) => {
-      const { thumbnail: _t, ...rest } = c;
       return {
-        ...rest,
+        ...c,
         fileUrl: c.fileDriveId ? `/api/public/media/certificate/${c.id}` : null,
         thumbnailUrl: c.fileDriveId ? `/api/public/media/thumbnail/certificate/${c.id}?v=${encodeURIComponent(c.fileDriveId)}` : null,
         previewUrl: typeof driveService.getPreviewUrl === 'function' ? driveService.getPreviewUrl(c.fileDriveId) : null,
@@ -500,13 +535,19 @@ router.get('/moderation', async (req: Request, res: Response) => {
   try {
     const videos = await prisma.introVideo.findMany({
       where: { status: { in: ['PENDING', 'UNDER_REVIEW'] } },
-      include: { student: true },
+      take: 200,
+      select: {
+        id: true, studentId: true, driveFileId: true, mimeType: true, sizeMb: true,
+        filename: true, status: true, reviewNote: true, reviewedBy: true,
+        reviewedAt: true, isActive: true, submittedAt: true, updatedAt: true,
+        isPublic: true, publishedAt: true, changeRequestedAt: true, changeRequestNote: true,
+        student: true,
+      },
       orderBy: { submittedAt: 'desc' },
     });
     const mappedVideos = videos.map((v) => {
-      const { thumbnail: _t, ...rest } = v;
       return {
-        ...rest,
+        ...v,
         thumbnailUrl: (v.driveFileId && v.driveFileId.trim()) ? `/api/public/media/thumbnail/video/${v.id}?v=${encodeURIComponent(v.driveFileId.trim())}` : null,
       };
     });

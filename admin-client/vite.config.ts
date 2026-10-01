@@ -8,6 +8,15 @@ export default defineConfig({
   build: {
     outDir: path.resolve(__dirname, '../backend/public/admin'),
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        // Keep rarely-changing vendor code in its own long-lived chunk so an
+        // admin UI change does not invalidate the whole ~350 kB bundle.
+        manualChunks: {
+          react: ['react', 'react-dom', 'react-router-dom'],
+        },
+      },
+    },
   },
   server: {
     port: 5175,

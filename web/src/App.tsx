@@ -1,14 +1,9 @@
-import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
+import React, { useCallback, lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, Outlet, useNavigate, BrowserRouter } from 'react-router-dom';
 import { StudentSession } from './types';
-import { api } from './services/api';
 import { PublicThemeProvider, StudentThemeProvider } from './context/ThemeContext';
-import {
-  TOKEN_STORAGE_KEY,
-  bootstrapToken,
-  classifySessionFailure,
-  hasStoredToken,
-} from './utils/sessionBootstrap';
+import { SessionProvider, useSession } from './context/SessionContext';
+import { hasStoredToken } from './utils/sessionBootstrap';
 
 // Public Pages (isolated chunk for public visitors)
 const HomePage = lazy(() => import('./pages/public/HomePage'));
@@ -72,78 +67,13 @@ const LoginRoute: React.FC<{
 };
 
 const AuthWrapper: React.FC = () => {
-  const [session, setSession] = useState<StudentSession | null>(null);
-  // Synchronously bootstrap token from URL if returning from Google OAuth redirect,
-  // persisting it immediately into storage before any child routes mount or navigate.
-  const [authChecking, setAuthChecking] = useState(() => bootstrapToken().needsVerification);
-  const [sessionError, setSessionError] = useState<string | null>(null);
+  const { session, authChecking, sessionError, retrySessionCheck, logout, setPhoto } = useSession();
   const navigate = useNavigate();
 
-  // The header avatar is rendered from the session, not from the profile the
-  // edit page fetches. Without this patch a freshly uploaded photo only appeared
-  // on the edit page itself and the header kept showing the previous image until
-  // the student logged out and back in.
-  const handlePhotoChange = useCallback((photoUrl: string | null) => {
-    setSession((prev) =>
-      prev ? { ...prev, student: { ...prev.student, photoUrl: photoUrl ?? undefined } } : prev,
-    );
-  }, []);
-
-  const verifySession = useCallback((onSettled: () => void) => {
-    api
-      .getMe()
-      .then((res) => setSession({ student: res.student }))
-      .catch((err) => {
-        const failure = classifySessionFailure(err);
-        if (failure.kind === 'unauthorized') {
-          localStorage.removeItem(TOKEN_STORAGE_KEY);
-          setSession(null);
-        } else {
-          // A server-side failure must not masquerade as a logout. The retry
-          // screen is shown instead of silently dumping the student on sign-in.
-          console.error('Could not verify student session:', err);
-          setSessionError(failure.message);
-        }
-      })
-      .finally(onSettled);
-  }, []);
-
-  const retrySessionCheck = useCallback(() => {
-    setSessionError(null);
-    setAuthChecking(true);
-    verifySession(() => setAuthChecking(false));
-  }, [verifySession]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    if (!hasStoredToken()) {
-      // Nothing to verify, so nothing to wait for. This is the branch that lets
-      // a signed-out visitor paint a public page without a network round trip.
-      setSession(null);
-      setAuthChecking(false);
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    setAuthChecking(true);
-    verifySession(() => {
-      if (!cancelled) setAuthChecking(false);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [verifySession]);
-
   const handleLogout = useCallback(async () => {
-    try {
-      await api.logout();
-    } catch {}
-    localStorage.removeItem(TOKEN_STORAGE_KEY);
-    setSession(null);
+    await logout();
     navigate('/', { replace: true });
-  }, [navigate]);
+  }, [logout, navigate]);
 
   // Only the protected subtree waits on the session check. Public routes render
   // as soon as their own code is loaded, so a visitor with no token paints
@@ -179,7 +109,7 @@ const AuthWrapper: React.FC = () => {
         <StudentLayout
           session={session}
           onLogout={handleLogout}
-          onPhotoChange={handlePhotoChange}
+          onPhotoChange={setPhoto}
         />
       </StudentThemeProvider>
     );
@@ -252,7 +182,7 @@ const AuthWrapper: React.FC = () => {
                 <StudentLayout
                   session={session}
                   onLogout={handleLogout}
-                  onPhotoChange={handlePhotoChange}
+                  onPhotoChange={setPhoto}
                 />
               </StudentThemeProvider>
             ) : (
@@ -308,7 +238,9 @@ const AuthWrapper: React.FC = () => {
 export const App: React.FC = () => {
   return (
     <BrowserRouter>
-      <AuthWrapper />
+      <SessionProvider>
+        <AuthWrapper />
+      </SessionProvider>
     </BrowserRouter>
   );
 };
