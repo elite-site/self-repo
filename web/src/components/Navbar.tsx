@@ -2,7 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X, LogOut, ChevronDown, ArrowRight, LayoutDashboard, User, Users } from 'lucide-react';
 import { StudentSession } from '../types';
-import { api } from '../services/api';
+import { api, resolveMediaUrl } from '../services/api';
+import { getPhotoStyle } from '../utils/photoStyle';
 
 interface NavbarProps {
   session?: StudentSession | null;
@@ -122,9 +123,20 @@ export const Navbar: React.FC<NavbarProps> = ({ session, onLogout }) => {
                   className="flex items-center gap-2 p-1.5 rounded-full bg-surface-sunken hover:bg-surface-sunken/80 text-ink transition-colors cursor-pointer border border-edge"
                   aria-label="Profile menu"
                 >
-                  <span className="w-7 h-7 rounded-full bg-brand-soft text-brand-soft-text border border-brand-soft flex items-center justify-center text-xs font-extrabold font-heading">
-                    {initials}
-                  </span>
+                  {session.student.photoUrl ? (
+                    <span className="w-7 h-7 rounded-full overflow-hidden border border-edge flex items-center justify-center shrink-0 bg-surface">
+                      <img
+                        src={resolveMediaUrl(session.student.photoUrl)}
+                        alt={session.student.name}
+                        style={getPhotoStyle(session.student)}
+                        className="w-full h-full object-cover"
+                      />
+                    </span>
+                  ) : (
+                    <span className="w-7 h-7 rounded-full bg-brand-soft text-brand-soft-text border border-brand-soft flex items-center justify-center text-xs font-extrabold font-heading">
+                      {initials}
+                    </span>
+                  )}
                   <ChevronDown className="w-3.5 h-3.5 text-ink-muted mr-1" />
                 </button>
 
@@ -188,9 +200,20 @@ export const Navbar: React.FC<NavbarProps> = ({ session, onLogout }) => {
         <div className="md:hidden bg-surface border-t border-edge px-6 py-4 space-y-3 text-xs font-semibold text-left shadow-drawer animate-slide-in-up">
           {session && (
             <div className="flex items-center gap-3 py-2 border-b border-edge pb-3">
-              <span className="w-8 h-8 rounded-full bg-brand-soft text-brand-soft-text border border-brand-soft flex items-center justify-center text-xs font-extrabold font-heading shrink-0">
-                {initials}
-              </span>
+              {session.student.photoUrl ? (
+                <span className="w-8 h-8 rounded-full overflow-hidden border border-edge flex items-center justify-center shrink-0 bg-surface">
+                  <img
+                    src={resolveMediaUrl(session.student.photoUrl)}
+                    alt={session.student.name}
+                    style={getPhotoStyle(session.student)}
+                    className="w-full h-full object-cover"
+                  />
+                </span>
+              ) : (
+                <span className="w-8 h-8 rounded-full bg-brand-soft text-brand-soft-text border border-brand-soft flex items-center justify-center text-xs font-extrabold font-heading shrink-0">
+                  {initials}
+                </span>
+              )}
               <div className="min-w-0">
                 <div className="truncate text-ink font-bold font-heading">{session.student.name}</div>
                 <div className="text-ink-muted normal-case text-[10px]">{session.student.rollNo}</div>

@@ -10,9 +10,14 @@ router.get('/', async (req: Request, res: Response) => {
 
     const where: any = {};
 
-    if (status === 'ACTIVE' || status === 'GRADUATED') where.status = status;
-    if (year) where.year = parseInt(year as string);
-    if (section) where.section = String(section);
+    // Only students who have approved access (status: 'ACTIVE' or 'GRADUATED') are returned to the public
+    if (status === 'ACTIVE' || status === 'GRADUATED') {
+      where.status = status;
+    } else if (status) {
+      where.status = { in: [] };
+    } else {
+      where.status = { in: ['ACTIVE', 'GRADUATED'] };
+    }
 
     if (search) {
       const term = String(search).trim();
@@ -134,14 +139,20 @@ router.get('/:rollNo', async (req: Request, res: Response) => {
           where: { status: 'APPROVED', isPublic: true, driveFileId: { not: null } },
           take: 1,
           orderBy: { publishedAt: 'desc' },
-          select: { id: true, submittedAt: true, publishedAt: true, sizeMb: true, driveFileId: true },
+          select: { id: true, submittedAt: true, publishedAt: true, sizeMb: true, driveFileId: true, status: true, isPublic: true },
         }
       }
     });
-    if (!student) {
+    if (!student || (student.status !== 'ACTIVE' && student.status !== 'GRADUATED')) {
       return res.status(404).json({ error: 'NOT_FOUND', message: 'Student not found' });
     }
     const introVideo = student.introVideos?.[0];
+    const isApprovedIntroVideo = Boolean(
+      introVideo &&
+      introVideo.status === 'APPROVED' &&
+      introVideo.isPublic === true &&
+      introVideo.driveFileId !== null
+    );
 
     const maskedProfile = student.profile ? {
       ...student.profile,
@@ -158,15 +169,15 @@ router.get('/:rollNo', async (req: Request, res: Response) => {
       ...student,
       profile: maskedProfile,
       introVideos: undefined,
-      introVideo: introVideo
+      introVideo: isApprovedIntroVideo
         ? {
-            id: introVideo.id,
-            submittedAt: introVideo.submittedAt,
-            publishedAt: introVideo.publishedAt,
-            sizeMb: introVideo.sizeMb,
-            streamUrl: `/api/public/videos/stream/${introVideo.id}`,
-            thumbnailUrl: introVideo.driveFileId
-              ? `/api/public/media/thumbnail/video/${introVideo.id}?v=${encodeURIComponent(introVideo.driveFileId)}`
+            id: introVideo!.id,
+            submittedAt: introVideo!.submittedAt,
+            publishedAt: introVideo!.publishedAt,
+            sizeMb: introVideo!.sizeMb,
+            streamUrl: `/api/public/videos/stream/${introVideo!.id}`,
+            thumbnailUrl: introVideo!.driveFileId
+              ? `/api/public/media/thumbnail/video/${introVideo!.id}?v=${encodeURIComponent(introVideo!.driveFileId)}`
               : null,
           }
         : null,
@@ -228,7 +239,7 @@ router.get('/:rollNo/resume', async (req: Request, res: Response) => {
       }
     });
 
-    if (!student || !student.resumes.length) {
+    if (!student || (student.status !== 'ACTIVE' && student.status !== 'GRADUATED') || !student.resumes.length) {
       return res.status(404).json({ error: 'NOT_FOUND', message: 'Resume not available' });
     }
 

@@ -1,8 +1,8 @@
-import React, {  useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import {  resolveMediaUrl } from '../services/api';
+import { resolveMediaUrl } from '../services/api';
 import { usePublicVideos, PublicVideosState } from '../hooks/usePublicVideos';
-import {   Play, Users, EyeOff } from 'lucide-react';
+import { Users, EyeOff } from 'lucide-react';
 
 interface Props extends Partial<PublicVideosState> {
   /** Optional heading override for reuse on other public pages. */
@@ -125,7 +125,7 @@ export const PublicVideoShowcase: React.FC<Props> = ({
           {videos.map((video) => (
             <article
               key={video.id}
-              className="group surface overflow-hidden shadow-card hover:shadow-card-hover transition-shadow"
+              className="surface overflow-hidden shadow-card hover:shadow-card-hover transition-shadow"
             >
               <div className="relative bg-surface-inverse aspect-video">
                 <video
@@ -143,14 +143,6 @@ export const PublicVideoShowcase: React.FC<Props> = ({
                 >
                   Your browser does not support video playback.
                 </video>
-
-                {activeId !== video.id && (
-                  <div className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <span className="w-14 h-14 rounded-full bg-on-primary/55 backdrop-blur-sm border border-on-primary/25 flex items-center justify-center">
-                      <Play className="w-6 h-6 text-on-primary fill-on-primary ml-0.5" />
-                    </span>
-                  </div>
-                )}
               </div>
 
               <div className="p-4 flex items-center justify-between gap-3">

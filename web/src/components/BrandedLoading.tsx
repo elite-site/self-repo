@@ -10,21 +10,26 @@ export const BrandedLoading: React.FC<BrandedLoadingProps> = ({
   fullScreen = true,
 }) => {
   const content = (
-    <div className="flex flex-col items-center justify-center gap-6 select-none">
-      {/* Centered logo with a soft pulse ring behind it */}
-      <div className="relative flex items-center justify-center">
-        {/* Soft pulse rings using brand color */}
-        <div className="absolute w-28 h-28 rounded-full bg-brand/10 animate-ping [animation-duration:2.8s]" />
-        <div className="absolute w-20 h-20 rounded-full bg-brand/15 animate-pulse" />
+    <div className="flex flex-col items-center justify-center gap-5 select-none" role="status" aria-live="polite">
+      {/* Refined dual-ring circular spinner with centered circular logo badge */}
+      <div className="relative flex items-center justify-center w-24 h-24">
+        {/* Soft pulse glow ring */}
+        <div className="absolute inset-0 rounded-full bg-brand/10 animate-pulse" />
 
-        {/* Centered logo card */}
-        <div className="relative w-16 h-16 rounded-xl surface flex items-center justify-center p-3 z-10">
+        {/* Outer primary spinner ring */}
+        <div className="absolute inset-0 rounded-full border-2 border-brand/20 border-t-brand animate-spin [animation-duration:1.1s]" />
+
+        {/* Inner secondary counter-rotating subtle accent ring */}
+        <div className="absolute inset-2 rounded-full border border-brand/15 border-b-brand/40 animate-spin [animation-duration:2.2s] [animation-direction:reverse]" />
+
+        {/* Centered circular logo card */}
+        <div className="relative w-12 h-12 rounded-full surface border border-edge shadow-xs flex items-center justify-center p-2 z-10">
           <picture className="flex items-center justify-center">
             <source srcSet="/elite-logo.webp" type="image/webp" />
             <img
               src="/elite-logo.png"
               alt="ELITE"
-              className="w-10 h-10 object-contain"
+              className="w-7 h-7 object-contain"
               onError={(e) => {
                 (e.target as HTMLElement).style.display = 'none';
               }}
@@ -33,13 +38,8 @@ export const BrandedLoading: React.FC<BrandedLoadingProps> = ({
         </div>
       </div>
 
-      {/* Slim indeterminate progress bar in brand color underneath */}
-      <div className="w-48 flex flex-col items-center gap-2.5">
-        <div className="w-full h-1 bg-brand-soft rounded-full overflow-hidden relative">
-          <div className="absolute top-0 bottom-0 left-0 bg-brand rounded-full animate-indeterminate" />
-        </div>
-
-        {/* Small uppercase "Loading ELITE Portal" label in the heading font */}
+      {/* Uppercase message label */}
+      <div className="flex flex-col items-center gap-1.5">
         <span className="font-heading text-[11px] font-bold uppercase tracking-widest text-ink-secondary">
           {message}
         </span>

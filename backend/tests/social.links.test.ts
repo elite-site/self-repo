@@ -50,6 +50,50 @@ describe('professional link normalisation', () => {
     });
   });
 
+  describe('accepted input formats (LeetCode)', () => {
+    it('places a bare username under /u/', () => {
+      expect(normalizeSocialLink('leetcode', 'jane').value).toBe('https://leetcode.com/u/jane');
+    });
+
+    it('keeps an explicit /u/ path', () => {
+      expect(normalizeSocialLink('leetcode', 'leetcode.com/u/jane').value).toBe(
+        'https://leetcode.com/u/jane',
+      );
+    });
+
+    it('handles leetcode.com/<username> without /u/ prefix', () => {
+      expect(normalizeSocialLink('leetcode', 'https://leetcode.com/jane').value).toBe(
+        'https://leetcode.com/u/jane',
+      );
+    });
+
+    it('accepts @username for LeetCode', () => {
+      expect(normalizeSocialLink('leetcode', '@jane').value).toBe('https://leetcode.com/u/jane');
+    });
+  });
+
+  describe('accepted input formats (CodeChef)', () => {
+    it('places a bare username under /users/', () => {
+      expect(normalizeSocialLink('codechef', 'jane').value).toBe('https://www.codechef.com/users/jane');
+    });
+
+    it('keeps an explicit /users/ path', () => {
+      expect(normalizeSocialLink('codechef', 'codechef.com/users/jane').value).toBe(
+        'https://www.codechef.com/users/jane',
+      );
+    });
+
+    it('handles codechef.com/<username> without /users/ prefix', () => {
+      expect(normalizeSocialLink('codechef', 'https://www.codechef.com/jane').value).toBe(
+        'https://www.codechef.com/users/jane',
+      );
+    });
+
+    it('accepts @username for CodeChef', () => {
+      expect(normalizeSocialLink('codechef', '@jane').value).toBe('https://www.codechef.com/users/jane');
+    });
+  });
+
   describe('portfolio field', () => {
     it('keeps a full URL host and path', () => {
       expect(normalizeSocialLink('portfolio', 'https://jane.dev/projects').value).toBe(

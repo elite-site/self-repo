@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { api } from '../services/api';
 import { Event, EventRegistration } from '../types';
@@ -354,166 +355,196 @@ export const EventDetailPage: React.FC = () => {
       </div>
 
       {/* REGISTRATION MODAL */}
-      {modalOpen && (
-        <div className="fixed inset-0 z-modal flex items-center justify-center p-4 bg-on-primary/60 backdrop-blur-xs" role="dialog" aria-modal="true" aria-labelledby="registration-modal-title">
-          <div className="surface max-w-lg w-full p-6 shadow-modal border border-edge animate-scale-in text-left">
-            <div className="flex items-center justify-between pb-3 border-b border-edge">
-              <h3 id="registration-modal-title" className="text-body-md font-bold text-ink font-heading">Confirm Event Registration</h3>
-              <button
-                onClick={() => setModalOpen(false)}
-                className="p-1 text-ink-muted hover:text-ink rounded-lg cursor-pointer transition-colors"
-                aria-label="Close registration modal"
-              >
-                <X className="w-5 h-5" aria-hidden="true" />
-              </button>
-            </div>
-
-            <form onSubmit={handleRegister} className="space-y-4 pt-4">
-              {regError && (
-                <div className="p-3 bg-status-bg-rejected border border-edge-strong rounded-lg text-body-sm text-status-rejected flex items-center gap-2" role="alert">
-                  <AlertCircle className="w-4 h-4 shrink-0" aria-hidden="true" />
-                  <span>{regError}</span>
-                </div>
-              )}
-
-              <p className="text-body-sm text-ink-secondary">
-                You are about to register for <strong>{event.title}</strong>. Your college roll number and email will be
-                associated with this entry.
-              </p>
-
-              {/* Dynamic form fields if required by event */}
-              {event.registrationFields && event.registrationFields.length > 0 && (
-                <div className="space-y-3 pt-2">
-                  {event.registrationFields.map((field: any) => (
-                    <div key={field.id}>
-                      <label htmlFor={`reg-field-${field.id}`} className="label">
-                        {field.label} {field.isRequired ? '*' : ''}
-                      </label>
-                      <input
-                        id={`reg-field-${field.id}`}
-                        type={field.fieldType === 'NUMBER' ? 'number' : 'text'}
-                        required={field.isRequired}
-                        value={answers[field.id] || ''}
-                        onChange={(e) => setAnswers({ ...answers, [field.id]: e.target.value })}
-                        placeholder={`Enter ${field.label.toLowerCase()}`}
-                        className="input"
-                        aria-required={field.isRequired}
-                      />
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <div className="pt-2 flex items-center justify-end gap-3">
+      {modalOpen &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-modal flex items-center justify-center p-4 bg-scrim backdrop-blur-xs animate-fade-in overflow-y-auto"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="registration-modal-title"
+            onClick={(e) => {
+              if (e.target === e.currentTarget && !submitting) setModalOpen(false);
+            }}
+          >
+            <div
+              className="surface max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 shadow-modal border border-edge animate-scale-in text-left my-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between pb-3 border-b border-edge">
+                <h3 id="registration-modal-title" className="text-body-md font-bold text-ink font-heading">Confirm Event Registration</h3>
                 <button
-                  type="button"
                   onClick={() => setModalOpen(false)}
-                  className="btn btn-ghost"
+                  className="p-1 text-ink-muted hover:text-ink rounded-lg cursor-pointer transition-colors"
+                  aria-label="Close registration modal"
                 >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="btn btn-primary"
-                >
-                  {submitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" /> : <Send className="w-3.5 h-3.5" aria-hidden="true" />}
-                  <span>Confirm Registration</span>
+                  <X className="w-5 h-5" aria-hidden="true" />
                 </button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
 
-      {/* TEAM CREATION MODAL */}
-      {teamModalOpen && (
-        <div className="fixed inset-0 z-modal flex items-center justify-center p-4 bg-on-primary/60 backdrop-blur-xs" role="dialog" aria-modal="true" aria-labelledby="team-modal-title">
-          <div className="surface max-w-md w-full p-6 shadow-modal border border-edge animate-scale-in text-left">
-            <div className="flex items-center justify-between pb-3 border-b border-edge">
-              <h3 id="team-modal-title" className="text-body-md font-bold text-ink font-heading">Create Team for Event</h3>
-              <button
-                onClick={() => {
-                  setTeamModalOpen(false);
-                  setTeamError(null);
-                  setTeamSuccess(null);
-                }}
-                className="p-1 text-ink-muted hover:text-ink rounded-lg cursor-pointer transition-colors"
-                aria-label="Close team creation modal"
-              >
-                <X className="w-5 h-5" aria-hidden="true" />
-              </button>
-            </div>
-
-            {teamSuccess ? (
-              <div className="py-8 text-center space-y-2">
-                <CheckCircle2 className="w-10 h-10 text-status-approved mx-auto" aria-hidden="true" />
-                <h4 className="text-body-sm font-bold text-ink font-heading">Team Created!</h4>
-                <p className="text-body-sm text-ink-secondary">{teamSuccess}</p>
-                <p className="text-label-sm text-ink-muted">Redirecting to your teams...</p>
-              </div>
-            ) : (
-              <form onSubmit={handleCreateTeam} className="space-y-4 pt-4">
-                {teamError && (
+              <form onSubmit={handleRegister} className="space-y-4 pt-4">
+                {regError && (
                   <div className="p-3 bg-status-bg-rejected border border-edge-strong rounded-lg text-body-sm text-status-rejected flex items-center gap-2" role="alert">
                     <AlertCircle className="w-4 h-4 shrink-0" aria-hidden="true" />
-                    <span>{teamError}</span>
+                    <span>{regError}</span>
                   </div>
                 )}
 
-                {!isEventActive && (
-                  <div className="p-3 bg-status-bg-pending border border-edge-strong rounded-lg text-body-sm text-status-pending flex items-center gap-2" role="status">
-                    <AlertCircle className="w-4 h-4 shrink-0" aria-hidden="true" />
-                    <span>No active event available to create a team for.</span>
+                <p className="text-body-sm text-ink-secondary">
+                  You are about to register for <strong>{event.title}</strong>. Your college roll number and email will be
+                  associated with this entry.
+                </p>
+
+                {/* Dynamic form fields if required by event */}
+                {event.registrationFields && event.registrationFields.length > 0 && (
+                  <div className="space-y-3 pt-2">
+                    {event.registrationFields.map((field: any) => (
+                      <div key={field.id}>
+                        <label htmlFor={`reg-field-${field.id}`} className="label">
+                          {field.label} {field.isRequired ? '*' : ''}
+                        </label>
+                        <input
+                          id={`reg-field-${field.id}`}
+                          type={field.fieldType === 'NUMBER' ? 'number' : 'text'}
+                          required={field.isRequired}
+                          value={answers[field.id] || ''}
+                          onChange={(e) => setAnswers({ ...answers, [field.id]: e.target.value })}
+                          placeholder={`Enter ${field.label.toLowerCase()}`}
+                          className="input"
+                          aria-required={field.isRequired}
+                        />
+                      </div>
+                    ))}
                   </div>
                 )}
 
-                <div>
-                  <label className="label">Target Event</label>
-                  <div className="p-2.5 surface-sunken border border-edge rounded-lg text-body-sm text-ink font-medium">
-                    {event?.title || event?.name}
-                  </div>
-                </div>
-
-                <div>
-                  <label htmlFor="team-name" className="label">Team Name *</label>
-                  <input
-                    id="team-name"
-                    type="text"
-                    required
-                    value={teamName}
-                    onChange={(e) => setTeamName(e.target.value)}
-                    placeholder="e.g. AlgoRhythms / CyberKnights"
-                    className="input"
-                    autoFocus
-                  />
-                </div>
-
-                <div className="pt-2 flex items-center justify-end gap-3">
+                <div className="pt-2 flex items-center justify-end gap-3 border-t border-edge">
                   <button
                     type="button"
-                    onClick={() => {
-                      setTeamModalOpen(false);
-                      setTeamError(null);
-                    }}
+                    onClick={() => setModalOpen(false)}
                     className="btn btn-ghost"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    disabled={creatingTeam || !teamName.trim() || !isEventActive}
+                    disabled={submitting}
                     className="btn btn-primary"
                   >
-                    {creatingTeam ? <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" /> : <Plus className="w-3.5 h-3.5" aria-hidden="true" />}
-                    <span>Create Team</span>
+                    {submitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" /> : <Send className="w-3.5 h-3.5" aria-hidden="true" />}
+                    <span>Confirm Registration</span>
                   </button>
                 </div>
               </form>
-            )}
-          </div>
-        </div>
-      )}
+            </div>
+          </div>,
+          document.body
+        )}
+
+      {/* TEAM CREATION MODAL */}
+      {teamModalOpen &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-modal flex items-center justify-center p-4 bg-scrim backdrop-blur-xs animate-fade-in overflow-y-auto"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="team-modal-title"
+            onClick={(e) => {
+              if (e.target === e.currentTarget && !creatingTeam) {
+                setTeamModalOpen(false);
+                setTeamError(null);
+                setTeamSuccess(null);
+              }
+            }}
+          >
+            <div
+              className="surface max-w-md w-full max-h-[90vh] overflow-y-auto p-6 shadow-modal border border-edge animate-scale-in text-left my-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between pb-3 border-b border-edge">
+                <h3 id="team-modal-title" className="text-body-md font-bold text-ink font-heading">Create Team for Event</h3>
+                <button
+                  onClick={() => {
+                    setTeamModalOpen(false);
+                    setTeamError(null);
+                    setTeamSuccess(null);
+                  }}
+                  className="p-1 text-ink-muted hover:text-ink rounded-lg cursor-pointer transition-colors"
+                  aria-label="Close team creation modal"
+                >
+                  <X className="w-5 h-5" aria-hidden="true" />
+                </button>
+              </div>
+
+              {teamSuccess ? (
+                <div className="py-8 text-center space-y-2">
+                  <CheckCircle2 className="w-10 h-10 text-status-approved mx-auto" aria-hidden="true" />
+                  <h4 className="text-body-sm font-bold text-ink font-heading">Team Created!</h4>
+                  <p className="text-body-sm text-ink-secondary">{teamSuccess}</p>
+                  <p className="text-label-sm text-ink-muted">Redirecting to your teams...</p>
+                </div>
+              ) : (
+                <form onSubmit={handleCreateTeam} className="space-y-4 pt-4">
+                  {teamError && (
+                    <div className="p-3 bg-status-bg-rejected border border-edge-strong rounded-lg text-body-sm text-status-rejected flex items-center gap-2" role="alert">
+                      <AlertCircle className="w-4 h-4 shrink-0" aria-hidden="true" />
+                      <span>{teamError}</span>
+                    </div>
+                  )}
+
+                  {!isEventActive && (
+                    <div className="p-3 bg-status-bg-pending border border-edge-strong rounded-lg text-body-sm text-status-pending flex items-center gap-2" role="status">
+                      <AlertCircle className="w-4 h-4 shrink-0" aria-hidden="true" />
+                      <span>No active event available to create a team for.</span>
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="label">Target Event</label>
+                    <div className="p-2.5 surface-sunken border border-edge rounded-lg text-body-sm text-ink font-medium">
+                      {event?.title || event?.name}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label htmlFor="team-name" className="label">Team Name *</label>
+                    <input
+                      id="team-name"
+                      type="text"
+                      required
+                      value={teamName}
+                      onChange={(e) => setTeamName(e.target.value)}
+                      placeholder="e.g. AlgoRhythms / CyberKnights"
+                      className="input"
+                      autoFocus
+                    />
+                  </div>
+
+                  <div className="pt-2 flex items-center justify-end gap-3 border-t border-edge">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTeamModalOpen(false);
+                        setTeamError(null);
+                      }}
+                      className="btn btn-ghost"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={creatingTeam || !teamName.trim() || !isEventActive}
+                      className="btn btn-primary"
+                    >
+                      {creatingTeam ? <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" /> : <Plus className="w-3.5 h-3.5" aria-hidden="true" />}
+                      <span>Create Team</span>
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 };

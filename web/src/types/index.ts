@@ -28,6 +28,7 @@ export interface StudentIntroVideo {
   mimeType: string | null;
   sizeMb: number | null;
   hasFile: boolean;
+  driveFileId?: string | null;
   thumbnailUrl?: string | null;
 }
 
@@ -63,6 +64,8 @@ export interface StudentProfile {
   photoZoom?: number | null;
   githubUrl?: string;
   linkedinUrl?: string;
+  leetcodeUrl?: string;
+  codechefUrl?: string;
   portfolioUrl?: string;
   status?: 'ACTIVE' | 'GRADUATED';
   graduatedAt?: string | null;

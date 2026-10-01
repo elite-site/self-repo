@@ -77,6 +77,8 @@ router.get('/', async (req: Request, res: Response) => {
       photoZoom: student.profile?.photoZoom ?? 1,
       githubUrl: student.profile?.githubUrl || '',
       linkedinUrl: student.profile?.linkedinUrl || '',
+      leetcodeUrl: student.profile?.leetcodeUrl || '',
+      codechefUrl: student.profile?.codechefUrl || '',
       portfolioUrl: student.profile?.portfolioUrl || '',
       skills: (student.profile?.skills || []).map(s => s.skill.name),
       skillObjects: (student.profile?.skills || []).map(s => s.skill),
@@ -115,7 +117,7 @@ router.put('/', async (req: Request, res: Response) => {
     // Validate the professional link fields. The client normalises the accepted
     // paste formats; this is the server-side guarantee that only a real,
     // safe absolute URL is ever persisted.
-    const linkFields = ['githubUrl', 'linkedinUrl', 'portfolioUrl'] as const;
+    const linkFields = ['githubUrl', 'linkedinUrl', 'leetcodeUrl', 'codechefUrl', 'portfolioUrl'] as const;
     const normalizedLinks: Record<string, string> = {};
     for (const field of linkFields) {
       if (req.body[field] === undefined) continue;
@@ -135,6 +137,8 @@ router.put('/', async (req: Request, res: Response) => {
     if (bioText !== undefined) updateData.biography = bioText;
     if (normalizedLinks.githubUrl !== undefined) updateData.githubUrl = normalizedLinks.githubUrl;
     if (normalizedLinks.linkedinUrl !== undefined) updateData.linkedinUrl = normalizedLinks.linkedinUrl;
+    if (normalizedLinks.leetcodeUrl !== undefined) updateData.leetcodeUrl = normalizedLinks.leetcodeUrl;
+    if (normalizedLinks.codechefUrl !== undefined) updateData.codechefUrl = normalizedLinks.codechefUrl;
     if (normalizedLinks.portfolioUrl !== undefined) updateData.portfolioUrl = normalizedLinks.portfolioUrl;
 
     const profile = await prisma.studentProfile.upsert({
@@ -146,6 +150,8 @@ router.put('/', async (req: Request, res: Response) => {
         biography: bioText || '',
         githubUrl: normalizedLinks.githubUrl || '',
         linkedinUrl: normalizedLinks.linkedinUrl || '',
+        leetcodeUrl: normalizedLinks.leetcodeUrl || '',
+        codechefUrl: normalizedLinks.codechefUrl || '',
         portfolioUrl: normalizedLinks.portfolioUrl || '',
       },
     });

@@ -100,7 +100,12 @@ export const VideoPage: React.FC = () => {
     setError(null);
     try {
       const data = await api.getMe();
-      setVideo(data?.student?.video ?? null);
+      const currentVideo = data?.student?.video ?? null;
+      setVideo(currentVideo);
+      if (!currentVideo?.hasFile) {
+        setLocalPreview(null);
+        setPreviewError(false);
+      }
       // The server reports the limit it actually enforces; fall back to the
       // documented default only if an older backend omits it.
       setMaxVideoSizeMb(data?.student?.maxVideoSizeMb || DEFAULT_MAX_VIDEO_MB);
@@ -867,7 +872,7 @@ export const VideoPage: React.FC = () => {
             )}
 
             {/* WHAT IS CURRENTLY STORED */}
-            {video && (
+            {video && video.hasFile && (
               <div className="rounded-lg border border-edge bg-surface-canvas px-4 py-3">
                 <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[11px] text-ink-secondary">
                   <div className="flex items-center gap-1.5">

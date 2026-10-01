@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { api, resolveMediaUrl } from '../../services/api';
 import { Certificate } from '../../types';
 import { UploadCloud, Loader2, FileText, AlertCircle, Trash2, X, ExternalLink, Globe, EyeOff } from 'lucide-react';
@@ -290,12 +291,25 @@ export const CertificatesTab: React.FC = () => {
       )}
 
       {/* UPLOAD MODAL */}
-      {modalOpen && (
-        <div className="fixed inset-0 z-modal flex items-center justify-center p-4 bg-scrim backdrop-blur-xs animate-fade-in" role="dialog" aria-modal="true" aria-labelledby="certificate-modal-title">
-          <div className="surface max-w-lg w-full p-6 shadow-modal animate-scale-in text-left" ref={modalTitleRef}>
-            <div className="flex items-center justify-between pb-3 border-b border-edge">
+      {modalOpen && createPortal(
+        <div
+          className="fixed inset-0 z-modal flex items-center justify-center p-4 sm:p-6 bg-scrim backdrop-blur-xs animate-fade-in overflow-y-auto"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="certificate-modal-title"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setModalOpen(false);
+          }}
+        >
+          <div
+            className="surface max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 shadow-modal animate-scale-in text-left my-auto"
+            ref={modalTitleRef}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-edge sticky -top-6 bg-surface pt-0 -mt-1 z-10">
               <h3 id="certificate-modal-title" className="text-body-lg font-bold text-ink font-heading">Upload Verified Certificate</h3>
               <button
+                type="button"
                 onClick={() => setModalOpen(false)}
                 className="btn btn-ghost p-1"
                 aria-label="Close modal"
@@ -365,7 +379,7 @@ export const CertificatesTab: React.FC = () => {
                 />
               </div>
 
-              <div className="pt-2 flex items-center justify-end gap-3">
+              <div className="pt-2 flex items-center justify-end gap-3 border-t border-edge mt-4">
                 <button
                   type="button"
                   onClick={() => setModalOpen(false)}
@@ -385,7 +399,8 @@ export const CertificatesTab: React.FC = () => {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

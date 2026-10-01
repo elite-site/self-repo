@@ -31,7 +31,20 @@ function serializeStudentView(student: {
   branch: string;
   status: StudentStatus;
   graduatedAt: Date | null;
+  profile?: {
+    id?: string;
+    photoDriveId?: string | null;
+    photoUrl?: string | null;
+    photoOffsetX?: number | null;
+    photoOffsetY?: number | null;
+    photoZoom?: number | null;
+    biography?: string | null;
+  } | null;
 }, submission: any | null, introVideo: any | null = null, maxVideoSizeMb: number = 25) {
+  const photoUrl = (student.profile?.photoDriveId || student.profile?.photoUrl)
+    ? `/api/public/media/photo/${student.profile?.id || student.id}`
+    : null;
+
   return {
     id: student.id,
     rollNo: student.rollNo,
@@ -42,6 +55,14 @@ function serializeStudentView(student: {
     branch: student.branch,
     status: student.status,
     graduatedAt: student.graduatedAt,
+    photoUrl: photoUrl || undefined,
+    viewUrl: photoUrl || undefined,
+    hasPhoto: Boolean(photoUrl),
+    photoOffsetX: student.profile?.photoOffsetX ?? 0,
+    photoOffsetY: student.profile?.photoOffsetY ?? 0,
+    photoZoom: student.profile?.photoZoom ?? 1,
+    bio: student.profile?.biography || undefined,
+    biography: student.profile?.biography || undefined,
     // The effective, administrator-configured upload limit, so the client can
     // pre-check against the same number the server enforces.
     maxVideoSizeMb,
@@ -73,9 +94,10 @@ function serializeStudentView(student: {
           filename: introVideo.filename || null,
           mimeType: introVideo.mimeType || null,
           sizeMb: introVideo.sizeMb ?? null,
-          hasFile: Boolean(introVideo.driveFileId),
-          thumbnailUrl: introVideo.driveFileId
-            ? `/api/public/media/thumbnail/video/${introVideo.id}?v=${encodeURIComponent(introVideo.driveFileId)}`
+          hasFile: Boolean(introVideo.driveFileId && introVideo.driveFileId.trim() !== ''),
+          driveFileId: (introVideo.driveFileId && introVideo.driveFileId.trim() !== '') ? introVideo.driveFileId.trim() : null,
+          thumbnailUrl: (introVideo.driveFileId && introVideo.driveFileId.trim() !== '')
+            ? `/api/public/media/thumbnail/video/${introVideo.id}?v=${encodeURIComponent(introVideo.driveFileId.trim())}`
             : null,
         }
       : null,
@@ -267,6 +289,19 @@ router.get('/me', requireStudentAuth, async (req: Request, res: Response): Promi
     // Parallelize queries across database connections to minimize latency under concurrency
     const studentPromise = prisma.student.findUnique({
       where: { id: studentId },
+      include: {
+        profile: {
+          select: {
+            id: true,
+            photoDriveId: true,
+            photoUrl: true,
+            photoOffsetX: true,
+            photoOffsetY: true,
+            photoZoom: true,
+            biography: true,
+          },
+        },
+      },
     });
 
     const submissionPromise = rollNo
@@ -352,7 +387,7 @@ router.get('/me', requireStudentAuth, async (req: Request, res: Response): Promi
     // Never cache student session/profile data so submissions, reviews,
     // profile photo edits and the intro video reflect immediately without
     // requiring a re-login.
-    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
     res.json({

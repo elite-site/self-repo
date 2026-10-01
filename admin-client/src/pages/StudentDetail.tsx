@@ -21,6 +21,7 @@ import {
   X,
 } from 'lucide-react';
 import { adminApi } from '../services/api';
+import { LeetCodeIcon, CodeChefIcon } from '../components/icons/PlatformIcons';
 
 interface StudentDetailProps {
   studentId: string;
@@ -288,17 +289,19 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
       <div className="bg-surface border border-edge rounded-2xl p-6 shadow-xs">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="flex items-center gap-4">
-            {profile.photoUrl ? (
-              <img
-                src={profile.photoUrl}
-                alt={student.name}
-                className="w-16 h-16 rounded-2xl object-cover border-2 border-edge shadow-xs"
-              />
-            ) : (
-              <div className="w-16 h-16 rounded-2xl bg-status-bg-rejected text-ink-brand flex items-center justify-center text-2xl font-black border border-edge">
-                {student.name?.charAt(0) || 'S'}
-              </div>
-            )}
+            <div className="relative w-16 h-16 rounded-2xl bg-status-bg-rejected text-ink-brand flex items-center justify-center text-2xl font-black border border-edge overflow-hidden shadow-xs shrink-0">
+              <span>{student.name?.charAt(0) || 'S'}</span>
+              {profile.photoUrl && (
+                <img
+                  src={profile.photoUrl}
+                  alt={student.name}
+                  className="absolute inset-0 w-full h-full object-cover"
+                  onError={(e) => {
+                    (e.currentTarget as HTMLElement).style.display = 'none';
+                  }}
+                />
+              )}
+            </div>
             <div>
               <div className="flex items-center gap-2.5 flex-wrap">
                 <h1 className="text-xl sm:text-2xl font-black text-ink font-display">
@@ -338,6 +341,26 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-edge hover:bg-surface-sunken text-xs font-semibold text-ink-secondary"
               >
                 <Linkedin className="w-3.5 h-3.5 text-status-approved" /> LinkedIn
+              </a>
+            )}
+            {profile.leetcodeUrl && (
+              <a
+                href={profile.leetcodeUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-edge hover:bg-surface-sunken text-xs font-semibold text-amber-500"
+              >
+                <LeetCodeIcon className="w-3.5 h-3.5" /> LeetCode
+              </a>
+            )}
+            {profile.codechefUrl && (
+              <a
+                href={profile.codechefUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-edge hover:bg-surface-sunken text-xs font-semibold text-amber-700"
+              >
+                <CodeChefIcon className="w-3.5 h-3.5" /> CodeChef
               </a>
             )}
             {profile.portfolioUrl && (

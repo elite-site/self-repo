@@ -41,6 +41,7 @@ export const StudentHeader: React.FC<StudentHeaderProps> = ({ session, onLogout 
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [imageError, setImageError] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
 
@@ -287,12 +288,14 @@ export const StudentHeader: React.FC<StudentHeaderProps> = ({ session, onLogout 
               onClick={() => setDropdownOpen(!dropdownOpen)}
               className="flex items-center gap-2.5 p-1 sm:px-2.5 sm:py-1.5 rounded-lg border border-transparent hover:border-edge hover:bg-surface-sunken transition-colors cursor-pointer"
             >
-              {student?.photoUrl ? (
-                <div className="w-8 h-8 rounded-full overflow-hidden border border-edge shrink-0">
+              {student?.photoUrl && !imageError ? (
+                <div className="w-8 h-8 rounded-full overflow-hidden border border-edge shrink-0 bg-surface-sunken">
                   <img
                     src={resolveMediaUrl(student.photoUrl)}
                     alt={student.name}
                     style={getPhotoStyle(student)}
+                    onError={() => setImageError(true)}
+                    className="w-full h-full object-cover"
                   />
                 </div>
               ) : (
@@ -314,11 +317,28 @@ export const StudentHeader: React.FC<StudentHeaderProps> = ({ session, onLogout 
             {/* Dropdown Menu */}
             {dropdownOpen && (
               <div className="absolute right-0 mt-2 w-56 bg-surface rounded-lg shadow-modal border border-edge py-2 z-50 text-left animate-scale-in">
-                <div className="px-4 py-2.5 border-b border-edge">
-                  <div className="font-heading text-xs font-bold text-ink truncate">{student?.name}</div>
-                  <div className="text-[11px] text-ink-secondary font-mono">{student?.rollNo}</div>
-                  <div className="text-[10px] text-ink-muted mt-0.5">
-                    Year {student?.year} · Section {student?.section} · {student?.branch}
+                <div className="px-4 py-2.5 border-b border-edge flex items-center gap-3">
+                  {student?.photoUrl && !imageError ? (
+                    <div className="w-9 h-9 rounded-full overflow-hidden border border-edge shrink-0 bg-surface-sunken">
+                      <img
+                        src={resolveMediaUrl(student.photoUrl)}
+                        alt={student.name}
+                        style={getPhotoStyle(student)}
+                        onError={() => setImageError(true)}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-9 h-9 rounded-full bg-brand-soft text-brand-soft-text flex items-center justify-center font-heading font-bold text-xs shrink-0">
+                      {initials}
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="font-heading text-xs font-bold text-ink truncate">{student?.name}</div>
+                    <div className="text-[11px] text-ink-secondary font-mono">{student?.rollNo}</div>
+                    <div className="text-[10px] text-ink-muted mt-0.5">
+                      Year {student?.year} · Section {student?.section} · {student?.branch}
+                    </div>
                   </div>
                 </div>
 

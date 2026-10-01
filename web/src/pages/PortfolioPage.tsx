@@ -42,7 +42,7 @@ export const PortfolioPage: React.FC = () => {
         </p>
       </div>
 
-      <div className="surface flex flex-col overflow-hidden">
+      <div className="surface flex flex-col">
         <div
           className="border-b border-edge px-4 flex gap-1 bg-surface-sunken"
           role="tablist"

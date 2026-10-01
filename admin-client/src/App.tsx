@@ -10,12 +10,10 @@ import {
 import { Sidebar, AdminTab, ACTIVE_EVENT_ID } from './components/Sidebar';
 import { AdminHeader } from './components/AdminHeader';
 import { StatsDashboard } from './components/StatsDashboard';
-import { SubmissionsTable } from './components/SubmissionsTable';
 import { StudentsTable } from './components/StudentsTable';
-import { SubmissionDetailModal } from './components/SubmissionDetailModal';
 import { ActivityLogView } from './components/ActivityLogView';
 import { LoginPage } from './components/LoginPage';
-import { AdminStats, AdminUser, Submission } from './types';
+import { AdminStats, AdminUser } from './types';
 import { adminApi } from './services/api';
 import { useTheme } from './context/ThemeContext';
 import { BrandedLoading } from './components/BrandedLoading';
@@ -78,44 +76,6 @@ const DashboardPage: React.FC = () => {
   );
 };
 
-const SubmissionsPage: React.FC = () => {
-  const { user } = useAuth();
-  const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
-
-  const loadStats = useCallback(async () => {
-    if (!user) return;
-    try {
-      const data = await adminApi.getStats(ACTIVE_EVENT_ID);
-      return data;
-    } catch (err) {
-      console.error('Failed to load stats', err);
-    }
-  }, [user]);
-
-  return (
-    <>
-      <SubmissionsTable
-        activeEventId={ACTIVE_EVENT_ID}
-        onSelectSubmission={setSelectedSubmission}
-        onRefreshStats={loadStats}
-      />
-      {selectedSubmission && (
-        <SubmissionDetailModal
-          submission={selectedSubmission}
-          onClose={() => setSelectedSubmission(null)}
-          onUpdated={(updated) => {
-            setSelectedSubmission(updated);
-            loadStats();
-          }}
-          onDeleted={() => {
-            setSelectedSubmission(null);
-            loadStats();
-          }}
-        />
-      )}
-    </>
-  );
-};
 
 const StudentsPage: React.FC = () => {
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
@@ -344,7 +304,7 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <Navigate to="/admin/dashboard" replace /> },
       { path: 'dashboard', element: <DashboardPage /> },
-      { path: 'submissions', element: <SubmissionsPage /> },
+      { path: 'submissions', element: <Navigate to="/admin/moderation" replace /> },
       { path: 'students', element: <StudentsPage /> },
       { path: 'students/:studentId', element: <StudentsPage /> },
       { path: 'activity', element: <ActivityPage /> },
@@ -362,15 +322,26 @@ const router = createBrowserRouter([
       { path: 'roles', element: <RolesPermissions /> },
       { path: 'audit-logs', element: <AuditLogs /> },
       { path: 'settings', element: <Settings /> },
+      { path: '*', element: <Navigate to="/admin/dashboard" replace /> },
     ],
+  },
+  {
+    path: '/submissions',
+    element: <Navigate to="/admin/moderation" replace />,
+  },
+  {
+    path: '/moderation',
+    element: <Navigate to="/admin/moderation" replace />,
   },
   {
     path: '/',
     element: <Navigate to="/admin" replace />,
   },
-], {
-  basename: '/admin',
-});
+  {
+    path: '*',
+    element: <Navigate to="/admin" replace />,
+  },
+]);
 
 export const App: React.FC = () => {
   return <RouterProvider router={router} />;

@@ -22,6 +22,7 @@ import { api, resolveMediaUrl } from '../services/api';
 import { getNotificationDestination, navigateToNotification } from '../utils/notificationRouting';
 import { StudentProfile, Project, Event, EventRegistration, VotingCampaign, Notification } from '../types';
 import { BrandedLoading } from '../components/BrandedLoading';
+import { getPhotoStyle } from '../utils/photoStyle';
 
 export const DashboardPage: React.FC = () => {
   const [profile, setProfile] = useState<StudentProfile | null>(null);
@@ -36,10 +37,15 @@ export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
+  const [imageError, setImageError] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [eventsError, setEventsError] = useState<string | null>(null);
   const [notifError, setNotifError] = useState<string | null>(null);
   const [votingError, setVotingError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setImageError(false);
+  }, [profile?.photoUrl]);
 
   const loadData = async (isInitial = true) => {
     if (isInitial && !profile) setLoading(true);
@@ -152,12 +158,15 @@ export const DashboardPage: React.FC = () => {
       {/* 1. WELCOME HEADER CARD */}
       <div className="surface p-6 sm:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="flex items-start sm:items-center gap-4 sm:gap-5">
-          {profile?.photoUrl ? (
-            <img
-              src={resolveMediaUrl(profile.photoUrl)}
-              alt={profile.name}
-              className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg object-cover border border-edge shrink-0 shadow-sm"
-            />
+          {profile?.photoUrl && !imageError ? (
+            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden border border-edge shrink-0 shadow-sm bg-surface">
+              <img
+                src={resolveMediaUrl(profile.photoUrl)}
+                alt={profile.name}
+                style={getPhotoStyle(profile)}
+                onError={() => setImageError(true)}
+              />
+            </div>
           ) : (
             <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg bg-brand-soft text-brand-soft-text flex items-center justify-center font-heading font-bold text-xl sm:text-2xl shrink-0 shadow-sm">
               {profile?.name

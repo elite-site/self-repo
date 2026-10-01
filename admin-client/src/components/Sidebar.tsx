@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import {
   Home,
-  ClipboardList,
   Users,
   Clock,
   LogOut,
@@ -67,7 +66,6 @@ const navGroups: NavGroup[] = [
     label: 'Students',
     items: [
       { id: 'students', label: 'All Students', icon: Users },
-      { id: 'submissions', label: 'Video Submissions', icon: ClipboardList },
       { id: 'moderation', label: 'Moderation Queue', icon: ShieldCheck },
     ],
   },

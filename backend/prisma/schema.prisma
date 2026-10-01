@@ -339,6 +339,8 @@ model StudentProfile {
   // Professional links
   githubUrl    String?
   linkedinUrl  String?
+  leetcodeUrl  String?
+  codechefUrl  String?
   portfolioUrl String?
 
   // Skills (many-to-many via join table)

@@ -25,9 +25,12 @@ import { api, resolveMediaUrl } from '../services/api';
 import { StudentProfile, Project, Certificate, Achievement } from '../types';
 import { getPhotoStyle } from '../utils/photoStyle';
 import { BrandedLoading } from '../components/BrandedLoading';
+import { createPortal } from 'react-dom';
+import { LeetCodeIcon, CodeChefIcon } from '../components/icons/PlatformIcons';
 
 export const ProfilePage: React.FC = () => {
   const [profile, setProfile] = useState<StudentProfile | null>(null);
+  const [imageError, setImageError] = useState(false);
   const [resume, setResume] = useState<any | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
@@ -36,6 +39,10 @@ export const ProfilePage: React.FC = () => {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setImageError(false);
+  }, [profile?.photoUrl]);
 
   // Academic change request modal state
   const [modalOpen, setModalOpen] = useState(false);
@@ -190,12 +197,13 @@ export const ProfilePage: React.FC = () => {
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 -mt-12 sm:-mt-16 mb-6">
             {/* Avatar */}
             <div className="relative">
-              {profile?.photoUrl ? (
+              {profile?.photoUrl && !imageError ? (
                 <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-lg overflow-hidden border-4 border-on-primary shadow-md bg-surface shrink-0">
                   <img
                     src={resolveMediaUrl(profile.photoUrl)}
                     alt={profile.name}
                     style={getPhotoStyle(profile)}
+                    onError={() => setImageError(true)}
                   />
                 </div>
               ) : (
@@ -291,6 +299,28 @@ export const ProfilePage: React.FC = () => {
                   <span>LinkedIn</span>
                 </a>
               )}
+              {profile?.leetcodeUrl && (
+                <a
+                  href={profile.leetcodeUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn btn-secondary px-3 py-1.5 text-xs hover:border-amber-500/40"
+                >
+                  <LeetCodeIcon className="w-3.5 h-3.5 text-amber-500" />
+                  <span>LeetCode</span>
+                </a>
+              )}
+              {profile?.codechefUrl && (
+                <a
+                  href={profile.codechefUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn btn-secondary px-3 py-1.5 text-xs hover:border-amber-700/40"
+                >
+                  <CodeChefIcon className="w-3.5 h-3.5 text-amber-700" />
+                  <span>CodeChef</span>
+                </a>
+              )}
               {profile?.portfolioUrl && (
                 <a
                   href={profile.portfolioUrl}
@@ -302,9 +332,9 @@ export const ProfilePage: React.FC = () => {
                   <span>Portfolio Site</span>
                 </a>
               )}
-              {!profile?.githubUrl && !profile?.linkedinUrl && !profile?.portfolioUrl && (
+              {!profile?.githubUrl && !profile?.linkedinUrl && !profile?.leetcodeUrl && !profile?.codechefUrl && !profile?.portfolioUrl && (
                 <span className="text-xs text-ink-muted italic">
-                  No professional links added. Add your GitHub or LinkedIn in Edit Profile.
+                  No professional links added. Add your GitHub, LinkedIn, LeetCode, or CodeChef in Edit Profile.
                 </span>
               )}
             </div>
@@ -644,110 +674,123 @@ export const ProfilePage: React.FC = () => {
       </div>
 
       {/* 3. MODAL DIALOG: REQUEST ACADEMIC DETAIL CHANGE */}
-      {modalOpen && (
-        <div className="fixed inset-0 z-modal flex items-center justify-center p-4 bg-overlay-scrim" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-          <div className="surface max-w-lg w-full p-6 shadow-modal border border-edge animate-scale-in text-left">
-            <div className="flex items-center justify-between pb-3 border-b border-edge">
-              <div className="flex items-center gap-2">
-                <ShieldAlert className="w-5 h-5 text-status-rejected" />
-                <h3 id="modal-title" className="text-base font-bold text-ink font-heading">Request Academic Record Correction</h3>
+      {modalOpen &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-modal flex items-center justify-center p-4 bg-overlay-scrim overflow-y-auto animate-fade-in"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="modal-title"
+            onClick={(e) => {
+              if (e.target === e.currentTarget && !submittingReq) setModalOpen(false);
+            }}
+          >
+            <div
+              className="surface max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 shadow-modal border border-edge animate-scale-in text-left my-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between pb-3 border-b border-edge">
+                <div className="flex items-center gap-2">
+                  <ShieldAlert className="w-5 h-5 text-status-rejected" />
+                  <h3 id="modal-title" className="text-base font-bold text-ink font-heading">Request Academic Record Correction</h3>
+                </div>
+                <button
+                  onClick={() => setModalOpen(false)}
+                  className="p-1.5 text-ink-muted hover:text-ink rounded-lg hover:bg-surface-sunken cursor-pointer"
+                  aria-label="Close modal"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
-              <button
-                onClick={() => setModalOpen(false)}
-                className="p-1.5 text-ink-muted hover:text-ink rounded-lg hover:bg-surface-sunken cursor-pointer"
-                aria-label="Close modal"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
 
-            {reqSuccess ? (
-              <div className="py-8 text-center space-y-3">
-                <CheckCircle2 className="w-12 h-12 text-status-approved mx-auto" />
-                <h4 className="text-base font-bold text-ink font-heading">Request Submitted Successfully!</h4>
-                <p className="text-xs text-ink-secondary max-w-xs mx-auto">
-                  Your request has been routed to department administrators for verification.
-                </p>
-              </div>
-            ) : (
-              <form onSubmit={handleSubmitChangeRequest} className="space-y-4 pt-4">
-                {reqError && (
-                  <div className="p-3 bg-status-bg-rejected border border-status-rejected rounded-lg text-xs text-status-rejected flex items-center gap-2">
-                    <AlertCircle className="w-4 h-4 shrink-0" />
-                    <span>{reqError}</span>
+              {reqSuccess ? (
+                <div className="py-8 text-center space-y-3">
+                  <CheckCircle2 className="w-12 h-12 text-status-approved mx-auto" />
+                  <h4 className="text-base font-bold text-ink font-heading">Request Submitted Successfully!</h4>
+                  <p className="text-xs text-ink-secondary max-w-xs mx-auto">
+                    Your request has been routed to department administrators for verification.
+                  </p>
+                </div>
+              ) : (
+                <form onSubmit={handleSubmitChangeRequest} className="space-y-4 pt-4">
+                  {reqError && (
+                    <div className="p-3 bg-status-bg-rejected border border-status-rejected rounded-lg text-xs text-status-rejected flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 shrink-0" />
+                      <span>{reqError}</span>
+                    </div>
+                  )}
+
+                  <div>
+                    <label htmlFor="field-name" className="label font-heading">
+                      Field to Correct
+                    </label>
+                    <select
+                      id="field-name"
+                      value={fieldName}
+                      onChange={(e) => setFieldName(e.target.value)}
+                      className="select"
+                    >
+                      <option value="name">Full Name</option>
+                      <option value="year">Year of Study</option>
+                      <option value="section">Section</option>
+                      <option value="branch">Branch / Department</option>
+                      <option value="rollNo">Roll Number</option>
+                    </select>
                   </div>
-                )}
 
-                <div>
-                  <label htmlFor="field-name" className="label font-heading">
-                    Field to Correct
-                  </label>
-                  <select
-                    id="field-name"
-                    value={fieldName}
-                    onChange={(e) => setFieldName(e.target.value)}
-                    className="select"
-                  >
-                    <option value="name">Full Name</option>
-                    <option value="year">Year of Study</option>
-                    <option value="section">Section</option>
-                    <option value="branch">Branch / Department</option>
-                    <option value="rollNo">Roll Number</option>
-                  </select>
-                </div>
+                  <div>
+                    <label htmlFor="requested-value" className="label font-heading">
+                      Requested New Value
+                    </label>
+                    <input
+                      id="requested-value"
+                      type="text"
+                      required
+                      value={requestedValue}
+                      onChange={(e) => setRequestedValue(e.target.value)}
+                      placeholder="Enter the correct spelling or value"
+                      className="input"
+                    />
+                  </div>
 
-                <div>
-                  <label htmlFor="requested-value" className="label font-heading">
-                    Requested New Value
-                  </label>
-                  <input
-                    id="requested-value"
-                    type="text"
-                    required
-                    value={requestedValue}
-                    onChange={(e) => setRequestedValue(e.target.value)}
-                    placeholder="Enter the correct spelling or value"
-                    className="input"
-                  />
-                </div>
+                  <div>
+                    <label htmlFor="reason" className="label font-heading">
+                      Reason for Correction
+                    </label>
+                    <textarea
+                      id="reason"
+                      required
+                      rows={3}
+                      value={reason}
+                      onChange={(e) => setReason(e.target.value)}
+                      placeholder="Explain why this change is necessary (e.g. Typo in admission records, section transfer)..."
+                      className="textarea"
+                    />
+                  </div>
 
-                <div>
-                  <label htmlFor="reason" className="label font-heading">
-                    Reason for Correction
-                  </label>
-                  <textarea
-                    id="reason"
-                    required
-                    rows={3}
-                    value={reason}
-                    onChange={(e) => setReason(e.target.value)}
-                    placeholder="Explain why this change is necessary (e.g. Typo in admission records, section transfer)..."
-                    className="textarea"
-                  />
-                </div>
-
-                <div className="pt-2 flex items-center justify-end gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setModalOpen(false)}
-                    className="btn btn-secondary text-xs"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={submittingReq || !requestedValue.trim() || !reason.trim()}
-                    className="btn btn-primary text-xs"
-                  >
-                    {submittingReq ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-                    <span>Submit Request</span>
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
-        </div>
-      )}
+                  <div className="pt-2 flex items-center justify-end gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setModalOpen(false)}
+                      className="btn btn-secondary text-xs"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={submittingReq || !requestedValue.trim() || !reason.trim()}
+                      className="btn btn-primary text-xs"
+                    >
+                      {submittingReq ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                      <span>Submit Request</span>
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 };

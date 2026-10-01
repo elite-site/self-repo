@@ -171,6 +171,7 @@ describe('WebP Thumbnails and Cache Invalidation', () => {
         name: 'Jane Doe',
         year: 3,
         section: 'A',
+        status: 'ACTIVE',
         profile: {
           id: 'p_1',
           photoUrl: 'photo.jpg',

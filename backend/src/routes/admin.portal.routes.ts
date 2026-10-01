@@ -87,7 +87,7 @@ router.get('/students/:id', async (req: Request, res: Response) => {
       return {
         ...rest,
         streamUrl: `/api/public/videos/stream/${v.id}`,
-        thumbnailUrl: v.driveFileId ? `/api/public/media/thumbnail/video/${v.id}?v=${encodeURIComponent(v.driveFileId)}` : null,
+        thumbnailUrl: (v.driveFileId && v.driveFileId.trim()) ? `/api/public/media/thumbnail/video/${v.id}?v=${encodeURIComponent(v.driveFileId.trim())}` : null,
         watchUrl: typeof driveService.getWatchUrl === 'function' ? driveService.getWatchUrl(v.driveFileId) : null,
         previewUrl: typeof driveService.getPreviewUrl === 'function' ? driveService.getPreviewUrl(v.driveFileId) : null,
       };
@@ -123,8 +123,18 @@ router.get('/students/:id', async (req: Request, res: Response) => {
       };
     });
 
+    const photoUrl = (student.profile?.photoDriveId || student.profile?.photoUrl)
+      ? `/api/public/media/photo/${student.profile?.id || student.id}`
+      : student.profile?.photoUrl || null;
+
     res.json({
       ...student,
+      profile: student.profile
+        ? {
+            ...student.profile,
+            photoUrl: photoUrl || undefined,
+          }
+        : null,
       introVideos,
       resumes,
       achievements,
@@ -290,14 +300,81 @@ router.delete('/students/:studentId/items/:type/:itemId', async (req: Request, r
     const normalizedType = type.toLowerCase().replace(/_/g, '-');
 
     if (normalizedType === 'video' || normalizedType === 'intro-video' || normalizedType === 'videos') {
-      const item = await prisma.introVideo.findUnique({ where: { id: itemId } });
+      let item = await prisma.introVideo.findUnique({ where: { id: itemId } });
       if (!item || item.studentId !== student.id) {
+        const fallback = await prisma.introVideo.findFirst({
+          where: {
+            OR: [
+              { id: itemId, studentId: student.id },
+              { id: itemId, student: { rollNo: student.rollNo } },
+              { studentId: student.id },
+              { student: { rollNo: student.rollNo } },
+            ],
+          },
+          orderBy: { submittedAt: 'desc' },
+        });
+        if (fallback) {
+          item = fallback;
+        }
+      }
+
+      const submissions = await prisma.submission.findMany({
+        where: {
+          OR: [
+            { rollNo: student.rollNo },
+            { id: student.id },
+            { rollNo: student.id },
+            { id: itemId },
+          ],
+        },
+      });
+
+      if (!item && !submissions.some((s) => Boolean(s.videoDriveId))) {
         return res.status(404).json({ error: 'NOT_FOUND', message: 'Video not found.' });
       }
-      if (item.driveFileId) {
+
+      // a) If item.driveFileId, delete it from Google Drive / mock storage via driveService.deleteFileById
+      if (item?.driveFileId) {
         await driveService.deleteFileById(item.driveFileId).catch(() => {});
       }
-      await prisma.introVideo.delete({ where: { id: itemId } });
+
+      // b) Reset all IntroVideo rows for this student: wipe Drive ID, thumbnail, and set status to CHANGES_REQUESTED
+      await prisma.introVideo.updateMany({
+        where: {
+          OR: [
+            { studentId: student.id },
+            { student: { rollNo: student.rollNo } },
+          ],
+        },
+        data: {
+          driveFileId: null,
+          thumbnail: null,
+          filename: null,
+          mimeType: null,
+          sizeMb: null,
+          status: 'CHANGES_REQUESTED',
+          reviewNote: reasonText || 'Video removed by administrator.',
+          isPublic: false,
+          publishedAt: null,
+          changeRequestedAt: new Date(),
+          changeRequestNote: reasonText || 'Your previous video was removed. Please upload a new one.',
+        },
+      });
+
+      // c) Also find any Submission row matching the student's rollNo or id. If submission.videoDriveId exists, delete that Drive file too, and update submission.videoDriveId = null.
+      for (const sub of submissions) {
+        if (sub.videoDriveId) {
+          if (!item || sub.videoDriveId !== item.driveFileId) {
+            await driveService.deleteFileById(sub.videoDriveId, sub.driveFolderPath).catch(() => {});
+          }
+          await prisma.submission.update({
+            where: { id: sub.id },
+            data: { videoDriveId: null },
+          });
+        }
+      }
+
+      // e) Add audit logging and student notification
       await notifyStudent({
         studentId: student.id,
         title: 'Introduction Video Deleted',
@@ -305,6 +382,14 @@ router.delete('/students/:studentId/items/:type/:itemId', async (req: Request, r
           ? `Your introduction video was removed by administrator. Reason: "${reasonText}".`
           : 'Your introduction video was removed by administrator.',
         actionUrl: '/intro-video',
+      });
+
+      await ActivityService.log({
+        category: 'ADMIN',
+        action: 'DELETE_VIDEO',
+        details: `Admin deleted video (${itemId}) for student ${student.rollNo}${reasonText ? ` (Reason: ${reasonText})` : ''}`,
+        applicantName: student.name,
+        userEmail: (req as any).user?.email || 'admin',
       });
     } else if (normalizedType === 'resume' || normalizedType === 'resumes') {
       const item = await prisma.resume.findUnique({ where: { id: itemId } });
@@ -422,7 +507,7 @@ router.get('/moderation', async (req: Request, res: Response) => {
       const { thumbnail: _t, ...rest } = v;
       return {
         ...rest,
-        thumbnailUrl: v.driveFileId ? `/api/public/media/thumbnail/video/${v.id}?v=${encodeURIComponent(v.driveFileId)}` : null,
+        thumbnailUrl: (v.driveFileId && v.driveFileId.trim()) ? `/api/public/media/thumbnail/video/${v.id}?v=${encodeURIComponent(v.driveFileId.trim())}` : null,
       };
     });
     res.json({ videos: mappedVideos, resumes: [], achievements: [], certificates: [] });
@@ -496,6 +581,8 @@ const handleModerationDecision = async (
       return prisma.achievement.update({ where: { id }, data: { status, reviewNote: reason } });
     case 'certificates':
       return prisma.certificate.update({ where: { id }, data: { status, reviewNote: reason } });
+    case 'projects':
+      return prisma.project.update({ where: { id }, data: { status, reviewNote: reason } });
     default:
       throw new Error(`Invalid moderation type: ${type}`);
   }

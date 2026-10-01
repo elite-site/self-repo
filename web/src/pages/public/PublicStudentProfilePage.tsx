@@ -20,6 +20,7 @@ import { Navbar } from '../../components/Navbar';
 import { Footer } from '../../components/Footer';
 import { BrandedLoading } from '../../components/BrandedLoading';
 import { getPhotoStyle } from '../../utils/photoStyle';
+import { LeetCodeIcon, CodeChefIcon } from '../../components/icons/PlatformIcons';
 
 interface PublicProfileProps {
   session?: StudentSession | null;
@@ -30,6 +31,11 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
   const { rollNo } = useParams<{ rollNo: string }>();
   const [student, setStudent] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
+  const [imageError, setImageError] = useState(false);
+
+  useEffect(() => {
+    setImageError(false);
+  }, [rollNo]);
 
   useEffect(() => {
     if (!rollNo) return;
@@ -127,11 +133,12 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
           <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 sm:gap-8">
             {/* Avatar */}
             <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-lg bg-brand-soft text-brand-soft-text flex items-center justify-center font-bold text-3xl shadow-xs overflow-hidden shrink-0 border border-edge">
-              {profile.viewUrl || profile.photoUrl ? (
+              {(profile.viewUrl || profile.photoUrl) && !imageError ? (
                 <img
                   src={resolveMediaUrl(profile.viewUrl || profile.photoUrl)}
                   alt={student.name}
                   style={getPhotoStyle(profile)}
+                  onError={() => setImageError(true)}
                 />
               ) : (
                 initials || 'IT'
@@ -183,6 +190,30 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
                     aria-label="LinkedIn Profile"
                   >
                     <Linkedin className="w-4 h-4" aria-hidden="true" />
+                  </a>
+                )}
+                {profile.leetcodeUrl && (
+                  <a
+                    href={profile.leetcodeUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="p-2 rounded-lg bg-surface-sunken hover:bg-amber-500/10 border border-edge hover:border-amber-500/30 text-amber-500 transition-colors"
+                    title="LeetCode Profile"
+                    aria-label="LeetCode Profile"
+                  >
+                    <LeetCodeIcon className="w-4 h-4" />
+                  </a>
+                )}
+                {profile.codechefUrl && (
+                  <a
+                    href={profile.codechefUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="p-2 rounded-lg bg-surface-sunken hover:bg-amber-700/10 border border-edge hover:border-amber-700/30 text-amber-700 transition-colors"
+                    title="CodeChef Profile"
+                    aria-label="CodeChef Profile"
+                  >
+                    <CodeChefIcon className="w-4 h-4" />
                   </a>
                 )}
                 {profile.portfolioUrl && (

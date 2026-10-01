@@ -354,16 +354,19 @@ export const StudentDirectoryPage: React.FC<StudentDirectoryProps> = ({ session,
                       <div className="space-y-4">
                         <div className="flex items-center justify-between">
                           <div className="w-14 h-14 rounded-lg bg-brand-soft text-brand-soft-text flex items-center justify-center font-bold text-base shadow-xs group-hover:bg-brand group-hover:text-on-primary transition-colors overflow-hidden relative">
-                            {photoUrl ? (
+                            <span aria-hidden="true">{initials || 'IT'}</span>
+                            {photoUrl && (
                               <img
                                 src={photoUrl}
                                 alt=""
                                 loading="lazy"
                                 decoding="async"
-                                style={{ ...getPhotoStyle(s.profile), objectFit: 'cover', width: '100%', height: '100%' }}
+                                className="absolute inset-0 w-full h-full"
+                                style={{ ...getPhotoStyle(s.profile), objectFit: 'cover' }}
+                                onError={(e) => {
+                                  (e.currentTarget as HTMLElement).style.display = 'none';
+                                }}
                               />
-                            ) : (
-                              <span aria-hidden="true">{initials || 'IT'}</span>
                             )}
                           </div>
                           <span className="text-[11px] font-semibold bg-surface-sunken text-ink-secondary px-2.5 py-1 rounded-full border border-edge">

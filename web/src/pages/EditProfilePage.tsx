@@ -23,6 +23,7 @@ import type { StudentOutletContext } from '../components/layout/StudentLayout';
 import { StudentProfile } from '../types';
 import { PhotoCropModal } from '../components/PhotoCropModal';
 import { getPhotoStyle } from '../utils/photoStyle';
+import { LeetCodeIcon, CodeChefIcon } from '../components/icons/PlatformIcons';
 
 const COMMON_SKILLS = [
   'Python',
@@ -60,6 +61,8 @@ export const EditProfilePage: React.FC = () => {
   const [bio, setBio] = useState('');
   const [githubUrl, setGithubUrl] = useState('');
   const [linkedinUrl, setLinkedinUrl] = useState('');
+  const [leetcodeUrl, setLeetcodeUrl] = useState('');
+  const [codechefUrl, setCodechefUrl] = useState('');
   const [portfolioUrl, setPortfolioUrl] = useState('');
   const [skills, setSkills] = useState<string[]>([]);
   const [customSkill, setCustomSkill] = useState('');
@@ -87,6 +90,8 @@ export const EditProfilePage: React.FC = () => {
         setBio(data.bio || (data as any).biography || '');
         setGithubUrl(data.githubUrl || '');
         setLinkedinUrl(data.linkedinUrl || '');
+        setLeetcodeUrl(data.leetcodeUrl || '');
+        setCodechefUrl(data.codechefUrl || '');
         setPortfolioUrl(data.portfolioUrl || '');
         setSkills(Array.isArray(data.skills) ? data.skills : []);
       })
@@ -196,6 +201,8 @@ export const EditProfilePage: React.FC = () => {
     const links: Array<[SocialLinkKind, string, (v: string) => void]> = [
       ['github', githubUrl, setGithubUrl],
       ['linkedin', linkedinUrl, setLinkedinUrl],
+      ['leetcode', leetcodeUrl, setLeetcodeUrl],
+      ['codechef', codechefUrl, setCodechefUrl],
       ['portfolio', portfolioUrl, setPortfolioUrl],
     ];
     const normalized: Record<string, string> = {};
@@ -222,6 +229,8 @@ export const EditProfilePage: React.FC = () => {
           bio: bio.trim(),
           githubUrl: normalized.github,
           linkedinUrl: normalized.linkedin,
+          leetcodeUrl: normalized.leetcode,
+          codechefUrl: normalized.codechef,
           portfolioUrl: normalized.portfolio,
         }),
         api.updateSkills(skills),
@@ -476,7 +485,7 @@ export const EditProfilePage: React.FC = () => {
         {/* SECTION 4: PROFESSIONAL & REPOSITORY LINKS */}
         <div className="surface space-y-4">
           <h2 className="text-label-lg font-bold text-ink font-heading">Professional & Social Links</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div className="space-y-1.5">
               <label className="text-label-sm font-bold text-ink-secondary flex items-center gap-1.5">
                 <Github className="w-3.5 h-3.5 text-ink-secondary" />
@@ -520,6 +529,52 @@ export const EditProfilePage: React.FC = () => {
               />
               {linkErrors.linkedin && (
                 <span id="linkedin-error" className="error-text" role="alert">{linkErrors.linkedin}</span>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-label-sm font-bold text-ink-secondary flex items-center gap-1.5">
+                <LeetCodeIcon className="w-3.5 h-3.5 text-amber-500" />
+                <span>LeetCode URL</span>
+              </label>
+              <input
+                type="text"
+                inputMode="url"
+                autoComplete="off"
+                spellCheck={false}
+                value={leetcodeUrl}
+                onChange={(e) => setLeetcodeUrl(e.target.value)}
+                onBlur={(e) => setLeetcodeUrl(applyLink('leetcode', e.target.value))}
+                placeholder="jane, @jane or leetcode.com/u/jane"
+                className="input"
+                aria-invalid={!!linkErrors.leetcode}
+                aria-describedby={linkErrors.leetcode ? 'leetcode-error' : undefined}
+              />
+              {linkErrors.leetcode && (
+                <span id="leetcode-error" className="error-text" role="alert">{linkErrors.leetcode}</span>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-label-sm font-bold text-ink-secondary flex items-center gap-1.5">
+                <CodeChefIcon className="w-3.5 h-3.5 text-amber-700" />
+                <span>CodeChef URL</span>
+              </label>
+              <input
+                type="text"
+                inputMode="url"
+                autoComplete="off"
+                spellCheck={false}
+                value={codechefUrl}
+                onChange={(e) => setCodechefUrl(e.target.value)}
+                onBlur={(e) => setCodechefUrl(applyLink('codechef', e.target.value))}
+                placeholder="jane, @jane or codechef.com/users/jane"
+                className="input"
+                aria-invalid={!!linkErrors.codechef}
+                aria-describedby={linkErrors.codechef ? 'codechef-error' : undefined}
+              />
+              {linkErrors.codechef && (
+                <span id="codechef-error" className="error-text" role="alert">{linkErrors.codechef}</span>
               )}
             </div>
 

@@ -99,8 +99,44 @@ router.post('/logout', (_req: Request, res: Response) => {
   res.json({ success: true, message: 'Logged out successfully.' });
 });
 
-// GET /admin/me
-router.get('/me', requireAdminAuth, (req: Request, res: Response) => {
+// GET /admin/me — fast sync with live roles and permissions from database
+router.get('/me', requireAdminAuth, async (req: Request, res: Response): Promise<void> => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+
+  if (req.adminUser?.userId) {
+    try {
+      const admin = await prisma.adminUser.findUnique({
+        where: { id: req.adminUser.userId },
+        include: {
+          roleAssignments: {
+            include: {
+              role: {
+                include: { permissions: true }
+              }
+            }
+          }
+        }
+      });
+
+      if (admin) {
+        res.json({
+          authenticated: true,
+          user: {
+            id: admin.id,
+            userId: admin.id,
+            email: admin.email,
+            username: admin.username,
+            role: admin.role,
+            roleAssignments: admin.roleAssignments,
+          },
+        });
+        return;
+      }
+    } catch (_) {}
+  }
+
   res.json({
     authenticated: true,
     user: req.adminUser,

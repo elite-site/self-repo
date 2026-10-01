@@ -11,22 +11,35 @@
  * genuinely not a link is rejected with a message instead of being saved broken.
  */
 
-export type SocialLinkKind = 'github' | 'linkedin' | 'portfolio';
+export type SocialLinkKind = 'github' | 'linkedin' | 'leetcode' | 'codechef' | 'portfolio';
 
-const PLATFORM_HOST: Record<'github' | 'linkedin', string> = {
+const PLATFORM_HOST: Record<'github' | 'linkedin' | 'leetcode' | 'codechef', string> = {
   github: 'github.com',
   linkedin: 'www.linkedin.com',
+  leetcode: 'leetcode.com',
+  codechef: 'www.codechef.com',
 };
 
-const PLATFORM_PATH_PREFIX: Record<'github' | 'linkedin', string> = {
+const PLATFORM_PATH_PREFIX: Record<'github' | 'linkedin' | 'leetcode' | 'codechef', string> = {
   github: '',
   linkedin: '/in',
+  leetcode: '/u',
+  codechef: '/users',
 };
 
 /** Hosts that identify a value as a link to the platform rather than a username. */
-const PLATFORM_HOSTS: Record<'github' | 'linkedin', string[]> = {
+const PLATFORM_HOSTS: Record<'github' | 'linkedin' | 'leetcode' | 'codechef', string[]> = {
   github: ['github.com'],
   linkedin: ['linkedin.com'],
+  leetcode: ['leetcode.com'],
+  codechef: ['codechef.com'],
+};
+
+const PLATFORM_LABELS: Record<'github' | 'linkedin' | 'leetcode' | 'codechef', string> = {
+  github: 'GitHub',
+  linkedin: 'LinkedIn',
+  leetcode: 'LeetCode',
+  codechef: 'CodeChef',
 };
 
 /** A bare username: alphanumerics plus `.`, `_`, `-`, not starting/ending on a dot. */
@@ -96,7 +109,7 @@ export function normalizeSocialLink(kind: SocialLinkKind, input: string | null |
   const host = first.toLowerCase();
   const rawPath = slash === -1 ? '' : rest.slice(slash + 1);
   const isPlatformField = kind !== 'portfolio';
-  const platformLabel = kind === 'github' ? 'GitHub' : 'LinkedIn';
+  const platformLabel = isPlatformField ? PLATFORM_LABELS[kind] : '';
 
   // On the platform fields a value with no path separator is a username, even
   // when it contains dots or dashes — `jane.doe` is a far more likely GitHub
@@ -126,20 +139,28 @@ export function normalizeSocialLink(kind: SocialLinkKind, input: string | null |
   const path = rawPath.replace(/\/{2,}/g, '/').replace(/\/+$/, '');
 
   // On the platform's own domain the username is the meaningful part, so it is
-  // validated as one. `linkedin.com/in/jane` and `github.com/jane` both reduce
-  // to a bare handle and are rebuilt in canonical form.
+  // validated as one. `linkedin.com/in/jane`, `leetcode.com/u/jane`, `codechef.com/users/jane`
+  // and `github.com/jane` all reduce to a bare handle and are rebuilt in canonical form.
   if (isPlatformField && PLATFORM_HOSTS[kind].includes(host)) {
     const segments = path.split('/').filter(Boolean);
-    const prefix = PLATFORM_PATH_PREFIX[kind];
-    const handle = prefix ? segments[1] : segments[0];
-    // `linkedin.com/in/` with no username, or `github.com/` with no username.
+    let handle = '';
+    if (kind === 'linkedin') {
+      handle = segments[0] === 'in' ? segments[1] : segments[0];
+    } else if (kind === 'leetcode') {
+      handle = segments[0] === 'u' ? segments[1] : segments[0];
+    } else if (kind === 'codechef') {
+      handle = segments[0] === 'users' ? segments[1] : segments[0];
+    } else {
+      handle = segments[0];
+    }
+
     if (!handle) {
       return bad(`Enter your ${platformLabel} username.`);
     }
     if (!HANDLE_RE.test(handle)) {
       return bad('Enter a valid username.');
     }
-    return ok(`https://${PLATFORM_HOST[kind]}${prefix}/${handle}`, handle);
+    return ok(`https://${PLATFORM_HOST[kind]}${PLATFORM_PATH_PREFIX[kind]}/${handle}`, handle);
   }
 
   return ok(`https://${host}${path ? `/${path}` : ''}`);

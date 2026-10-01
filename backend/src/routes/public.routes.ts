@@ -367,6 +367,17 @@ router.get(
           });
           driveFileId = sub?.videoDriveId ?? null;
         }
+
+        // If video was deleted or has no driveFileId, return placeholder SVG immediately rather than serving a stale or cached thumbnail
+        if (!driveFileId || !driveFileId.trim()) {
+          const svg = getThumbnailPlaceholderSvg('video');
+          res.setHeader('Content-Type', 'image/svg+xml');
+          res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+          res.setHeader('Pragma', 'no-cache');
+          res.setHeader('Expires', '0');
+          res.status(200).send(svg);
+          return;
+        }
       }
 
       if (record?.thumbnail) {
@@ -402,14 +413,17 @@ router.get(
       const versionKey = driveFileId || id;
       const etag = `"${versionKey}"`;
 
+      const isVideo = type === 'video';
+      const cacheControl = isVideo ? 'public, max-age=60, must-revalidate' : 'public, max-age=604800, immutable';
+
       if (req.headers['if-none-match'] === etag) {
-        res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
+        res.setHeader('Cache-Control', cacheControl);
         res.setHeader('ETag', etag);
         res.status(304).end();
         return;
       }
 
-      res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
+      res.setHeader('Cache-Control', cacheControl);
       res.setHeader('ETag', etag);
 
       if (thumbnail) {

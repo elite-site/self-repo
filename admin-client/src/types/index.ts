@@ -410,3 +410,108 @@ export interface SettingsResponse {
     updatedAt: string;
   }>;
 }
+
+// Moderation
+export type ModerationType = 'videos' | 'resumes' | 'certificates' | 'achievements' | 'projects';
+
+export interface ModerationDecisionData {
+  action: 'approve' | 'reject' | 'changes' | 'hide' | string;
+  reason?: string;
+  publish?: boolean;
+}
+
+export interface ModerationDecisionResult {
+  success?: boolean;
+  message?: string;
+  video?: any;
+  resume?: any;
+  certificate?: any;
+  achievement?: any;
+  project?: any;
+  isPublic?: boolean;
+  [key: string]: any;
+}
+
+export interface ModerationBaseItem {
+  id: string;
+  studentName: string;
+  studentRoll: string;
+  status: string;
+  fileUrl?: string | null;
+  thumbnailUrl?: string | null;
+  submittedAt?: string;
+  createdAt?: string;
+  title?: string;
+  reason?: string;
+  reviewNote?: string | null;
+  driveFileId?: string | null;
+  fileDriveId?: string | null;
+  proofDriveId?: string | null;
+  watchUrl?: string | null;
+  previewUrl?: string | null;
+  [key: string]: any;
+}
+
+export interface ModerationVideoItem extends ModerationBaseItem {
+  submittedAt: string;
+  isPublic: boolean;
+  publicUrl?: string | null;
+  changeRequestedAt?: string | null;
+  changeRequestNote?: string | null;
+}
+
+export interface ModerationResumeItem extends ModerationBaseItem {
+  driveFileId?: string | null;
+}
+
+export interface ModerationAchievementItem extends ModerationBaseItem {
+  description?: string | null;
+  organization?: string | null;
+  category?: string;
+  proofUrl?: string | null;
+}
+
+export interface ModerationCertificateItem extends ModerationBaseItem {
+  issuer?: string | null;
+  fileDriveId?: string | null;
+}
+
+export interface ModerationProjectItem extends ModerationBaseItem {
+  description?: string | null;
+  technologies?: string[];
+  githubUrl?: string | null;
+  driveVideoUrl?: string | null;
+  isPublic?: boolean;
+}
+
+export interface UnifiedModerationItem {
+  id: string;
+  type: ModerationType;
+  itemType: 'video' | 'resume' | 'certificate' | 'project' | 'achievement';
+  studentId: string;
+  studentName: string;
+  studentRoll: string;
+  studentYear?: number;
+  studentSection?: string;
+  studentBranch?: string;
+  title: string;
+  description?: string | null;
+  fileUrl?: string | null;
+  thumbnailUrl?: string | null;
+  driveFileId?: string | null;
+  fileDriveId?: string | null;
+  proofDriveId?: string | null;
+  proofUrl?: string | null;
+  status: string;
+  submittedAt: string;
+  isPublic?: boolean;
+  publicUrl?: string | null;
+  reviewNote?: string | null;
+  technologies?: string[];
+  githubUrl?: string | null;
+  driveVideoUrl?: string | null;
+  organization?: string | null;
+  category?: string;
+  [key: string]: any;
+}
+

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import Cropper, { Area, Point } from 'react-easy-crop';
 import { X, ZoomIn, ZoomOut, RotateCcw, Sparkles, Check, Loader2, Image as ImageIcon } from 'lucide-react';
 import { getCroppedImg } from '../utils/cropImage';
@@ -117,11 +118,11 @@ export const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
 
   const isBusy = isSaving || isProcessing;
 
-  return (
+  return createPortal(
     <div
       ref={modalRef}
       tabIndex={-1}
-      className="fixed inset-0 z-modal flex items-center justify-center p-4 bg-scrim animate-fade-in"
+      className="fixed inset-0 z-modal flex items-center justify-center p-4 bg-scrim animate-fade-in overflow-y-auto"
       role="dialog"
       aria-modal="true"
       aria-labelledby="photo-crop-title"
@@ -131,7 +132,7 @@ export const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
         }
       }}
     >
-      <div className="surface bg-surface rounded-xl max-w-lg w-full p-5 sm:p-6 shadow-modal border border-edge animate-scale-in flex flex-col gap-4 text-left">
+      <div className="surface bg-surface rounded-xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-5 sm:p-6 shadow-modal border border-edge animate-scale-in flex flex-col gap-4 text-left my-auto" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-edge">
           <div className="flex items-center gap-2.5">
@@ -275,6 +276,7 @@ export const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

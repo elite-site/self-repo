@@ -7,6 +7,14 @@ import {
   EmailHistoryResponse,
   EmailTemplateItem,
   EventItem,
+  ModerationAchievementItem,
+  ModerationCertificateItem,
+  ModerationDecisionData,
+  ModerationDecisionResult,
+  ModerationProjectItem,
+  ModerationResumeItem,
+  ModerationType,
+  ModerationVideoItem,
   RegistrationItem,
   RegistrationsResponse,
   RegistrationTeam,
@@ -18,6 +26,7 @@ import {
   Submission,
   SubmissionRating,
   SubmissionsResponse,
+  UnifiedModerationItem,
 } from '../types';
 
 const client = axios.create({
@@ -217,23 +226,37 @@ export const adminApi = {
   },
 
   // Moderation
-  async getModerationVideos(): Promise<{ items: any[] }> {
+  async getModerationItems(type: string = 'all', status?: string): Promise<{ items: UnifiedModerationItem[]; total: number }> {
+    const res = await client.get('/admin/api/moderation', {
+      params: { type, ...(status ? { status } : {}) },
+    });
+    return res.data || { items: [], total: 0 };
+  },
+  async getModerationVideos(): Promise<{ items: ModerationVideoItem[] }> {
     const res = await client.get('/admin/api/moderation/videos');
     return { items: res.data || [] };
   },
-  async getModerationResumes(): Promise<{ items: any[] }> {
+  async getModerationResumes(): Promise<{ items: ModerationResumeItem[] }> {
     const res = await client.get('/admin/api/moderation/resumes');
     return { items: res.data || [] };
   },
-  async getModerationAchievements(): Promise<{ items: any[] }> {
+  async getModerationAchievements(): Promise<{ items: ModerationAchievementItem[] }> {
     const res = await client.get('/admin/api/moderation/achievements');
     return { items: res.data || [] };
   },
-  async getModerationCertificates(): Promise<{ items: any[] }> {
+  async getModerationCertificates(): Promise<{ items: ModerationCertificateItem[] }> {
     const res = await client.get('/admin/api/moderation/certificates');
     return { items: res.data || [] };
   },
-  async moderationDecision(type: string, id: string, data: { action: string; reason?: string; publish?: boolean }): Promise<any> {
+  async getModerationProjects(): Promise<{ items: ModerationProjectItem[] }> {
+    const res = await client.get('/admin/api/moderation/projects');
+    return { items: res.data || [] };
+  },
+  async moderationDecision(
+    type: ModerationType | string,
+    id: string,
+    data: ModerationDecisionData
+  ): Promise<ModerationDecisionResult> {
     const res = await client.patch(`/admin/api/moderation/${type}/${id}`, data);
     return res.data;
   },

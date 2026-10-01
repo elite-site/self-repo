@@ -96,6 +96,7 @@ describe('Public Students Routes & Visibility Overhaul', () => {
         name: 'Active Student',
         year: 3,
         section: 'B',
+        status: 'ACTIVE',
         profile: {
           id: 'prof_1',
           photoUrl: '/api/public/media/photo/prof_1',
@@ -136,6 +137,94 @@ describe('Public Students Routes & Visibility Overhaul', () => {
       expect(res.body.certificates[0].viewUrl).toBe('/api/public/media/certificate/cert_pub_1');
       expect(res.body.profile.photoOffsetX).toBe(45);
       expect(res.body.profile.photoZoom).toBe(1.2);
+    });
+
+    it('returns 404 when student has unapproved/pending status', async () => {
+      (prisma.student.findUnique as any).mockResolvedValue({
+        id: 'student_pending',
+        rollNo: '23A91A1299',
+        name: 'Pending Student',
+        year: 2,
+        section: 'A',
+        status: 'PENDING',
+        profile: null,
+        projects: [],
+        achievements: [],
+        certificates: [],
+        resumes: [],
+        introVideos: [],
+      });
+
+      const res = await request(app).get('/api/public/students/23A91A1299');
+
+      expect(res.status).toBe(404);
+      expect(res.body.error).toBe('NOT_FOUND');
+    });
+
+    it('attaches intro video ONLY if status is APPROVED, isPublic is true, and driveFileId is present', async () => {
+      (prisma.student.findUnique as any).mockResolvedValue({
+        id: 'student_video',
+        rollNo: '23A91A1207',
+        name: 'Video Student',
+        year: 2,
+        section: 'A',
+        status: 'ACTIVE',
+        profile: null,
+        projects: [],
+        achievements: [],
+        certificates: [],
+        resumes: [],
+        introVideos: [
+          {
+            id: 'video_1',
+            submittedAt: new Date(),
+            publishedAt: new Date(),
+            sizeMb: 12.5,
+            driveFileId: 'drive_vid_123',
+            status: 'APPROVED',
+            isPublic: true,
+          },
+        ],
+      });
+
+      const res = await request(app).get('/api/public/students/23A91A1207');
+
+      expect(res.status).toBe(200);
+      expect(res.body.introVideo).not.toBeNull();
+      expect(res.body.introVideo.id).toBe('video_1');
+      expect(res.body.introVideo.streamUrl).toBe('/api/public/videos/stream/video_1');
+    });
+
+    it('does not attach intro video if it is unapproved or missing driveFileId', async () => {
+      (prisma.student.findUnique as any).mockResolvedValue({
+        id: 'student_unapproved_vid',
+        rollNo: '23A91A1208',
+        name: 'Unapproved Video Student',
+        year: 2,
+        section: 'A',
+        status: 'ACTIVE',
+        profile: null,
+        projects: [],
+        achievements: [],
+        certificates: [],
+        resumes: [],
+        introVideos: [
+          {
+            id: 'video_pending',
+            submittedAt: new Date(),
+            publishedAt: null,
+            sizeMb: 12.5,
+            driveFileId: null,
+            status: 'PENDING',
+            isPublic: false,
+          },
+        ],
+      });
+
+      const res = await request(app).get('/api/public/students/23A91A1208');
+
+      expect(res.status).toBe(200);
+      expect(res.body.introVideo).toBeNull();
     });
   });
 
@@ -211,6 +300,36 @@ describe('Public Students Routes & Visibility Overhaul', () => {
         expect.objectContaining({
           skip: 50,
           take: 50,
+        })
+      );
+    });
+
+    it('enforces that only ACTIVE and GRADUATED students are returned by default', async () => {
+      (prisma.student.count as any).mockResolvedValue(0);
+      (prisma.student.findMany as any).mockResolvedValue([]);
+
+      await request(app).get('/api/public/students');
+
+      expect(prisma.student.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            status: { in: ['ACTIVE', 'GRADUATED'] },
+          }),
+        })
+      );
+    });
+
+    it('blocks unapproved or pending status queries from returning active students', async () => {
+      (prisma.student.count as any).mockResolvedValue(0);
+      (prisma.student.findMany as any).mockResolvedValue([]);
+
+      await request(app).get('/api/public/students?status=PENDING');
+
+      expect(prisma.student.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            status: { in: [] },
+          }),
         })
       );
     });

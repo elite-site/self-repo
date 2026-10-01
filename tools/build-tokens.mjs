@@ -167,6 +167,7 @@ ${block(':root', {
   .btn[aria-disabled='true'] {
     opacity: 0.5;
     cursor: not-allowed;
+    pointer-events: none;
   }
 
   .btn-primary {
@@ -295,6 +296,12 @@ ${block(':root', {
     background-color: var(--surface-sunken);
     border-radius: var(--md);
     animation: skeleton-pulse 1.6s var(--ease-standard) infinite;
+    pointer-events: none !important;
+  }
+
+  .loading,
+  [data-loading='true'] {
+    pointer-events: none !important;
   }
 }
 

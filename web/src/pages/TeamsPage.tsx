@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { api } from '../services/api';
 import { Users, Loader2, Plus, UserPlus, Check, X, AlertCircle, Mail, Trash2 } from 'lucide-react';
 import { BrandedLoading } from '../components/BrandedLoading';
@@ -354,155 +355,185 @@ export const TeamsPage: React.FC = () => {
       </div>
 
       {/* CREATE TEAM MODAL */}
-      {createModalOpen && (
-        <div className="fixed inset-0 z-modal flex items-center justify-center p-4 bg-on-primary/60 backdrop-blur-xs"
-           role="dialog" aria-modal="true" aria-labelledby="create-team-modal-title"> <div className="surface max-w-md w-full p-6 shadow-modal border border-edge text-left">
-            <div className="flex items-center justify-between pb-3 border-b border-edge">
-              <h3 id="create-team-modal-title" className="text-body-md font-bold text-ink font-heading">Create New Team</h3>
-              <button
-                onClick={() => setCreateModalOpen(false)}
-                className="p-1 text-ink-muted hover:text-ink rounded-lg cursor-pointer transition-colors" aria-label="Close create team modal"
-              >
-                <X className="w-5 h-5" aria-hidden="true" />
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateTeam} className="space-y-4 pt-4">
-              {createError && (
-                <div className="p-3 bg-status-bg-rejected border border-edge-strong rounded-lg text-body-sm text-status-rejected" role="alert">
-                  {createError}
-                </div>
-              )}
-
-              {events.length === 0 && (
-                <div className="p-3 bg-status-bg-pending border border-edge-strong rounded-lg text-body-sm text-status-pending flex items-center gap-2" role="status">
-                  <AlertCircle className="w-4 h-4 shrink-0" aria-hidden="true" />
-                  <span>No active event available to create a team for.</span>
-                </div>
-              )}
-
-              <div>
-                <label htmlFor="create-team-event" className="label">Target    Event *</label>
-                {events.length === 0 ? (
-                  <div className="p-2.5 surface-sunken border border-edge rounded-lg text-body-sm text-ink-secondary">
-                    No active event available to create a team for.
-                  </div>
-                ) : (
-                  <select id="create-team-event"
-                    value={selectedEventId}
-                    onChange={(e) => setSelectedEventId(e.target.value)}
-                    required
-                     className="select"
-                  >
-                    <option value="" disabled>Select an event</option>
-                    {events.map((ev) => (
-                      <option key={ev.id} value={ev.id}>
-                        {ev.title || ev.name} ({ev.year || 2026})
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
-
-              <div>
-                <label htmlFor="create-team-name" className="label">Team    Name *</label>
-                <input id="create-team-name"
-                  type="text"
-                  required
-                  value={teamName}
-                  onChange={(e) => setTeamName(e.target.value)}
-                  placeholder="e.g. AlgoRhythms / CyberKnights"
-                   className="input" autoFocus
-                />
-              </div>
-
-              <div className="pt-2 flex items-center justify-end gap-3">
+      {createModalOpen &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-modal flex items-center justify-center p-4 bg-scrim backdrop-blur-xs animate-fade-in overflow-y-auto"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="create-team-modal-title"
+            onClick={(e) => {
+              if (e.target === e.currentTarget && !creating) setCreateModalOpen(false);
+            }}
+          >
+            <div
+              className="surface max-w-md w-full max-h-[90vh] overflow-y-auto p-6 shadow-modal border border-edge text-left my-auto animate-scale-in"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between pb-3 border-b border-edge">
+                <h3 id="create-team-modal-title" className="text-body-md font-bold text-ink font-heading">Create New Team</h3>
                 <button
-                  type="button"
                   onClick={() => setCreateModalOpen(false)}
-                   className="btn btn-ghost"
+                  className="p-1 text-ink-muted hover:text-ink rounded-lg cursor-pointer transition-colors"
+                  aria-label="Close create team modal"
                 >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={creating || !teamName.trim() || !selectedEventId || events.length === 0}
-                   className="btn btn-primary"
-                >
-                  {creating ? 'Creating...' : 'Create Team'}
+                  <X className="w-5 h-5" aria-hidden="true" />
                 </button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
 
-      {/* INVITE MEMBER MODAL */}
-      {inviteModalOpen && (
-        <div className="fixed inset-0 z-modal flex items-center justify-center p-4 bg-on-primary/60 backdrop-blur-xs"
-           role="dialog" aria-modal="true" aria-labelledby="invite-modal-title"> <div className="surface max-w-md w-full p-6 shadow-modal border border-edge text-left">
-            <div className="flex items-center justify-between pb-3 border-b border-edge">
-              <h3 id="invite-modal-title" className="text-body-md font-bold text-ink font-heading">Invite Team Member</h3>
-              <button
-                onClick={() => setInviteModalOpen(false)}
-                className="p-1 text-ink-muted hover:text-ink rounded-lg cursor-pointer transition-colors" aria-label="Close invite modal"
-              >
-                <X className="w-5 h-5" aria-hidden="true" />
-              </button>
-            </div>
-
-            {inviteSuccess ? (
-              <div className="py-8 text-center space-y-2" role="status" aria-live="polite">
-                <Check className="w-10 h-10 text-status-approved mx-auto" aria-hidden="true" />
-                <h4 className="text-body-sm font-bold text-ink font-heading">Invitation Sent!</h4>
-                <p className="text-body-sm text-ink-secondary">The student will receive an invitation in their portal inbox.</p>
-              </div>
-            ) : (
-              <form onSubmit={handleInvite} className="space-y-4 pt-4">
-                {inviteError && (
+              <form onSubmit={handleCreateTeam} className="space-y-4 pt-4">
+                {createError && (
                   <div className="p-3 bg-status-bg-rejected border border-edge-strong rounded-lg text-body-sm text-status-rejected" role="alert">
-                    {inviteError}
+                    {createError}
+                  </div>
+                )}
+
+                {events.length === 0 && (
+                  <div className="p-3 bg-status-bg-pending border border-edge-strong rounded-lg text-body-sm text-status-pending flex items-center gap-2" role="status">
+                    <AlertCircle className="w-4 h-4 shrink-0" aria-hidden="true" />
+                    <span>No active event available to create a team for.</span>
                   </div>
                 )}
 
                 <div>
-                  <label htmlFor="invite-roll-no" className="label">
-                    Student Roll Number *
-                  </label>
-                  <input id="invite-roll-no"
-                    type="text"
-                    required
-                    value={inviteRollNo}
-                    onChange={(e) => setInviteRollNo(e.target.value.toUpperCase())}
-                    placeholder="e.g. 21K61A1201"
-                     className="input font-mono uppercase"
-                  />
-                  <p className="hint">Enter
-                     the student's exact college roll number.</p>
-
+                  <label htmlFor="create-team-event" className="label">Target Event *</label>
+                  {events.length === 0 ? (
+                    <div className="p-2.5 surface-sunken border border-edge rounded-lg text-body-sm text-ink-secondary">
+                      No active event available to create a team for.
+                    </div>
+                  ) : (
+                    <select
+                      id="create-team-event"
+                      value={selectedEventId}
+                      onChange={(e) => setSelectedEventId(e.target.value)}
+                      required
+                      className="select"
+                    >
+                      <option value="" disabled>Select an event</option>
+                      {events.map((ev) => (
+                        <option key={ev.id} value={ev.id}>
+                          {ev.title || ev.name} ({ev.year || 2026})
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </div>
 
-                <div className="pt-2 flex items-center justify-end gap-3">
+                <div>
+                  <label htmlFor="create-team-name" className="label">Team Name *</label>
+                  <input
+                    id="create-team-name"
+                    type="text"
+                    required
+                    value={teamName}
+                    onChange={(e) => setTeamName(e.target.value)}
+                    placeholder="e.g. AlgoRhythms / CyberKnights"
+                    className="input"
+                    autoFocus
+                  />
+                </div>
+
+                <div className="pt-2 flex items-center justify-end gap-3 border-t border-edge">
                   <button
                     type="button"
-                    onClick={() => setInviteModalOpen(false)}
+                    onClick={() => setCreateModalOpen(false)}
                     className="btn btn-ghost"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    disabled={inviting || !inviteRollNo.trim()}
+                    disabled={creating || !teamName.trim() || !selectedEventId || events.length === 0}
                     className="btn btn-primary"
                   >
-                    {inviting ? 'Sending...' : 'Send Invitation'}
+                    {creating ? 'Creating...' : 'Create Team'}
                   </button>
                 </div>
               </form>
-            )}
-          </div>
-        </div>
-      )}
+            </div>
+          </div>,
+          document.body
+        )}
+
+      {/* INVITE MEMBER MODAL */}
+      {inviteModalOpen &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-modal flex items-center justify-center p-4 bg-scrim backdrop-blur-xs animate-fade-in overflow-y-auto"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="invite-modal-title"
+            onClick={(e) => {
+              if (e.target === e.currentTarget && !inviting) setInviteModalOpen(false);
+            }}
+          >
+            <div
+              className="surface max-w-md w-full max-h-[90vh] overflow-y-auto p-6 shadow-modal border border-edge text-left my-auto animate-scale-in"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between pb-3 border-b border-edge">
+                <h3 id="invite-modal-title" className="text-body-md font-bold text-ink font-heading">Invite Team Member</h3>
+                <button
+                  onClick={() => setInviteModalOpen(false)}
+                  className="p-1 text-ink-muted hover:text-ink rounded-lg cursor-pointer transition-colors"
+                  aria-label="Close invite modal"
+                >
+                  <X className="w-5 h-5" aria-hidden="true" />
+                </button>
+              </div>
+
+              {inviteSuccess ? (
+                <div className="py-8 text-center space-y-2" role="status" aria-live="polite">
+                  <Check className="w-10 h-10 text-status-approved mx-auto" aria-hidden="true" />
+                  <h4 className="text-body-sm font-bold text-ink font-heading">Invitation Sent!</h4>
+                  <p className="text-body-sm text-ink-secondary">The student will receive an invitation in their portal inbox.</p>
+                </div>
+              ) : (
+                <form onSubmit={handleInvite} className="space-y-4 pt-4">
+                  {inviteError && (
+                    <div className="p-3 bg-status-bg-rejected border border-edge-strong rounded-lg text-body-sm text-status-rejected" role="alert">
+                      {inviteError}
+                    </div>
+                  )}
+
+                  <div>
+                    <label htmlFor="invite-roll-no" className="label">
+                      Student Roll Number *
+                    </label>
+                    <input
+                      id="invite-roll-no"
+                      type="text"
+                      required
+                      value={inviteRollNo}
+                      onChange={(e) => setInviteRollNo(e.target.value.toUpperCase())}
+                      placeholder="e.g. 21K61A1201"
+                      className="input font-mono uppercase"
+                    />
+                    <p className="hint">Enter the student's exact college roll number.</p>
+                  </div>
+
+                  <div className="pt-2 flex items-center justify-end gap-3 border-t border-edge">
+                    <button
+                      type="button"
+                      onClick={() => setInviteModalOpen(false)}
+                      className="btn btn-ghost"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={inviting || !inviteRollNo.trim()}
+                      className="btn btn-primary"
+                    >
+                      {inviting ? 'Sending...' : 'Send Invitation'}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 };

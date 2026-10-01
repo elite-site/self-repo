@@ -12,22 +12,15 @@ vi.mock('../../components/Footer', () => ({
   Footer: () => <footer data-testid="footer" />,
 }));
 
-const renderHome = async (session: null = null) => {
-  const utils = render(
+const renderHome = async (session: any = null) => {
+  return render(
     <MemoryRouter>
       <HomePage session={session} onLogout={vi.fn()} />
     </MemoryRouter>,
   );
-  // Let the public-video request settle so its state update lands inside act().
-  await waitFor(() => expect(api.getPublicVideos).toHaveBeenCalled());
-  return utils;
 };
 
 describe('HomePage (public landing)', () => {
-  beforeEach(() => {
-    vi.spyOn(api, 'getPublicVideos').mockResolvedValue({ items: [], total: 0 });
-  });
-
   it('states a value proposition instead of only naming the institution', async () => {
     await renderHome();
     const h1 = screen.getByRole('heading', { level: 1 });
@@ -62,12 +55,11 @@ describe('HomePage (public landing)', () => {
     expect(container.textContent).not.toMatch(/>or</);
   });
 
-  it('points visitors somewhere real when no video is published', async () => {
+  it('highlights the verified department roster in spotlight', async () => {
     await renderHome();
 
-    await waitFor(() =>
-      expect(screen.getByText(/no introduction videos published yet/i)).toBeInTheDocument(),
-    );
+    expect(screen.getByText(/Department Spotlight/i)).toBeInTheDocument();
+    expect(screen.getByText(/Verified Roster/i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /browse the directory/i })).toBeInTheDocument();
   });
 
