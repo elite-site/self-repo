@@ -99,8 +99,9 @@ describe('Resume and Intro Video Reupload Persistence & Cache Invalidation', () 
           studentId: 'stud_123',
           driveFileId: 'drive_resume_A',
           filename: 'resume_v1.pdf',
-          status: 'APPROVED',
-          isPublic: true,
+          // A fresh upload re-enters moderation; it must not self-approve.
+          status: 'PENDING',
+          isPublic: false,
         }),
       });
       expect(res.body.driveFileId).toBeUndefined();
@@ -108,7 +109,7 @@ describe('Resume and Intro Video Reupload Persistence & Cache Invalidation', () 
       expect(res.body.viewUrl).toBe('/api/public/media/resume/res_1');
     });
 
-    it('reuploads resume B, cleans up old drive file, updates DB pointer to new file B and resets status', async () => {
+    it('reuploads resume B, cleans up old drive file, updates DB pointer to new file B and re-enters moderation', async () => {
       (prisma.student.findUnique as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
         id: 'stud_123',
         rollNo: '23K61A1201',
@@ -131,7 +132,8 @@ describe('Resume and Intro Video Reupload Persistence & Cache Invalidation', () 
         driveFileId: 'drive_resume_B',
         filename: 'resume_v2.pdf',
         sizeMb: 1.5,
-        status: 'APPROVED',
+        status: 'PENDING',
+        isPublic: false,
         submittedAt: new Date(),
       });
 
@@ -151,8 +153,10 @@ describe('Resume and Intro Video Reupload Persistence & Cache Invalidation', () 
         data: expect.objectContaining({
           driveFileId: 'drive_resume_B',
           filename: 'resume_v2.pdf',
-          status: 'APPROVED',
-          isPublic: true,
+          // Re-uploading must send the resume back through moderation rather
+          // than silently re-publishing the replaced file.
+          status: 'PENDING',
+          isPublic: false,
         }),
       });
       expect(res.body.driveFileId).toBeUndefined();

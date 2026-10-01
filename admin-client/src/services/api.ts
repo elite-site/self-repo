@@ -260,6 +260,21 @@ export const adminApi = {
     const res = await client.patch(`/admin/api/moderation/${type}/${id}`, data);
     return res.data;
   },
+  /** Publish / unpublish an approved item without changing its approval decision. */
+  async setModerationVisibility(type: ModerationType | string, id: string, isPublic: boolean) {
+    const res = await client.patch(`/admin/api/moderation/${type}/${id}/visibility`, { isPublic });
+    return res.data;
+  },
+  /** Remove an item entirely and ask the student to re-upload a replacement. */
+  async deleteModerationItem(type: ModerationType | string, id: string) {
+    const res = await client.delete(`/admin/api/moderation/${type}/${id}`);
+    return res.data;
+  },
+  /** Ask a student to upload a new version of a specific item. */
+  async requestModerationChanges(type: ModerationType | string, id: string, note?: string) {
+    const res = await client.post(`/admin/api/moderation/${type}/${id}/request-changes`, note ? { note } : {});
+    return res.data;
+  },
 
   // Events
   async createEvent(data: any): Promise<any> {

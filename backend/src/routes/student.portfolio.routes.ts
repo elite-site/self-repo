@@ -400,4 +400,71 @@ router.delete('/certificates/:id', async (req: Request, res: Response) => {
   }
 });
 
+// ============================================================================
+// STUDENT VISIBILITY TOGGLE (achievements, projects, certificates)
+//
+// Certificates already had one of these; the rest of the portfolio items did
+// not, so a student could not hide an approved achievement or project from
+// their public page. One generic route keeps them all behaving identically.
+//
+// Only APPROVED items may be published — the approval gate must not be
+// something a student can talk their way past from their own profile.
+// ============================================================================
+
+type PortfolioKind = 'achievements' | 'projects' | 'certificates';
+
+const PORTFOLIO_META: Record<
+  PortfolioKind,
+  { model: 'achievement' | 'project' | 'certificate'; label: string }
+> = {
+  achievements: { model: 'achievement', label: 'Achievement' },
+  projects: { model: 'project', label: 'Project' },
+  certificates: { model: 'certificate', label: 'Certificate' },
+};
+
+router.patch('/:kind/:id/visibility', async (req: Request, res: Response) => {
+  const kind = String(req.params.kind || '').toLowerCase() as PortfolioKind;
+  const meta = PORTFOLIO_META[kind];
+  if (!meta) {
+    return res.status(404).json({ error: 'NOT_FOUND', message: 'Unknown portfolio item type' });
+  }
+
+  try {
+    const studentId = (req as any).studentId;
+    const { isPublic } = req.body || {};
+    if (typeof isPublic !== 'boolean') {
+      return res.status(400).json({ error: 'VALIDATION_ERROR', message: 'isPublic must be a boolean' });
+    }
+
+    const delegate = (prisma as any)[meta.model];
+    const item = await delegate.findFirst({ where: { id: req.params.id, studentId } });
+    if (!item) {
+      return res.status(404).json({ error: 'NOT_FOUND', message: `${meta.label} not found` });
+    }
+
+    if (isPublic && item.status !== 'APPROVED') {
+      return res.status(409).json({
+        error: 'NOT_APPROVED',
+        message: `Only approved ${meta.label.toLowerCase()}s can be displayed on your public profile.`,
+      });
+    }
+
+    const updated = await delegate.update({
+      where: { id: item.id },
+      data: { isPublic },
+      select: { id: true, isPublic: true, status: true },
+    });
+
+    return res.json({
+      success: true,
+      isPublic: updated.isPublic,
+      message: isPublic
+        ? `${meta.label} is now visible on your public profile.`
+        : `${meta.label} has been hidden from your public profile.`,
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+  }
+});
+
 export default router;

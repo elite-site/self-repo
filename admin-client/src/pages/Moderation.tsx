@@ -21,6 +21,9 @@ import {
   X,
   RefreshCw,
   Sparkles,
+  Eye,
+  Upload,
+  Trash2,
 } from 'lucide-react';
 import { adminApi } from '../services/api';
 import { UnifiedModerationItem, ModerationType } from '../types';
@@ -115,6 +118,9 @@ export const Moderation: React.FC = () => {
   const [approvalNote, setApprovalNote] = useState('');
   const [publishOnApprove, setPublishOnApprove] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [visibilityBusy, setVisibilityBusy] = useState(false);
+  const [actionBusy, setActionBusy] = useState(false);
+  const [deleteBusy, setDeleteBusy] = useState(false);
   const [toast, setToast] = useState<{ message: string; type?: 'success' | 'error' } | null>(null);
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
@@ -245,6 +251,14 @@ export const Moderation: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedItem, selectedIndex, filteredItems]);
 
+  const typeKeyFor = useCallback((item: UnifiedModerationItem): ModerationType => {
+    if (item.type) return item.type;
+    return item.itemType === 'video' ? 'videos' :
+      item.itemType === 'resume' ? 'resumes' :
+      item.itemType === 'certificate' ? 'certificates' :
+      item.itemType === 'project' ? 'projects' : 'achievements';
+  }, []);
+
   const handleDecision = async () => {
     if (!selectedItem || !action) return;
     if ((action === 'reject' || action === 'changes') && !reason.trim()) {
@@ -254,12 +268,7 @@ export const Moderation: React.FC = () => {
 
     setSubmitting(true);
     try {
-      const typeKey: ModerationType = selectedItem.type || (
-        selectedItem.itemType === 'video' ? 'videos' :
-        selectedItem.itemType === 'resume' ? 'resumes' :
-        selectedItem.itemType === 'certificate' ? 'certificates' :
-        selectedItem.itemType === 'project' ? 'projects' : 'achievements'
-      );
+      const typeKey: ModerationType = typeKeyFor(selectedItem);
 
       await adminApi.moderationDecision(typeKey, selectedItem.id, {
         action,
@@ -300,6 +309,79 @@ export const Moderation: React.FC = () => {
       showToast('Failed to record decision. Please try again.', 'error');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const readableTypeOf = (item: UnifiedModerationItem) =>
+    item.itemType === 'video' ? 'Intro video' :
+    item.itemType === 'resume' ? 'Resume' :
+    item.itemType === 'certificate' ? 'Certificate' :
+    item.itemType === 'project' ? 'Project' : 'Achievement';
+
+  /** Publish / unpublish without altering the approval decision. */
+  const handleToggleVisibility = async () => {
+    if (!selectedItem) return;
+    const next = !selectedItem.isPublic;
+    setVisibilityBusy(true);
+    try {
+      await adminApi.setModerationVisibility(typeKeyFor(selectedItem), selectedItem.id, next);
+      setItems((prev) => prev.map((i) => (i.id === selectedItem.id ? { ...i, isPublic: next } : i)));
+      showToast(next ? 'Published to the public page.' : 'Removed from the public page.');
+    } catch (err: any) {
+      showToast(err.response?.data?.message || 'Could not change visibility.', 'error');
+    } finally {
+      setVisibilityBusy(false);
+    }
+  };
+
+  /** Ask the student to upload a replacement for this item. */
+  const handleRequestChanges = async () => {
+    if (!selectedItem) return;
+    const note = window.prompt(
+      `What should the student change before re-uploading their ${readableTypeOf(selectedItem).toLowerCase()}?`,
+      'Please upload an updated version.',
+    );
+    if (note === null) return;
+
+    setActionBusy(true);
+    try {
+      await adminApi.requestModerationChanges(typeKeyFor(selectedItem), selectedItem.id, note.trim() || undefined);
+      showToast(`Re-upload requested from ${selectedItem.studentName}.`);
+    } catch (err: any) {
+      showToast(err.response?.data?.message || 'Could not send the request.', 'error');
+    } finally {
+      setActionBusy(false);
+    }
+  };
+
+  /** Destructive: remove the item and drop it out of the queue. */
+  const handleDeleteItem = async () => {
+    if (!selectedItem) return;
+    if (
+      !window.confirm(
+        `Delete this ${readableTypeOf(selectedItem).toLowerCase()} for ${selectedItem.studentName}?\n\n` +
+          'The file is removed permanently and the student is asked to upload a replacement.',
+      )
+    ) {
+      return;
+    }
+
+    setDeleteBusy(true);
+    try {
+      await adminApi.deleteModerationItem(typeKeyFor(selectedItem), selectedItem.id);
+      showToast(`${readableTypeOf(selectedItem)} deleted. Re-upload requested.`);
+
+      const nextRemaining = filteredItems.filter((i) => i.id !== selectedItem.id);
+      setItems((prev) => prev.filter((i) => i.id !== selectedItem.id));
+      if (nextRemaining.length > 0) {
+        setSelectedItemId(nextRemaining[Math.min(selectedIndex, nextRemaining.length - 1)].id);
+      } else {
+        setSelectedItemId(null);
+      }
+    } catch (err: any) {
+      showToast(err.response?.data?.message || 'Could not delete this item.', 'error');
+    } finally {
+      setDeleteBusy(false);
     }
   };
 
@@ -1032,6 +1114,67 @@ export const Moderation: React.FC = () => {
                     </p>
                   </div>
                 )}
+
+                {/* Post-Decision Controls: visibility, re-upload request, delete */}
+                <div className="surface p-5 rounded-xl border border-edge space-y-3">
+                  <h3 className="text-label-md font-extrabold text-ink uppercase tracking-wider">
+                    Publication &amp; Files
+                  </h3>
+
+                  {/* Publish / unpublish — only meaningful once APPROVED. */}
+                  <button
+                    type="button"
+                    onClick={handleToggleVisibility}
+                    disabled={visibilityBusy || selectedItem.status !== 'APPROVED'}
+                    title={
+                      selectedItem.status !== 'APPROVED'
+                        ? 'Only approved items can be published'
+                        : undefined
+                    }
+                    className="btn btn-secondary w-full py-2.5 text-body-sm font-bold inline-flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {visibilityBusy ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : selectedItem.isPublic ? (
+                      <EyeOff className="w-4 h-4 text-ink-muted" />
+                    ) : (
+                      <Eye className="w-4 h-4 text-brand" />
+                    )}
+                    <span>
+                      {selectedItem.isPublic ? 'Unpublish from Public Page' : 'Publish to Public Page'}
+                    </span>
+                  </button>
+
+                  {/* Ask the student to upload a replacement. */}
+                  <button
+                    type="button"
+                    onClick={handleRequestChanges}
+                    disabled={actionBusy}
+                    className="btn btn-secondary w-full py-2.5 text-body-sm font-bold inline-flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    {actionBusy ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Upload className="w-4 h-4 text-amber-500" />
+                    )}
+                    <span>Request Re-upload</span>
+                  </button>
+
+                  {/* Destructive: removes the file and asks for a replacement. */}
+                  <button
+                    type="button"
+                    onClick={handleDeleteItem}
+                    disabled={deleteBusy}
+                    className="btn btn-danger w-full py-2.5 text-body-sm font-bold inline-flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    {deleteBusy ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="w-4 h-4" />
+                    )}
+                    <span>Delete &amp; Ask for Replacement</span>
+                  </button>
+                </div>
 
                 {/* Keyboard Shortcuts Hint */}
                 <div className="p-3 surface rounded-xl border border-edge text-[11px] text-ink-muted space-y-1">

@@ -2024,6 +2024,217 @@ router.patch('/moderation/projects/:id', async (req, res) => {
   }
 });
 
+// ============================================================================
+// GENERIC MODERATION CAPABILITIES (videos, resumes, certificates, projects,
+// achievements)
+//
+// The video flow was built first and the other four types never grew the same
+// operations, so admins could approve them but could not un-publish, delete, or
+// ask for a re-upload. These routes close that gap with one implementation
+// instead of four more near-duplicates.
+// ============================================================================
+
+type ModerationKind = 'videos' | 'resumes' | 'certificates' | 'projects' | 'achievements';
+
+const MODERATION_KINDS: Record<string, ModerationKind> = {
+  videos: 'videos',
+  resumes: 'resumes',
+  certificates: 'certificates',
+  projects: 'projects',
+  achievements: 'achievements',
+};
+
+/** Per-kind model config: the drive field, title field, and student-facing URL. */
+const MODERATION_META: Record<
+  ModerationKind,
+  { model: 'introVideo' | 'resume' | 'certificate' | 'project' | 'achievement'; driveField: string; label: string; studentUrl: string }
+> = {
+  videos: { model: 'introVideo', driveField: 'driveFileId', label: 'Intro video', studentUrl: '/intro-video' },
+  resumes: { model: 'resume', driveField: 'driveFileId', label: 'Resume', studentUrl: '/resume' },
+  certificates: { model: 'certificate', driveField: 'fileDriveId', label: 'Certificate', studentUrl: '/portfolio/certificates' },
+  projects: { model: 'project', driveField: 'driveVideoUrl', label: 'Project', studentUrl: '/portfolio/projects' },
+  achievements: { model: 'achievement', driveField: 'proofDriveId', label: 'Achievement', studentUrl: '/portfolio/achievements' },
+};
+
+function resolveKind(raw: string): ModerationKind | null {
+  return MODERATION_KINDS[String(raw || '').toLowerCase()] ?? null;
+}
+
+/**
+ * PATCH /moderation/:kind/:id/visibility — publish or unpublish without changing
+ * the approval decision. Only APPROVED items may be published.
+ */
+router.patch('/moderation/:kind/:id/visibility', async (req, res) => {
+  const kind = resolveKind(req.params.kind);
+  if (!kind) {
+    return httpError(res, 404, new Error('Unknown moderation type'), "NOT_FOUND");
+  }
+
+  try {
+    const { isPublic } = req.body || {};
+    if (typeof isPublic !== 'boolean') {
+      return httpError(res, 400, new Error('isPublic must be true or false'), "VALIDATION_ERROR");
+    }
+
+    const meta = MODERATION_META[kind];
+    const delegate = (prisma as any)[meta.model];
+    const record = await delegate.findUnique({ where: { id: req.params.id } });
+    if (!record) {
+      return httpError(res, 404, new Error(`${meta.label} not found`), "NOT_FOUND");
+    }
+
+    if (isPublic && record.status !== 'APPROVED') {
+      return httpError(
+        res,
+        409,
+        new Error(`Only an approved ${meta.label.toLowerCase()} can be published publicly.`),
+        "NOT_APPROVED",
+      );
+    }
+
+    const updated = await delegate.update({
+      where: { id: req.params.id },
+      data: { isPublic, publishedAt: isPublic ? new Date() : null },
+      select: { id: true, isPublic: true, publishedAt: true, status: true },
+    });
+
+    res.json({
+      success: true,
+      [kind.replace(/s$/, '')]: updated,
+      isPublic: updated.isPublic,
+      message: isPublic
+        ? `${meta.label} is now visible on the public page.`
+        : `${meta.label} has been removed from the public page.`,
+    });
+  } catch (err: any) {
+    return httpError(res, 500, err, "SERVER_ERROR");
+  }
+});
+
+/**
+ * DELETE /moderation/:kind/:id — remove the artefact entirely.
+ *
+ * Mirrors `DELETE /submissions/:id/video`: the Drive file is deleted, the
+ * record is reset to CHANGES_REQUESTED with a note, it is un-published so
+ * nothing stale remains on the public page, and the student is told to
+ * re-upload rather than left with a silently missing item.
+ */
+router.delete('/moderation/:kind/:id', async (req, res) => {
+  const kind = resolveKind(req.params.kind);
+  if (!kind) {
+    return httpError(res, 404, new Error('Unknown moderation type'), "NOT_FOUND");
+  }
+
+  try {
+    const meta = MODERATION_META[kind];
+    const delegate = (prisma as any)[meta.model];
+
+    const record = await delegate.findUnique({
+      where: { id: req.params.id },
+      include: { student: { select: { id: true, name: true } } },
+    });
+    if (!record) {
+      return httpError(res, 404, new Error(`${meta.label} not found`), "NOT_FOUND");
+    }
+
+    const driveFileId = record[meta.driveField];
+
+    // Delete from Drive when there is a real Drive-backed file. Projects store a
+    // URL rather than a Drive id, so there is nothing to delete for those.
+    if (driveFileId && kind !== 'projects' && typeof driveService.deleteFileById === 'function') {
+      await driveService.deleteFileById(driveFileId).catch(() => {});
+    }
+
+    const note = `${meta.label} removed by administrator. Please upload a new one.`;
+    const data: Record<string, unknown> = {
+      status: 'CHANGES_REQUESTED',
+      reviewNote: note,
+      isPublic: false,
+      thumbnail: null,
+      reviewedBy: req.adminUser?.username || req.adminUser?.email || null,
+      reviewedAt: new Date(),
+    };
+    // Clear the file reference so the lazy thumbnail generator cannot resurrect
+    // a cached image for a file that no longer exists.
+    if (kind !== 'projects') data[meta.driveField] = null;
+
+    const updated = await delegate.update({ where: { id: req.params.id }, data });
+
+    if (record.student?.id) {
+      await notifyStudent({
+        studentId: record.student.id,
+        title: `${meta.label} Removed`,
+        message: `Your ${meta.label.toLowerCase()} was removed by the administrator. Please upload a new one.`,
+        actionUrl: meta.studentUrl,
+      });
+    }
+
+    await ActivityService.log({
+      eventId: undefined,
+      category: 'ADMIN',
+      action: `Admin deleted student ${meta.label.toLowerCase()}`,
+      details: `${meta.label} removed (${record.id}). Student notified to upload a replacement.`,
+      applicantName: record.student?.name || 'Unknown',
+      userEmail: record.student?.id || null,
+      status: 'WARNING',
+    }).catch(() => {});
+
+    res.json({ success: true, message: `${meta.label} removed. The student has been asked to re-upload.`, [kind.replace(/s$/, '')]: updated });
+  } catch (err: any) {
+    return httpError(res, 500, err, "SERVER_ERROR");
+  }
+});
+
+/**
+ * POST /moderation/:kind/:id/request-changes — nudge a student to re-upload a
+ * specific item without necessarily rejecting it.
+ */
+router.post('/moderation/:kind/:id/request-changes', async (req, res) => {
+  const kind = resolveKind(req.params.kind);
+  if (!kind) {
+    return httpError(res, 404, new Error('Unknown moderation type'), "NOT_FOUND");
+  }
+
+  try {
+    const note = req.body?.note ? String(req.body.note) : 'Please upload a new version.';
+    const meta = MODERATION_META[kind];
+    const delegate = (prisma as any)[meta.model];
+
+    const record = await delegate.findUnique({
+      where: { id: req.params.id },
+      include: { student: { select: { id: true, name: true } } },
+    });
+    if (!record) {
+      return httpError(res, 404, new Error(`${meta.label} not found`), "NOT_FOUND");
+    }
+
+    const updated = await delegate.update({
+      where: { id: req.params.id },
+      data: {
+        status: 'CHANGES_REQUESTED',
+        reviewNote: note,
+        isPublic: false,
+        thumbnail: null,
+        reviewedBy: req.adminUser?.username || req.adminUser?.email || null,
+        reviewedAt: new Date(),
+      },
+    });
+
+    if (record.student?.id) {
+      await notifyStudent({
+        studentId: record.student.id,
+        title: `${meta.label} Update Requested`,
+        message: `Admin requested an update to your ${meta.label.toLowerCase()}: "${note}".`,
+        actionUrl: meta.studentUrl,
+      });
+    }
+
+    res.json({ success: true, message: `Change request sent for this ${meta.label.toLowerCase()}.`, [kind.replace(/s$/, '')]: updated });
+  } catch (err: any) {
+    return httpError(res, 500, err, "SERVER_ERROR");
+  }
+});
+
 router.get('/voting', async (req, res) => {
   try {
     const campaigns = await prisma.votingCampaign.findMany();

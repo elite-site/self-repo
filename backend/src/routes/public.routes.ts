@@ -413,8 +413,11 @@ router.get(
       const versionKey = driveFileId || id;
       const etag = `"${versionKey}"`;
 
-      const isVideo = type === 'video';
-      const cacheControl = isVideo ? 'public, max-age=60, must-revalidate' : 'public, max-age=604800, immutable';
+      // Every thumbnail type revalidates. A re-upload replaces the Drive file and
+      // mints a new ETag, so the browser must come back for it — `immutable`
+      // made replaced resumes/certificates serve their original thumbnail for
+      // the full max-age, long after the file underneath had changed.
+      const cacheControl = 'public, max-age=60, must-revalidate';
 
       if (req.headers['if-none-match'] === etag) {
         res.setHeader('Cache-Control', cacheControl);

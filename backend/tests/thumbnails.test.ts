@@ -75,7 +75,10 @@ describe('WebP Thumbnails and Cache Invalidation', () => {
 
       expect(res.status).toBe(200);
       expect(res.headers['content-type']).toContain('image/webp');
-      expect(res.headers['cache-control']).toBe('public, max-age=604800, immutable');
+      // must-revalidate: a re-upload swaps the Drive file, so the browser has to
+      // come back and pick up the new thumbnail instead of trusting a week of
+      // `immutable` caching on the stale image.
+      expect(res.headers['cache-control']).toBe('public, max-age=60, must-revalidate');
       expect(res.headers['etag']).toBe('"drive_file_abc123"');
       expect(res.body).toEqual(mockWebpBuffer);
     });
@@ -93,7 +96,7 @@ describe('WebP Thumbnails and Cache Invalidation', () => {
         .set('If-None-Match', '"drive_file_abc123"');
 
       expect(res.status).toBe(304);
-      expect(res.headers['cache-control']).toBe('public, max-age=604800, immutable');
+      expect(res.headers['cache-control']).toBe('public, max-age=60, must-revalidate');
       expect(res.headers['etag']).toBe('"drive_file_abc123"');
       expect(res.text).toBe('');
     });
@@ -114,7 +117,7 @@ describe('WebP Thumbnails and Cache Invalidation', () => {
       // Must NOT return 304; must return fresh 200 with new ETag
       expect(res.status).toBe(200);
       expect(res.headers['etag']).toBe('"drive_file_NEW999"');
-      expect(res.headers['cache-control']).toBe('public, max-age=604800, immutable');
+      expect(res.headers['cache-control']).toBe('public, max-age=60, must-revalidate');
     });
 
     it('triggers lazy fallback generation if thumbnail is null in DB and stores it', async () => {

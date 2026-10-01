@@ -221,6 +221,18 @@ export const api = {
     const res = await client.patch(`/student/portfolio/certificates/${id}/visibility`, { isPublic });
     return res.data;
   },
+  /**
+   * Generic portfolio visibility toggle — works for achievements, projects and
+   * certificates. Kept alongside setCertificatePublic for call-site clarity.
+   */
+  async setPortfolioPublic(
+    kind: 'achievements' | 'projects' | 'certificates',
+    id: string,
+    isPublic: boolean,
+  ): Promise<{ success: boolean; isPublic: boolean; message?: string }> {
+    const res = await client.patch(`/student/portfolio/${kind}/${id}/visibility`, { isPublic });
+    return res.data;
+  },
   async deleteCertificate(id: string) { const res = await client.delete(`/student/portfolio/certificates/${id}`); return res.data; },
 
   // Resume
