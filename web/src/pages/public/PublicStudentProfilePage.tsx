@@ -43,7 +43,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F7F8FC] flex flex-col justify-between">
+      <div className="min-h-[100dvh] bg-surface-canvas flex flex-col justify-between">
         <Navbar session={session} onLogout={onLogout} />
         <div className="flex-1 flex items-center justify-center py-32">
           <BrandedLoading fullScreen={false} message="Loading Student Profile..." />
@@ -55,21 +55,21 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
 
   if (!student) {
     return (
-      <div className="min-h-screen bg-[#F7F8FC] flex flex-col justify-between">
+      <div className="min-h-[100dvh] bg-surface-canvas flex flex-col justify-between">
         <Navbar session={session} onLogout={onLogout} />
         <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
-          <div className="w-16 h-16 rounded-lg bg-rose-50 text-[#E11D48] flex items-center justify-center mb-4">
-            <ShieldCheck className="w-8 h-8" />
+          <div className="w-16 h-16 rounded-lg bg-brand-soft text-brand-soft-text flex items-center justify-center mb-4">
+            <ShieldCheck className="w-8 h-8" aria-hidden="true" />
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-[#0F172A] mb-2 font-heading">
+          <h1 className="text-headline-md font-bold text-ink mb-2 font-heading">
             Student Not Found
           </h1>
-          <p className="text-[#475569] mb-6 max-w-md text-xs sm:text-sm">
+          <p className="text-body-sm text-ink-secondary mb-6 max-w-md">
             The profile you are looking for does not exist in our department roster.
           </p>
           <Link
             to="/"
-            className="px-6 py-2.5 bg-[#4F46E5] hover:bg-[#3730A3] text-white font-bold text-xs uppercase tracking-wider rounded-lg transition-opacity"
+            className="btn btn-primary"
           >
             Back to Home
           </Link>
@@ -105,17 +105,17 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
     .join('');
 
   return (
-    <div className="min-h-screen bg-[#F7F8FC] flex flex-col font-sans text-left text-[#0F172A]">
+    <div className="min-h-[100dvh] bg-surface-canvas flex flex-col text-ink">
       <Navbar session={session} onLogout={onLogout} />
 
       {/* TOP HEADER */}
-      <div className="bg-white border-b border-[#E4E7F2] py-6">
+      <div className="bg-surface border-b border-edge py-6">
         <div className="max-w-6xl mx-auto px-6 sm:px-10">
           <Link
             to="/students"
-            className="inline-flex items-center gap-2 text-[#475569] hover:text-[#4F46E5] text-xs font-semibold uppercase tracking-wider transition-colors"
+            className="inline-flex items-center gap-2 text-ink-secondary hover:text-brand text-label-sm font-semibold uppercase tracking-wider transition-colors"
           >
-            <ArrowLeft className="w-4 h-4 text-[#4F46E5]" />
+            <ArrowLeft className="w-4 h-4 text-brand" aria-hidden="true" />
             <span>Back to Student Directory</span>
           </Link>
         </div>
@@ -123,10 +123,10 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
 
       {/* MAIN PROFILE CARD */}
       <main className="flex-1 max-w-6xl mx-auto px-6 sm:px-10 py-8 w-full pb-20 space-y-8">
-        <div className="bg-white rounded-lg shadow-[0_1px_2px_rgba(15,23,42,0.04)] border border-[#E4E7F2] p-6 sm:p-8 space-y-6">
+        <div className="surface p-6 sm:p-8 space-y-6">
           <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 sm:gap-8">
             {/* Avatar */}
-            <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-lg bg-[#EEF2FF] text-[#4F46E5] flex items-center justify-center font-bold text-3xl shadow-xs overflow-hidden shrink-0 border border-[#E4E7F2]">
+            <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-lg bg-brand-soft text-brand-soft-text flex items-center justify-center font-bold text-3xl shadow-xs overflow-hidden shrink-0 border border-edge">
               {profile.viewUrl || profile.photoUrl ? (
                 <img
                   src={resolveMediaUrl(profile.viewUrl || profile.photoUrl)}
@@ -141,22 +141,22 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
             {/* Student Info */}
             <div className="flex-1 text-center sm:text-left space-y-2">
               <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2.5">
-                <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0F172A] font-heading tracking-tight">
+                <h1 className="text-headline-md font-extrabold text-ink font-heading tracking-tight">
                   {student.name}
                 </h1>
-                <span className="text-xs font-semibold text-[#475569] bg-[#F7F8FC] px-2.5 py-1 rounded-md border border-[#E4E7F2]">
+                <span className="text-label-sm font-semibold text-ink-secondary bg-surface-sunken px-2.5 py-1 rounded-md border border-edge">
                   {student.rollNo}
                 </span>
               </div>
 
-              <div className="text-xs sm:text-sm font-semibold text-[#475569] flex flex-wrap items-center justify-center sm:justify-start gap-2">
-                <span className="text-[#E11D48] font-bold">
+              <div className="text-label-sm sm:text-body-sm font-semibold text-ink-secondary flex flex-wrap items-center justify-center sm:justify-start gap-2">
+                <span className="text-brand font-bold">
                   Year {student.year || 1} · Section {student.section || 'A'}
                 </span>
-                <span>•</span>
+                <span>·</span>
                 <span>Department of Information Technology</span>
-                <span>•</span>
-                <span className="text-[#94A3B8]">SASI</span>
+                <span>·</span>
+                <span className="text-ink-muted">SASI</span>
               </div>
 
               {/* Professional Links */}
@@ -166,10 +166,11 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
                     href={profile.githubUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="p-2 rounded-lg bg-[#F7F8FC] hover:bg-[#EEF2FF] border border-[#E4E7F2] text-[#0F172A] transition-colors"
+                    className="p-2 rounded-lg bg-surface-sunken hover:bg-brand-soft border border-edge text-ink transition-colors"
                     title="GitHub Profile"
+                    aria-label="GitHub Profile"
                   >
-                    <Github className="w-4 h-4" />
+                    <Github className="w-4 h-4" aria-hidden="true" />
                   </a>
                 )}
                 {profile.linkedinUrl && (
@@ -177,10 +178,11 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
                     href={profile.linkedinUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="p-2 rounded-lg bg-[#EEF2FF] hover:bg-[#E0E7FF] border border-[#C7D2FE] text-[#4F46E5] transition-colors"
+                    className="p-2 rounded-lg bg-brand-soft hover:bg-brand-soft/80 border border-brand-soft text-brand-soft-text transition-colors"
                     title="LinkedIn Profile"
+                    aria-label="LinkedIn Profile"
                   >
-                    <Linkedin className="w-4 h-4" />
+                    <Linkedin className="w-4 h-4" aria-hidden="true" />
                   </a>
                 )}
                 {profile.portfolioUrl && (
@@ -188,10 +190,11 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
                     href={profile.portfolioUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="p-2 rounded-lg bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 transition-colors"
+                    className="p-2 rounded-lg bg-status-bg-approved hover:bg-status-bg-approved/80 border border-status-bg-approved text-status-approved transition-colors"
                     title="Personal Portfolio Website"
+                    aria-label="Personal Portfolio Website"
                   >
-                    <Globe className="w-4 h-4" />
+                    <Globe className="w-4 h-4" aria-hidden="true" />
                   </a>
                 )}
               </div>
@@ -202,9 +205,9 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
               <div className="shrink-0 pt-2 sm:pt-0">
                 <Link
                   to={`/students/${student.rollNo}/resume`}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#4F46E5] hover:bg-[#3730A3] text-white text-xs font-bold uppercase tracking-wider rounded-lg transition-opacity shadow-xs"
+                  className="btn btn-primary"
                 >
-                  <FileText className="w-4 h-4" />
+                  <FileText className="w-4 h-4" aria-hidden="true" />
                   <span>View Resume</span>
                 </Link>
               </div>
@@ -213,12 +216,12 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
 
           {/* Published introduction video */}
           {introVideo?.streamUrl && (
-            <div className="pt-6 border-t border-[#E4E7F2]">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-[#475569] mb-3 flex items-center gap-2 font-heading">
-                <VideoIcon className="w-3.5 h-3.5 text-[#4F46E5]" />
+            <div className="pt-6 border-t border-edge">
+              <h3 className="text-label-sm font-bold uppercase tracking-wider text-ink-secondary mb-3 flex items-center gap-2 font-heading">
+                <VideoIcon className="w-3.5 h-3.5 text-brand" aria-hidden="true" />
                 <span>Introduction Video</span>
               </h3>
-              <div className="bg-black rounded-lg overflow-hidden aspect-video max-w-3xl">
+              <div className="bg-surface-inverse rounded-lg overflow-hidden aspect-video max-w-3xl">
                 <video
                   src={resolveMediaUrl(introVideo.streamUrl)}
                   poster={introVideo.thumbnailUrl ? resolveMediaUrl(introVideo.thumbnailUrl) : undefined}
@@ -233,11 +236,11 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
 
           {/* Biography */}
           {(profile.biography || profile.bio) && (
-            <div className="pt-6 border-t border-[#E4E7F2]">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-[#475569] mb-2 font-heading">
+            <div className="pt-6 border-t border-edge">
+              <h3 className="text-label-sm font-bold uppercase tracking-wider text-ink-secondary mb-2 font-heading">
                 Biography
               </h3>
-              <p className="text-sm text-[#475569] leading-relaxed max-w-4xl">
+              <p className="text-body-sm text-ink-secondary leading-relaxed max-w-4xl">
                 {profile.biography || profile.bio}
               </p>
             </div>
@@ -245,14 +248,14 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
 
           {/* EMPTY PROFILE STATE */}
           {hasNoData && (
-            <div className="pt-8 border-t border-[#E4E7F2] flex flex-col items-center justify-center text-center py-8 sm:py-12 px-4">
-              <div className="w-14 h-14 rounded-lg bg-[#EEF2FF] text-[#4F46E5] flex items-center justify-center mb-3">
-                <Sparkles className="w-6 h-6 text-[#E11D48]" />
+            <div className="pt-8 border-t border-edge flex flex-col items-center justify-center text-center py-8 sm:py-12 px-4">
+              <div className="w-14 h-14 rounded-lg bg-brand-soft text-brand-soft-text flex items-center justify-center mb-3">
+                <Sparkles className="w-6 h-6 text-brand" aria-hidden="true" />
               </div>
-              <h3 className="text-base sm:text-lg font-bold text-[#0F172A] font-heading mb-1">
+              <h3 className="text-body-md sm:text-headline-sm font-bold text-ink font-heading mb-1">
                 This student hasn't updated their profile yet.
               </h3>
-              <p className="text-xs sm:text-sm text-[#475569] max-w-md leading-relaxed">
+              <p className="text-label-sm sm:text-body-sm text-ink-secondary max-w-md leading-relaxed">
                 This official student profile is linked to the department roster. When {student.name?.split(' ')[0] || 'the student'} updates their bio, technical skills, projects, or achievements, they will appear here.
               </p>
             </div>
@@ -264,12 +267,12 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
           {/* LEFT: SKILLS */}
           <div className="lg:col-span-1 space-y-6">
-            <div className="bg-white rounded-lg p-6 border border-[#E4E7F2] shadow-[0_1px_2px_rgba(15,23,42,0.04)] space-y-4">
-              <h3 className="text-sm font-bold text-[#0F172A] font-heading flex items-center gap-2 uppercase tracking-wide">
+            <div className="surface p-6 space-y-4">
+              <h3 className="text-body-sm font-bold text-ink font-heading flex items-center gap-2 uppercase tracking-wide">
                 <span>Technical Skills</span>
               </h3>
               {skillsList.length === 0 ? (
-                <p className="text-xs text-[#94A3B8] italic">No skills listed yet.</p>
+                <p className="text-label-sm text-ink-muted italic">No skills listed yet.</p>
               ) : (
                 <div className="flex flex-wrap gap-2">
                   {skillsList.map((sk: any, idx: number) => {
@@ -277,7 +280,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
                     return (
                       <span
                         key={idx}
-                        className="px-3 py-1 bg-[#EEF2FF] border border-[#E0E7FF] text-[#4F46E5] rounded-md text-xs font-semibold"
+                        className="px-3 py-1 bg-brand-soft border border-brand-soft text-brand-soft-text rounded-md text-label-sm font-semibold"
                       >
                         {name}
                       </span>
@@ -289,19 +292,19 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
 
             {/* CERTIFICATES */}
             {certificates.length > 0 && (
-              <div className="bg-white rounded-lg p-6 border border-[#E4E7F2] shadow-[0_1px_2px_rgba(15,23,42,0.04)] space-y-4">
-                <h3 className="text-sm font-bold text-[#0F172A] font-heading flex items-center gap-2 uppercase tracking-wide">
-                  <ShieldCheck className="w-4 h-4 text-[#4F46E5]" />
+              <div className="surface p-6 space-y-4">
+                <h3 className="text-body-sm font-bold text-ink font-heading flex items-center gap-2 uppercase tracking-wide">
+                  <ShieldCheck className="w-4 h-4 text-brand" aria-hidden="true" />
                   <span>Verified Certificates</span>
                 </h3>
                 <div className="space-y-3">
                   {certificates.map((c: any) => (
                     <div
                       key={c.id}
-                      className="p-3 bg-[#F7F8FC] rounded-lg border border-[#E4E7F2] flex items-center justify-between text-xs gap-3"
+                      className="p-3 bg-surface-sunken rounded-lg border border-edge flex items-center justify-between text-label-sm gap-3"
                     >
                       {c.thumbnailUrl && (
-                        <div className="w-14 h-10 rounded-md bg-neutral-200 overflow-hidden shrink-0 border border-[#E4E7F2]">
+                        <div className="w-14 h-10 rounded-md bg-surface-inset overflow-hidden shrink-0 border border-edge">
                           <img
                             src={resolveMediaUrl(c.thumbnailUrl)}
                             alt={c.title}
@@ -312,18 +315,18 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
                         </div>
                       )}
                       <div className="space-y-0.5 min-w-0 flex-1">
-                        <div className="font-bold text-[#0F172A] truncate">{c.title}</div>
-                        <div className="text-[11px] text-[#475569] truncate">{c.issuer}</div>
+                        <div className="font-bold text-ink truncate">{c.title}</div>
+                        <div className="text-[11px] text-ink-muted truncate">{c.issuer}</div>
                       </div>
                       {(c.viewUrl || c.fileUrl) && (
                         <a
                           href={resolveMediaUrl(c.viewUrl || c.fileUrl)}
                           target="_blank"
                           rel="noreferrer"
-                          className="inline-flex items-center gap-1 text-[11px] font-bold text-[#4F46E5] hover:underline shrink-0 ml-2"
+                          className="inline-flex items-center gap-1 text-[11px] font-bold text-brand hover:underline shrink-0 ml-2"
                         >
                           <span>View</span>
-                          <ExternalLink className="w-3 h-3" />
+                          <ExternalLink className="w-3 h-3" aria-hidden="true" />
                         </a>
                       )}
                     </div>
@@ -336,24 +339,24 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
           {/* RIGHT: PROJECTS & ACHIEVEMENTS */}
           <div className="lg:col-span-2 space-y-8">
             {/* PROJECTS */}
-            <div className="bg-white rounded-lg p-6 sm:p-8 border border-[#E4E7F2] shadow-[0_1px_2px_rgba(15,23,42,0.04)] space-y-5">
-              <h3 className="text-base font-bold text-[#0F172A] font-heading flex items-center gap-2 uppercase tracking-wide">
-                <Briefcase className="w-4 h-4 text-[#4F46E5]" />
+            <div className="surface p-6 sm:p-8 space-y-5">
+              <h3 className="text-body-md font-bold text-ink font-heading flex items-center gap-2 uppercase tracking-wide">
+                <Briefcase className="w-4 h-4 text-brand" aria-hidden="true" />
                 <span>Featured Projects ({projects.length})</span>
               </h3>
 
               {projects.length === 0 ? (
-                <p className="text-xs text-[#94A3B8] italic py-4">No projects showcased yet.</p>
+                <p className="text-label-sm text-ink-muted italic py-4">No projects showcased yet.</p>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {projects.map((p: any) => (
                     <div
                       key={p.id}
-                      className="p-5 rounded-lg border border-[#E4E7F2] bg-[#F7F8FC] flex flex-col justify-between space-y-3"
+                      className="p-5 rounded-lg border border-edge bg-surface-sunken flex flex-col justify-between space-y-3"
                     >
-                      <div className="space-y-2">
-                        <h4 className="font-bold text-sm text-[#0F172A] font-heading">{p.title}</h4>
-                        <p className="text-xs text-[#475569] line-clamp-3 leading-relaxed">
+                      <div className="space-y-2 min-w-0">
+                        <h4 className="font-bold text-body-sm text-ink font-heading truncate">{p.title}</h4>
+                        <p className="text-label-sm text-ink-secondary line-clamp-3 leading-relaxed">
                           {p.description}
                         </p>
                         {p.techStack && p.techStack.length > 0 && (
@@ -361,7 +364,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
                             {p.techStack.map((t: string) => (
                               <span
                                 key={t}
-                                className="text-[10px] bg-white border border-[#E4E7F2] px-2 py-0.5 rounded text-[#475569]"
+                                className="text-[10px] bg-surface border border-edge px-2 py-0.5 rounded text-ink-secondary"
                               >
                                 {t}
                               </span>
@@ -371,14 +374,14 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
                       </div>
 
                       {p.githubUrl && (
-                        <div className="pt-2 border-t border-[#E4E7F2]">
+                        <div className="pt-2 border-t border-edge">
                           <a
                             href={p.githubUrl}
                             target="_blank"
                             rel="noreferrer"
-                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#4F46E5] hover:underline"
+                            className="inline-flex items-center gap-1.5 text-label-sm font-semibold text-brand hover:underline"
                           >
-                            <Github className="w-3.5 h-3.5" />
+                            <Github className="w-3.5 h-3.5" aria-hidden="true" />
                             <span>View Source</span>
                           </a>
                         </div>
@@ -391,9 +394,9 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
 
             {/* ACHIEVEMENTS */}
             {achievements.length > 0 && (
-              <div className="bg-white rounded-lg p-6 sm:p-8 border border-[#E4E7F2] shadow-[0_1px_2px_rgba(15,23,42,0.04)] space-y-5">
-                <h3 className="text-base font-bold text-[#0F172A] font-heading flex items-center gap-2 uppercase tracking-wide">
-                  <Award className="w-4 h-4 text-amber-500" />
+              <div className="surface p-6 sm:p-8 space-y-5">
+                <h3 className="text-body-md font-bold text-ink font-heading flex items-center gap-2 uppercase tracking-wide">
+                  <Award className="w-4 h-4 text-status-pending" aria-hidden="true" />
                   <span>Endorsed Achievements</span>
                 </h3>
 
@@ -401,10 +404,10 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
                   {achievements.map((a: any) => (
                     <div
                       key={a.id}
-                      className="p-4 rounded-lg border border-[#E4E7F2] bg-[#F7F8FC] flex items-start justify-between gap-4"
+                      className="p-4 rounded-lg border border-edge bg-surface-sunken flex items-start justify-between gap-4"
                     >
                       {a.thumbnailUrl && (
-                        <div className="w-16 h-12 rounded-md bg-neutral-200 overflow-hidden shrink-0 border border-[#E4E7F2] mt-0.5">
+                        <div className="w-16 h-12 rounded-md bg-surface-inset overflow-hidden shrink-0 border border-edge mt-0.5">
                           <img
                             src={resolveMediaUrl(a.thumbnailUrl)}
                             alt={a.title}
@@ -414,11 +417,11 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
                           />
                         </div>
                       )}
-                      <div className="space-y-1 text-xs min-w-0 flex-1">
-                        <div className="font-bold text-[#0F172A] text-sm font-heading">{a.title}</div>
-                        <p className="text-[#475569]">{a.description}</p>
-                        <div className="text-[11px] text-[#94A3B8] pt-1">
-                          {a.organization} · {a.date ? new Date(a.date).toLocaleDateString() : ''}
+                      <div className="space-y-1 text-label-sm min-w-0 flex-1">
+                        <div className="font-bold text-ink text-body-sm font-heading">{a.title}</div>
+                        <p className="text-ink-secondary">{a.description}</p>
+                        <div className="text-[11px] text-ink-muted pt-1">
+                          {a.organization} · {a.date ? new Date(a.date).toLocaleDateString() : 'To be announced'}
                         </div>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
@@ -427,14 +430,14 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
                             href={resolveMediaUrl(a.viewUrl || a.proofUrl)}
                             target="_blank"
                             rel="noreferrer"
-                            className="inline-flex items-center gap-1 text-[11px] font-bold text-[#4F46E5] hover:underline"
+                            className="inline-flex items-center gap-1 text-[11px] font-bold text-brand hover:underline"
                           >
                             <span>Proof</span>
-                            <ExternalLink className="w-3 h-3" />
+                            <ExternalLink className="w-3 h-3" aria-hidden="true" />
                           </a>
                         )}
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold">
-                          <CheckCircle2 className="w-3 h-3" />
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-status-bg-approved text-status-approved border border-status-bg-approved text-[10px] font-bold">
+                          <CheckCircle2 className="w-3 h-3" aria-hidden="true" />
                           Verified
                         </span>
                       </div>

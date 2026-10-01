@@ -20,6 +20,10 @@ export const CertificatesTab: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
+  const modalTitleRef = useRef<HTMLHeadingElement>(null);
+  const firstInputRef = useRef<HTMLInputElement>(null);
+  const lastFocusedElement = useRef<HTMLElement | null>(null);
+
   const loadCertificates = async () => {
     setLoading(true);
     setError(null);
@@ -36,6 +40,16 @@ export const CertificatesTab: React.FC = () => {
   useEffect(() => {
     loadCertificates();
   }, []);
+
+  // Focus management for modal
+  useEffect(() => {
+    if (modalOpen) {
+      lastFocusedElement.current = document.activeElement as HTMLElement;
+      setTimeout(() => firstInputRef.current?.focus(), 0);
+    } else if (lastFocusedElement.current) {
+      lastFocusedElement.current.focus();
+    }
+  }, [modalOpen]);
 
   const handleOpenModal = () => {
     setTitle('');
@@ -106,86 +120,100 @@ export const CertificatesTab: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="py-16">
+      <div className="py-16 animate-fade-in">
         <BrandedLoading fullScreen={false} message="Loading Certificates..." />
       </div>
     );
   }
 
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'APPROVED':
+        return <span className="badge badge-approved">Approved</span>;
+      case 'CHANGES_REQUESTED':
+        return <span className="badge badge-changes">Revision Requested</span>;
+      case 'REJECTED':
+        return <span className="badge badge-rejected">Rejected</span>;
+      case 'PENDING':
+        return <span className="badge badge-pending">Pending Review</span>;
+      default:
+        return <span className="badge badge-draft">{status}</span>;
+    }
+  };
+
   return (
-    <div className="space-y-6 text-left">
+    <div className="space-y-6 text-left page-enter" role="main">
       {/* HEADER */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-lg font-bold text-[#0F172A] font-heading">Verified Credentials & Licenses</h2>
-          <p className="text-xs text-[#475569]">Official certificates from Coursera, NPTEL, AWS, Google, and department workshops</p>
+          <h2 className="text-body-lg font-bold text-ink font-heading">Verified Credentials & Licenses</h2>
+          <p className="text-body-sm text-ink-secondary">Official certificates from Coursera, NPTEL, AWS, Google, and department workshops</p>
         </div>
         <button
           onClick={handleOpenModal}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-[#4F46E5] hover:bg-[#3730A3] text-white text-xs font-bold rounded-lg transition-opacity shadow-xs cursor-pointer"
+          className="btn btn-primary"
+          aria-label="Upload new certificate"
         >
-          <UploadCloud className="w-4 h-4" />
+          <UploadCloud className="w-4 h-4" aria-hidden="true" />
           <span>Upload Certificate</span>
         </button>
       </div>
 
       {error && (
-        <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-xs text-[#E11D48] flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 shrink-0" />
+        <div className="surface-sunken border border-status-rejected bg-status-bg-rejected text-status-rejected text-body-sm flex items-center gap-2 animate-fade-in" role="alert">
+          <AlertCircle className="w-4 h-4 shrink-0" aria-hidden="true" />
           <span>{error}</span>
         </div>
       )}
 
       {/* GRID */}
       {certificates.length === 0 ? (
-        <div className="text-center py-16 px-4 border-2 border-dashed border-[#E4E7F2] rounded-lg bg-[#F7F8FC]">
-          <FileText className="w-12 h-12 text-[#94A3B8] mx-auto mb-3" />
-          <h3 className="text-sm font-bold text-[#0F172A] font-heading">No certificates uploaded yet</h3>
-          <p className="text-xs text-[#475569] mt-1 max-w-sm mx-auto mb-4">
+        <div className="surface text-center py-16 px-4 animate-fade-in">
+          <div className="w-12 h-12 rounded-full bg-brand-soft flex items-center justify-center mx-auto mb-4">
+            <FileText className="w-6 h-6 text-brand" aria-hidden="true" />
+          </div>
+          <h3 className="text-body-lg font-bold text-ink font-heading">No certificates uploaded yet</h3>
+          <p className="text-body-sm text-ink-secondary mt-1 max-w-sm mx-auto mb-4">
             Upload course completion certificates, professional licenses, and exam scorecards in PDF or image format.
           </p>
           <button
             onClick={handleOpenModal}
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#4F46E5] hover:bg-[#3730A3] text-white rounded-lg text-xs font-bold transition-opacity cursor-pointer shadow-xs"
+            className="btn btn-primary"
           >
-            <UploadCloud className="w-3.5 h-3.5" />
+            <UploadCloud className="w-3.5 h-3.5" aria-hidden="true" />
             <span>Upload Certificate</span>
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-fade-in">
           {certificates.map((c) => (
             <div
               key={c.id}
-              className="border border-[#E4E7F2] rounded-lg p-4 bg-white hover:border-[#4F46E5]/40 hover:shadow-md transition-all flex flex-col justify-between text-left group shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+              className="surface p-4 flex flex-col justify-between group"
             >
               <div className="space-y-3">
-                <div className="w-full aspect-[4/3] bg-[#F7F8FC] rounded-lg overflow-hidden flex items-center justify-center border border-[#E4E7F2] relative">
+                <div className="w-full aspect-[4/3] bg-surface-sunken rounded-lg overflow-hidden flex items-center justify-center border border-edge relative">
                   {c.thumbnailUrl ? (
-                    <img src={resolveMediaUrl(c.thumbnailUrl)} alt={c.title} loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                    <img
+                      src={resolveMediaUrl(c.thumbnailUrl)}
+                      alt={c.title}
+                      loading="lazy"
+                      decoding="async"
+                      className="w-full h-full object-cover"
+                    />
                   ) : (
-                    <FileText className="w-10 h-10 text-[#94A3B8]" />
+                    <FileText className="w-10 h-10 text-ink-muted" aria-hidden="true" />
                   )}
-                  <span
-                    className={`absolute top-2 right-2 text-[9px] font-bold px-2 py-0.5 rounded-full ${
-                      c.status === 'APPROVED'
-                        ? 'bg-emerald-100 text-emerald-800'
-                        : c.status === 'CHANGES_REQUESTED'
-                        ? 'bg-orange-100 text-orange-800 border border-orange-200'
-                        : 'bg-amber-100 text-amber-800'
-                    }`}
-                  >
-                    {c.status === 'CHANGES_REQUESTED' ? 'Revision Requested' : (c.status || 'Pending')}
-                  </span>
+                  {getStatusBadge(c.status || 'PENDING')}
                 </div>
 
                 <div>
-                  <h3 className="font-bold text-xs text-[#0F172A] font-heading line-clamp-1" title={c.title}>
+                  <h3 className="font-bold text-body-sm text-ink font-heading line-clamp-1" title={c.title}>
                     {c.title}
                   </h3>
-                  <p className="text-[11px] text-[#475569] mt-0.5">{c.issuer || 'Issuing Body'}</p>
+                  <p className="text-label-sm text-ink-secondary mt-0.5">{c.issuer || 'Issuing Body'}</p>
                   {c.status === 'CHANGES_REQUESTED' && (
-                    <div className="p-2 bg-orange-50 border border-orange-200 rounded-lg text-[11px] text-orange-900 mt-2">
+                    <div className="p-2 bg-status-bg-changes border border-status-changes rounded-lg text-label-sm text-status-changes mt-2">
                       <strong className="font-bold">Faculty Revision Note: </strong>
                       <span>{c.reviewNote || 'The admin requested changes on this certificate.'}</span>
                     </div>
@@ -194,14 +222,14 @@ export const CertificatesTab: React.FC = () => {
               </div>
 
               {/* PUBLIC VISIBILITY TOGGLE */}
-              <div className="pt-2.5 mt-2.5 border-t border-[#E4E7F2] flex items-center justify-between">
+              <div className="pt-2.5 mt-2.5 border-t border-edge flex items-center justify-between">
                 <div className="flex items-center gap-1.5 min-w-0">
                   {c.isPublic ? (
-                    <Globe className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <Globe className="w-3.5 h-3.5 text-status-approved shrink-0" aria-hidden="true" />
                   ) : (
-                    <EyeOff className="w-3.5 h-3.5 text-[#94A3B8] shrink-0" />
+                    <EyeOff className="w-3.5 h-3.5 text-ink-muted shrink-0" aria-hidden="true" />
                   )}
-                  <span className="text-[11px] font-medium text-[#475569] truncate">
+                  <span className="text-label-sm font-medium text-ink-secondary truncate">
                     {c.isPublic ? 'Public on profile' : 'Hidden from profile'}
                   </span>
                 </div>
@@ -210,48 +238,50 @@ export const CertificatesTab: React.FC = () => {
                   type="button"
                   onClick={() => handleTogglePublic(c.id, !c.isPublic)}
                   disabled={togglingId === c.id || c.status !== 'APPROVED'}
-                  title={
+                  aria-label={
                     c.status === 'APPROVED'
                       ? c.isPublic
                         ? 'Hide from public profile'
                         : 'Show on public profile'
                       : 'Requires faculty approval to display publicly'
                   }
-                  className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden disabled:opacity-40 disabled:cursor-not-allowed ${
-                    c.isPublic ? 'bg-emerald-600' : 'bg-neutral-200'
+                  aria-pressed={c.isPublic}
+                  className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent focus:outline-hidden disabled:opacity-40 disabled:cursor-not-allowed transition-colors duration-base ease-standard ${
+                    c.isPublic ? 'bg-status-approved' : 'bg-edge'
                   }`}
                 >
                   <span
-                    className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
+                    className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-surface shadow-sm ring-0 transition-transform duration-base ease-standard ${
                       c.isPublic ? 'translate-x-4' : 'translate-x-0'
                     }`}
+                    aria-hidden="true"
                   />
                 </button>
               </div>
 
-              <div className="pt-3 mt-3 border-t border-[#E4E7F2] flex items-center justify-between text-xs">
+              <div className="pt-3 mt-3 border-t border-edge flex items-center justify-between text-xs">
                 <div className="flex items-center gap-2">
                   {(c.viewUrl || c.fileUrl) ? (
                     <a
                       href={resolveMediaUrl(c.viewUrl || c.fileUrl)}
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex items-center gap-1 text-[11px] font-bold text-[#4F46E5] hover:underline"
+                      className="inline-flex items-center gap-1 text-label-sm font-bold text-brand hover:underline"
                     >
                       <span>View File</span>
-                      <ExternalLink className="w-3 h-3" />
+                      <ExternalLink className="w-3 h-3" aria-hidden="true" />
                     </a>
                   ) : (
-                    <span className="text-[10px] text-[#94A3B8]">Verified Record</span>
+                    <span className="text-label-sm text-ink-muted">Verified Record</span>
                   )}
                 </div>
 
                 <button
                   onClick={() => handleDelete(c.id)}
-                  className="p-1 text-[#94A3B8] hover:text-[#E11D48] transition-colors cursor-pointer rounded"
-                  title="Delete certificate"
+                  className="btn btn-ghost p-1 text-ink-muted hover:text-status-rejected"
+                  aria-label={`Delete ${c.title}`}
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
+                  <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
                 </button>
               </div>
             </div>
@@ -261,62 +291,68 @@ export const CertificatesTab: React.FC = () => {
 
       {/* UPLOAD MODAL */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="bg-white rounded-lg max-w-lg w-full p-6 shadow-2xl border border-[#E4E7F2] animate-in fade-in zoom-in-95 duration-150 text-left">
-            <div className="flex items-center justify-between pb-3 border-b border-[#E4E7F2]">
-              <h3 className="text-base font-bold text-[#0F172A] font-heading">Upload Verified Certificate</h3>
+        <div className="fixed inset-0 z-modal flex items-center justify-center p-4 bg-scrim backdrop-blur-xs animate-fade-in" role="dialog" aria-modal="true" aria-labelledby="certificate-modal-title">
+          <div className="surface max-w-lg w-full p-6 shadow-modal animate-scale-in text-left" ref={modalTitleRef}>
+            <div className="flex items-center justify-between pb-3 border-b border-edge">
+              <h3 id="certificate-modal-title" className="text-body-lg font-bold text-ink font-heading">Upload Verified Certificate</h3>
               <button
                 onClick={() => setModalOpen(false)}
-                className="p-1 text-[#94A3B8] hover:text-[#0F172A] rounded-lg cursor-pointer"
+                className="btn btn-ghost p-1"
+                aria-label="Close modal"
               >
-                <X className="w-5 h-5" />
+                <X className="w-5 h-5" aria-hidden="true" />
               </button>
             </div>
 
             <form onSubmit={handleUploadCertificate} className="space-y-4 pt-4">
               {modalError && (
-                <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-xs text-[#E11D48] flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
+                <div className="surface-sunken border border-status-rejected bg-status-bg-rejected text-status-rejected text-body-sm flex items-center gap-2" role="alert">
+                  <AlertCircle className="w-4 h-4 shrink-0" aria-hidden="true" />
                   <span>{modalError}</span>
                 </div>
               )}
 
               <div>
-                <label className="block text-xs font-bold text-[#0F172A] mb-1 font-heading">Certificate Name *</label>
+                <label htmlFor="certificate-title" className="label">Certificate Name <span className="text-status-rejected" aria-hidden="true">*</span></label>
                 <input
+                  id="certificate-title"
+                  ref={firstInputRef}
                   type="text"
                   required
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="e.g. AWS Certified Cloud Practitioner"
-                  className="w-full p-2.5 bg-white border border-[#E4E7F2] rounded-lg text-xs focus:outline-none focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5]"
+                  className="input"
+                  aria-required="true"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#0F172A] mb-1 font-heading">Issuing Authority / Platform</label>
+                <label htmlFor="certificate-issuer" className="label">Issuing Authority / Platform</label>
                 <input
+                  id="certificate-issuer"
                   type="text"
                   value={issuer}
                   onChange={(e) => setIssuer(e.target.value)}
                   placeholder="e.g. Amazon Web Services / Coursera"
-                  className="w-full p-2.5 bg-white border border-[#E4E7F2] rounded-lg text-xs focus:outline-none focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5]"
+                  className="input"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#0F172A] mb-1 font-heading">Issue Date</label>
+                <label htmlFor="certificate-date" className="label">Issue Date</label>
                 <input
+                  id="certificate-date"
                   type="date"
                   value={issueDate}
                   onChange={(e) => setIssueDate(e.target.value)}
-                  className="w-full p-2.5 bg-white border border-[#E4E7F2] rounded-lg text-xs focus:outline-none focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5]"
+                  className="input"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#0F172A] mb-1 font-heading">
-                  Upload Document (PDF or Image) *
+                <label className="label">
+                  Upload Document (PDF or Image) <span className="text-status-rejected" aria-hidden="true">*</span>
                 </label>
                 <input
                   type="file"
@@ -324,7 +360,8 @@ export const CertificatesTab: React.FC = () => {
                   ref={fileInputRef}
                   accept=".pdf,image/jpeg,image/png,image/webp"
                   onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-                  className="w-full text-xs text-[#475569] file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-[#EEF2FF] file:text-[#4F46E5] hover:file:bg-[#E0E7FF] cursor-pointer"
+                  className="w-full text-label-sm text-ink-secondary file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-brand-soft file:text-brand hover:file:bg-brand-soft/80 cursor-pointer"
+                  aria-required="true"
                 />
               </div>
 
@@ -332,16 +369,17 @@ export const CertificatesTab: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setModalOpen(false)}
-                  className="px-4 py-2 rounded-lg text-xs font-bold text-[#475569] hover:bg-[#F7F8FC] transition-colors cursor-pointer"
+                  className="btn btn-secondary"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={uploading || !title.trim() || !selectedFile}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#4F46E5] hover:bg-[#3730A3] text-white text-xs font-bold transition-opacity disabled:opacity-50 cursor-pointer shadow-xs"
+                  className="btn btn-primary"
+                  aria-busy={uploading}
                 >
-                  {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UploadCloud className="w-3.5 h-3.5" />}
+                  {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" /> : <UploadCloud className="w-3.5 h-3.5" aria-hidden="true" />}
                   <span>{uploading ? 'Uploading...' : 'Save Certificate'}</span>
                 </button>
               </div>

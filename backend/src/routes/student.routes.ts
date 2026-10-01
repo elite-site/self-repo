@@ -13,6 +13,7 @@ import { driveService } from '../services/drive.service';
 import { ActivityService } from '../services/activity.service';
 import { ssoService } from '../services/sso.service';
 import { resolveContentRange } from '../utils/rangeParser';
+import { getMaxVideoSizeMb } from '../services/limits.service';
 
 const router = Router();
 
@@ -30,7 +31,7 @@ function serializeStudentView(student: {
   branch: string;
   status: StudentStatus;
   graduatedAt: Date | null;
-}, submission: any | null, introVideo: any | null = null) {
+}, submission: any | null, introVideo: any | null = null, maxVideoSizeMb: number = 25) {
   return {
     id: student.id,
     rollNo: student.rollNo,
@@ -41,6 +42,9 @@ function serializeStudentView(student: {
     branch: student.branch,
     status: student.status,
     graduatedAt: student.graduatedAt,
+    // The effective, administrator-configured upload limit, so the client can
+    // pre-check against the same number the server enforces.
+    maxVideoSizeMb,
     submission: submission
       ? {
           id: submission.id,
@@ -351,7 +355,14 @@ router.get('/me', requireStudentAuth, async (req: Request, res: Response): Promi
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
-    res.json({ student: serializeStudentView(student, submission, introVideo) });
+    res.json({
+      student: serializeStudentView(
+        student,
+        submission,
+        introVideo,
+        await getMaxVideoSizeMb(),
+      ),
+    });
   } catch (err: any) {
     console.error('Error fetching student profile:', err);
     res.status(500).json({ error: 'FAILED_TO_FETCH_PROFILE', message: err.message });

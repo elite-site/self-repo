@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import {
   X,
@@ -35,11 +35,11 @@ const REVIEW_CONS = [
 ];
 
 const VIDEO_STATUS_BADGE: Record<string, { label: string; cls: string }> = {
-  PENDING: { label: 'Pending review', cls: 'bg-amber-50 text-amber-700 border-amber-200' },
-  UNDER_REVIEW: { label: 'Under review', cls: 'bg-violet-50 text-violet-700 border-violet-200' },
-  APPROVED: { label: 'Approved', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  REJECTED: { label: 'Rejected', cls: 'bg-red-50 text-red-700 border-red-200' },
-  CHANGES_REQUESTED: { label: 'New video requested', cls: 'bg-orange-50 text-orange-700 border-orange-200' },
+  PENDING: { label: 'Pending review', cls: 'badge badge-pending' },
+  UNDER_REVIEW: { label: 'Under review', cls: 'badge badge-review' },
+  APPROVED: { label: 'Approved', cls: 'badge badge-approved' },
+  REJECTED: { label: 'Rejected', cls: 'badge badge-rejected' },
+  CHANGES_REQUESTED: { label: 'New video requested', cls: 'badge badge-changes' },
 };
 
 interface SubmissionDetailModalProps {
@@ -60,22 +60,22 @@ const ratingOptions: Array<{
     value: 'GOOD',
     label: 'Good',
     description: 'Confident, clear, excellent introduction',
-    activeClass: 'bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-600/20',
-    dotClass: 'bg-emerald-500',
+    activeClass: 'bg-status-approved text-on-primary border-status-approved',
+    dotClass: 'bg-status-approved',
   },
   {
     value: 'AVERAGE',
     label: 'Average',
     description: 'Acceptable, decent communication',
-    activeClass: 'bg-amber-400 text-white border-amber-400 shadow-md shadow-amber-400/20',
-    dotClass: 'bg-amber-400',
+    activeClass: 'bg-status-pending text-on-primary border-status-pending',
+    dotClass: 'bg-status-pending',
   },
   {
     value: 'POOR',
     label: 'Poor',
     description: 'Needs improvement, weak delivery',
-    activeClass: 'bg-red-600 text-white border-red-600 shadow-md shadow-red-600/20',
-    dotClass: 'bg-red-500',
+    activeClass: 'bg-status-rejected text-on-primary border-status-rejected',
+    dotClass: 'bg-status-rejected',
   },
 ];
 
@@ -85,26 +85,28 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
   onUpdated,
   onDeleted,
 }) => {
-  if (!submission) return null;
+  const modalRef = useRef<HTMLDivElement>(null);
+  const previousActiveElement = useRef<HTMLElement | null>(null);
 
-  const [rating, setRating] = useState<SubmissionRating | null>(submission.rating || null);
+  const [rating, setRating] = useState<SubmissionRating | null>(submission?.rating || null);
   const [updating, setUpdating] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deletingVideo, setDeletingVideo] = useState(false);
-  const [hasVideo, setHasVideo] = useState<boolean>(Boolean(submission.videoDriveId));
-  const [introVideo, setIntroVideo] = useState<IntroVideoState | null>(submission.introVideo ?? null);
+  const [hasVideo, setHasVideo] = useState<boolean>(Boolean(submission?.videoDriveId));
+  const [introVideo, setIntroVideo] = useState<IntroVideoState | null>(submission?.introVideo ?? null);
   const [requestingVideo, setRequestingVideo] = useState(false);
   const [showRequestForm, setShowRequestForm] = useState(false);
   const [requestReason, setRequestReason] = useState('');
   const [togglingPublic, setTogglingPublic] = useState(false);
   const [videoNotice, setVideoNotice] = useState<string | null>(null);
-  const [reviewText, setReviewText] = useState(submission.reviewText || '');
-  const [reviewPros, setReviewPros] = useState<string[]>(submission.reviewPros || []);
-  const [reviewCons, setReviewCons] = useState<string[]>(submission.reviewCons || []);
+  const [reviewText, setReviewText] = useState(submission?.reviewText || '');
+  const [reviewPros, setReviewPros] = useState<string[]>(submission?.reviewPros || []);
+  const [reviewCons, setReviewCons] = useState<string[]>(submission?.reviewCons || []);
   const [sendingReview, setSendingReview] = useState(false);
 
   // Lock background body scroll and listen for Escape key
   useEffect(() => {
+    previousActiveElement.current = document.activeElement as HTMLElement;
     const originalOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
 
@@ -112,19 +114,40 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
       if (e.key === 'Escape') {
         onClose();
       }
+      // Focus trapping
+      if (e.key === 'Tab' && modalRef.current) {
+        const focusableElements = modalRef.current.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
+
+        if (e.shiftKey && document.activeElement === firstElement) {
+          e.preventDefault();
+          lastElement?.focus();
+        } else if (!e.shiftKey && document.activeElement === lastElement) {
+          e.preventDefault();
+          firstElement?.focus();
+        }
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
 
     return () => {
       document.body.style.overflow = originalOverflow;
       window.removeEventListener('keydown', handleKeyDown);
+      previousActiveElement.current?.focus();
     };
   }, [onClose]);
 
-  const videoUrl = hasVideo ? adminApi.getMediaUrl(submission.id, 'video', submission.videoDriveId || submission.submittedAt) : null;
+  // Focus the close button on mount
+  useEffect(() => {
+    modalRef.current?.querySelector<HTMLElement>('button[aria-label="Close modal"]')?.focus();
+  }, []);
 
   // Load the freshest moderation + public visibility state for this video.
   useEffect(() => {
+    if (!submission) return;
     let cancelled = false;
     adminApi
       .getSubmission(submission.id)
@@ -135,7 +158,11 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [submission.id]);
+  }, [submission]);
+
+  if (!submission) return null;
+
+  const videoUrl = hasVideo ? adminApi.getMediaUrl(submission.id, 'video', submission.videoDriveId || submission.submittedAt) : null;
 
   const handleRequestNewVideo = async () => {
     setRequestingVideo(true);
@@ -282,39 +309,43 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
   return ReactDOM.createPortal(
     <>
       <div
-        className="fixed inset-0 z-[9999] bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 md:p-6"
+        className="fixed inset-0 z-modal bg-on-primary/40 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 md:p-6 animate-fade-in"
         onClick={(e) => {
           if (e.target === e.currentTarget) onClose();
         }}
+        role="presentation"
       >
-        <div className="bg-white dark:bg-[#11151C] border border-neutral-200 dark:border-[#252B35] text-neutral-900 dark:text-[#F3F5F7] rounded-2xl w-full max-w-5xl max-h-[calc(100vh-1.5rem)] sm:max-h-[calc(100vh-2rem)] md:max-h-[calc(100vh-3rem)] flex flex-col shadow-2xl text-left overflow-hidden my-auto">
+        <div
+          ref={modalRef}
+          className="surface surface-raised rounded-xl w-full max-w-5xl max-h-[calc(100vh-1.5rem)] sm:max-h-[calc(100vh-2rem)] md:max-h-[calc(100vh-3rem)] flex flex-col shadow-modal text-left overflow-hidden my-auto animate-scale-in"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-title"
+          aria-describedby="modal-body"
+        >
           {/* 1. STICKY MODAL HEADER */}
-          <div className="p-4 sm:p-5 border-b border-neutral-200 dark:border-[#252B35] flex items-center justify-between bg-[#fafafa] dark:bg-[#0D1117] flex-none shrink-0">
+          <div className="p-4 sm:p-5 border-b border-edge bg-surface-sunken flex items-center justify-between flex-none shrink-0">
             <div className="flex items-center gap-3 min-w-0 pr-2">
-              <div className="w-11 h-11 rounded-xl bg-elite-red text-white flex items-center justify-center text-base font-extrabold font-display shrink-0">
+              <div className="w-11 h-11 rounded-xl bg-brand text-on-primary flex items-center justify-center text-base font-extrabold shrink-0">
                 {initials || <UserRound className="w-5 h-5" />}
               </div>
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                  <h2 className="text-lg sm:text-xl font-bold text-elite-black font-display tracking-tight truncate">
+                  <h2 id="modal-title" className="text-lg sm:text-xl font-bold text-ink tracking-tight truncate">
                     {submission.name}
                   </h2>
                   {activeRating ? (
-                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-[11px] sm:text-xs font-bold uppercase tracking-wide shrink-0 ${
-                      activeRating.value === 'GOOD' ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
-                        : activeRating.value === 'AVERAGE' ? 'bg-amber-50 border-amber-200 text-amber-700'
-                        : 'bg-red-50 border-red-200 text-elite-red'
-                    }`}>
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-[11px] sm:text-xs font-bold uppercase tracking-wide shrink-0 ${activeRating.value === 'GOOD' ? 'badge badge-approved' : activeRating.value === 'AVERAGE' ? 'badge badge-pending' : 'badge badge-rejected'}`}>
                       <span className={`w-2 h-2 rounded-full ${activeRating.dotClass}`} />
                       {activeRating.label}
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-neutral-100 border border-neutral-200 text-neutral-600 text-[11px] sm:text-xs font-medium uppercase tracking-wide shrink-0">
+                    <span className="badge badge-draft shrink-0">
                       NOT RATED
                     </span>
                   )}
                 </div>
-                <div className="text-xs text-neutral-500 mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 font-mono">
+                <div className="text-xs text-ink-secondary mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 font-mono">
                   <span className="font-semibold">{submission.rollNo}</span>
                   <span>•</span>
                   <span>{submission.branch}-{submission.section} (Year {submission.year})</span>
@@ -325,64 +356,64 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
             <button
               onClick={onClose}
               aria-label="Close modal"
-              className="p-2 rounded-lg bg-neutral-100 hover:bg-neutral-200 text-neutral-600 transition-colors cursor-pointer shrink-0"
+              className="btn btn-ghost p-2"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
 
           {/* 2. SCROLLABLE MODAL BODY */}
-          <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 md:p-8 space-y-6">
+          <div id="modal-body" className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 md:p-8 space-y-6">
             {/* STUDENT IDENTITY CARD */}
-            <div className="bg-[#fafafa] dark:bg-[#161B22] border border-neutral-200 dark:border-[#252B35] rounded-2xl p-4 sm:p-5">
+            <div className="surface p-4 sm:p-5">
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 text-xs items-start">
                 <div className="min-w-0">
-                  <div className="text-neutral-400 dark:text-neutral-500 uppercase text-[10px] font-semibold tracking-wider">Roll Number</div>
-                  <div className="text-neutral-900 dark:text-white font-mono font-bold mt-0.5 truncate">{submission.rollNo}</div>
+                  <div className="text-ink-muted uppercase text-[10px] font-semibold tracking-wider">Roll Number</div>
+                  <div className="text-ink font-mono font-bold mt-0.5 truncate">{submission.rollNo}</div>
                 </div>
                 <div className="min-w-0">
-                  <div className="text-neutral-400 dark:text-neutral-500 uppercase text-[10px] font-semibold tracking-wider">Section & Year</div>
-                  <div className="text-neutral-900 dark:text-white font-semibold mt-0.5 truncate">{submission.branch}-{submission.section} • Year {submission.year}</div>
+                  <div className="text-ink-muted uppercase text-[10px] font-semibold tracking-wider">Section & Year</div>
+                  <div className="text-ink font-semibold mt-0.5 truncate">{submission.branch}-{submission.section} • Year {submission.year}</div>
                 </div>
                 <div className="min-w-0">
-                  <div className="text-neutral-400 dark:text-neutral-500 uppercase text-[10px] font-semibold tracking-wider flex items-center gap-1">
+                  <div className="text-ink-muted uppercase text-[10px] font-semibold tracking-wider flex items-center gap-1">
                     <Mail className="w-3 h-3" /> Email
                   </div>
-                  <div className="text-neutral-900 dark:text-white mt-0.5 break-all">{submission.email}</div>
+                  <div className="text-ink mt-0.5 break-all">{submission.email}</div>
                 </div>
                 <div className="min-w-0">
-                  <div className="text-neutral-400 dark:text-neutral-500 uppercase text-[10px] font-semibold tracking-wider flex items-center gap-1">
+                  <div className="text-ink-muted uppercase text-[10px] font-semibold tracking-wider flex items-center gap-1">
                     <Phone className="w-3 h-3" /> Phone
                   </div>
-                  <div className="text-neutral-900 dark:text-white font-mono font-semibold mt-0.5">{submission.phoneNo || '—'}</div>
+                  <div className="text-ink font-mono font-semibold mt-0.5">{submission.phoneNo || 'To be announced'}</div>
                 </div>
                 <div className="min-w-0">
-                  <div className="text-neutral-400 dark:text-neutral-500 uppercase text-[10px] font-semibold tracking-wider flex items-center gap-1">
+                  <div className="text-ink-muted uppercase text-[10px] font-semibold tracking-wider flex items-center gap-1">
                     <ShieldCheck className="w-3 h-3" /> Video Status
                   </div>
-                  <div className={`font-bold uppercase mt-0.5 text-[11px] ${hasVideo ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'}`}>
+                  <div className={`font-bold uppercase mt-0.5 text-[11px] ${hasVideo ? 'text-status-approved' : 'text-status-rejected'}`}>
                     {hasVideo ? 'Available' : 'No video'}
                   </div>
                 </div>
               </div>
-              <div className="mt-4 pt-3 border-t border-neutral-200 dark:border-[#252B35] flex items-center gap-1.5 text-[11px] text-neutral-500 dark:text-neutral-400 font-mono min-w-0">
-                <Folder className="w-3 h-3 text-neutral-400 shrink-0" />
+              <div className="mt-4 pt-3 border-t border-edge flex items-center gap-1.5 text-[11px] text-ink-secondary font-mono min-w-0">
+                <Folder className="w-3 h-3 text-ink-muted shrink-0" />
                 <span className="truncate">{submission.driveFolderPath}</span>
               </div>
             </div>
 
             {/* VIDEO */}
-            <div className="bg-white dark:bg-[#161B22] border border-neutral-200 dark:border-[#252B35] rounded-2xl p-4 sm:p-5 shadow-sm">
+            <div className="surface p-4 sm:p-5 shadow-sm">
               <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-red-50 dark:bg-red-950/40 text-elite-red flex items-center justify-center shrink-0">
+                  <div className="w-9 h-9 rounded-xl bg-brand-soft text-brand-soft-text flex items-center justify-center shrink-0">
                     <Film className="w-4 h-4" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-elite-black dark:text-white font-display tracking-tight">
+                    <h3 className="text-sm font-bold text-ink tracking-tight">
                       Submitted Self-Introduction
                     </h3>
-                    <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                    <p className="text-[11px] text-ink-secondary">
                       Review the student's introduction clip below.
                     </p>
                   </div>
@@ -390,17 +421,12 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                 {hasVideo && (
                   <div className="flex items-center gap-2">
                     {introVideo?.status && (
-                      <span
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-bold uppercase tracking-wide ${
-                          VIDEO_STATUS_BADGE[introVideo.status]?.cls ??
-                          'bg-neutral-50 text-neutral-600 border-neutral-200'
-                        }`}
-                      >
+                      <span className={`${VIDEO_STATUS_BADGE[introVideo.status]?.cls ?? 'badge badge-draft'}`}>
                         {VIDEO_STATUS_BADGE[introVideo.status]?.label ?? introVideo.status}
                       </span>
                     )}
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-emerald-200 dark:border-emerald-800/60 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 text-[11px] font-bold uppercase tracking-wide">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+                    <span className="badge badge-approved">
+                      <span className="w-2 h-2 rounded-full bg-status-approved inline-block" />
                       Uploaded
                     </span>
                   </div>
@@ -408,32 +434,32 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
               </div>
 
               {videoUrl ? (
-                <div className="bg-neutral-900 rounded-xl overflow-hidden shadow-md">
+                <div className="bg-surface-inverse rounded-xl overflow-hidden shadow-md">
                   <video src={videoUrl} controls className="w-full max-h-[420px]" />
                 </div>
               ) : (
-                <div className="bg-neutral-100 dark:bg-neutral-800/50 border border-dashed border-neutral-300 dark:border-neutral-700 rounded-xl p-10 text-center space-y-2">
-                  <VideoOff className="w-6 h-6 text-neutral-400 mx-auto" />
-                  <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                <div className="surface-sunken border border-edge-strong rounded-xl p-10 text-center space-y-2">
+                  <VideoOff className="w-6 h-6 text-ink-muted mx-auto" />
+                  <p className="text-xs text-ink-secondary">
                     No video is linked to this submission. The student can upload a replacement video.
                   </p>
                 </div>
               )}
 
               {/* PUBLIC VISIBILITY + CHANGE REQUEST */}
-              <div className="mt-4 pt-4 border-t border-neutral-200 dark:border-[#252B35] space-y-3">
+              <div className="mt-4 pt-4 border-t border-edge space-y-3">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="flex items-start gap-2.5 min-w-0">
                     {introVideo?.isPublic ? (
-                      <Globe className="w-4 h-4 shrink-0 text-emerald-600 mt-0.5" />
+                      <Globe className="w-4 h-4 shrink-0 text-status-approved mt-0.5" />
                     ) : (
-                      <EyeOff className="w-4 h-4 shrink-0 text-neutral-400 mt-0.5" />
+                      <EyeOff className="w-4 h-4 shrink-0 text-ink-muted mt-0.5" />
                     )}
                     <div className="min-w-0">
-                      <p className="text-xs font-bold text-elite-black dark:text-white">
+                      <p className="text-xs font-bold text-ink">
                         {introVideo?.isPublic ? 'Visible on the public page' : 'Not published publicly'}
                       </p>
-                      <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5 leading-relaxed">
+                      <p className="text-[11px] text-ink-secondary mt-0.5 leading-relaxed">
                         {introVideo?.status === 'APPROVED'
                           ? 'Published videos are watchable by anyone on the public home page, without logging in.'
                           : 'Only an approved video can be published to the public page.'}
@@ -449,8 +475,8 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                       title={introVideo?.status === 'APPROVED' ? undefined : 'Only approved videos can be published'}
                       className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-[11px] font-bold uppercase tracking-wide transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
                         introVideo?.isPublic
-                          ? 'bg-neutral-100 hover:bg-neutral-200 text-elite-black dark:bg-neutral-800 dark:text-white'
-                          : 'bg-elite-red hover:bg-red-700 text-white'
+                          ? 'btn btn-ghost'
+                          : 'btn btn-primary'
                       }`}
                     >
                       {togglingPublic ? (
@@ -466,7 +492,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                     <button
                       type="button"
                       onClick={() => setShowRequestForm((v) => !v)}
-                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-orange-200 dark:border-orange-800/60 text-[11px] font-bold uppercase tracking-wide text-orange-700 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-950/40 transition-colors cursor-pointer"
+                      className="btn btn-ghost text-status-changes hover:bg-status-bg-changes hover:text-status-changes border border-status-bg-changes"
                     >
                       <RefreshCw className="w-3.5 h-3.5" />
                       Request New Video
@@ -475,18 +501,18 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                 </div>
 
                 {showRequestForm && (
-                  <div className="space-y-2 p-3 rounded-xl border border-orange-200 dark:border-orange-800/60 bg-orange-50/50 dark:bg-orange-950/20">
-                    <label className="block text-[11px] font-bold uppercase tracking-wide text-orange-800 dark:text-orange-300">
+                  <div className="space-y-2 p-3 rounded-xl border border-status-bg-changes bg-status-bg-changes/50">
+                    <label className="block text-[11px] font-bold uppercase tracking-wide text-status-changes">
                       What should the student change? <span className="font-normal normal-case">(optional)</span>
                     </label>
                     <textarea
                       value={requestReason}
                       onChange={(e) => setRequestReason(e.target.value)}
                       rows={3}
-                      placeholder="e.g. The audio is not clear in the second half — please re-record."
-                      className="w-full text-xs border border-orange-200 dark:border-orange-800/60 bg-white dark:bg-neutral-800 rounded-lg p-3 resize-none focus:outline-none focus:border-elite-red focus:ring-1 focus:ring-elite-red text-elite-black dark:text-white"
+                      placeholder="e.g. The audio is not clear in the second half, please re-record."
+                      className="textarea"
                     />
-                    <p className="text-[11px] text-orange-800/80 dark:text-orange-300/80 leading-relaxed">
+                    <p className="text-[11px] text-status-changes/80 leading-relaxed">
                       The student gets a notification. Their current video stays live until they upload the
                       replacement, which then overrides it and removes the old file.
                     </p>
@@ -494,7 +520,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                       <button
                         type="button"
                         onClick={() => setShowRequestForm(false)}
-                        className="px-3 py-1.5 rounded-lg text-[11px] font-bold text-neutral-600 dark:text-neutral-300 hover:bg-white dark:hover:bg-neutral-800 cursor-pointer"
+                        className="btn btn-ghost"
                       >
                         Cancel
                       </button>
@@ -502,7 +528,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                         type="button"
                         onClick={handleRequestNewVideo}
                         disabled={requestingVideo}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-elite-red hover:bg-red-700 text-white text-[11px] font-bold uppercase tracking-wide disabled:opacity-50 cursor-pointer"
+                        className="btn btn-primary"
                       >
                         {requestingVideo ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <MessageSquare className="w-3.5 h-3.5" />}
                         Notify Student
@@ -512,7 +538,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                 )}
 
                 {videoNotice && (
-                  <p className="text-[11px] text-neutral-600 dark:text-neutral-300 flex items-center gap-1.5">
+                  <p className="text-[11px] text-ink-secondary flex items-center gap-1.5">
                     <ShieldCheck className="w-3 h-3 shrink-0" />
                     {videoNotice}
                   </p>
@@ -523,16 +549,16 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
             {/* RATING + RESPONSE GRID */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
               {/* RATING CONTROL */}
-              <div className="bg-white dark:bg-[#161B22] border border-neutral-200 dark:border-[#252B35] rounded-2xl p-5 shadow-sm space-y-3">
+              <div className="surface p-5 shadow-sm space-y-3">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                  <div className="w-9 h-9 rounded-xl bg-status-bg-approved text-status-approved flex items-center justify-center shrink-0">
                     <Circle className="w-4 h-4" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-elite-black dark:text-white font-display tracking-tight uppercase">
+                    <h3 className="text-sm font-bold text-ink tracking-tight uppercase">
                       Introduction Rating
                     </h3>
-                    <p className="text-[11px] text-neutral-500 dark:text-neutral-400">Assess the delivery and clarity.</p>
+                    <p className="text-[11px] text-ink-secondary">Assess the delivery and clarity.</p>
                   </div>
                 </div>
 
@@ -545,18 +571,18 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                         type="button"
                         disabled={updating || deleting || deletingVideo}
                         onClick={() => handleRate(isActive ? null : opt.value)}
-                        className={`w-full py-3 px-4 rounded-lg text-left transition-all flex items-start gap-3 border cursor-pointer disabled:opacity-50 ${
+                        className={`w-full py-3 px-4 rounded-lg text-left transition-colors flex items-start gap-3 border cursor-pointer disabled:opacity-50 ${
                           isActive
                             ? opt.activeClass
-                            : 'bg-white dark:bg-neutral-800/80 border-neutral-200 dark:border-neutral-700 hover:border-neutral-300 dark:hover:border-neutral-600'
+                            : 'bg-surface border-edge hover:border-edge-strong'
                         }`}
                       >
-                        <Circle className={`w-4 h-4 mt-0.5 shrink-0 ${isActive ? 'text-white' : 'text-neutral-300 dark:text-neutral-600'}`} />
+                        <Circle className={`w-4 h-4 mt-0.5 shrink-0 ${isActive ? 'text-on-primary' : 'text-ink-muted'}`} />
                         <div className="min-w-0">
-                          <div className={`font-bold text-xs uppercase tracking-wider ${isActive ? 'text-white' : 'text-elite-black dark:text-white'}`}>
+                          <div className={`font-bold text-xs uppercase tracking-wider ${isActive ? 'text-on-primary' : 'text-ink'}`}>
                             {opt.label}
                           </div>
-                          <div className={`text-[11px] mt-0.5 ${isActive ? 'text-white/80' : 'text-neutral-500 dark:text-neutral-400'}`}>
+                          <div className={`text-[11px] mt-0.5 ${isActive ? 'text-on-primary/80' : 'text-ink-secondary'}`}>
                             {opt.description}
                           </div>
                         </div>
@@ -565,22 +591,22 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                   })}
 
                   {updating && (
-                    <div className="text-[11px] text-neutral-400 font-mono pt-1">Saving rating...</div>
+                    <div className="text-[11px] text-ink-muted font-mono pt-1">Saving rating...</div>
                   )}
                 </div>
               </div>
 
               {/* SEND RESPONSE */}
-              <div className="bg-white dark:bg-[#161B22] border border-neutral-200 dark:border-[#252B35] rounded-2xl p-5 shadow-sm space-y-4">
+              <div className="surface p-5 shadow-sm space-y-4">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-red-50 dark:bg-red-950/40 text-elite-red flex items-center justify-center shrink-0">
+                  <div className="w-9 h-9 rounded-xl bg-status-bg-rejected text-status-rejected flex items-center justify-center shrink-0">
                     <MessageSquare className="w-4 h-4" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-elite-black dark:text-white font-display tracking-tight uppercase">
+                    <h3 className="text-sm font-bold text-ink tracking-tight uppercase">
                       Send Response to Student
                     </h3>
-                    <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                    <p className="text-[11px] text-ink-secondary">
                       Text feedback plus hashtag keywords the student sees after submitting.
                     </p>
                   </div>
@@ -590,14 +616,14 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                   value={reviewText}
                   onChange={(e) => setReviewText(e.target.value)}
                   rows={3}
-                  placeholder="Write your review — what the student did well and what to improve..."
-                  className="w-full bg-[#fafafa] dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg px-3 py-2.5 text-xs text-neutral-900 dark:text-white placeholder:text-neutral-400 focus:outline-none focus:border-elite-red focus:bg-white dark:focus:bg-neutral-800 transition-colors resize-y"
+                  placeholder="Write your review. What did the student do well, and what to improve?"
+                  className="textarea bg-surface-sunken"
                 />
 
                 <div className="space-y-3">
                   <div>
-                    <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 mb-1.5">
-                      Pros — select keywords
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-status-approved mb-1.5">
+                      Pros, select keywords
                     </div>
                     <div className="flex flex-wrap gap-1.5">
                       {REVIEW_PROS.map((tag) => {
@@ -609,8 +635,8 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                             onClick={() => togglePros(tag)}
                             className={`px-2.5 py-1 rounded-full border text-[11px] font-semibold transition-colors cursor-pointer ${
                               on
-                                ? 'bg-emerald-600 text-white border-emerald-600'
-                                : 'bg-emerald-50/50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/60 hover:border-emerald-400'
+                                ? 'bg-status-approved text-on-primary border-status-approved'
+                                : 'badge badge-approved hover:border-status-approved'
                             }`}
                           >
                             # {tag}
@@ -620,8 +646,8 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                     </div>
                   </div>
                   <div>
-                    <div className="text-[10px] font-bold uppercase tracking-wider text-elite-red mb-1.5">
-                      Cons — select keywords
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-status-rejected mb-1.5">
+                      Cons, select keywords
                     </div>
                     <div className="flex flex-wrap gap-1.5">
                       {REVIEW_CONS.map((tag) => {
@@ -633,8 +659,8 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                             onClick={() => toggleCons(tag)}
                             className={`px-2.5 py-1 rounded-full border text-[11px] font-semibold transition-colors cursor-pointer ${
                               on
-                                ? 'bg-elite-darkred text-white border-elite-darkred'
-                                : 'bg-red-50/50 dark:bg-red-950/30 text-elite-red border-red-200 dark:border-red-900/50 hover:border-red-400'
+                                ? 'bg-status-rejected text-on-primary border-status-rejected'
+                                : 'badge badge-rejected hover:border-status-rejected'
                             }`}
                           >
                             # {tag}
@@ -650,7 +676,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                     type="button"
                     disabled={sendingReview || deleting || deletingVideo}
                     onClick={() => handleSubmitReview(false)}
-                    className="flex-1 py-2.5 px-4 bg-elite-red hover:bg-elite-darkred text-white font-bold text-xs uppercase tracking-wider rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
+                    className="flex-1 btn btn-primary"
                   >
                     <Send className="w-3.5 h-3.5" />
                     <span>{sendingReview ? 'Sending...' : 'Send Response'}</span>
@@ -660,7 +686,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                     disabled={sendingReview || deleting || deletingVideo}
                     onClick={() => handleSubmitReview(true)}
                     title="Clear the response (marks the submission as not yet reviewed)"
-                    className="py-2.5 px-3.5 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-600 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700 font-semibold text-xs rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
+                    className="btn btn-secondary"
                   >
                     <Eraser className="w-3.5 h-3.5" />
                     <span className="hidden sm:inline">Clear</span>
@@ -670,12 +696,12 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
             </div>
 
             {/* MANAGE ACTIONS */}
-            <div className="bg-white dark:bg-[#161B22] border border-neutral-200 dark:border-[#252B35] rounded-2xl p-5 shadow-sm flex flex-col sm:flex-row items-stretch sm:items-center gap-3 justify-between">
+            <div className="surface p-5 shadow-sm flex flex-col sm:flex-row items-stretch sm:items-center gap-3 justify-between">
               <div>
-                <h3 className="text-sm font-bold text-elite-black dark:text-white font-display tracking-tight uppercase">
+                <h3 className="text-sm font-bold text-ink tracking-tight uppercase">
                   Manage Video & Record
                 </h3>
-                <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5">
+                <p className="text-[11px] text-ink-secondary mt-0.5">
                   Deleting the video lets the student upload a replacement. Removing the record is permanent.
                 </p>
               </div>
@@ -684,7 +710,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                   type="button"
                   disabled={updating || deleting || deletingVideo || !hasVideo}
                   onClick={handleDeleteVideo}
-                  className="py-2.5 px-4 bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60 hover:border-amber-300 font-semibold text-xs rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="btn btn-ghost text-status-pending hover:bg-status-bg-pending hover:text-status-pending border border-status-bg-pending disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <VideoOff className="w-4 h-4" />
                   <span>{deletingVideo ? 'Deleting Video...' : 'Delete Video & Allow Re-upload'}</span>
@@ -693,9 +719,9 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                   type="button"
                   disabled={updating || deleting || deletingVideo}
                   onClick={handleDelete}
-                  className="py-2.5 px-4 bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-950/60 text-elite-red border border-red-200 dark:border-red-900/50 hover:border-red-300 font-semibold text-xs rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-2"
+                  className="btn btn-danger"
                 >
-                  <Trash2 className="w-4 h-4 text-elite-red" />
+                  <Trash2 className="w-4 h-4" />
                   <span>{deleting ? 'Deleting Record...' : 'Delete Record & Files'}</span>
                 </button>
               </div>

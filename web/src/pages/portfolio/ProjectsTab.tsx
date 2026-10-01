@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { api } from '../../services/api';
 import { Project } from '../../types';
 import { Plus, Github, ExternalLink, Loader2, AlertCircle, Trash2, X, FolderGit2, Pencil } from 'lucide-react';
@@ -21,6 +21,10 @@ export const ProjectsTab: React.FC = () => {
   const [githubUrl, setGithubUrl] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
 
+  const modalTitleRef = useRef<HTMLHeadingElement>(null);
+  const firstInputRef = useRef<HTMLInputElement>(null);
+  const lastFocusedElement = useRef<HTMLElement | null>(null);
+
   const loadProjects = async () => {
     setLoading(true);
     setError(null);
@@ -37,6 +41,16 @@ export const ProjectsTab: React.FC = () => {
   useEffect(() => {
     loadProjects();
   }, []);
+
+  // Focus management for modal
+  useEffect(() => {
+    if (modalOpen) {
+      lastFocusedElement.current = document.activeElement as HTMLElement;
+      setTimeout(() => firstInputRef.current?.focus(), 0);
+    } else if (lastFocusedElement.current) {
+      lastFocusedElement.current.focus();
+    }
+  }, [modalOpen]);
 
   const handleOpenCreateModal = () => {
     setEditingProject(null);
@@ -106,100 +120,107 @@ export const ProjectsTab: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="py-16">
+      <div className="py-16 animate-fade-in">
         <BrandedLoading fullScreen={false} message="Loading Projects..." />
       </div>
     );
   }
 
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'APPROVED':
+        return <span className="badge badge-approved">Approved</span>;
+      case 'REJECTED':
+        return <span className="badge badge-rejected">Rejected</span>;
+      case 'PENDING':
+        return <span className="badge badge-pending">Pending Review</span>;
+      default:
+        return <span className="badge badge-draft">{status}</span>;
+    }
+  };
+
   return (
-    <div className="space-y-6 text-left">
+    <div className="space-y-6 text-left page-enter" role="main">
       {/* SECTION HEADER */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-lg font-bold text-[#0F172A] font-heading">Project Portfolio ({projects.length}/5)</h2>
-          <p className="text-xs text-[#475569]">Showcase technical builds, full-stack applications, and research code</p>
+          <h2 className="text-body-lg font-bold text-ink font-heading">Project Portfolio ({projects.length}/5)</h2>
+          <p className="text-body-sm text-ink-secondary">Showcase technical builds, full-stack applications, and research code</p>
         </div>
         <button
           onClick={handleOpenCreateModal}
           disabled={projects.length >= 5}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-[#4F46E5] hover:bg-[#3730A3] disabled:opacity-40 text-white text-xs font-bold rounded-lg transition-opacity shadow-xs cursor-pointer"
+          className="btn btn-primary disabled:opacity-40"
+          aria-label={projects.length >= 5 ? 'Maximum of 5 projects reached' : 'Add new project'}
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-4 h-4" aria-hidden="true" />
           <span>Add Project</span>
         </button>
       </div>
 
       {error && (
-        <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-xs text-[#E11D48] flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 shrink-0" />
+        <div className="surface-sunken border border-status-rejected bg-status-bg-rejected text-status-rejected text-body-sm flex items-center gap-2 animate-fade-in" role="alert">
+          <AlertCircle className="w-4 h-4 shrink-0" aria-hidden="true" />
           <span>{error}</span>
         </div>
       )}
 
       {/* PROJECTS GRID */}
       {projects.length === 0 ? (
-        <div className="text-center py-16 px-4 border-2 border-dashed border-[#E4E7F2] rounded-lg bg-[#F7F8FC]">
-          <FolderGit2 className="w-12 h-12 text-[#94A3B8] mx-auto mb-3" />
-          <h3 className="text-sm font-bold text-[#0F172A] font-heading">No projects added yet</h3>
-          <p className="text-xs text-[#475569] mt-1 max-w-sm mx-auto mb-4">
+        <div className="surface text-center py-16 px-4 animate-fade-in">
+          <div className="w-12 h-12 rounded-full bg-brand-soft flex items-center justify-center mx-auto mb-4">
+            <FolderGit2 className="w-6 h-6 text-brand" aria-hidden="true" />
+          </div>
+          <h3 className="text-body-lg font-bold text-ink font-heading">No projects added yet</h3>
+          <p className="text-body-sm text-ink-secondary mt-1 max-w-sm mx-auto mb-4">
             Upload your technical projects with GitHub links and tech stack tags to build your recruitment profile.
           </p>
           <button
             onClick={handleOpenCreateModal}
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#4F46E5] hover:bg-[#3730A3] text-white rounded-lg text-xs font-bold transition-opacity cursor-pointer shadow-xs"
+            disabled={projects.length >= 5}
+            className="btn btn-primary"
           >
-            <Plus className="w-3.5 h-3.5" />
+            <Plus className="w-3.5 h-3.5" aria-hidden="true" />
             <span>Add Your First Project</span>
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 animate-fade-in">
           {projects.map((p) => (
             <div
               key={p.id}
-              className="border border-[#E4E7F2] rounded-lg p-5 hover:border-[#4F46E5]/40 hover:shadow-md transition-all flex flex-col justify-between bg-white group text-left shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+              className="surface p-5 flex flex-col justify-between group"
             >
               <div className="space-y-3">
                 <div className="flex items-start justify-between gap-2">
-                  <h3 className="font-bold text-sm text-[#0F172A] font-heading line-clamp-1">{p.title}</h3>
+                  <h3 className="font-bold text-body-sm text-ink font-heading line-clamp-1">{p.title}</h3>
                   <div className="flex items-center gap-1.5 shrink-0">
-                    <span
-                      className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
-                        p.status === 'APPROVED'
-                          ? 'bg-emerald-100 text-emerald-800'
-                          : p.status === 'REJECTED'
-                          ? 'bg-rose-100 text-rose-800'
-                          : 'bg-amber-100 text-amber-800'
-                      }`}
-                    >
-                      {p.status}
-                    </span>
+                    {getStatusBadge(p.status)}
                     <button
                       onClick={() => handleOpenEditModal(p)}
-                      className="p-1 text-[#94A3B8] hover:text-[#0F172A] transition-colors cursor-pointer rounded"
-                      title="Edit project"
+                      className="btn btn-ghost p-1"
+                      aria-label={`Edit ${p.title}`}
                     >
-                      <Pencil className="w-3.5 h-3.5" />
+                      <Pencil className="w-3.5 h-3.5" aria-hidden="true" />
                     </button>
                     <button
                       onClick={() => handleDelete(p.id)}
-                      className="p-1 text-[#94A3B8] hover:text-[#E11D48] transition-colors cursor-pointer rounded"
-                      title="Delete project"
+                      className="btn btn-ghost p-1 text-ink-muted hover:text-status-rejected"
+                      aria-label={`Delete ${p.title}`}
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
                     </button>
                   </div>
                 </div>
 
-                <p className="text-xs text-[#475569] line-clamp-2 leading-relaxed">{p.description}</p>
+                <p className="text-body-sm text-ink-secondary line-clamp-2 leading-relaxed">{p.description}</p>
 
                 {/* Tech stack badges */}
                 <div className="flex flex-wrap gap-1 pt-1">
                   {p.techStack?.map((t) => (
                     <span
                       key={t}
-                      className="px-2 py-0.5 bg-[#EEF2FF] text-[#4F46E5] text-[10px] font-semibold rounded-md border border-[#E0E7FF]"
+                      className="badge badge-brand text-[10px]"
                     >
                       {t}
                     </span>
@@ -207,19 +228,19 @@ export const ProjectsTab: React.FC = () => {
                 </div>
               </div>
 
-              <div className="pt-4 mt-4 border-t border-[#E4E7F2] flex items-center justify-between text-xs">
+              <div className="pt-4 mt-4 border-t border-edge flex items-center justify-between text-label-sm">
                 {p.githubUrl ? (
                   <a
                     href={p.githubUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex items-center gap-1.5 text-[#475569] hover:text-[#4F46E5] font-semibold"
+                    className="inline-flex items-center gap-1.5 text-ink-secondary hover:text-brand font-semibold"
                   >
-                    <Github className="w-3.5 h-3.5" />
+                    <Github className="w-3.5 h-3.5" aria-hidden="true" />
                     <span>Repository</span>
                   </a>
                 ) : (
-                  <span className="text-[11px] text-[#94A3B8]">No repo link</span>
+                  <span className="text-ink-muted">No repo link</span>
                 )}
 
                 {p.videoUrl && (
@@ -227,10 +248,10 @@ export const ProjectsTab: React.FC = () => {
                     href={p.videoUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex items-center gap-1 text-[#4F46E5] hover:underline font-semibold"
+                    className="inline-flex items-center gap-1 text-brand hover:underline font-semibold"
                   >
                     <span>Demo</span>
-                    <ExternalLink className="w-3 h-3" />
+                    <ExternalLink className="w-3 h-3" aria-hidden="true" />
                   </a>
                 )}
               </div>
@@ -241,84 +262,91 @@ export const ProjectsTab: React.FC = () => {
 
       {/* ADD / EDIT PROJECT MODAL */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="bg-white rounded-lg max-w-lg w-full p-6 shadow-2xl border border-[#E4E7F2] animate-in fade-in zoom-in-95 duration-150 text-left">
-            <div className="flex items-center justify-between pb-3 border-b border-[#E4E7F2]">
-              <h3 className="text-base font-bold text-[#0F172A] font-heading">
+        <div className="fixed inset-0 z-modal flex items-center justify-center p-4 bg-scrim backdrop-blur-xs animate-fade-in" role="dialog" aria-modal="true" aria-labelledby="project-modal-title">
+          <div className="surface max-w-lg w-full p-6 shadow-modal animate-scale-in text-left" ref={modalTitleRef}>
+            <div className="flex items-center justify-between pb-3 border-b border-edge">
+              <h3 id="project-modal-title" className="text-body-lg font-bold text-ink font-heading">
                 {editingProject ? 'Edit Technical Project' : 'Add New Technical Project'}
               </h3>
               <button
                 onClick={() => setModalOpen(false)}
-                className="p-1 text-[#94A3B8] hover:text-[#0F172A] rounded-lg cursor-pointer"
+                className="btn btn-ghost p-1"
+                aria-label="Close modal"
               >
-                <X className="w-5 h-5" />
+                <X className="w-5 h-5" aria-hidden="true" />
               </button>
             </div>
 
             <form onSubmit={handleSaveProject} className="space-y-4 pt-4">
               {modalError && (
-                <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-xs text-[#E11D48] flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
+                <div className="surface-sunken border border-status-rejected bg-status-bg-rejected text-status-rejected text-body-sm flex items-center gap-2" role="alert">
+                  <AlertCircle className="w-4 h-4 shrink-0" aria-hidden="true" />
                   <span>{modalError}</span>
                 </div>
               )}
 
               <div>
-                <label className="block text-xs font-bold text-[#0F172A] mb-1 font-heading">Project Title *</label>
+                <label htmlFor="project-title" className="label">Project Title <span className="text-status-rejected" aria-hidden="true">*</span></label>
                 <input
+                  id="project-title"
+                  ref={firstInputRef}
                   type="text"
                   required
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="e.g. Distributed Task Queue"
-                  className="w-full p-2.5 bg-white border border-[#E4E7F2] rounded-lg text-xs focus:outline-none focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5]"
+                  className="input"
+                  aria-required="true"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#0F172A] mb-1 font-heading">Description *</label>
+                <label htmlFor="project-description" className="label">Description <span className="text-status-rejected" aria-hidden="true">*</span></label>
                 <textarea
+                  id="project-description"
                   required
                   rows={3}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Describe the system architecture, problems solved, and outcomes..."
-                  className="w-full p-2.5 bg-white border border-[#E4E7F2] rounded-lg text-xs focus:outline-none focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5]"
+                  className="textarea"
+                  aria-required="true"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#0F172A] mb-1 font-heading">
-                  Technologies / Tech Stack (comma separated)
-                </label>
+                <label htmlFor="project-techstack" className="label">Technologies / Tech Stack (comma separated)</label>
                 <input
+                  id="project-techstack"
                   type="text"
                   value={techStackInput}
                   onChange={(e) => setTechStackInput(e.target.value)}
                   placeholder="e.g. React, Node.js, Redis, Docker"
-                  className="w-full p-2.5 bg-white border border-[#E4E7F2] rounded-lg text-xs focus:outline-none focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5]"
+                  className="input"
                 />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-[#0F172A] mb-1 font-heading">GitHub Repo URL</label>
+                  <label htmlFor="project-github" className="label">GitHub Repo URL</label>
                   <input
+                    id="project-github"
                     type="url"
                     value={githubUrl}
                     onChange={(e) => setGithubUrl(e.target.value)}
                     placeholder="https://github.com/..."
-                    className="w-full p-2.5 bg-white border border-[#E4E7F2] rounded-lg text-xs focus:outline-none focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5]"
+                    className="input"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-[#0F172A] mb-1 font-heading">Live Demo / Video URL</label>
+                  <label htmlFor="project-video" className="label">Live Demo / Video URL</label>
                   <input
+                    id="project-video"
                     type="url"
                     value={videoUrl}
                     onChange={(e) => setVideoUrl(e.target.value)}
                     placeholder="https://..."
-                    className="w-full p-2.5 bg-white border border-[#E4E7F2] rounded-lg text-xs focus:outline-none focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5]"
+                    className="input"
                   />
                 </div>
               </div>
@@ -327,16 +355,17 @@ export const ProjectsTab: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setModalOpen(false)}
-                  className="px-4 py-2 rounded-lg text-xs font-bold text-[#475569] hover:bg-[#F7F8FC] transition-colors cursor-pointer"
+                  className="btn btn-secondary"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={saving || !title.trim() || !description.trim()}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#4F46E5] hover:bg-[#3730A3] text-white text-xs font-bold transition-opacity disabled:opacity-50 cursor-pointer shadow-xs"
+                  className="btn btn-primary"
+                  aria-busy={saving}
                 >
-                  {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                  {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" /> : <Plus className="w-3.5 h-3.5" aria-hidden="true" />}
                   <span>{editingProject ? 'Update Project' : 'Save Project'}</span>
                 </button>
               </div>

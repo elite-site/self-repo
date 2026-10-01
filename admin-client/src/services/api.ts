@@ -36,13 +36,15 @@ export const adminApi = {
     return res.data;
   },
 
+  // Deliberately *not* swallowing errors here. This used to catch everything
+  // and report `{ authenticated: false }`, which made a 500 or a network blip
+  // indistinguishable from being signed out — and because the caller saw a
+  // resolved promise, the caller's error branch (and its "Retry" screen) could
+  // never run. Let it reject so App.tsx can tell "logged out" from
+  // "could not reach the server".
   async getMe(): Promise<{ authenticated: boolean; user?: AdminUser }> {
-    try {
-      const res = await client.get('/admin/me');
-      return res.data;
-    } catch {
-      return { authenticated: false };
-    }
+    const res = await client.get('/admin/me');
+    return res.data;
   },
 
   // Events
@@ -278,8 +280,10 @@ export const adminApi = {
     return res.data;
   },
   async getAnnouncementAudiencePreview(audience: string): Promise<{ count: number }> {
-    const res = await client.get('/admin/api/announcements/preview', { params: { audience } }).catch(() => ({ data: { count: 120 } }));
-    return res.data || { count: 120 };
+    // No fabricated fallback: a wrong reach estimate is worse than an error, and
+    // this previously masked a missing endpoint behind a constant 120.
+    const res = await client.get('/admin/api/announcements/preview', { params: { audience } });
+    return res.data;
   },
 
   // Event Registrations (ADM-08)

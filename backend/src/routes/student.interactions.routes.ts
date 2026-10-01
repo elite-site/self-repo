@@ -143,7 +143,7 @@ router.post(['/voting/:id/vote', '/voting/vote'], async (req: Request, res: Resp
     }
     const campaignId = req.params.id || req.body.campaignId;
     const { candidateId } = req.body;
-    
+
     if (!campaignId) {
       return res.status(400).json({ error: 'INVALID_CAMPAIGN', message: 'Campaign ID is required' });
     }
@@ -177,7 +177,7 @@ router.post(['/voting/:id/vote', '/voting/vote'], async (req: Request, res: Resp
         err.code = 'ALREADY_VOTED';
         throw err;
       }
-      
+
       return await tx.vote.create({
         data: {
           campaignId,

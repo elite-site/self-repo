@@ -133,19 +133,19 @@ export const TeamsPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="py-20">
+      <div className="py-20" role="status" aria-live="polite">
         <BrandedLoading fullScreen={false} message="Loading Teams & Invitations..." />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 text-left">
+    <div className="space-y-6 text-left page-enter" role="main">
       {/* HEADER */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-black text-[#0F172A] font-heading">Hackathon & Project Teams</h1>
-          <p className="text-xs text-[#475569]">
+          <h1 className="text-headline-md font-black text-ink font-heading">Hackathon & Project Teams</h1>
+          <p className="text-body-sm text-ink-muted">
             Form collaborative teams with peers across sections for department hackathons and projects
           </p>
         </div>
@@ -160,16 +160,16 @@ export const TeamsPage: React.FC = () => {
           }}
           disabled={events.length === 0}
           title={events.length === 0 ? 'No active event available to create a team for.' : undefined}
-          className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-[#4F46E5] hover:bg-[#3730A3] text-white text-xs font-bold rounded-lg transition-all shadow-xs cursor-pointer shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="btn btn-primary inline-flex items-center gap-1.5 shrink-0"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-4 h-4" aria-hidden="true" />
           <span>Create New Team</span>
         </button>
       </div>
 
       {events.length === 0 && !loading && (
-        <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-xs flex items-center gap-2.5">
-          <AlertCircle className="w-4 h-4 shrink-0 text-amber-600" />
+        <div className="p-4 bg-status-bg-pending border border-edge-strong rounded-lg text-status-pending text-body-sm flex items-center gap-2.5" role="status">
+          <AlertCircle className="w-4 h-4 shrink-0" aria-hidden="true" />
           <div>
             <span className="font-bold block">Team Creation Disabled</span>
             <span>No active event available to create a team for. Team creation will become available when an event opens.</span>
@@ -178,9 +178,9 @@ export const TeamsPage: React.FC = () => {
       )}
 
       {error && (
-        <div className="p-4 bg-rose-50 border border-rose-200 rounded-lg text-rose-800 text-xs flex items-center justify-between">
+        <div className="p-4 bg-status-bg-rejected border border-edge-strong rounded-lg text-status-rejected text-body-sm flex items-center justify-between" role="alert">
           <div className="flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+            <AlertCircle className="w-4 h-4 shrink-0" aria-hidden="true" />
             <span>{error}</span>
           </div>
           <button onClick={loadTeamsData} className="font-bold underline cursor-pointer">
@@ -190,15 +190,15 @@ export const TeamsPage: React.FC = () => {
       )}
 
       {teamNotice && (
-        <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-xs flex items-center gap-2">
-          <Check className="w-4 h-4 shrink-0 text-emerald-600" />
+        <div className="p-4 bg-status-bg-approved border border-edge-strong rounded-lg text-status-approved text-body-sm flex items-center gap-2" role="status">
+          <Check className="w-4 h-4 shrink-0" aria-hidden="true" />
           <span>{teamNotice}</span>
         </div>
       )}
 
       {teamError && (
-        <div className="p-4 bg-rose-50 border border-rose-200 rounded-lg text-rose-800 text-xs flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+        <div className="p-4 bg-status-bg-rejected border border-edge-strong rounded-lg text-status-rejected text-body-sm flex items-center gap-2" role="alert">
+          <AlertCircle className="w-4 h-4 shrink-0" aria-hidden="true" />
           <span>{teamError}</span>
         </div>
       )}
@@ -207,36 +207,35 @@ export const TeamsPage: React.FC = () => {
       {invitations.length > 0 && (
         <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <Mail className="w-4 h-4 text-purple-600" />
-            <h2 className="text-sm font-bold text-[#0F172A] font-heading">Pending Team Invitations ({invitations.length})</h2>
+            <Mail className="w-4 h-4 text-status-review" aria-hidden="true" />
+            <h2 className="text-body-md font-bold text-ink font-heading">Pending Team Invitations ({invitations.length})</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {invitations.map((inv) => (
               <div
                 key={inv.id}
-                className="bg-white p-5 border border-purple-200 rounded-lg shadow-[0_1px_2px_rgba(15,23,42,0.04)] flex flex-col justify-between space-y-4"
+                className="surface border border-status-review/20 rounded-lg shadow-card flex flex-col justify-between space-y-4"
               >
                 <div>
-                  <span className="text-[9px] font-extrabold uppercase tracking-wider bg-purple-50 text-purple-700 px-2 py-0.5 rounded">
-                    Invitation
-                  </span>
-                  <h3 className="font-bold text-sm text-[#0F172A] font-heading mt-2">{inv.team?.name || 'Hackathon Squad'}</h3>
-                  <p className="text-xs text-[#475569] mt-0.5">
+                  <span className="badge badge-review">Invitation</span>
+
+                  <h3 className="font-bold text-body-sm text-ink font-heading mt-2">{inv.team?.name || 'Hackathon Squad'}</h3>
+                  <p className="text-body-sm text-ink-secondary mt-0.5">
                     {inv.event?.name ? `For ${inv.event.name}` : 'General Project Team'}
                   </p>
                 </div>
-                <div className="flex gap-2 pt-2 border-t border-[#E4E7F2]">
+                <div className="flex gap-2 pt-2 border-t border-edge">
                   <button
                     onClick={() => handleAcceptInvite(inv.id)}
-                    className="flex-1 flex justify-center items-center gap-1.5 py-2 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 rounded-lg text-xs font-bold border border-emerald-200 transition-colors cursor-pointer"
+                    className="btn btn-primary flex-1 flex justify-center items-center gap-1.5"
                   >
-                    <Check className="w-3.5 h-3.5" /> Accept
+                    <Check className="w-3.5 h-3.5" aria-hidden="true" /> Accept
                   </button>
                   <button
                     onClick={() => handleDeclineInvite(inv.id)}
-                    className="flex-1 flex justify-center items-center gap-1.5 py-2 bg-[#F7F8FC] border border-[#E4E7F2] text-[#475569] hover:bg-neutral-100 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                    className="btn btn-ghost flex-1 flex justify-center items-center gap-1.5"
                   >
-                    <X className="w-3.5 h-3.5" /> Decline
+                    <X className="w-3.5 h-3.5" aria-hidden="true" /> Decline
                   </button>
                 </div>
               </div>
@@ -248,10 +247,10 @@ export const TeamsPage: React.FC = () => {
       {/* TEAMS LIST */}
       <div>
         {teams.length === 0 ? (
-          <div className="text-center py-20 bg-white border border-[#E4E7F2] rounded-lg shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-            <Users className="w-12 h-12 text-[#94A3B8] mx-auto mb-3" />
-            <h3 className="font-bold text-sm text-[#0F172A] font-heading">No teams formed yet</h3>
-            <p className="text-xs text-[#475569] mt-1 max-w-sm mx-auto mb-4">
+          <div className="surface text-center py-20" role="status">
+            <Users className="w-12 h-12 text-ink-muted mx-auto mb-3" aria-hidden="true" />
+            <h3 className="text-body-md font-bold text-ink font-heading">No teams formed yet</h3>
+            <p className="text-body-sm text-ink-muted mt-1 max-w-sm mx-auto mb-4">
               Create a team or join a classmate's team to participate in hackathons and multi-student challenges.
             </p>
             <button
@@ -265,28 +264,29 @@ export const TeamsPage: React.FC = () => {
               }}
               disabled={events.length === 0}
               title={events.length === 0 ? 'No active event available to create a team for.' : undefined}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#4F46E5] hover:bg-[#3730A3] text-white rounded-lg text-xs font-bold transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-xs"
+              className="btn btn-primary inline-flex items-center gap-1.5"
             >
-              <Plus className="w-3.5 h-3.5" />
+              <Plus className="w-3.5 h-3.5" aria-hidden="true" />
               <span>Create Your First Team</span>
             </button>
             {events.length === 0 && (
-              <p className="text-[11px] text-amber-700 mt-2 font-medium">
+              <p className="text-label-sm text-status-pending mt-2 font-medium">
                 No active event available to create a team for.
               </p>
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5" role="list" aria-label="Teams">
             {teams.map((t) => (
               <div
                 key={t.id}
-                className="bg-white border border-[#E4E7F2] rounded-lg overflow-hidden shadow-[0_1px_2px_rgba(15,23,42,0.04)] flex flex-col justify-between hover:border-[#4F46E5]/40 transition-all"
+                className="surface overflow-hidden hover:border-brand-hover hover:shadow-card-hover transition-colors flex flex-col justify-between"
+                role="listitem"
               >
-                <div className="p-5 border-b border-[#E4E7F2] flex items-center justify-between gap-2 bg-[#F7F8FC]">
+                <div className="p-5 border-b border-edge flex items-center justify-between gap-2 bg-surface-sunken">
                   <div>
-                    <h3 className="font-bold text-sm text-[#0F172A] font-heading">{t.name}</h3>
-                    <p className="text-[11px] text-[#475569]">
+                    <h3 className="font-bold text-body-sm text-ink font-heading">{t.name}</h3>
+                    <p className="text-label-sm text-ink-secondary">
                       {t.event?.name || 'Independent Team'}
                     </p>
                   </div>
@@ -300,21 +300,21 @@ export const TeamsPage: React.FC = () => {
                           setInviteSuccess(false);
                           setInviteModalOpen(true);
                         }}
-                        className="p-1.5 rounded-lg border border-[#E4E7F2] bg-white text-[#475569] hover:text-[#4F46E5] hover:bg-[#E0E7FF]/20 transition-colors cursor-pointer"
-                        title="Invite Member"
+                        className="p-1.5 rounded-lg border border-edge bg-surface text-ink-secondary hover:text-ink-brand hover:bg-brand-soft transition-colors cursor-pointer"
+                        aria-label={`Invite member to ${t.name}`}
                       >
-                        <UserPlus className="w-4 h-4" />
+                        <UserPlus className="w-4 h-4" aria-hidden="true" />
                       </button>
                       <button
                         onClick={() => handleRemoveTeam(t)}
                         disabled={removingTeamId === t.id}
-                        className="p-1.5 rounded-lg border border-[#E4E7F2] bg-white text-[#94A3B8] hover:text-[#E11D48] hover:bg-rose-50 transition-colors cursor-pointer disabled:opacity-50"
-                        title="Remove Team"
+                        className="p-1.5 rounded-lg border border-edge bg-surface text-ink-muted hover:text-status-rejected hover:bg-status-bg-rejected transition-colors cursor-pointer disabled:opacity-50"
+                        aria-label={`Remove team ${t.name}`}
                       >
                         {removingTeamId === t.id ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
                         ) : (
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="w-4 h-4" aria-hidden="true" />
                         )}
                       </button>
                     </div>
@@ -322,7 +322,7 @@ export const TeamsPage: React.FC = () => {
                 </div>
 
                 <div className="p-5 space-y-2">
-                  <h4 className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-wider">
+                  <h4 className="text-label-xs font-bold text-ink-muted uppercase tracking-wider">
                     Members ({t.members?.length || 1})
                   </h4>
                   <ul className="space-y-2">
@@ -331,19 +331,19 @@ export const TeamsPage: React.FC = () => {
                         const name = m.student?.name || m.name || (typeof m === 'string' ? m : 'Member');
                         const roll = m.student?.rollNo || '';
                         return (
-                          <li key={i} className="flex items-center justify-between text-xs text-[#475569]">
+                          <li key={i} className="flex items-center justify-between text-body-sm text-ink-secondary">
                             <div className="flex items-center gap-2">
-                              <div className="w-6 h-6 rounded-full bg-[#4F46E5] text-white flex items-center justify-center text-[10px] font-bold font-heading">
+                              <div className="w-6 h-6 rounded-full bg-brand text-ink-inverse flex items-center justify-center text-label-xs font-bold font-heading">
                                 {name.charAt(0)}
                               </div>
-                              <span className="font-semibold text-[#0F172A]">{name}</span>
+                              <span className="font-semibold text-ink">{name}</span>
                             </div>
-                            {roll && <span className="text-[10px] text-[#94A3B8]">{roll}</span>}
+                            {roll && <span className="text-label-xs text-ink-muted">{roll}</span>}
                           </li>
                         );
                       })
                     ) : (
-                      <li className="text-xs text-[#94A3B8] italic">No members yet.</li>
+                      <li className="text-body-sm text-ink-muted italic">No members yet.</li>
                     )}
                   </ul>
                 </div>
@@ -355,44 +355,44 @@ export const TeamsPage: React.FC = () => {
 
       {/* CREATE TEAM MODAL */}
       {createModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="bg-white rounded-lg max-w-md w-full p-6 shadow-2xl border border-[#E4E7F2] text-left">
-            <div className="flex items-center justify-between pb-3 border-b border-[#E4E7F2]">
-              <h3 className="text-base font-bold text-[#0F172A] font-heading">Create New Team</h3>
+        <div className="fixed inset-0 z-modal flex items-center justify-center p-4 bg-on-primary/60 backdrop-blur-xs"
+           role="dialog" aria-modal="true" aria-labelledby="create-team-modal-title"> <div className="surface max-w-md w-full p-6 shadow-modal border border-edge text-left">
+            <div className="flex items-center justify-between pb-3 border-b border-edge">
+              <h3 id="create-team-modal-title" className="text-body-md font-bold text-ink font-heading">Create New Team</h3>
               <button
                 onClick={() => setCreateModalOpen(false)}
-                className="p-1 text-[#94A3B8] hover:text-[#0F172A] rounded-lg cursor-pointer transition-colors"
+                className="p-1 text-ink-muted hover:text-ink rounded-lg cursor-pointer transition-colors" aria-label="Close create team modal"
               >
-                <X className="w-5 h-5" />
+                <X className="w-5 h-5" aria-hidden="true" />
               </button>
             </div>
 
             <form onSubmit={handleCreateTeam} className="space-y-4 pt-4">
               {createError && (
-                <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-xs text-rose-700">
+                <div className="p-3 bg-status-bg-rejected border border-edge-strong rounded-lg text-body-sm text-status-rejected" role="alert">
                   {createError}
                 </div>
               )}
 
               {events.length === 0 && (
-                <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800 flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0 text-amber-600" />
+                <div className="p-3 bg-status-bg-pending border border-edge-strong rounded-lg text-body-sm text-status-pending flex items-center gap-2" role="status">
+                  <AlertCircle className="w-4 h-4 shrink-0" aria-hidden="true" />
                   <span>No active event available to create a team for.</span>
                 </div>
               )}
 
               <div>
-                <label className="block text-xs font-bold text-[#0F172A] mb-1">Target Event *</label>
+                <label htmlFor="create-team-event" className="label">Target    Event *</label>
                 {events.length === 0 ? (
-                  <div className="p-2.5 bg-[#F7F8FC] border border-[#E4E7F2] rounded-lg text-xs text-[#475569]">
+                  <div className="p-2.5 surface-sunken border border-edge rounded-lg text-body-sm text-ink-secondary">
                     No active event available to create a team for.
                   </div>
                 ) : (
-                  <select
+                  <select id="create-team-event"
                     value={selectedEventId}
                     onChange={(e) => setSelectedEventId(e.target.value)}
                     required
-                    className="w-full p-2.5 bg-white border border-[#E4E7F2] rounded-lg text-xs text-[#0F172A] focus:outline-none focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5] transition-colors"
+                     className="select"
                   >
                     <option value="" disabled>Select an event</option>
                     {events.map((ev) => (
@@ -405,14 +405,14 @@ export const TeamsPage: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#0F172A] mb-1">Team Name *</label>
-                <input
+                <label htmlFor="create-team-name" className="label">Team    Name *</label>
+                <input id="create-team-name"
                   type="text"
                   required
                   value={teamName}
                   onChange={(e) => setTeamName(e.target.value)}
                   placeholder="e.g. AlgoRhythms / CyberKnights"
-                  className="w-full p-2.5 bg-white border border-[#E4E7F2] rounded-lg text-xs text-[#0F172A] focus:outline-none focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5] transition-colors"
+                   className="input" autoFocus
                 />
               </div>
 
@@ -420,14 +420,14 @@ export const TeamsPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setCreateModalOpen(false)}
-                  className="px-4 py-2 rounded-lg text-xs font-bold text-[#475569] hover:bg-[#F7F8FC] cursor-pointer transition-colors"
+                   className="btn btn-ghost"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={creating || !teamName.trim() || !selectedEventId || events.length === 0}
-                  className="px-5 py-2.5 rounded-lg bg-[#4F46E5] hover:bg-[#3730A3] text-white text-xs font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shadow-xs"
+                   className="btn btn-primary"
                 >
                   {creating ? 'Creating...' : 'Create Team'}
                 </button>
@@ -439,61 +439,61 @@ export const TeamsPage: React.FC = () => {
 
       {/* INVITE MEMBER MODAL */}
       {inviteModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="bg-white rounded-lg max-w-md w-full p-6 shadow-2xl border border-[#E4E7F2] text-left">
-            <div className="flex items-center justify-between pb-3 border-b border-[#E4E7F2]">
-              <h3 className="text-base font-bold text-[#0F172A] font-heading">Invite Team Member</h3>
+        <div className="fixed inset-0 z-modal flex items-center justify-center p-4 bg-on-primary/60 backdrop-blur-xs"
+           role="dialog" aria-modal="true" aria-labelledby="invite-modal-title"> <div className="surface max-w-md w-full p-6 shadow-modal border border-edge text-left">
+            <div className="flex items-center justify-between pb-3 border-b border-edge">
+              <h3 id="invite-modal-title" className="text-body-md font-bold text-ink font-heading">Invite Team Member</h3>
               <button
                 onClick={() => setInviteModalOpen(false)}
-                className="p-1 text-[#94A3B8] hover:text-[#0F172A] rounded-lg cursor-pointer transition-colors"
+                className="p-1 text-ink-muted hover:text-ink rounded-lg cursor-pointer transition-colors" aria-label="Close invite modal"
               >
-                <X className="w-5 h-5" />
+                <X className="w-5 h-5" aria-hidden="true" />
               </button>
             </div>
 
             {inviteSuccess ? (
-              <div className="py-8 text-center space-y-2">
-                <Check className="w-10 h-10 text-emerald-500 mx-auto" />
-                <h4 className="text-sm font-bold text-[#0F172A] font-heading">Invitation Sent!</h4>
-                <p className="text-xs text-[#475569]">The student will receive an invitation in their portal inbox.</p>
+              <div className="py-8 text-center space-y-2" role="status" aria-live="polite">
+                <Check className="w-10 h-10 text-status-approved mx-auto" aria-hidden="true" />
+                <h4 className="text-body-sm font-bold text-ink font-heading">Invitation Sent!</h4>
+                <p className="text-body-sm text-ink-secondary">The student will receive an invitation in their portal inbox.</p>
               </div>
             ) : (
               <form onSubmit={handleInvite} className="space-y-4 pt-4">
                 {inviteError && (
-                  <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-xs text-rose-700">
+                  <div className="p-3 bg-status-bg-rejected border border-edge-strong rounded-lg text-body-sm text-status-rejected" role="alert">
                     {inviteError}
                   </div>
                 )}
 
                 <div>
-                  <label className="block text-xs font-bold text-[#0F172A] mb-1">
+                  <label htmlFor="invite-roll-no" className="label">
                     Student Roll Number *
                   </label>
-                  <input
+                  <input id="invite-roll-no"
                     type="text"
                     required
                     value={inviteRollNo}
                     onChange={(e) => setInviteRollNo(e.target.value.toUpperCase())}
                     placeholder="e.g. 21K61A1201"
-                    className="w-full p-2.5 bg-white border border-[#E4E7F2] rounded-lg text-xs font-mono uppercase focus:outline-none focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5] transition-colors"
+                     className="input font-mono uppercase"
                   />
-                  <p className="text-[11px] text-[#94A3B8] mt-1">
-                    Enter the student's exact college roll number.
-                  </p>
+                  <p className="hint">Enter
+                     the student's exact college roll number.</p>
+
                 </div>
 
                 <div className="pt-2 flex items-center justify-end gap-3">
                   <button
                     type="button"
                     onClick={() => setInviteModalOpen(false)}
-                    className="px-4 py-2 rounded-lg text-xs font-bold text-[#475569] hover:bg-[#F7F8FC] cursor-pointer transition-colors"
+                    className="btn btn-ghost"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={inviting || !inviteRollNo.trim()}
-                    className="px-5 py-2.5 rounded-lg bg-[#4F46E5] hover:bg-[#3730A3] text-white text-xs font-bold transition-all disabled:opacity-50 cursor-pointer shadow-xs"
+                    className="btn btn-primary"
                   >
                     {inviting ? 'Sending...' : 'Send Invitation'}
                   </button>
@@ -508,4 +508,3 @@ export const TeamsPage: React.FC = () => {
 };
 
 export default TeamsPage;
-

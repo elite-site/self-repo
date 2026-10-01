@@ -13,3 +13,12 @@ storage/
 Students_Master_List.xlsx
 assests/
 assets/stitch/
+
+# Agent tooling, not project source. A vendored skill library and its lockfile
+# belong to the developer's machine, not in the repository.
+.agents/
+skills-lock.json
+
+# Stray documents dropped at the repository root. Nothing in the app reads them,
+# and they are not release artefacts.
+*.pdf

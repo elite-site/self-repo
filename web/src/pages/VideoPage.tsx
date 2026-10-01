@@ -27,6 +27,12 @@ import {
 } from 'lucide-react';
 import { BrandedLoading } from '../components/BrandedLoading';
 
+/**
+ * Fallback only, for an older backend that does not report the configured
+ * limit. The authoritative value arrives on `GET /student/me`.
+ */
+const DEFAULT_MAX_VIDEO_MB = 25;
+
 interface UploadStats {
   loadedMb: number;
   totalMb: number;
@@ -47,6 +53,7 @@ interface VideoMeta {
 export const VideoPage: React.FC = () => {
   const [submission, setSubmission] = useState<StudentSubmission | null>(null);
   const [video, setVideo] = useState<StudentIntroVideo | null>(null);
+  const [maxVideoSizeMb, setMaxVideoSizeMb] = useState<number>(DEFAULT_MAX_VIDEO_MB);
   const [localPreviewUrl, setLocalPreviewUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -94,6 +101,9 @@ export const VideoPage: React.FC = () => {
     try {
       const data = await api.getMe();
       setVideo(data?.student?.video ?? null);
+      // The server reports the limit it actually enforces; fall back to the
+      // documented default only if an older backend omits it.
+      setMaxVideoSizeMb(data?.student?.maxVideoSizeMb || DEFAULT_MAX_VIDEO_MB);
       if (data?.student?.submission) {
         setSubmission(data.student.submission);
       } else {
@@ -258,7 +268,9 @@ export const VideoPage: React.FC = () => {
   const inspectVideoFile = (file: File): Promise<VideoMeta> => {
     return new Promise((resolve) => {
       const sizeMb = parseFloat((file.size / (1024 * 1024)).toFixed(1));
-      const isLarge = sizeMb > 15;
+      // "Large" is relative to the configured limit, so the tip still fires at
+      // the right point if an administrator raises or lowers the cap.
+      const isLarge = sizeMb > maxVideoSizeMb * 0.6;
 
       const tempVideo = document.createElement('video');
       tempVideo.preload = 'metadata';
@@ -343,8 +355,8 @@ export const VideoPage: React.FC = () => {
       return;
     }
 
-    if (file.size > 25 * 1024 * 1024) {
-      setError('Video file must be under 25MB.');
+    if (file.size > maxVideoSizeMb * 1024 * 1024) {
+      setError(`Video file must be under ${maxVideoSizeMb}MB.`);
       return;
     }
 
@@ -450,9 +462,9 @@ export const VideoPage: React.FC = () => {
   }
 
   const formatSubmittedAt = (iso: string | null | undefined): string => {
-    if (!iso) return '—';
+    if (!iso) return 'To be announced';
     const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return '—';
+    if (Number.isNaN(d.getTime())) return 'To be announced';
     return d.toLocaleString(undefined, {
       day: 'numeric',
       month: 'short',
@@ -466,32 +478,32 @@ export const VideoPage: React.FC = () => {
     switch (status) {
       case 'APPROVED':
         return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+          <span className="badge badge-approved">
             <CheckCircle2 className="w-3.5 h-3.5" /> Approved
           </span>
         );
       case 'SUBMITTED':
       case 'PENDING':
         return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">
+          <span className="badge badge-pending">
             <Clock className="w-3.5 h-3.5" /> Under Review
           </span>
         );
       case 'CHANGES_REQUESTED':
         return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-orange-100 text-orange-800 border border-orange-200">
+          <span className="badge badge-changes">
             <AlertCircle className="w-3.5 h-3.5" /> Re-upload Requested
           </span>
         );
       case 'REJECTED':
         return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-red-100 text-red-800 border border-red-200">
+          <span className="badge badge-rejected">
             <XCircle className="w-3.5 h-3.5" /> Rejected
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-neutral-100 text-neutral-600 border border-neutral-200">
+          <span className="badge badge-draft">
             Draft
           </span>
         );
@@ -507,12 +519,12 @@ export const VideoPage: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6 text-left text-[#0F172A]">
+    <div className="space-y-6 text-left page-enter">
       {/* HEADER */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-extrabold text-[#0F172A] font-heading">Introduction Video</h1>
-          <p className="text-xs text-[#475569]">
+          <h1 className="text-xl sm:text-2xl font-extrabold text-ink font-heading">Introduction Video</h1>
+          <p className="text-xs text-ink-secondary">
             Your 60–90 second professional department self-introduction video
           </p>
         </div>
@@ -524,46 +536,46 @@ export const VideoPage: React.FC = () => {
       </div>
 
       {error && (
-        <div className="p-4 bg-rose-50 border border-rose-200 rounded-lg text-rose-800 text-xs flex items-center justify-between">
+        <div className="p-4 bg-status-bg-rejected border border-status-rejected rounded-lg text-status-rejected text-xs flex items-center justify-between" role="alert">
           <div className="flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0 text-[#E11D48]" />
+            <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{error}</span>
           </div>
-          <button onClick={() => loadSubmission(true)} className="font-bold underline cursor-pointer">
+          <button onClick={() => loadSubmission(true)} className="font-bold underline cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center">
             Retry
           </button>
         </div>
       )}
 
       {uploadSuccess && (
-        <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-xs flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+        <div className="p-4 bg-status-bg-approved border border-status-approved rounded-lg text-status-approved text-xs flex items-center gap-2" role="status">
+          <CheckCircle2 className="w-4 h-4 shrink-0" />
           <span>Video uploaded successfully and submitted for faculty moderation!</span>
         </div>
       )}
 
       {deleteNotice && (
-        <div className="p-4 bg-[#F7F8FC] border border-[#E4E7F2] rounded-lg text-[#475569] text-xs flex items-center gap-2">
-          <Info className="w-4 h-4 shrink-0 text-[#4F46E5]" />
+        <div className="p-4 bg-surface-canvas border border-edge rounded-lg text-ink-secondary text-xs flex items-center gap-2">
+          <Info className="w-4 h-4 shrink-0 text-brand" />
           <span>{deleteNotice}</span>
         </div>
       )}
 
       {/* ADMIN REQUESTED A NEW TAKE */}
       {video?.changeRequestedAt && (
-        <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg text-orange-900 text-xs space-y-2">
+        <div className="p-4 bg-status-bg-changes border border-status-changes rounded-lg text-status-changes text-xs space-y-2">
           <div className="flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0 text-orange-600" />
+            <AlertCircle className="w-4 h-4 shrink-0" />
             <span className="font-bold">A new introduction video has been requested</span>
           </div>
-          <p className="text-orange-800/90 leading-relaxed">
+          <p className="leading-relaxed">
             {video.changeRequestNote ||
               'Faculty asked you to record a new version of your introduction video. Uploading it will replace your current video and the old file will be removed.'}
           </p>
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#E11D48] hover:bg-[#BE123C] text-white font-bold disabled:opacity-50 transition-opacity"
+            className="btn btn-primary min-h-[44px]"
           >
             <UploadCloud className="w-3.5 h-3.5" />
             <span>Upload New Video</span>
@@ -573,19 +585,19 @@ export const VideoPage: React.FC = () => {
 
       {/* PUBLIC VISIBILITY */}
       {submission?.videoUploaded && (
-        <div className="p-4 bg-white border border-[#E4E7F2] rounded-lg text-xs space-y-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+        <div className="surface p-4 text-xs space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-start gap-2.5 min-w-0">
               {video?.isPublic ? (
-                <Globe className="w-4 h-4 shrink-0 text-emerald-600 mt-0.5" />
+                <Globe className="w-4 h-4 shrink-0 text-status-approved mt-0.5" />
               ) : (
-                <EyeOff className="w-4 h-4 shrink-0 text-[#94A3B8] mt-0.5" />
+                <EyeOff className="w-4 h-4 shrink-0 text-ink-muted mt-0.5" />
               )}
               <div className="min-w-0">
-                <p className="font-bold text-[#0F172A] font-heading">
+                <p className="font-bold text-ink font-heading">
                   Show this video on my public profile
                 </p>
-                <p className="text-[#475569] mt-0.5 leading-relaxed">
+                <p className="text-ink-secondary mt-0.5 leading-relaxed">
                   {video?.status === 'APPROVED'
                     ? video.isPublic
                       ? 'Your approved video is currently visible on your public profile and the showcase.'
@@ -599,10 +611,10 @@ export const VideoPage: React.FC = () => {
               onClick={() => handleTogglePublish(!video?.isPublic)}
               disabled={publishing || video?.status !== 'APPROVED'}
               title={video?.status === 'APPROVED' ? undefined : 'Faculty approval required to publish on public profile'}
-              className={`shrink-0 inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg font-bold transition-opacity disabled:opacity-50 disabled:cursor-not-allowed ${
+              className={`shrink-0 inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg font-bold transition-opacity disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] ${
                 video?.isPublic
-                  ? 'bg-[#F7F8FC] hover:bg-neutral-100 text-[#0F172A] border border-[#E4E7F2]'
-                  : 'bg-[#4F46E5] hover:bg-[#3730A3] text-white shadow-xs'
+                  ? 'btn btn-secondary'
+                  : 'btn btn-primary'
               }`}
             >
               {publishing ? (
@@ -617,8 +629,8 @@ export const VideoPage: React.FC = () => {
           </div>
 
           {publishNotice && (
-            <p className="text-[11px] text-[#475569] flex items-center gap-1.5">
-              <Info className="w-3 h-3 shrink-0 text-[#4F46E5]" />
+            <p className="text-[11px] text-ink-secondary flex items-center gap-1.5">
+              <Info className="w-3 h-3 shrink-0 text-brand" />
               <span>{publishNotice}</span>
             </p>
           )}
@@ -629,9 +641,9 @@ export const VideoPage: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* LEFT COLUMN: VIDEO PLAYER OR UPLOADER (8 COLS) */}
         <div className="lg:col-span-8 space-y-6">
-          <div className="bg-white border border-[#E4E7F2] rounded-lg p-6 shadow-[0_1px_2px_rgba(15,23,42,0.04)] space-y-4">
+          <div className="surface p-6 space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-bold text-[#0F172A] font-heading">Video Playback & Media</h2>
+              <h2 className="text-sm font-bold text-ink font-heading">Video Playback & Media</h2>
               <input
                 type="file"
                 ref={fileInputRef}
@@ -644,7 +656,7 @@ export const VideoPage: React.FC = () => {
                   <a
                     href={playbackUrl}
                     download={video?.filename || 'self-introduction.mp4'}
-                    className="text-xs font-bold text-[#475569] hover:text-[#0F172A] flex items-center gap-1 cursor-pointer bg-[#F7F8FC] hover:bg-neutral-100 border border-[#E4E7F2] px-3 py-1.5 rounded-lg transition-colors"
+                    className="text-xs font-bold text-ink-secondary hover:text-ink flex items-center gap-1 cursor-pointer btn btn-ghost min-h-[44px] px-3"
                   >
                     <Download className="w-3.5 h-3.5" />
                     <span>Download</span>
@@ -653,7 +665,7 @@ export const VideoPage: React.FC = () => {
                 <button
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploading}
-                  className="text-xs font-bold text-[#4F46E5] hover:text-[#3730A3] flex items-center gap-1 cursor-pointer disabled:opacity-50 transition-colors"
+                  className="btn btn-primary min-h-[44px]"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
                   <span>{submission?.videoUploaded ? 'Upload New Take' : 'Upload Video'}</span>
@@ -664,7 +676,7 @@ export const VideoPage: React.FC = () => {
                     onClick={handleDelete}
                     disabled={deleting || uploading}
                     title="Delete your submitted video"
-                    className="text-xs font-bold text-[#94A3B8] hover:text-[#E11D48] flex items-center gap-1 cursor-pointer disabled:opacity-50 transition-colors"
+                    className="btn btn-ghost min-h-[44px]"
                   >
                     {deleting ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -678,42 +690,42 @@ export const VideoPage: React.FC = () => {
             </div>
 
             {uploading ? (
-              <div className="border border-dashed border-[#4F46E5]/40 bg-[#E0E7FF]/20 rounded-lg p-8 sm:p-12 text-center space-y-4">
+              <div className="border border-dashed border-edge-strong/40 bg-brand-soft/20 rounded-lg p-8 sm:p-12 text-center space-y-4">
                 <div className="relative w-16 h-16 mx-auto flex items-center justify-center">
-                  <div className="w-16 h-16 rounded-full border-4 border-[#E0E7FF] border-t-[#4F46E5] animate-spin" />
-                  <span className="absolute text-xs font-black text-[#0F172A]">{uploadProgress}%</span>
+                  <div className="w-16 h-16 rounded-full border-4 border-brand-soft border-t-brand animate-spin" />
+                  <span className="absolute text-xs font-black text-ink">{uploadProgress}%</span>
                 </div>
 
                 <div>
-                  <h3 className="text-sm font-bold text-[#0F172A] font-heading">
+                  <h3 className="text-sm font-bold text-ink font-heading">
                     {uploadStats?.phase === 'confirming'
                       ? 'Finalizing submission with Google Drive...'
                       : 'Streaming video to Google Drive...'}
                   </h3>
-                  <p className="text-[11px] text-[#475569] mt-0.5">
+                  <p className="text-[11px] text-ink-secondary mt-0.5">
                     Zero server buffering • Direct parallel pipeline to cloud storage
                   </p>
                 </div>
 
                 {/* Progress Bar */}
                 <div className="w-80 max-w-full mx-auto space-y-2">
-                  <div className="w-full bg-[#E0E7FF] rounded-full h-2 overflow-hidden">
+                  <div className="w-full bg-brand-soft rounded-full h-2 overflow-hidden">
                     <div
-                      className="bg-[#4F46E5] h-full rounded-full transition-all duration-200 ease-out"
+                      className="bg-brand h-full rounded-full transition-transform duration-base ease-standard"
                       style={{ width: `${uploadProgress}%` }}
                     />
                   </div>
 
                   {/* Live Metrics Row */}
                   {uploadStats && (
-                    <div className="flex items-center justify-between text-[11px] text-[#475569] px-0.5">
+                    <div className="flex items-center justify-between text-[11px] text-ink-secondary px-0.5">
                       <span>{uploadStats.loadedMb} / {uploadStats.totalMb} MB</span>
                       <div className="flex items-center gap-2.5">
                         {uploadStats.speedFormatted && (
-                          <span className="font-semibold text-[#0F172A]">⚡ {uploadStats.speedFormatted}</span>
+                          <span className="font-semibold text-ink">{uploadStats.speedFormatted}</span>
                         )}
                         {uploadStats.etaFormatted && (
-                          <span className="text-[#94A3B8]">⏱️ {uploadStats.etaFormatted}</span>
+                          <span className="text-ink-muted">{uploadStats.etaFormatted}</span>
                         )}
                       </div>
                     </div>
@@ -723,16 +735,16 @@ export const VideoPage: React.FC = () => {
                 {/* Video Meta Badges */}
                 {videoMeta && (
                   <div className="flex flex-wrap items-center justify-center gap-2 pt-1 text-[11px]">
-                    <span className="px-2 py-0.5 rounded-md bg-white border border-[#E4E7F2] font-medium text-[#475569]">
+                    <span className="px-2 py-0.5 rounded-md bg-surface border border-edge font-medium text-ink-secondary">
                       File: {videoMeta.sizeMb} MB
                     </span>
                     {videoMeta.durationFormatted && (
-                      <span className="px-2 py-0.5 rounded-md bg-white border border-[#E4E7F2] font-medium text-[#475569]">
+                      <span className="px-2 py-0.5 rounded-md bg-surface border border-edge font-medium text-ink-secondary">
                         Duration: {videoMeta.durationFormatted}
                       </span>
                     )}
                     {videoMeta.resolutionFormatted && (
-                      <span className="px-2 py-0.5 rounded-md bg-white border border-[#E4E7F2] font-medium text-[#475569]">
+                      <span className="px-2 py-0.5 rounded-md bg-surface border border-edge font-medium text-ink-secondary">
                         Resolution: {videoMeta.resolutionFormatted}
                       </span>
                     )}
@@ -741,16 +753,16 @@ export const VideoPage: React.FC = () => {
 
                 {/* Duration notice if outside 60-90s */}
                 {videoMeta?.durationNotice && (
-                  <div className="max-w-md mx-auto p-2 bg-[#E0E7FF]/40 border border-[#4F46E5]/30 rounded-lg text-[11px] text-[#3730A3] text-left flex items-start gap-1.5">
-                    <Info className="w-4 h-4 text-[#4F46E5] shrink-0 mt-0.5" />
+                  <div className="max-w-md mx-auto p-2 bg-brand-soft/40 border border-brand/30 rounded-lg text-[11px] text-brand-soft-text text-left flex items-start gap-1.5">
+                    <Info className="w-4 h-4 text-brand shrink-0 mt-0.5" />
                     <span>{videoMeta.durationNotice}</span>
                   </div>
                 )}
 
                 {/* Wi-Fi Optimization Notice if file is large */}
                 {videoMeta?.isLarge && (
-                  <div className="max-w-md mx-auto p-2.5 bg-amber-50 border border-amber-200 rounded-lg text-[11px] text-amber-800 text-left flex items-start gap-2">
-                    <Zap className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <div className="max-w-md mx-auto p-2.5 bg-status-bg-pending border border-status-pending rounded-lg text-[11px] text-status-pending text-left flex items-start gap-2">
+                    <Zap className="w-4 h-4 shrink-0 mt-0.5" />
                     <span>
                       <strong>Fast Upload Tip:</strong> This video is {videoMeta.sizeMb} MB. Recording at 720p HD (~8–12 MB) uploads up to 2× faster on campus Wi-Fi!
                     </span>
@@ -762,14 +774,14 @@ export const VideoPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={handleCancelUpload}
-                    className="text-xs font-semibold text-[#94A3B8] hover:text-[#E11D48] transition-colors inline-flex items-center gap-1 cursor-pointer"
+                    className="text-xs font-semibold text-ink-muted hover:text-status-rejected transition-colors inline-flex items-center gap-1 cursor-pointer min-h-[44px] min-w-[44px]"
                   >
                     <X className="w-3.5 h-3.5" /> Cancel Upload
                   </button>
                 </div>
               </div>
             ) : playbackUrl ? (
-              <div className="bg-black rounded-lg overflow-hidden aspect-video border border-neutral-800 shadow-inner">
+              <div className="bg-surface-inverse rounded-lg overflow-hidden aspect-video border border-edge-strong shadow-inner">
                 <video
                   ref={videoRef}
                   key={playbackUrl}
@@ -791,11 +803,11 @@ export const VideoPage: React.FC = () => {
                   open it in a video player.
                 </video>
                 {/* Quick controls: Play/Pause, Replay, ±10s seek, Download. */}
-                <div className="flex flex-wrap items-center gap-2 px-3 py-2 bg-neutral-900 border-t border-neutral-800">
+                <div className="flex flex-wrap items-center gap-2 px-3 py-2 bg-surface-inverse border-t border-edge-strong">
                   <button
                     type="button"
                     onClick={handlePlayPause}
-                    className="px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                    className="px-3 py-1.5 rounded-lg bg-surface-sunken hover:bg-surface-raised text-ink text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs min-h-[44px] min-w-[44px]"
                     aria-label={isPlaying ? 'Pause video' : 'Play video'}
                   >
                     {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
@@ -804,7 +816,7 @@ export const VideoPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={handleReplay}
-                    className="px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                    className="px-3 py-1.5 rounded-lg bg-surface-sunken hover:bg-surface-raised text-ink text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs min-h-[44px] min-w-[44px]"
                     aria-label="Replay video from start"
                   >
                     <RotateCcw className="w-3.5 h-3.5" /> Replay
@@ -812,7 +824,7 @@ export const VideoPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => handleSeek(-10)}
-                    className="px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-white text-xs font-bold transition-colors cursor-pointer shadow-xs"
+                    className="px-3 py-1.5 rounded-lg bg-surface-sunken hover:bg-surface-raised text-ink text-xs font-bold transition-colors cursor-pointer shadow-xs min-h-[44px] min-w-[44px]"
                     aria-label="Seek back 10 seconds"
                   >
                     -10s
@@ -820,14 +832,14 @@ export const VideoPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => handleSeek(10)}
-                    className="px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-white text-xs font-bold transition-colors cursor-pointer shadow-xs"
+                    className="px-3 py-1.5 rounded-lg bg-surface-sunken hover:bg-surface-raised text-ink text-xs font-bold transition-colors cursor-pointer shadow-xs min-h-[44px] min-w-[44px]"
                     aria-label="Seek forward 10 seconds"
                   >
                     +10s
                   </button>
                 </div>
                 {previewError && (
-                  <p className="px-4 py-2 text-[11px] text-amber-800 bg-amber-50 border-t border-amber-200">
+                  <p className="px-4 py-2 text-[11px] text-ink bg-status-bg-pending border-t border-edge" role="alert">
                     Could not load your recording from the server. Refresh the
                     page to try again, or use Download.
                   </p>
@@ -836,18 +848,18 @@ export const VideoPage: React.FC = () => {
             ) : (
               <div
                 onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-[#E4E7F2] hover:border-[#4F46E5] bg-[#F7F8FC] hover:bg-[#E0E7FF]/10 rounded-lg p-12 flex flex-col items-center text-center justify-center min-h-[300px] transition-all cursor-pointer group"
+                className="border-2 border-dashed border-edge hover:border-edge-strong bg-surface-canvas hover:bg-brand-soft/10 rounded-lg p-12 flex flex-col items-center text-center justify-center min-h-[300px] transition-colors cursor-pointer group"
               >
-                <div className="w-16 h-16 rounded-lg bg-white border border-[#E4E7F2] flex items-center justify-center mb-4 group-hover:scale-105 transition-transform shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-                  <FileVideo className="w-8 h-8 text-[#4F46E5]" />
+                <div className="w-16 h-16 rounded-lg bg-surface border border-edge flex items-center justify-center mb-4 group-hover:scale-105 transition-transform shadow-card">
+                  <FileVideo className="w-8 h-8 text-brand" />
                 </div>
-                <h3 className="font-bold text-base text-[#0F172A] font-heading">Upload your self-introduction video</h3>
-                <p className="text-xs text-[#475569] max-w-sm mt-1.5 mb-6">
-                  Recommended: MP4 or WebM, 720p/1080p, 60–90 seconds, under 25MB. Introduce your name, branch, interests, and career ambitions.
+                <h3 className="font-bold text-base text-ink font-heading">Upload your self-introduction video</h3>
+                <p className="text-xs text-ink-secondary max-w-sm mt-1.5 mb-6">
+                  Recommended: MP4 or WebM, 720p/1080p, 60–90 seconds, under {maxVideoSizeMb}MB. Introduce your name, branch, interests, and career ambitions.
                 </p>
                 <button
                   type="button"
-                  className="px-6 py-2.5 bg-[#4F46E5] hover:bg-[#3730A3] text-white text-xs font-bold rounded-lg shadow-xs transition-opacity"
+                  className="btn btn-primary min-h-[44px]"
                 >
                   Select Video File
                 </button>
@@ -856,11 +868,11 @@ export const VideoPage: React.FC = () => {
 
             {/* WHAT IS CURRENTLY STORED */}
             {video && (
-              <div className="rounded-lg border border-[#E4E7F2] bg-[#F7F8FC] px-4 py-3">
-                <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[11px] text-[#475569]">
+              <div className="rounded-lg border border-edge bg-surface-canvas px-4 py-3">
+                <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[11px] text-ink-secondary">
                   <div className="flex items-center gap-1.5">
-                    <FileVideo className="w-3.5 h-3.5 text-[#4F46E5] shrink-0" />
-                    <span className="font-semibold text-[#0F172A] truncate max-w-[16rem]">
+                    <FileVideo className="w-3.5 h-3.5 text-brand shrink-0" />
+                    <span className="font-semibold text-ink truncate max-w-[16rem]">
                       {video.filename || 'self-introduction.mp4'}
                     </span>
                   </div>
@@ -876,6 +888,18 @@ export const VideoPage: React.FC = () => {
                   </span>
                   <span className="ml-auto">{getStatusBadge(video.status)}</span>
                 </div>
+                {/* Replacing is always available, not only when faculty has asked
+                    for a new take. A new upload overwrites the previous file and
+                    sends the video back through moderation. */}
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-edge bg-surface text-ink-secondary hover:border-edge-strong hover:text-brand font-bold text-[11px] transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer min-h-[44px]"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Record a replacement</span>
+                </button>
               </div>
             )}
           </div>
@@ -885,17 +909,17 @@ export const VideoPage: React.FC = () => {
         <div className="lg:col-span-4 space-y-6">
           {/* REVIEW FEEDBACK (IF REVIEWED) */}
           {submission && (submission.reviewText || submission.adminNotes || submission.reviewPros?.length || submission.reviewCons?.length) ? (
-            <div className="bg-white border border-[#E4E7F2] rounded-lg p-6 shadow-[0_1px_2px_rgba(15,23,42,0.04)] space-y-4">
-              <h2 className="text-sm font-bold text-[#0F172A] font-heading">Faculty Review Feedback</h2>
+            <div className="surface p-6 space-y-4">
+              <h2 className="text-sm font-bold text-ink font-heading">Faculty Review Feedback</h2>
 
               {submission.reviewText && (
-                <div className="p-3.5 bg-[#F7F8FC] rounded-lg border border-[#E4E7F2] text-xs text-[#475569] italic">
+                <div className="p-3.5 bg-surface-canvas rounded-lg border border-edge text-xs text-ink-secondary italic">
                   "{submission.reviewText}"
                 </div>
               )}
 
               {submission.adminNotes && (
-                <div className="p-3.5 bg-orange-50 rounded-lg border border-orange-200 text-xs text-orange-900">
+                <div className="p-3.5 bg-status-bg-changes rounded-lg border border-edge text-xs text-ink">
                   <span className="font-bold block mb-1">Reviewer Note:</span>
                   {submission.adminNotes}
                 </div>
@@ -903,12 +927,12 @@ export const VideoPage: React.FC = () => {
 
               {submission.reviewPros && submission.reviewPros.length > 0 && (
                 <div className="space-y-1.5">
-                  <span className="text-[11px] font-bold text-emerald-800 flex items-center gap-1">
-                    <ThumbsUp className="w-3.5 h-3.5" /> Strengths
+                  <span className="text-[11px] font-bold text-ink flex items-center gap-1">
+                    <ThumbsUp className="w-3.5 h-3.5 text-status-approved" /> Strengths
                   </span>
                   <ul className="space-y-1">
                     {submission.reviewPros.map((pro, i) => (
-                      <li key={i} className="text-xs text-[#475569] pl-2 border-l-2 border-emerald-400">
+                      <li key={i} className="text-xs text-ink-secondary pl-2 border-l-2 border-status-approved">
                         {pro}
                       </li>
                     ))}
@@ -918,12 +942,12 @@ export const VideoPage: React.FC = () => {
 
               {submission.reviewCons && submission.reviewCons.length > 0 && (
                 <div className="space-y-1.5 pt-2">
-                  <span className="text-[11px] font-bold text-amber-800 flex items-center gap-1">
-                    <ThumbsDown className="w-3.5 h-3.5" /> Suggestions
+                  <span className="text-[11px] font-bold text-ink flex items-center gap-1">
+                    <ThumbsDown className="w-3.5 h-3.5 text-status-pending" /> Suggestions
                   </span>
                   <ul className="space-y-1">
                     {submission.reviewCons.map((con, i) => (
-                      <li key={i} className="text-xs text-[#475569] pl-2 border-l-2 border-amber-400">
+                      <li key={i} className="text-xs text-ink-secondary pl-2 border-l-2 border-status-pending">
                         {con}
                       </li>
                     ))}
@@ -934,27 +958,27 @@ export const VideoPage: React.FC = () => {
           ) : null}
 
           {/* RECORDING GUIDELINES */}
-          <div className="bg-white border border-[#E4E7F2] rounded-lg p-6 shadow-[0_1px_2px_rgba(15,23,42,0.04)] space-y-4 text-xs">
-            <h2 className="text-sm font-bold text-[#0F172A] font-heading">Recording Guidelines</h2>
-            <ul className="space-y-2.5 text-[#475569]">
+          <div className="surface p-6 space-y-4 text-xs">
+            <h2 className="text-sm font-bold text-ink font-heading">Recording Guidelines</h2>
+            <ul className="space-y-2.5 text-ink-secondary">
               <li className="flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                <CheckCircle2 className="w-4 h-4 text-status-approved shrink-0 mt-0.5" />
                 <span><strong>Duration:</strong> Between 60 and 90 seconds.</span>
               </li>
               <li className="flex items-start gap-2">
-                <Zap className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                <Zap className="w-4 h-4 text-status-pending shrink-0 mt-0.5" />
                 <span><strong>Speed Tip:</strong> Record in <strong>720p (HD) at 30fps</strong> for the fastest upload. A 90s video will be only ~8–12 MB and upload in under 20 seconds!</span>
               </li>
               <li className="flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                <CheckCircle2 className="w-4 h-4 text-status-approved shrink-0 mt-0.5" />
                 <span><strong>Framing:</strong> Landscape orientation, eye level, shoulders-up framing.</span>
               </li>
               <li className="flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                <CheckCircle2 className="w-4 h-4 text-status-approved shrink-0 mt-0.5" />
                 <span><strong>Audio:</strong> Quiet environment with clear voice projection.</span>
               </li>
               <li className="flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                <CheckCircle2 className="w-4 h-4 text-status-approved shrink-0 mt-0.5" />
                 <span><strong>Structure:</strong> Full Name & Roll Number → Technical Areas → Major Project → Career Ambitions.</span>
               </li>
             </ul>
@@ -966,4 +990,3 @@ export const VideoPage: React.FC = () => {
 };
 
 export default VideoPage;
-

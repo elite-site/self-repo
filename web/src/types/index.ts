@@ -68,6 +68,12 @@ export interface StudentProfile {
   graduatedAt?: string | null;
   submission?: StudentSubmission | null;
   video?: StudentIntroVideo | null;
+  /**
+   * The effective, administrator-configured introduction-video size limit in
+   * megabytes. The server sends this so the client pre-checks against the same
+   * number the server enforces, instead of duplicating the default here.
+   */
+  maxVideoSizeMb?: number;
 }
 
 export interface StudentSession {
@@ -121,7 +127,6 @@ export interface PublicSkill {
   category?: string | null;
 }
 
-
 export interface Event {
   id: string;
   title: string;
@@ -130,6 +135,8 @@ export interface Event {
   type: string;
   eligibility: string;
   deadline: string;
+  /** Both the student and public event endpoints return the raw event row. */
+  status?: string;
 }
 
 export interface EventRegistration {
@@ -217,4 +224,3 @@ export interface Announcement {
   createdAt: string;
   createdBy?: string;
 }
-

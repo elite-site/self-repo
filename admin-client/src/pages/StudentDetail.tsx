@@ -31,28 +31,28 @@ const ItemStatusBadge = ({ status }: { status: string }) => {
   const map: Record<string, { label: string; cls: string }> = {
     APPROVED: {
       label: 'Approved',
-      cls: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
+      cls: 'bg-status-bg-approved text-status-approved border-edge',
     },
     PENDING: {
       label: 'Pending',
-      cls: 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800',
+      cls: 'bg-status-bg-pending text-status-pending border-edge',
     },
     UNDER_REVIEW: {
       label: 'Under Review',
-      cls: 'bg-violet-50 dark:bg-violet-950/40 text-violet-700 dark:text-violet-300 border-violet-200 dark:border-violet-800',
+      cls: 'bg-status-bg-review text-status-review border-edge',
     },
     CHANGES_REQUESTED: {
       label: 'Changes Requested',
-      cls: 'bg-orange-50 dark:bg-orange-950/40 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-800',
+      cls: 'bg-status-bg-changes text-status-changes border-edge',
     },
     REJECTED: {
       label: 'Rejected',
-      cls: 'bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800',
+      cls: 'bg-status-bg-rejected text-status-rejected border-edge',
     },
   };
   const s = map[status] ?? {
     label: status,
-    cls: 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700',
+    cls: 'bg-surface-canvas text-ink-secondary border-edge',
   };
   return (
     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold border ${s.cls}`}>
@@ -162,22 +162,22 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] gap-3">
-        <Loader2 className="w-8 h-8 animate-spin text-elite-red" />
-        <p className="text-xs font-semibold text-neutral-500">Loading student profile...</p>
+        <Loader2 className="w-8 h-8 animate-spin text-ink-brand" />
+        <p className="text-xs font-semibold text-ink-muted">Loading student profile...</p>
       </div>
     );
   }
 
   if (error || !student) {
     return (
-      <div className="p-8 text-center bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl max-w-lg mx-auto my-12">
-        <AlertTriangle className="w-10 h-10 text-red-500 mx-auto mb-3" />
-        <h3 className="text-base font-bold text-neutral-900 dark:text-white">Student Not Found</h3>
-        <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1 mb-5">{error || 'Unable to retrieve student profile.'}</p>
+      <div className="p-8 text-center bg-surface border border-edge rounded-2xl max-w-lg mx-auto my-12">
+        <AlertTriangle className="w-10 h-10 text-status-rejected mx-auto mb-3" />
+        <h3 className="text-base font-bold text-ink">Student Not Found</h3>
+        <p className="text-xs text-ink-muted mt-1 mb-5">{error || 'Unable to retrieve student profile.'}</p>
         {onBack && (
           <button
             onClick={onBack}
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 text-xs font-bold rounded-xl cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-4 py-2 bg-surface-inverse text-ink-inverse text-xs font-bold rounded-xl cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4" /> Back to Roster
           </button>
@@ -242,31 +242,31 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
     <div className="space-y-6 text-left pb-16">
       {/* Toast Notification */}
       {toast && (
-        <div className="fixed top-5 right-5 z-50 bg-[#0B192C] text-white text-xs font-semibold px-4 py-2.5 rounded-xl shadow-xl animate-in fade-in slide-in-from-top-3">
+        <div className="fixed top-5 right-5 z-50 bg-surface-inverse text-ink-inverse text-xs font-semibold px-4 py-2.5 rounded-xl shadow-xl animate-fade-in fade-in slide-in-from-top-3">
           {toast}
         </div>
       )}
 
       {/* Top Navigation & Actions Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-neutral-200 dark:border-neutral-800">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-edge">
         <div className="flex items-center gap-3">
           {onBack && (
             <button
               onClick={onBack}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-200 text-xs font-bold transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-edge bg-surface hover:bg-surface-sunken text-ink-secondary text-xs font-bold transition-colors cursor-pointer"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               <span>Back to Roster</span>
             </button>
           )}
-          <span className="text-xs text-neutral-400">/</span>
-          <span className="text-xs font-mono font-bold text-elite-red uppercase">{student.rollNo}</span>
+          <span className="text-xs text-ink-muted">/</span>
+          <span className="text-xs font-mono font-bold text-ink-brand uppercase">{student.rollNo}</span>
         </div>
 
         <div className="flex items-center gap-2">
           <button
             onClick={loadStudent}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-200 text-xs font-semibold cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-edge bg-surface hover:bg-surface-sunken text-ink-secondary text-xs font-semibold cursor-pointer"
             title="Refresh student data"
           >
             <RefreshCw className="w-3.5 h-3.5" />
@@ -276,7 +276,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
             href={`/students/${student.rollNo}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-elite-red hover:bg-red-700 text-white text-xs font-bold transition-colors shadow-sm cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-brand hover:bg-brand text-on-primary text-xs font-bold transition-colors shadow-sm cursor-pointer"
           >
             <span>Public Profile</span>
             <ExternalLink className="w-3.5 h-3.5" />
@@ -285,35 +285,35 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
       </div>
 
       {/* Student Profile Header Card */}
-      <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6 shadow-xs">
+      <div className="bg-surface border border-edge rounded-2xl p-6 shadow-xs">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="flex items-center gap-4">
             {profile.photoUrl ? (
               <img
                 src={profile.photoUrl}
                 alt={student.name}
-                className="w-16 h-16 rounded-2xl object-cover border-2 border-neutral-200 dark:border-neutral-700 shadow-xs"
+                className="w-16 h-16 rounded-2xl object-cover border-2 border-edge shadow-xs"
               />
             ) : (
-              <div className="w-16 h-16 rounded-2xl bg-red-50 dark:bg-red-950/40 text-elite-red flex items-center justify-center text-2xl font-black border border-red-100 dark:border-red-900/40">
+              <div className="w-16 h-16 rounded-2xl bg-status-bg-rejected text-ink-brand flex items-center justify-center text-2xl font-black border border-edge">
                 {student.name?.charAt(0) || 'S'}
               </div>
             )}
             <div>
               <div className="flex items-center gap-2.5 flex-wrap">
-                <h1 className="text-xl sm:text-2xl font-black text-[#0B192C] dark:text-white font-display">
+                <h1 className="text-xl sm:text-2xl font-black text-ink font-display">
                   {student.name}
                 </h1>
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300">
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-surface-sunken text-ink-secondary">
                   {student.status || 'ACTIVE'}
                 </span>
               </div>
-              <p className="text-xs font-mono text-neutral-500 dark:text-neutral-400 mt-1">
-                Roll No: <span className="font-bold text-neutral-800 dark:text-neutral-200">{student.rollNo}</span> • Year{' '}
+              <p className="text-xs font-mono text-ink-muted mt-1">
+                Roll No: <span className="font-bold text-ink">{student.rollNo}</span> • Year{' '}
                 {student.year} Section {student.section} • {student.branch || 'IT'}
               </p>
               {student.email && (
-                <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-0.5">{student.email}</p>
+                <p className="text-xs text-ink-muted mt-0.5">{student.email}</p>
               )}
             </div>
           </div>
@@ -325,7 +325,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
                 href={profile.githubUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-xs font-semibold text-neutral-700 dark:text-neutral-200"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-edge hover:bg-surface-sunken text-xs font-semibold text-ink-secondary"
               >
                 <Github className="w-3.5 h-3.5" /> GitHub
               </a>
@@ -335,9 +335,9 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
                 href={profile.linkedinUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-xs font-semibold text-neutral-700 dark:text-neutral-200"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-edge hover:bg-surface-sunken text-xs font-semibold text-ink-secondary"
               >
-                <Linkedin className="w-3.5 h-3.5 text-blue-600" /> LinkedIn
+                <Linkedin className="w-3.5 h-3.5 text-status-approved" /> LinkedIn
               </a>
             )}
             {profile.portfolioUrl && (
@@ -345,9 +345,9 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
                 href={profile.portfolioUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-xs font-semibold text-neutral-700 dark:text-neutral-200"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-edge hover:bg-surface-sunken text-xs font-semibold text-ink-secondary"
               >
-                <Globe className="w-3.5 h-3.5 text-emerald-600" /> Website
+                <Globe className="w-3.5 h-3.5 text-status-approved" /> Website
               </a>
             )}
           </div>
@@ -355,28 +355,28 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
 
         {/* Bio & Skills */}
         {(profile.biography || skillsList.length > 0) && (
-          <div className="mt-5 pt-5 border-t border-neutral-100 dark:border-neutral-800 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="mt-5 pt-5 border-t border-edge grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="md:col-span-2">
-              <h4 className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 mb-1">Biography</h4>
-              <p className="text-xs text-neutral-600 dark:text-neutral-300 leading-relaxed">
+              <h4 className="text-[11px] font-bold uppercase tracking-wider text-ink-muted mb-1">Biography</h4>
+              <p className="text-xs text-ink-secondary leading-relaxed">
                 {profile.biography || 'No biography written yet.'}
               </p>
             </div>
             <div>
-              <h4 className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 mb-1.5">
+              <h4 className="text-[11px] font-bold uppercase tracking-wider text-ink-muted mb-1.5">
                 Skills ({skillsList.length})
               </h4>
               <div className="flex flex-wrap gap-1.5">
                 {skillsList.map((s: any) => (
                   <span
                     key={s.id || s.skill?.id}
-                    className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300"
+                    className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-surface-sunken text-ink-secondary"
                   >
                     {s.skill?.name || s.name}
                   </span>
                 ))}
                 {skillsList.length === 0 && (
-                  <span className="text-xs text-neutral-400 italic">No skills added</span>
+                  <span className="text-xs text-ink-muted italic">No skills added</span>
                 )}
               </div>
             </div>
@@ -386,15 +386,15 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
 
       {/* Pending Revisions Banner (if any item was flagged with CHANGES_REQUESTED) */}
       {pendingChanges.length > 0 && (
-        <div className="p-4 bg-orange-50/80 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-900/50 rounded-2xl flex items-start gap-3">
-          <AlertTriangle className="w-5 h-5 text-orange-600 shrink-0 mt-0.5" />
+        <div className="p-4 bg-status-bg-changes/80 border border-edge rounded-2xl flex items-start gap-3">
+          <AlertTriangle className="w-5 h-5 text-status-changes shrink-0 mt-0.5" />
           <div className="text-xs space-y-1">
-            <p className="font-extrabold text-orange-900 dark:text-orange-200">
+            <p className="font-extrabold text-ink">
               {pendingChanges.length} Revision Request{pendingChanges.length > 1 ? 's' : ''} Pending on Student
             </p>
             <div className="space-y-1 pt-1">
               {pendingChanges.map((item, i) => (
-                <div key={i} className="text-orange-800 dark:text-orange-300">
+                <div key={i} className="text-ink">
                   • <strong>{item.type} ({item.title}):</strong> {item.note || 'Awaiting revised submission'}
                 </div>
               ))}
@@ -406,24 +406,24 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
       {/* Main Grid: Video & Resume */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* 1. INTRODUCTION VIDEO CARD */}
-        <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
+        <div className="bg-surface border border-edge rounded-2xl p-5 shadow-xs flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between pb-3 border-b border-neutral-100 dark:border-neutral-800 mb-4">
+            <div className="flex items-center justify-between pb-3 border-b border-edge mb-4">
               <div className="flex items-center gap-2">
-                <Film className="w-4 h-4 text-elite-red" />
-                <h3 className="font-extrabold text-sm text-[#0B192C] dark:text-white">Introduction Video</h3>
+                <Film className="w-4 h-4 text-ink-brand" />
+                <h3 className="font-extrabold text-sm text-ink">Introduction Video</h3>
               </div>
               {introVideo ? (
                 <ItemStatusBadge status={introVideo.status} />
               ) : (
-                <span className="text-[11px] font-semibold text-neutral-400">Not Uploaded</span>
+                <span className="text-[11px] font-semibold text-ink-muted">Not Uploaded</span>
               )}
             </div>
 
             {introVideo ? (
               <div className="space-y-3">
                 {/* Video embed / player */}
-                <div className="bg-neutral-900 rounded-xl overflow-hidden aspect-video relative flex items-center justify-center">
+                <div className="bg-surface-inverse rounded-xl overflow-hidden aspect-video relative flex items-center justify-center">
                   {introVideo.streamUrl ? (
                     <video
                       src={introVideo.streamUrl}
@@ -431,7 +431,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
                       className="w-full h-full object-contain"
                     />
                   ) : (
-                    <div className="text-neutral-400 text-xs flex flex-col items-center gap-2">
+                    <div className="text-ink-muted text-xs flex flex-col items-center gap-2">
                       <Film className="w-8 h-8 opacity-40" />
                       <span>Video uploaded to Drive</span>
                     </div>
@@ -439,7 +439,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
                 </div>
 
                 {/* Metadata & Links */}
-                <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-neutral-500 pt-1">
+                <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-ink-muted pt-1">
                   <span>
                     Size: {introVideo.sizeMb ? `${introVideo.sizeMb} MB` : 'Recorded video'} • Submitted:{' '}
                     {new Date(introVideo.submittedAt).toLocaleDateString()}
@@ -450,7 +450,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
                         href={introVideo.watchUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-blue-600 hover:underline font-bold text-xs inline-flex items-center gap-1"
+                        className="text-status-approved hover:underline font-bold text-xs inline-flex items-center gap-1"
                       >
                         <span>Drive</span>
                         <ExternalLink className="w-3 h-3" />
@@ -461,14 +461,14 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
 
                 {/* Revision Note Callout */}
                 {introVideo.status === 'CHANGES_REQUESTED' && (
-                  <div className="p-3 bg-orange-50 dark:bg-orange-950/40 border border-orange-200 dark:border-orange-800/60 rounded-xl text-xs text-orange-800 dark:text-orange-300">
+                  <div className="p-3 bg-status-bg-changes border border-edge rounded-xl text-xs text-ink">
                     <strong>Revision Note:</strong>{' '}
                     {introVideo.reviewNote || introVideo.changeRequestNote || 'Please re-upload your introduction video.'}
                   </div>
                 )}
               </div>
             ) : (
-              <div className="py-12 text-center text-neutral-400 text-xs italic">
+              <div className="py-12 text-center text-ink-muted text-xs italic">
                 No introduction video has been submitted by this student yet.
               </div>
             )}
@@ -476,7 +476,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
 
           {/* Video Admin Actions */}
           {introVideo && (
-            <div className="pt-4 mt-4 border-t border-neutral-100 dark:border-neutral-800 flex items-center justify-end gap-2">
+            <div className="pt-4 mt-4 border-t border-edge flex items-center justify-end gap-2">
               <button
                 onClick={() => {
                   setRequestModal({
@@ -487,7 +487,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
                   });
                   setRequestNote(introVideo.reviewNote || introVideo.changeRequestNote || '');
                 }}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-orange-200 dark:border-orange-800/80 bg-orange-50 dark:bg-orange-950/30 hover:bg-orange-100 text-orange-700 dark:text-orange-300 text-xs font-bold transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-edge bg-status-bg-changes hover:bg-status-bg-changes text-status-changes text-xs font-bold transition-colors cursor-pointer"
               >
                 <MessageSquare className="w-3.5 h-3.5" />
                 <span>Request Revision</span>
@@ -502,7 +502,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
                   });
                   setDeleteReason('');
                 }}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-200 dark:border-red-900/60 bg-red-50 dark:bg-red-950/30 hover:bg-red-100 text-red-600 dark:text-red-400 text-xs font-bold transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-edge bg-status-bg-rejected hover:bg-status-bg-rejected text-status-rejected text-xs font-bold transition-colors cursor-pointer"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 <span>Delete Video</span>
@@ -512,33 +512,33 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
         </div>
 
         {/* 2. RESUME CARD */}
-        <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
+        <div className="bg-surface border border-edge rounded-2xl p-5 shadow-xs flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between pb-3 border-b border-neutral-100 dark:border-neutral-800 mb-4">
+            <div className="flex items-center justify-between pb-3 border-b border-edge mb-4">
               <div className="flex items-center gap-2">
-                <FileText className="w-4 h-4 text-elite-red" />
-                <h3 className="font-extrabold text-sm text-[#0B192C] dark:text-white">Professional Resume</h3>
+                <FileText className="w-4 h-4 text-ink-brand" />
+                <h3 className="font-extrabold text-sm text-ink">Professional Resume</h3>
               </div>
               {resume ? (
                 <ItemStatusBadge status={resume.status} />
               ) : (
-                <span className="text-[11px] font-semibold text-neutral-400">Not Uploaded</span>
+                <span className="text-[11px] font-semibold text-ink-muted">Not Uploaded</span>
               )}
             </div>
 
             {resume ? (
               <div className="space-y-3">
                 {/* Resume preview / file box */}
-                <div className="p-4 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-[#F8FAFC] dark:bg-neutral-800/40 flex items-center justify-between gap-3">
+                <div className="p-4 rounded-xl border border-edge bg-surface-canvas flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-10 h-10 rounded-lg bg-red-100 dark:bg-red-950/60 text-elite-red flex items-center justify-center shrink-0">
+                    <div className="w-10 h-10 rounded-lg bg-status-bg-rejected text-ink-brand flex items-center justify-center shrink-0">
                       <FileText className="w-5 h-5" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-xs font-bold text-[#0B192C] dark:text-white truncate" title={resume.filename}>
+                      <p className="text-xs font-bold text-ink truncate" title={resume.filename}>
                         {resume.filename || 'Student_Resume.pdf'}
                       </p>
-                      <p className="text-[11px] text-neutral-500 mt-0.5">
+                      <p className="text-[11px] text-ink-muted mt-0.5">
                         {resume.sizeMb ? `${resume.sizeMb} MB` : 'PDF'} • Submitted{' '}
                         {new Date(resume.submittedAt).toLocaleDateString()}
                       </p>
@@ -551,7 +551,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
                         href={resume.watchUrl || resume.previewUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 rounded-lg text-xs font-bold hover:bg-blue-100 transition-colors"
+                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-status-bg-approved text-status-approved rounded-lg text-xs font-bold hover:bg-status-bg-approved transition-colors"
                       >
                         <Eye className="w-3.5 h-3.5" />
                         <span>Preview</span>
@@ -560,7 +560,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
                     {resume.fileUrl && (
                       <a
                         href={`${resume.fileUrl}?download=1`}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-200 rounded-lg text-xs font-bold hover:bg-neutral-200 transition-colors"
+                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-surface-sunken text-ink-secondary rounded-lg text-xs font-bold hover:bg-surface-inset transition-colors"
                       >
                         <Download className="w-3.5 h-3.5" />
                         <span>Download</span>
@@ -571,14 +571,14 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
 
                 {/* Revision Note Callout */}
                 {resume.status === 'CHANGES_REQUESTED' && (
-                  <div className="p-3 bg-orange-50 dark:bg-orange-950/40 border border-orange-200 dark:border-orange-800/60 rounded-xl text-xs text-orange-800 dark:text-orange-300">
+                  <div className="p-3 bg-status-bg-changes border border-edge rounded-xl text-xs text-ink">
                     <strong>Revision Note:</strong>{' '}
                     {resume.reviewNote || 'The student was asked to revise and re-upload an updated resume.'}
                   </div>
                 )}
               </div>
             ) : (
-              <div className="py-12 text-center text-neutral-400 text-xs italic">
+              <div className="py-12 text-center text-ink-muted text-xs italic">
                 No resume has been uploaded by this student yet.
               </div>
             )}
@@ -586,7 +586,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
 
           {/* Resume Admin Actions */}
           {resume && (
-            <div className="pt-4 mt-4 border-t border-neutral-100 dark:border-neutral-800 flex items-center justify-end gap-2">
+            <div className="pt-4 mt-4 border-t border-edge flex items-center justify-end gap-2">
               <button
                 onClick={() => {
                   setRequestModal({
@@ -597,7 +597,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
                   });
                   setRequestNote(resume.reviewNote || '');
                 }}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-orange-200 dark:border-orange-800/80 bg-orange-50 dark:bg-orange-950/30 hover:bg-orange-100 text-orange-700 dark:text-orange-300 text-xs font-bold transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-edge bg-status-bg-changes hover:bg-status-bg-changes text-status-changes text-xs font-bold transition-colors cursor-pointer"
               >
                 <MessageSquare className="w-3.5 h-3.5" />
                 <span>Request Revision</span>
@@ -612,7 +612,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
                   });
                   setDeleteReason('');
                 }}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-200 dark:border-red-900/60 bg-red-50 dark:bg-red-950/30 hover:bg-red-100 text-red-600 dark:text-red-400 text-xs font-bold transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-edge bg-status-bg-rejected hover:bg-status-bg-rejected text-status-rejected text-xs font-bold transition-colors cursor-pointer"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 <span>Delete Resume</span>
@@ -623,11 +623,11 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
       </div>
 
       {/* 3. ACHIEVEMENTS SECTION */}
-      <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-5 shadow-xs">
-        <div className="flex items-center justify-between pb-3 border-b border-neutral-100 dark:border-neutral-800 mb-4">
+      <div className="bg-surface border border-edge rounded-2xl p-5 shadow-xs">
+        <div className="flex items-center justify-between pb-3 border-b border-edge mb-4">
           <div className="flex items-center gap-2">
-            <Trophy className="w-4 h-4 text-amber-500" />
-            <h3 className="font-extrabold text-sm text-[#0B192C] dark:text-white">
+            <Trophy className="w-4 h-4 text-status-pending" />
+            <h3 className="font-extrabold text-sm text-ink">
               Honors & Achievements ({achievements.length})
             </h3>
           </div>
@@ -638,22 +638,22 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
             {achievements.map((a: any) => (
               <div
                 key={a.id}
-                className="p-4 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-[#F8FAFC] dark:bg-neutral-800/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                className="p-4 rounded-xl border border-edge bg-surface-canvas flex flex-col sm:flex-row sm:items-center justify-between gap-4"
               >
                 <div className="space-y-1 min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h4 className="font-bold text-xs sm:text-sm text-[#0B192C] dark:text-white">{a.title}</h4>
+                    <h4 className="font-bold text-xs sm:text-sm text-ink">{a.title}</h4>
                     <ItemStatusBadge status={a.status} />
                     {a.category && (
-                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300">
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-surface-inset text-ink-secondary">
                         {a.category.name}
                       </span>
                     )}
                   </div>
                   {a.description && (
-                    <p className="text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed">{a.description}</p>
+                    <p className="text-xs text-ink-secondary leading-relaxed">{a.description}</p>
                   )}
-                  <div className="flex flex-wrap items-center gap-3 text-[11px] text-neutral-400 pt-1">
+                  <div className="flex flex-wrap items-center gap-3 text-[11px] text-ink-muted pt-1">
                     <span>{a.organization || 'Department / Institution'}</span>
                     {a.achievedAt && (
                       <>
@@ -671,7 +671,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
                           href={a.proofUrl}
                           target="_blank"
                           rel="noreferrer"
-                          className="inline-flex items-center gap-1 text-[#DC2626] font-bold hover:underline"
+                          className="inline-flex items-center gap-1 text-status-rejected font-bold hover:underline"
                         >
                           <span>Proof Document</span>
                           <ExternalLink className="w-3 h-3" />
@@ -685,7 +685,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
                           href={a.watchUrl}
                           target="_blank"
                           rel="noreferrer"
-                          className="inline-flex items-center gap-1 text-blue-600 font-bold hover:underline"
+                          className="inline-flex items-center gap-1 text-status-approved font-bold hover:underline"
                         >
                           <span>Drive Proof</span>
                           <ExternalLink className="w-3 h-3" />
@@ -695,7 +695,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
                   </div>
 
                   {a.status === 'CHANGES_REQUESTED' && (
-                    <div className="mt-2 p-2.5 bg-orange-50 dark:bg-orange-950/40 border border-orange-200 dark:border-orange-800/60 rounded-lg text-xs text-orange-800 dark:text-orange-300">
+                    <div className="mt-2 p-2.5 bg-status-bg-changes border border-edge rounded-lg text-xs text-ink">
                       <strong>Revision Note:</strong> {a.reviewNote || 'Student was asked to revise this achievement.'}
                     </div>
                   )}
@@ -712,7 +712,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
                       });
                       setRequestNote(a.reviewNote || '');
                     }}
-                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-orange-200 dark:border-orange-800/80 bg-orange-50 dark:bg-orange-950/30 hover:bg-orange-100 text-orange-700 dark:text-orange-300 text-xs font-bold cursor-pointer"
+                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-edge bg-status-bg-changes hover:bg-status-bg-changes text-status-changes text-xs font-bold cursor-pointer"
                   >
                     <MessageSquare className="w-3.5 h-3.5" />
                     <span>Request Revision</span>
@@ -727,7 +727,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
                       });
                       setDeleteReason('');
                     }}
-                    className="p-1.5 rounded-lg border border-red-200 dark:border-red-900/60 bg-red-50 dark:bg-red-950/30 hover:bg-red-100 text-red-600 dark:text-red-400 cursor-pointer"
+                    className="p-1.5 rounded-lg border border-edge bg-status-bg-rejected hover:bg-status-bg-rejected text-status-rejected cursor-pointer"
                     title="Delete Achievement"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -737,18 +737,18 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
             ))}
           </div>
         ) : (
-          <div className="py-8 text-center text-neutral-400 text-xs italic">
+          <div className="py-8 text-center text-ink-muted text-xs italic">
             No honors or achievements have been recorded yet.
           </div>
         )}
       </div>
 
       {/* 4. CERTIFICATES SECTION */}
-      <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-5 shadow-xs">
-        <div className="flex items-center justify-between pb-3 border-b border-neutral-100 dark:border-neutral-800 mb-4">
+      <div className="bg-surface border border-edge rounded-2xl p-5 shadow-xs">
+        <div className="flex items-center justify-between pb-3 border-b border-edge mb-4">
           <div className="flex items-center gap-2">
-            <Award className="w-4 h-4 text-elite-red" />
-            <h3 className="font-extrabold text-sm text-[#0B192C] dark:text-white">
+            <Award className="w-4 h-4 text-ink-brand" />
+            <h3 className="font-extrabold text-sm text-ink">
               Certifications & Credentials ({certificates.length})
             </h3>
           </div>
@@ -759,21 +759,21 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
             {certificates.map((c: any) => (
               <div
                 key={c.id}
-                className="p-4 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-[#F8FAFC] dark:bg-neutral-800/30 flex flex-col justify-between gap-3"
+                className="p-4 rounded-xl border border-edge bg-surface-canvas flex flex-col justify-between gap-3"
               >
                 <div>
                   <div className="flex items-center justify-between gap-2 mb-2">
                     <ItemStatusBadge status={c.status} />
                     {c.issuedAt && (
-                      <span className="text-[10px] text-neutral-400">
+                      <span className="text-[10px] text-ink-muted">
                         {new Date(c.issuedAt).toLocaleDateString()}
                       </span>
                     )}
                   </div>
-                  <h4 className="font-bold text-xs text-[#0B192C] dark:text-white line-clamp-2" title={c.title}>
+                  <h4 className="font-bold text-xs text-ink line-clamp-2" title={c.title}>
                     {c.title}
                   </h4>
-                  <p className="text-[11px] text-neutral-500 mt-1">{c.issuer || 'Credential Issuer'}</p>
+                  <p className="text-[11px] text-ink-muted mt-1">{c.issuer || 'Credential Issuer'}</p>
 
                   {/* Certificate Link */}
                   {(c.fileUrl || c.watchUrl) && (
@@ -783,7 +783,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
                           href={c.fileUrl}
                           target="_blank"
                           rel="noreferrer"
-                          className="inline-flex items-center gap-1 text-[11px] font-bold text-[#DC2626] hover:underline"
+                          className="inline-flex items-center gap-1 text-[11px] font-bold text-status-rejected hover:underline"
                         >
                           <span>View Certificate</span>
                           <ExternalLink className="w-3 h-3" />
@@ -794,7 +794,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
                           href={c.watchUrl}
                           target="_blank"
                           rel="noreferrer"
-                          className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-600 hover:underline"
+                          className="inline-flex items-center gap-1 text-[11px] font-bold text-status-approved hover:underline"
                         >
                           <span>Drive File</span>
                           <ExternalLink className="w-3 h-3" />
@@ -804,13 +804,13 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
                   )}
 
                   {c.status === 'CHANGES_REQUESTED' && (
-                    <div className="mt-3 p-2 bg-orange-50 dark:bg-orange-950/40 border border-orange-200 dark:border-orange-800/60 rounded-lg text-[11px] text-orange-800 dark:text-orange-300">
+                    <div className="mt-3 p-2 bg-status-bg-changes border border-edge rounded-lg text-[11px] text-ink">
                       <strong>Revision Note:</strong> {c.reviewNote || 'Student was asked to revise this certificate.'}
                     </div>
                   )}
                 </div>
 
-                <div className="pt-3 border-t border-neutral-200 dark:border-neutral-700/60 flex items-center justify-end gap-2">
+                <div className="pt-3 border-t border-edge flex items-center justify-end gap-2">
                   <button
                     onClick={() => {
                       setRequestModal({
@@ -821,7 +821,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
                       });
                       setRequestNote(c.reviewNote || '');
                     }}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-orange-200 dark:border-orange-800/80 bg-orange-50 dark:bg-orange-950/30 hover:bg-orange-100 text-orange-700 dark:text-orange-300 text-xs font-bold cursor-pointer"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-edge bg-status-bg-changes hover:bg-status-bg-changes text-status-changes text-xs font-bold cursor-pointer"
                   >
                     <MessageSquare className="w-3.5 h-3.5" />
                     <span>Request Revision</span>
@@ -836,7 +836,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
                       });
                       setDeleteReason('');
                     }}
-                    className="p-1 rounded-lg border border-red-200 dark:border-red-900/60 bg-red-50 dark:bg-red-950/30 hover:bg-red-100 text-red-600 dark:text-red-400 cursor-pointer"
+                    className="p-1 rounded-lg border border-edge bg-status-bg-rejected hover:bg-status-bg-rejected text-status-rejected cursor-pointer"
                     title="Delete Certificate"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -846,18 +846,18 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
             ))}
           </div>
         ) : (
-          <div className="py-8 text-center text-neutral-400 text-xs italic">
+          <div className="py-8 text-center text-ink-muted text-xs italic">
             No certificates have been uploaded yet.
           </div>
         )}
       </div>
 
       {/* 5. PROJECTS SECTION */}
-      <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-5 shadow-xs">
-        <div className="flex items-center justify-between pb-3 border-b border-neutral-100 dark:border-neutral-800 mb-4">
+      <div className="bg-surface border border-edge rounded-2xl p-5 shadow-xs">
+        <div className="flex items-center justify-between pb-3 border-b border-edge mb-4">
           <div className="flex items-center gap-2">
-            <Code2 className="w-4 h-4 text-blue-600" />
-            <h3 className="font-extrabold text-sm text-[#0B192C] dark:text-white">
+            <Code2 className="w-4 h-4 text-status-approved" />
+            <h3 className="font-extrabold text-sm text-ink">
               Projects ({projects.length})
             </h3>
           </div>
@@ -868,22 +868,22 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
             {projects.map((p: any) => (
               <div
                 key={p.id}
-                className="p-4 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-[#F8FAFC] dark:bg-neutral-800/30 flex flex-col justify-between gap-3"
+                className="p-4 rounded-xl border border-edge bg-surface-canvas flex flex-col justify-between gap-3"
               >
                 <div>
                   <div className="flex items-center justify-between gap-2 mb-1.5">
-                    <h4 className="font-bold text-xs sm:text-sm text-[#0B192C] dark:text-white">{p.title}</h4>
+                    <h4 className="font-bold text-xs sm:text-sm text-ink">{p.title}</h4>
                     <ItemStatusBadge status={p.status || 'APPROVED'} />
                   </div>
                   {p.description && (
-                    <p className="text-xs text-neutral-600 dark:text-neutral-400 line-clamp-3 mb-2">{p.description}</p>
+                    <p className="text-xs text-ink-secondary line-clamp-3 mb-2">{p.description}</p>
                   )}
                   {Array.isArray(p.technologies) && p.technologies.length > 0 && (
                     <div className="flex flex-wrap gap-1 mb-3">
                       {p.technologies.map((t: string, idx: number) => (
                         <span
                           key={idx}
-                          className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300"
+                          className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-surface-inset text-ink-secondary"
                         >
                           {t}
                         </span>
@@ -897,7 +897,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
                         href={p.githubUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex items-center gap-1 font-bold text-neutral-700 dark:text-neutral-200 hover:text-black hover:underline"
+                        className="inline-flex items-center gap-1 font-bold text-ink-secondary hover:text-ink hover:underline"
                       >
                         <Github className="w-3.5 h-3.5" /> Repository
                       </a>
@@ -907,7 +907,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
                         href={p.driveVideoUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex items-center gap-1 font-bold text-blue-600 hover:underline"
+                        className="inline-flex items-center gap-1 font-bold text-status-approved hover:underline"
                       >
                         <ExternalLink className="w-3.5 h-3.5" /> Demo Video
                       </a>
@@ -915,13 +915,13 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
                   </div>
 
                   {p.status === 'CHANGES_REQUESTED' && (
-                    <div className="mt-3 p-2 bg-orange-50 dark:bg-orange-950/40 border border-orange-200 dark:border-orange-800/60 rounded-lg text-xs text-orange-800 dark:text-orange-300">
+                    <div className="mt-3 p-2 bg-status-bg-changes border border-edge rounded-lg text-xs text-ink">
                       <strong>Revision Note:</strong> {p.reviewNote || 'Student was asked to revise this project.'}
                     </div>
                   )}
                 </div>
 
-                <div className="pt-3 border-t border-neutral-200 dark:border-neutral-700/60 flex items-center justify-end gap-2">
+                <div className="pt-3 border-t border-edge flex items-center justify-end gap-2">
                   <button
                     onClick={() => {
                       setRequestModal({
@@ -932,7 +932,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
                       });
                       setRequestNote(p.reviewNote || '');
                     }}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-orange-200 dark:border-orange-800/80 bg-orange-50 dark:bg-orange-950/30 hover:bg-orange-100 text-orange-700 dark:text-orange-300 text-xs font-bold cursor-pointer"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-edge bg-status-bg-changes hover:bg-status-bg-changes text-status-changes text-xs font-bold cursor-pointer"
                   >
                     <MessageSquare className="w-3.5 h-3.5" />
                     <span>Request Revision</span>
@@ -947,7 +947,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
                       });
                       setDeleteReason('');
                     }}
-                    className="p-1 rounded-lg border border-red-200 dark:border-red-900/60 bg-red-50 dark:bg-red-950/30 hover:bg-red-100 text-red-600 dark:text-red-400 cursor-pointer"
+                    className="p-1 rounded-lg border border-edge bg-status-bg-rejected hover:bg-status-bg-rejected text-status-rejected cursor-pointer"
                     title="Delete Project"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -957,7 +957,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
             ))}
           </div>
         ) : (
-          <div className="py-8 text-center text-neutral-400 text-xs italic">
+          <div className="py-8 text-center text-ink-muted text-xs italic">
             No projects have been added by this student yet.
           </div>
         )}
@@ -965,18 +965,18 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
 
       {/* ── MODAL: REQUEST CHANGES ── */}
       {requestModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="bg-white dark:bg-neutral-900 rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-neutral-200 dark:border-neutral-800 text-left animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between pb-3 border-b border-neutral-100 dark:border-neutral-800">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-on-primary/60 backdrop-blur-xs">
+          <div className="bg-surface rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-edge text-left animate-fade-in fade-in (_m) => 'animate-scale-in' duration-fast">
+            <div className="flex items-center justify-between pb-3 border-b border-edge">
               <div className="flex items-center gap-2">
-                <MessageSquare className="w-5 h-5 text-orange-500" />
-                <h3 className="text-base font-extrabold text-[#0B192C] dark:text-white">
+                <MessageSquare className="w-5 h-5 text-status-changes" />
+                <h3 className="text-base font-extrabold text-ink">
                   Request Revision
                 </h3>
               </div>
               <button
                 onClick={() => setRequestModal(null)}
-                className="p-1 text-neutral-400 hover:text-neutral-700 dark:hover:text-white rounded-lg cursor-pointer"
+                className="p-1 text-ink-muted hover:text-ink-secondary rounded-lg cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -984,16 +984,16 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
 
             <form onSubmit={handleRequestChangeSubmit} className="space-y-4 pt-4">
               <div>
-                <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-2">
-                  Item to revise: <strong className="text-neutral-900 dark:text-white">{requestModal.title}</strong>
+                <p className="text-xs text-ink-muted mb-2">
+                  Item to revise: <strong className="text-ink">{requestModal.title}</strong>
                 </p>
-                <p className="text-xs text-neutral-400 dark:text-neutral-500 mb-3">
+                <p className="text-xs text-ink-muted mb-3">
                   The student will receive an in-portal notification with your note and instructions to submit a corrected version.
                 </p>
 
                 {/* Quick preset suggestions */}
                 <div className="mb-3 space-y-1">
-                  <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-wide">Quick suggestions:</span>
+                  <span className="text-[11px] font-bold text-ink-muted uppercase tracking-wide">Quick suggestions:</span>
                   <div className="flex flex-wrap gap-1.5 pt-1">
                     {[
                       'Please upload a clearer, high-resolution copy',
@@ -1005,7 +1005,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
                         type="button"
                         key={idx}
                         onClick={() => setRequestNote(preset)}
-                        className="text-[11px] px-2.5 py-1 rounded-lg bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300 font-medium transition-colors cursor-pointer"
+                        className="text-[11px] px-2.5 py-1 rounded-lg bg-surface-sunken hover:bg-surface-inset text-ink-secondary font-medium transition-colors cursor-pointer"
                       >
                         {preset}
                       </button>
@@ -1013,7 +1013,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
                   </div>
                 </div>
 
-                <label className="block text-xs font-bold text-[#0B192C] dark:text-white mb-1">
+                <label className="block text-xs font-bold text-ink mb-1">
                   Revision Instructions for Student *
                 </label>
                 <textarea
@@ -1022,22 +1022,22 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
                   value={requestNote}
                   onChange={(e) => setRequestNote(e.target.value)}
                   placeholder="Explain clearly what the student should correct before re-uploading..."
-                  className="w-full text-xs border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 rounded-xl p-3 resize-none focus:outline-none focus:border-orange-500 text-neutral-900 dark:text-white"
+                  className="w-full text-xs border border-edge-strong bg-surface rounded-xl p-3 resize-none focus:outline-none focus:border-status-changes text-ink"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-neutral-100 dark:border-neutral-800">
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-edge">
                 <button
                   type="button"
                   onClick={() => setRequestModal(null)}
-                  className="px-4 py-2 text-xs font-bold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-xl transition-colors cursor-pointer"
+                  className="px-4 py-2 text-xs font-bold text-ink-secondary hover:bg-surface-sunken rounded-xl transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={actionLoading || !requestNote.trim()}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-status-solid-changes hover:bg-status-solid-changes disabled:opacity-50 text-on-primary text-xs font-bold rounded-xl transition-colors cursor-pointer"
                 >
                   {actionLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
                   <span>Send Revision Request</span>
@@ -1050,28 +1050,28 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
 
       {/* ── MODAL: DELETE ITEM ── */}
       {deleteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="bg-white dark:bg-neutral-900 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-neutral-200 dark:border-neutral-800 text-left animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between pb-3 border-b border-neutral-100 dark:border-neutral-800">
-              <div className="flex items-center gap-2 text-red-600">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-on-primary/60 backdrop-blur-xs">
+          <div className="bg-surface rounded-2xl max-w-md w-full p-6 shadow-2xl border border-edge text-left animate-fade-in fade-in (_m) => 'animate-scale-in' duration-fast">
+            <div className="flex items-center justify-between pb-3 border-b border-edge">
+              <div className="flex items-center gap-2 text-status-rejected">
                 <Trash2 className="w-5 h-5" />
                 <h3 className="text-base font-extrabold">Delete {deleteModal.title}?</h3>
               </div>
               <button
                 onClick={() => setDeleteModal(null)}
-                className="p-1 text-neutral-400 hover:text-neutral-700 dark:hover:text-white rounded-lg cursor-pointer"
+                className="p-1 text-ink-muted hover:text-ink-secondary rounded-lg cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <form onSubmit={handleDeleteSubmit} className="space-y-4 pt-4">
-              <div className="p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 rounded-xl text-xs text-red-800 dark:text-red-300 leading-relaxed">
+              <div className="p-3 bg-status-bg-rejected border border-edge rounded-xl text-xs text-ink leading-relaxed">
                 <strong>Warning:</strong> This permanently deletes the database entry and removes any associated file from Google Drive storage. This action cannot be undone.
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-neutral-700 dark:text-neutral-300 mb-1">
+                <label className="block text-xs font-bold text-ink-secondary mb-1">
                   Optional Reason (sent to student)
                 </label>
                 <input
@@ -1079,22 +1079,22 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
                   value={deleteReason}
                   onChange={(e) => setDeleteReason(e.target.value)}
                   placeholder="e.g. Duplicate upload / Policy violation"
-                  className="w-full text-xs border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 rounded-xl p-2.5 focus:outline-none focus:border-red-500 text-neutral-900 dark:text-white"
+                  className="w-full text-xs border border-edge-strong bg-surface rounded-xl p-2.5 focus:outline-none focus:border-status-rejected text-ink"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-neutral-100 dark:border-neutral-800">
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-edge">
                 <button
                   type="button"
                   onClick={() => setDeleteModal(null)}
-                  className="px-4 py-2 text-xs font-bold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-xl transition-colors cursor-pointer"
+                  className="px-4 py-2 text-xs font-bold text-ink-secondary hover:bg-surface-sunken rounded-xl transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={actionLoading}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-brand hover:bg-brand disabled:opacity-50 text-on-primary text-xs font-bold rounded-xl transition-colors cursor-pointer"
                 >
                   {actionLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
                   <span>Delete Permanently</span>

@@ -21,8 +21,8 @@ const ComposeDialog: React.FC<{ onClose: () => void; onPublished: () => void }> 
 
   const fetchPreview = async () => {
     try {
-      const res = await adminApi.getAnnouncementAudiencePreview?.(form.audience) ?? { count: 0 };
-      setPreview(res.count ?? 0);
+      const res = await adminApi.getAnnouncementAudiencePreview(form.audience);
+      setPreview(res?.count ?? 0);
     } catch { setPreview(null); }
   };
 
@@ -32,32 +32,32 @@ const ComposeDialog: React.FC<{ onClose: () => void; onPublished: () => void }> 
     if (!form.title.trim() || !form.body.trim()) { setError('Title and body are required.'); return; }
     setSubmitting(true);
     try {
-      await adminApi.createAnnouncement?.(form);
+      await adminApi.createAnnouncement(form);
       onPublished(); onClose();
     } catch { setError('Failed to publish. Try again.'); }
     finally { setSubmitting(false); }
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl border border-neutral-200 dark:border-neutral-800 w-full max-w-xl flex flex-col overflow-hidden max-h-[90vh]">
-        <div className="flex items-center justify-between p-5 border-b border-[#E2E8F0] dark:border-neutral-800">
-          <h2 className="text-base font-extrabold text-[#0B192C] dark:text-white">New Announcement</h2>
-          <button onClick={onClose} className="text-neutral-400 hover:text-[#0B192C] dark:hover:text-white cursor-pointer"><X className="w-5 h-5" /></button>
+    <div className="fixed inset-0 z-50 bg-on-primary/50 backdrop-blur-xs flex items-center justify-center p-4">
+      <div className="bg-surface rounded-2xl shadow-2xl border border-edge w-full max-w-xl flex flex-col overflow-hidden max-h-[90vh]">
+        <div className="flex items-center justify-between p-5 border-b border-edge">
+          <h2 className="text-base font-extrabold text-ink">New Announcement</h2>
+          <button onClick={onClose} className="text-ink-muted hover:text-ink cursor-pointer"><X className="w-5 h-5" /></button>
         </div>
         <div className="flex-1 overflow-y-auto p-5 space-y-4">
-          {error && <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 text-red-700 dark:text-red-400 text-xs rounded-lg p-3">{error}</div>}
+          {error && <div className="bg-status-bg-rejected border border-edge text-status-rejected text-xs rounded-lg p-3">{error}</div>}
           <label className="block">
-            <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300 uppercase tracking-wide">Title *</span>
-            <input value={form.title} onChange={e => update('title', e.target.value)} className="mt-1 w-full text-sm bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white border border-[#E2E8F0] dark:border-neutral-700 rounded-lg px-3 py-2 focus:outline-none focus:border-[#DC2626]" placeholder="Announcement title" />
+            <span className="text-xs font-bold text-ink-secondary uppercase tracking-wide">Title *</span>
+            <input value={form.title} onChange={e => update('title', e.target.value)} className="mt-1 w-full text-sm bg-surface text-ink border border-edge rounded-lg px-3 py-2 focus:outline-none focus:border-status-rejected" placeholder="Announcement title" />
           </label>
           <label className="block">
-            <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300 uppercase tracking-wide">Body *</span>
-            <textarea value={form.body} onChange={e => update('body', e.target.value)} rows={6} className="mt-1 w-full text-sm bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white border border-[#E2E8F0] dark:border-neutral-700 rounded-lg px-3 py-2 focus:outline-none focus:border-[#DC2626] resize-none" placeholder="Write your announcement here..." />
+            <span className="text-xs font-bold text-ink-secondary uppercase tracking-wide">Body *</span>
+            <textarea value={form.body} onChange={e => update('body', e.target.value)} rows={6} className="mt-1 w-full text-sm bg-surface text-ink border border-edge rounded-lg px-3 py-2 focus:outline-none focus:border-status-rejected resize-none" placeholder="Write your announcement here..." />
           </label>
           <label className="block">
-            <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300 uppercase tracking-wide">Audience</span>
-            <select value={form.audience} onChange={e => update('audience', e.target.value)} className="mt-1 w-full text-sm bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white border border-[#E2E8F0] dark:border-neutral-700 rounded-lg px-3 py-2 focus:outline-none focus:border-[#DC2626]">
+            <span className="text-xs font-bold text-ink-secondary uppercase tracking-wide">Audience</span>
+            <select value={form.audience} onChange={e => update('audience', e.target.value)} className="mt-1 w-full text-sm bg-surface text-ink border border-edge rounded-lg px-3 py-2 focus:outline-none focus:border-status-rejected">
               <option value="ALL">All Students</option>
               <option value="YEAR_1">Year 1 only</option>
               <option value="YEAR_2">Year 2 only</option>
@@ -66,20 +66,20 @@ const ComposeDialog: React.FC<{ onClose: () => void; onPublished: () => void }> 
             </select>
           </label>
           {preview !== null && (
-            <div className="flex items-center gap-2 text-xs text-neutral-600 dark:text-neutral-400 bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/50 rounded-lg px-3 py-2">
-              <Users className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400" />
-              <span>This announcement will reach <strong className="text-[#0B192C] dark:text-blue-300">{preview} student{preview !== 1 ? 's' : ''}</strong></span>
+            <div className="flex items-center gap-2 text-xs text-ink-secondary bg-status-bg-approved border border-edge rounded-lg px-3 py-2">
+              <Users className="w-3.5 h-3.5 text-status-approved" />
+              <span>This announcement will reach <strong className="text-ink">{preview} student{preview !== 1 ? 's' : ''}</strong></span>
             </div>
           )}
           <label className="block">
-            <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300 uppercase tracking-wide">Schedule (optional)</span>
-            <input type="datetime-local" value={form.scheduledAt} onChange={e => update('scheduledAt', e.target.value)} className="mt-1 w-full text-sm bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white border border-[#E2E8F0] dark:border-neutral-700 rounded-lg px-3 py-2 focus:outline-none focus:border-[#DC2626]" />
-            <p className="text-[10px] text-neutral-400 dark:text-neutral-500 mt-1">Leave blank to publish immediately.</p>
+            <span className="text-xs font-bold text-ink-secondary uppercase tracking-wide">Schedule (optional)</span>
+            <input type="datetime-local" value={form.scheduledAt} onChange={e => update('scheduledAt', e.target.value)} className="mt-1 w-full text-sm bg-surface text-ink border border-edge rounded-lg px-3 py-2 focus:outline-none focus:border-status-rejected" />
+            <p className="text-[10px] text-ink-muted mt-1">Leave blank to publish immediately.</p>
           </label>
         </div>
-        <div className="flex gap-3 p-5 border-t border-[#E2E8F0] dark:border-neutral-800">
-          <button onClick={onClose} className="flex-1 py-2.5 border border-[#E2E8F0] dark:border-neutral-700 rounded-lg text-xs font-bold text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 cursor-pointer">Cancel</button>
-          <button onClick={handlePublish} disabled={submitting} className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-[#DC2626] text-white rounded-lg text-xs font-bold hover:bg-red-700 disabled:opacity-50 cursor-pointer">
+        <div className="flex gap-3 p-5 border-t border-edge">
+          <button onClick={onClose} className="flex-1 py-2.5 border border-edge rounded-lg text-xs font-bold text-ink-secondary hover:bg-surface-sunken cursor-pointer">Cancel</button>
+          <button onClick={handlePublish} disabled={submitting} className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-status-solid-rejected text-on-primary rounded-lg text-xs font-bold hover:bg-brand disabled:opacity-50 cursor-pointer">
             {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
             {form.scheduledAt ? 'Schedule' : 'Publish Now'}
           </button>
@@ -112,57 +112,57 @@ export const Communications: React.FC = () => {
 
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Megaphone className="w-6 h-6 text-[#DC2626]" />
+          <Megaphone className="w-6 h-6 text-status-rejected" />
           <div>
-            <h1 className="text-xl font-extrabold text-[#0B192C] dark:text-white">Announcements</h1>
-            <p className="text-xs text-neutral-500 dark:text-neutral-400">Send messages to all or specific groups of students</p>
+            <h1 className="text-xl font-extrabold text-ink">Announcements</h1>
+            <p className="text-xs text-ink-muted">Send messages to all or specific groups of students</p>
           </div>
         </div>
-        <button onClick={() => setShowCompose(true)} className="flex items-center gap-2 px-4 py-2 bg-[#DC2626] text-white rounded-lg text-xs font-bold hover:bg-red-700 cursor-pointer">
+        <button onClick={() => setShowCompose(true)} className="flex items-center gap-2 px-4 py-2 bg-status-solid-rejected text-on-primary rounded-lg text-xs font-bold hover:bg-brand cursor-pointer">
           <Plus className="w-4 h-4" /> New Announcement
         </button>
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center h-48 bg-white dark:bg-neutral-900 rounded-2xl border border-[#E2E8F0] dark:border-neutral-800">
-          <Loader2 className="w-7 h-7 animate-spin text-[#DC2626]" />
+        <div className="flex items-center justify-center h-48 bg-surface rounded-2xl border border-edge">
+          <Loader2 className="w-7 h-7 animate-spin text-status-rejected" />
         </div>
       ) : error ? (
-        <div className="flex flex-col items-center gap-2 h-48 justify-center bg-white dark:bg-neutral-900 rounded-2xl border border-red-100 dark:border-red-900/40">
-          <AlertCircle className="w-8 h-8 text-red-400" />
-          <p className="text-sm text-neutral-500 dark:text-neutral-400">{error}</p>
-          <button onClick={fetchAnnouncements} className="text-xs text-[#DC2626] font-semibold hover:underline cursor-pointer">Retry</button>
+        <div className="flex flex-col items-center gap-2 h-48 justify-center bg-surface rounded-2xl border border-edge">
+          <AlertCircle className="w-8 h-8 text-status-rejected" />
+          <p className="text-sm text-ink-muted">{error}</p>
+          <button onClick={fetchAnnouncements} className="text-xs text-status-rejected font-semibold hover:underline cursor-pointer">Retry</button>
         </div>
       ) : announcements.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-48 bg-white dark:bg-neutral-900 rounded-2xl border border-[#E2E8F0] dark:border-neutral-800 gap-3">
-          <Inbox className="w-10 h-10 text-neutral-300 dark:text-neutral-600" />
-          <p className="text-sm font-semibold text-neutral-500 dark:text-neutral-400">No announcements yet</p>
-          <button onClick={() => setShowCompose(true)} className="text-xs text-[#DC2626] font-semibold hover:underline cursor-pointer">Write the first one</button>
+        <div className="flex flex-col items-center justify-center h-48 bg-surface rounded-2xl border border-edge gap-3">
+          <Inbox className="w-10 h-10 text-ink-muted" />
+          <p className="text-sm font-semibold text-ink-muted">No announcements yet</p>
+          <button onClick={() => setShowCompose(true)} className="text-xs text-status-rejected font-semibold hover:underline cursor-pointer">Write the first one</button>
         </div>
       ) : (
         <div className="space-y-3">
           {announcements.map((a) => (
-            <div key={a.id} className="bg-white dark:bg-neutral-900 rounded-2xl border border-[#E2E8F0] dark:border-neutral-800 p-5 shadow-xs transition-colors">
+            <div key={a.id} className="bg-surface rounded-2xl border border-edge p-5 shadow-xs transition-colors">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-bold text-[#0B192C] dark:text-white text-sm truncate">{a.title}</h3>
-                  <p className="text-xs text-neutral-600 dark:text-neutral-300 mt-1 line-clamp-2 leading-relaxed">{a.body}</p>
+                  <h3 className="font-bold text-ink text-sm truncate">{a.title}</h3>
+                  <p className="text-xs text-ink-secondary mt-1 line-clamp-2 leading-relaxed">{a.body}</p>
                 </div>
                 <div className="text-right shrink-0">
-                  <div className="text-xs font-semibold text-neutral-400 dark:text-neutral-500">{new Date(a.createdAt).toLocaleDateString()}</div>
-                  <div className="flex items-center gap-1 text-xs text-neutral-500 dark:text-neutral-400 mt-1 justify-end">
+                  <div className="text-xs font-semibold text-ink-muted">{new Date(a.createdAt).toLocaleDateString()}</div>
+                  <div className="flex items-center gap-1 text-xs text-ink-muted mt-1 justify-end">
                     <Users className="w-3 h-3" /> {a.recipientCount} recipients
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-4 mt-3 pt-3 border-t border-[#E2E8F0] dark:border-neutral-800">
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase text-neutral-400 dark:text-neutral-500">
+              <div className="flex items-center gap-4 mt-3 pt-3 border-t border-edge">
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase text-ink-muted">
                   <Clock className="w-3 h-3" /> {a.createdByName}
                 </span>
                 <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${
                   a.audience === 'ALL'
-                    ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800'
-                    : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-neutral-700'
+                    ? 'bg-status-bg-approved text-status-approved border-edge'
+                    : 'bg-surface-canvas text-ink-secondary border-edge'
                 }`}>
                   {a.audience.replace(/_/g, ' ')}
                 </span>

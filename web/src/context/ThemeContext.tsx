@@ -22,7 +22,7 @@ export const PublicThemeProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   return (
     <PublicThemeContext.Provider value={{ theme: 'light' }}>
-      <div id="public-root" className="min-h-screen bg-[#F7F8FC] text-[#0F172A] w-full antialiased font-sans">
+      <div id="public-root" className="min-h-[100dvh] bg-surface-canvas text-ink w-full antialiased font-sans">
         {children}
       </div>
     </PublicThemeContext.Provider>
@@ -53,7 +53,7 @@ export const StudentThemeProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   return (
     <StudentThemeContext.Provider value={{ theme: 'light' }}>
-      <div id="student-root" className="min-h-screen bg-[#F7F8FC] text-[#0F172A] w-full antialiased font-sans">
+      <div id="student-root" className="min-h-[100dvh] bg-surface-canvas text-ink w-full antialiased font-sans">
         {children}
       </div>
     </StudentThemeContext.Provider>

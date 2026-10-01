@@ -12,6 +12,7 @@ import {
   Shield,
   X,
   Check,
+  Minus,
 } from 'lucide-react';
 
 export const RolesPermissions: React.FC = () => {
@@ -91,8 +92,8 @@ export const RolesPermissions: React.FC = () => {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[450px]">
-        <div className="w-10 h-10 border-3 border-elite-red border-t-transparent rounded-full animate-spin mb-4" />
-        <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400">Loading access control matrix...</p>
+        <div className="w-10 h-10 border-3 border-brand border-t-transparent rounded-full animate-spin mb-4" />
+        <p className="text-sm font-medium text-ink-muted">Loading access control matrix...</p>
       </div>
     );
   }
@@ -114,13 +115,13 @@ export const RolesPermissions: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-neutral-200 dark:border-neutral-800">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-edge">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-neutral-900 dark:text-white flex items-center gap-2.5">
-            <ShieldCheck className="w-7 h-7 text-elite-red" />
+          <h1 className="text-2xl font-bold tracking-tight text-ink flex items-center gap-2.5">
+            <ShieldCheck className="w-7 h-7 text-ink-brand" />
             Roles & Access Permissions (RBAC)
           </h1>
-          <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
+          <p className="text-sm text-ink-muted mt-1">
             Role-Based Access Control matrix governing administrative privileges across portal features.
           </p>
         </div>
@@ -128,14 +129,14 @@ export const RolesPermissions: React.FC = () => {
           <button
             onClick={() => loadRoles(true)}
             disabled={refreshing}
-            className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-neutral-700 dark:text-neutral-200 bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors shadow-sm disabled:opacity-50"
+            className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-ink-secondary bg-surface border border-edge-strong rounded-lg hover:bg-surface-sunken transition-colors shadow-sm disabled:opacity-50"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-elite-red' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-ink-brand' : ''}`} />
             Refresh
           </button>
           <button
             onClick={() => setIsModalOpen(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-elite-red text-white text-xs font-bold rounded-lg hover:bg-elite-red-dark transition-colors shadow-sm"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-brand text-on-primary text-xs font-bold rounded-lg hover:bg-brand-hover transition-colors shadow-sm"
           >
             <Plus className="w-3.5 h-3.5" />
             Create Role
@@ -144,24 +145,24 @@ export const RolesPermissions: React.FC = () => {
       </div>
 
       {success && (
-        <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/60 flex items-center justify-between text-xs text-emerald-800 dark:text-emerald-300">
+        <div className="p-4 rounded-xl bg-status-bg-approved border border-edge flex items-center justify-between text-xs text-ink">
           <div className="flex items-center gap-2">
-            <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0" />
+            <CheckCircle className="w-4 h-4 text-status-approved shrink-0" />
             <span>{success}</span>
           </div>
-          <button onClick={() => setSuccess(null)} className="font-bold underline text-emerald-700 dark:text-emerald-300">
+          <button onClick={() => setSuccess(null)} className="font-bold underline text-status-approved">
             Dismiss
           </button>
         </div>
       )}
 
       {error && (
-        <div className="p-4 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/60 flex items-center justify-between text-xs text-rose-800 dark:text-rose-300">
+        <div className="p-4 rounded-xl bg-status-bg-rejected border border-edge flex items-center justify-between text-xs text-ink">
           <div className="flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
+            <AlertCircle className="w-4 h-4 text-status-rejected shrink-0" />
             <span>{error}</span>
           </div>
-          <button onClick={() => setError(null)} className="font-bold underline text-rose-700 dark:text-rose-300">
+          <button onClick={() => setError(null)} className="font-bold underline text-status-rejected">
             Dismiss
           </button>
         </div>
@@ -169,8 +170,8 @@ export const RolesPermissions: React.FC = () => {
 
       {/* Roles Cards Grid */}
       <div>
-        <h2 className="text-base font-bold text-neutral-900 dark:text-white mb-3 flex items-center gap-2">
-          <Key className="w-4 h-4 text-elite-red" />
+        <h2 className="text-base font-bold text-ink mb-3 flex items-center gap-2">
+          <Key className="w-4 h-4 text-ink-brand" />
           Defined System Roles
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -179,30 +180,30 @@ export const RolesPermissions: React.FC = () => {
             return (
               <div
                 key={role.id}
-                className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-5 shadow-sm hover:border-neutral-300 dark:hover:border-neutral-700 transition-all flex flex-col justify-between"
+                className="bg-surface border border-edge rounded-xl p-5 shadow-sm hover:border-edge-strong transition-colors flex flex-col justify-between"
               >
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="font-mono text-xs font-extrabold px-2.5 py-1 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 border border-neutral-200 dark:border-neutral-700">
+                    <span className="font-mono text-xs font-extrabold px-2.5 py-1 rounded bg-surface-sunken text-ink border border-edge">
                       {role.name}
                     </span>
                     {role.isSystem && (
-                      <span className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
+                      <span className="text-[10px] font-bold text-ink-muted uppercase tracking-wider">
                         System Built-in
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-2 leading-relaxed">
+                  <p className="text-xs text-ink-secondary mt-2 leading-relaxed">
                     {role.description || 'Custom administrative privilege bundle.'}
                   </p>
                 </div>
 
-                <div className="mt-4 pt-3 border-t border-neutral-100 dark:border-neutral-800 flex items-center justify-between text-xs text-neutral-500 dark:text-neutral-400">
+                <div className="mt-4 pt-3 border-t border-edge flex items-center justify-between text-xs text-ink-muted">
                   <span className="flex items-center gap-1.5">
-                    <Users className="w-3.5 h-3.5 text-neutral-400" />
+                    <Users className="w-3.5 h-3.5 text-ink-muted" />
                     {assignedCount} Assigned {assignedCount === 1 ? 'Admin' : 'Admins'}
                   </span>
-                  <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">
+                  <span className="text-[11px] text-status-approved font-semibold">
                     Full Scope
                   </span>
                 </div>
@@ -213,19 +214,19 @@ export const RolesPermissions: React.FC = () => {
       </div>
 
       {/* Permission Capability Matrix Table */}
-      <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl shadow-sm overflow-hidden">
-        <div className="p-5 border-b border-neutral-200 dark:border-neutral-800">
-          <h3 className="text-sm font-bold text-neutral-900 dark:text-white">
+      <div className="bg-surface border border-edge rounded-xl shadow-sm overflow-hidden">
+        <div className="p-5 border-b border-edge">
+          <h3 className="text-sm font-bold text-ink">
             Module Authorization Matrix
           </h3>
-          <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+          <p className="text-xs text-ink-muted mt-0.5">
             Operational boundary across core portal components
           </p>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-neutral-50 dark:bg-neutral-800/60 text-neutral-600 dark:text-neutral-400 uppercase font-semibold border-b border-neutral-200 dark:border-neutral-800">
+            <thead className="bg-surface-sunken text-ink-secondary uppercase font-semibold border-b border-edge">
               <tr>
                 <th className="px-5 py-3">Feature Domain</th>
                 <th className="px-5 py-3 text-center">SUPER_ADMIN</th>
@@ -233,36 +234,36 @@ export const RolesPermissions: React.FC = () => {
                 <th className="px-5 py-3 text-center">MODERATOR</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800 text-neutral-700 dark:text-neutral-300">
+            <tbody className="divide-y divide-edge text-ink-secondary">
               {defaultModules.map((mod) => (
-                <tr key={mod.name} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/40 transition-colors">
-                  <td className="px-5 py-3.5 font-medium text-neutral-900 dark:text-neutral-100">
+                <tr key={mod.name} className="hover:bg-surface-sunken/50 transition-colors">
+                  <td className="px-5 py-3.5 font-medium text-ink">
                     {mod.name}
                   </td>
                   <td className="px-5 py-3.5 text-center">
-                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400">
+                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-status-bg-approved text-status-approved">
                       <Check className="w-3.5 h-3.5" />
                     </span>
                   </td>
                   <td className="px-5 py-3.5 text-center">
                     {mod.admin ? (
-                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400">
+                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-status-bg-approved text-status-approved">
                         <Check className="w-3.5 h-3.5" />
                       </span>
                     ) : (
-                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-400">
-                        —
+                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-surface-sunken text-ink-muted">
+                        <Minus className="w-3.5 h-3.5" aria-hidden="true" />
                       </span>
                     )}
                   </td>
                   <td className="px-5 py-3.5 text-center">
                     {mod.moderator ? (
-                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400">
+                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-status-bg-approved text-status-approved">
                         <Check className="w-3.5 h-3.5" />
                       </span>
                     ) : (
-                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-400">
-                        —
+                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-surface-sunken text-ink-muted">
+                        <Minus className="w-3.5 h-3.5" aria-hidden="true" />
                       </span>
                     )}
                   </td>
@@ -274,24 +275,24 @@ export const RolesPermissions: React.FC = () => {
       </div>
 
       {/* Administrator Accounts & Active Role Assignment Table */}
-      <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl shadow-sm overflow-hidden">
-        <div className="p-5 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between">
+      <div className="bg-surface border border-edge rounded-xl shadow-sm overflow-hidden">
+        <div className="p-5 border-b border-edge flex items-center justify-between">
           <div>
-            <h3 className="text-sm font-bold text-neutral-900 dark:text-white">
+            <h3 className="text-sm font-bold text-ink">
               Administrator Accounts & Role Assignment
             </h3>
-            <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+            <p className="text-xs text-ink-muted mt-0.5">
               Assigned credentials with administrative access to this portal instance
             </p>
           </div>
-          <span className="text-xs font-mono text-neutral-400 dark:text-neutral-500">
+          <span className="text-xs font-mono text-ink-muted">
             {admins.length} Organizers
           </span>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-neutral-50 dark:bg-neutral-800/60 text-neutral-600 dark:text-neutral-400 uppercase font-semibold border-b border-neutral-200 dark:border-neutral-800">
+            <thead className="bg-surface-sunken text-ink-secondary uppercase font-semibold border-b border-edge">
               <tr>
                 <th className="px-5 py-3">Username</th>
                 <th className="px-5 py-3">Email Address</th>
@@ -299,19 +300,19 @@ export const RolesPermissions: React.FC = () => {
                 <th className="px-5 py-3">Assigned Role Override</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800 text-neutral-700 dark:text-neutral-300">
+            <tbody className="divide-y divide-edge text-ink-secondary">
               {admins.map((adm) => {
                 const isAssigning = assigningAdminId === adm.id;
                 return (
-                  <tr key={adm.id} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/40 transition-colors">
-                    <td className="px-5 py-3.5 font-bold text-neutral-900 dark:text-white">
+                  <tr key={adm.id} className="hover:bg-surface-sunken/50 transition-colors">
+                    <td className="px-5 py-3.5 font-bold text-ink">
                       {adm.username}
                     </td>
-                    <td className="px-5 py-3.5 font-mono text-neutral-600 dark:text-neutral-400">
+                    <td className="px-5 py-3.5 font-mono text-ink-secondary">
                       {adm.email}
                     </td>
                     <td className="px-5 py-3.5">
-                      <span className="font-mono text-[11px] font-bold px-2 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 border border-neutral-200 dark:border-neutral-700">
+                      <span className="font-mono text-[11px] font-bold px-2 py-0.5 rounded bg-surface-sunken text-ink border border-edge">
                         {adm.role}
                       </span>
                     </td>
@@ -322,7 +323,7 @@ export const RolesPermissions: React.FC = () => {
                         onChange={(e) => {
                           if (e.target.value) handleAssign(adm.id, e.target.value);
                         }}
-                        className="px-2.5 py-1 text-xs rounded border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-elite-red"
+                        className="px-2.5 py-1 text-xs rounded border border-edge-strong bg-surface text-ink focus:outline-none focus:ring-1 focus:ring-brand"
                       >
                         <option value="">Default ({adm.role})</option>
                         {roles.map((r) => (
@@ -342,16 +343,16 @@ export const RolesPermissions: React.FC = () => {
 
       {/* Create Role Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
-            <div className="p-5 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between">
-              <h2 className="text-base font-bold text-neutral-900 dark:text-white flex items-center gap-2">
-                <Shield className="w-5 h-5 text-elite-red" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-on-primary/60 backdrop-blur-sm">
+          <div className="bg-surface border border-edge rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
+            <div className="p-5 border-b border-edge flex items-center justify-between">
+              <h2 className="text-base font-bold text-ink flex items-center gap-2">
+                <Shield className="w-5 h-5 text-ink-brand" />
                 Create Custom Security Role
               </h2>
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="p-1 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500"
+                className="p-1 rounded-lg hover:bg-surface-sunken text-ink-muted"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -359,7 +360,7 @@ export const RolesPermissions: React.FC = () => {
 
             <form onSubmit={handleCreateRole} className="p-6 space-y-4">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-neutral-700 dark:text-neutral-300 mb-1">
+                <label className="block text-xs font-bold uppercase tracking-wider text-ink-secondary mb-1">
                   Role Identifier *
                 </label>
                 <input
@@ -368,12 +369,12 @@ export const RolesPermissions: React.FC = () => {
                   placeholder="e.g. EVENT_COORDINATOR"
                   value={newRoleName}
                   onChange={(e) => setNewRoleName(e.target.value)}
-                  className="w-full px-3 py-2 text-xs font-mono rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-elite-red"
+                  className="w-full px-3 py-2 text-xs font-mono rounded-lg border border-edge-strong bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-brand"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-neutral-700 dark:text-neutral-300 mb-1">
+                <label className="block text-xs font-bold uppercase tracking-wider text-ink-secondary mb-1">
                   Description
                 </label>
                 <textarea
@@ -381,22 +382,22 @@ export const RolesPermissions: React.FC = () => {
                   placeholder="Outline the responsibilities and scope for this role..."
                   value={newRoleDesc}
                   onChange={(e) => setNewRoleDesc(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-elite-red"
+                  className="w-full px-3 py-2 text-xs rounded-lg border border-edge-strong bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-brand"
                 />
               </div>
 
-              <div className="pt-4 border-t border-neutral-200 dark:border-neutral-800 flex items-center justify-end gap-3">
+              <div className="pt-4 border-t border-edge flex items-center justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 text-xs font-semibold text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
+                  className="px-4 py-2 text-xs font-semibold text-ink-secondary hover:text-ink"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={creating}
-                  className="px-5 py-2 text-xs font-bold text-white bg-elite-red rounded-lg hover:bg-elite-red-dark transition-colors disabled:opacity-50"
+                  className="px-5 py-2 text-xs font-bold text-on-primary bg-brand rounded-lg hover:bg-brand-hover transition-colors disabled:opacity-50"
                 >
                   {creating ? 'Saving...' : 'Create Role'}
                 </button>

@@ -53,14 +53,14 @@ router.post('/projects', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'LIMIT_EXCEEDED', message: 'Max 5 projects allowed.' });
     }
     const { title, description, techStack, technologies, githubUrl, videoUrl, driveVideoUrl } = req.body;
-    
+
     // determine display order
     const maxOrderProj = await prisma.project.findFirst({
       where: { studentId },
       orderBy: { displayOrder: 'desc' }
     });
     const displayOrder = maxOrderProj ? maxOrderProj.displayOrder + 1 : 0;
-    
+
     const project = await prisma.project.create({
       data: {
         studentId,
@@ -550,4 +550,3 @@ router.delete('/certificates/:id', async (req: Request, res: Response) => {
 });
 
 export default router;
-

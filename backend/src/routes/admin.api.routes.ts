@@ -6,7 +6,11 @@ import { prisma } from '../lib/prisma';
 import { driveService } from '../services/drive.service';
 import { RATINGS, RATING_LABELS, SUBMISSION_STATUSES } from '../config/constants';
 import { ActivityService } from '../services/activity.service';
-import { deliverAnnouncementNotifications } from '../services/announcement.service';
+import {
+  countAnnouncementAudience,
+  deliverAnnouncementNotifications,
+  resolveAnnouncementTarget,
+} from '../services/announcement.service';
 import { notifyStudent, notifyVideoChangeRequested } from '../services/notification.service';
 import { resolveContentRange } from '../utils/rangeParser';
 
@@ -1478,22 +1482,38 @@ router.get('/announcements', async (req, res) => {
   }
 });
 
+router.get('/announcements/preview', async (req, res) => {
+  try {
+    const target = resolveAnnouncementTarget({
+      audience: req.query.audience,
+      targetYear: req.query.targetYear,
+      targetSection: req.query.targetSection,
+    });
+    const count = await countAnnouncementAudience(target);
+    res.json({ count });
+  } catch (err: any) {
+    return httpError(res, 500, err, "SERVER_ERROR");
+  }
+});
+
 router.post('/announcements', async (req, res) => {
   try {
-    const { title, body, content, message, scheduledAt, priority, targetYear, targetSection, targetAll } = req.body;
+    const { title, body, content, message, scheduledAt, priority, targetYear, targetSection, targetAll, audience } = req.body;
     const scheduledDate = scheduledAt ? new Date(scheduledAt) : null;
     const isFutureScheduled = scheduledDate !== null && !isNaN(scheduledDate.getTime()) && scheduledDate.getTime() > Date.now();
 
-    const isTargetAll = targetAll === false ? false : (targetAll === true ? true : !(targetYear || targetSection));
+    // `audience` is what the admin UI sends (ALL / YEAR_1..YEAR_4); targetYear and
+    // friends are kept for older callers. Both resolve to the same target here.
+    const resolved = resolveAnnouncementTarget({ audience, targetYear, targetSection, targetAll });
 
     const announcement = await prisma.announcement.create({
       data: {
         title,
         message: body || content || message || '',
         priority: priority || 'normal',
-        targetYear: targetYear !== undefined && targetYear !== null && targetYear !== '' ? parseInt(String(targetYear), 10) : null,
-        targetSection: targetSection ? String(targetSection) : null,
-        targetAll: isTargetAll,
+        targetYear: resolved.targetYear,
+        targetSection: resolved.targetSection,
+        targetAll: resolved.targetAll,
         createdBy: (req as any).adminUser?.username || (req as any).user?.username || 'admin',
         scheduledAt: scheduledDate,
         status: isFutureScheduled ? 'SCHEDULED' : 'PUBLISHED',

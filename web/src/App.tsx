@@ -1,14 +1,23 @@
 import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
-import { Routes, Route, Navigate, useNavigate, BrowserRouter } from 'react-router-dom';
+import { Routes, Route, Navigate, Outlet, useNavigate, BrowserRouter } from 'react-router-dom';
 import { StudentSession } from './types';
 import { api } from './services/api';
 import { PublicThemeProvider, StudentThemeProvider } from './context/ThemeContext';
+import {
+  TOKEN_STORAGE_KEY,
+  captureTokenFromUrl,
+  classifySessionFailure,
+  hasStoredToken,
+  planSessionBootstrap,
+} from './utils/sessionBootstrap';
 
 // Public Pages (isolated chunk for public visitors)
 const HomePage = lazy(() => import('./pages/public/HomePage'));
 const StudentDirectoryPage = lazy(() => import('./pages/public/StudentDirectoryPage'));
 const PublicStudentProfilePage = lazy(() => import('./pages/public/PublicStudentProfilePage'));
 const PublicResumeViewerPage = lazy(() => import('./pages/public/PublicResumeViewerPage'));
+const PublicEventsPage = lazy(() => import('./pages/public/PublicEventsPage'));
+const PublicEventDetailPage = lazy(() => import('./pages/public/PublicEventDetailPage'));
 
 // Protected Student Portal Layout & Pages (isolated chunk for authenticated students)
 const StudentLayout = lazy(() => import('./components/layout/StudentLayout'));
@@ -33,7 +42,10 @@ const RouteLoadingFallback: React.FC = () => (
 
 const AuthWrapper: React.FC = () => {
   const [session, setSession] = useState<StudentSession | null>(null);
-  const [authChecking, setAuthChecking] = useState(true);
+  // With no token there is nothing to verify, so the app is ready immediately
+  // and no request is made at all. Public pages used to wait on a round trip
+  // whose only possible outcome was a 401.
+  const [authChecking, setAuthChecking] = useState(hasStoredToken);
   const [sessionError, setSessionError] = useState<string | null>(null);
   const navigate = useNavigate();
 
@@ -47,107 +59,116 @@ const AuthWrapper: React.FC = () => {
     );
   }, []);
 
-  const retrySessionCheck = useCallback(() => {
-    setSessionError(null);
-    setAuthChecking(true);
+  const verifySession = useCallback((onSettled: () => void) => {
     api
       .getMe()
       .then((res) => setSession({ student: res.student }))
       .catch((err) => {
-        const status = err?.response?.status;
-        if (status === 401 || status === 403) {
-          localStorage.removeItem('student_token');
+        const failure = classifySessionFailure(err);
+        if (failure.kind === 'unauthorized') {
+          localStorage.removeItem(TOKEN_STORAGE_KEY);
           setSession(null);
         } else {
-          setSessionError(
-            status
-              ? `Could not reach the server (HTTP ${status}). Please retry.`
-              : 'Could not reach the server. Please check your connection and retry.',
-          );
+          // A server-side failure must not masquerade as a logout. The retry
+          // screen is shown instead of silently dumping the student on sign-in.
+          console.error('Could not verify student session:', err);
+          setSessionError(failure.message);
         }
       })
-      .finally(() => setAuthChecking(false));
+      .finally(onSettled);
   }, []);
+
+  const retrySessionCheck = useCallback(() => {
+    setSessionError(null);
+    setAuthChecking(true);
+    verifySession(() => setAuthChecking(false));
+  }, [verifySession]);
 
   useEffect(() => {
     let cancelled = false;
 
     // Capture token from Google OAuth callback redirect if passed in URL
-    const searchParams = new URLSearchParams(window.location.search);
-    const tokenFromUrl = searchParams.get('token');
+    const { token: tokenFromUrl, cleanUrl } = captureTokenFromUrl(window.location.search);
     if (tokenFromUrl) {
-      localStorage.setItem('student_token', tokenFromUrl);
-      searchParams.delete('token');
-      const cleanSearch = searchParams.toString();
-      const cleanUrl = window.location.pathname + (cleanSearch ? `?${cleanSearch}` : '') + window.location.hash;
       window.history.replaceState({}, document.title, cleanUrl);
     }
 
-    api
-      .getMe()
-      .then((res) => {
-        if (cancelled) return;
-        setSession({ student: res.student });
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        // Only an explicit auth rejection should discard the session. Treating
-        // every failure as "logged out" meant a single 500 (or a network blip)
-        // deleted the stored token and trapped the student in a login loop.
-        const status = err?.response?.status;
-        if (status === 401 || status === 403) {
-          localStorage.removeItem('student_token');
-          setSession(null);
-        } else {
-          console.error('Could not verify student session:', err);
-          setSessionError(
-            status
-              ? `Could not reach the server (HTTP ${status}). Please retry.`
-              : 'Could not reach the server. Please check your connection and retry.',
-          );
-          setAuthChecking(false);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setAuthChecking(false);
-      });
+    const plan = planSessionBootstrap({
+      storedToken: hasStoredToken() ? localStorage.getItem(TOKEN_STORAGE_KEY) : null,
+      urlToken: tokenFromUrl,
+    });
+
+    if (!plan.needsVerification) {
+      // Nothing to verify, so nothing to wait for. This is the branch that lets
+      // a signed-out visitor paint a public page without a network round trip.
+      setSession(null);
+      setAuthChecking(false);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    // A token exists and has not been checked yet, so the protected subtree
+    // waits. Note this also covers the OAuth callback path: the token just
+    // arrived and still has to be verified, which is what turns the callback
+    // into a real session.
+    setAuthChecking(true);
+    verifySession(() => {
+      if (!cancelled) setAuthChecking(false);
+    });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [verifySession]);
 
   const handleLogout = useCallback(async () => {
     try {
       await api.logout();
     } catch {}
-    localStorage.removeItem('student_token');
+    localStorage.removeItem(TOKEN_STORAGE_KEY);
     setSession(null);
     navigate('/', { replace: true });
   }, [navigate]);
 
-  if (authChecking) {
-    return <BrandedLoading message="Verifying Student Session" />;
-  }
-
-  // A server-side failure must not masquerade as a logout. Offer a retry instead
-  // of silently sending the student back to the sign-in page.
-  if (sessionError && !session) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center px-6">
-        <div className="max-w-md text-center">
-          <h1 className="text-lg font-black text-[#0B192C] mb-2">Unable to verify your session</h1>
-          <p className="text-sm text-neutral-600 mb-6">{sessionError}</p>
-          <button
-            type="button"
-            onClick={retrySessionCheck}
-            className="px-5 py-2.5 rounded-xl bg-[#DC2626] text-white text-sm font-bold hover:bg-red-700 transition-colors cursor-pointer"
-          >
-            Retry
-          </button>
+  // Only the protected subtree waits on the session check. Public routes render
+  // as soon as their own code is loaded, so a visitor with no token paints
+  // immediately instead of watching a full-screen loader until a 401 returns.
+  // A server-side failure must not masquerade as a logout: offer a retry rather
+  // than silently sending the student back to the sign-in page.
+  const protectedShell = () => {
+    if (authChecking) {
+      return <BrandedLoading message="Verifying Student Session" />;
+    }
+    if (sessionError && !session) {
+      return (
+        <div className="min-h-[100dvh] bg-surface flex items-center justify-center px-6">
+          <div className="max-w-md text-center">
+            <h1 className="text-lg font-black text-ink mb-2">Unable to verify your session</h1>
+            <p className="text-sm text-ink-secondary mb-6">{sessionError}</p>
+            <button
+              type="button"
+              onClick={retrySessionCheck}
+              className="px-5 py-2.5 rounded-xl bg-status-solid-rejected text-on-primary text-sm font-bold hover:bg-brand transition-colors cursor-pointer"
+            >
+              Retry
+            </button>
+          </div>
         </div>
-      </div>
+      );
+    }
+    if (!session) {
+      return <Navigate to="/" replace />;
+    }
+    return (
+      <StudentThemeProvider>
+        <StudentLayout
+          session={session}
+          onLogout={handleLogout}
+          onPhotoChange={handlePhotoChange}
+        />
+      </StudentThemeProvider>
     );
-  }
+  };
 
   return (
     <Suspense fallback={<RouteLoadingFallback />}>
@@ -187,10 +208,17 @@ const AuthWrapper: React.FC = () => {
           }
         />
 
-        {/* Protected Student Portal Routes: Isolated Student Theme */}
+        {/* Events are readable without a login: a visitor gets the read-only
+            public page, a signed-in student gets the full registration flow
+            inside the portal chrome. Both live on the same path so a public event
+            link resolves for everyone. The one case that still waits is a stored
+            token whose session has not been verified yet, so a signed-in student
+            never sees the public version flash before being redirected. */}
         <Route
           element={
-            session ? (
+            authChecking && hasStoredToken() ? (
+              <BrandedLoading message="Verifying Student Session" />
+            ) : session ? (
               <StudentThemeProvider>
                 <StudentLayout
                   session={session}
@@ -199,10 +227,36 @@ const AuthWrapper: React.FC = () => {
                 />
               </StudentThemeProvider>
             ) : (
-              <Navigate to="/" replace />
+              <PublicThemeProvider>
+                <Outlet />
+              </PublicThemeProvider>
             )
           }
         >
+          <Route
+            path="/events"
+            element={
+              session ? (
+                <EventsPage />
+              ) : (
+                <PublicEventsPage session={session} onLogout={handleLogout} />
+              )
+            }
+          />
+          <Route
+            path="/events/:id"
+            element={
+              session ? (
+                <EventDetailPage />
+              ) : (
+                <PublicEventDetailPage session={session} onLogout={handleLogout} />
+              )
+            }
+          />
+        </Route>
+
+        {/* Protected Student Portal Routes: Isolated Student Theme */}
+        <Route element={protectedShell()}>
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/profile/edit" element={<EditProfilePage />} />
@@ -210,8 +264,6 @@ const AuthWrapper: React.FC = () => {
           <Route path="/intro-video" element={<VideoPage />} />
           <Route path="/video" element={<Navigate to="/intro-video" replace />} />
           <Route path="/resume" element={<ResumePage />} />
-          <Route path="/events" element={<EventsPage />} />
-          <Route path="/events/:id" element={<EventDetailPage />} />
           <Route path="/registrations" element={<RegistrationsPage />} />
           <Route path="/teams" element={<TeamsPage />} />
           <Route path="/voting" element={<VotingPage />} />
@@ -219,9 +271,6 @@ const AuthWrapper: React.FC = () => {
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/announcements/:id" element={<AnnouncementDetailPage />} />
         </Route>
-
-        {/* Fallback */}
-        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>
   );

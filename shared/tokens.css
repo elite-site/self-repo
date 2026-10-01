@@ -1,0 +1,479 @@
+/**
+ * ELITE design tokens — GENERATED FILE, DO NOT EDIT.
+ *
+ * Source:    shared/tokens.mjs
+ * Regenerate: npm run tokens
+ * Verify:     npm run tokens:check
+ *
+ * ELITE Student Portal · SASI Institute of Technology and Engineering · Department of Information Technology
+ * Primary #ED1E26 (SASI red) · Accent #041030 (ELITE navy)
+ *
+ * Both web/ and admin-client/ import this file. It contains:
+ *   1. raw colour ramps, for the rare component that needs a specific step
+ *   2. semantic theme tokens under :root and [data-theme='dark']
+ *   3. non-colour scales: radius, motion, layer, elevation
+ *   4. the component layer (btn / card / input / badge / surface)
+ *   5. keyframes and the reduced-motion override
+ *
+ * Theming contract: components read SEMANTIC tokens (--surface, --text), never
+ * raw ramps, and never write a `dark:` variant. That is what lets the admin
+ * client drop its 200-line `!important` override wall.
+ */
+
+:root {
+  --red-50: #FEF3F3;
+  --red-100: #FDE4E5;
+  --red-200: #FBC8CB;
+  --red-300: #F79FA5;
+  --red-400: #F2606A;
+  --red-500: #ED1E26;
+  --red-600: #CE1119;
+  --red-700: #A80D14;
+  --red-800: #830E14;
+  --red-900: #6B1016;
+  --navy-50: #F3F5F9;
+  --navy-100: #E4E8F0;
+  --navy-200: #C3CBDB;
+  --navy-300: #94A0BA;
+  --navy-400: #5C6A8C;
+  --navy-500: #384763;
+  --navy-600: #23324F;
+  --navy-700: #16223A;
+  --navy-800: #0C1526;
+  --navy-900: #041030;
+  --navy-950: #02081C;
+  --neutral-50: #F7F8FB;
+  --neutral-100: #EEF1F6;
+  --neutral-200: #DFE4EC;
+  --neutral-300: #C3CBD8;
+  --neutral-400: #94A0B4;
+  --neutral-500: #6B7688;
+  --neutral-600: #4E5866;
+  --neutral-700: #3A424E;
+  --neutral-800: #252B34;
+  --neutral-900: #12161C;
+}
+:root {
+  --canvas: #F7F8FB;
+  --surface: #FFFFFF;
+  --surface-raised: #FFFFFF;
+  --surface-sunken: #EEF1F6;
+  --surface-inset: #F7F8FB;
+  --surface-inverse: #041030;
+  --border: #DFE4EC;
+  --border-strong: #C3CBD8;
+  --border-inverse: #16223A;
+  --text: #041030;
+  --text-secondary: #4E5866;
+  --text-muted: #6B7688;
+  --text-inverse: #FFFFFF;
+  --text-brand: #CE1119;
+  --brand: #CE1119;
+  --brand-hover: #A80D14;
+  --brand-active: #830E14;
+  --brand-soft: #FEF3F3;
+  --brand-soft-text: #A80D14;
+  --brand-ring: #F2606A;
+  --accent: #041030;
+  --accent-hover: #0C1526;
+  --on-primary: #FFFFFF;
+  --focus: #CE1119;
+  --overlay-scrim: rgba(4, 16, 48, 0.44);
+  --status-draft: #6B7688;
+  --status-pending: #B45309;
+  --status-review: #5B4BC4;
+  --status-approved: #047857;
+  --status-rejected: #A80D14;
+  --status-changes: #C2410C;
+  --status-draft-bg: #EEF1F6;
+  --status-pending-bg: #FEF3C7;
+  --status-review-bg: #EDE9FE;
+  --status-approved-bg: #D1FAE5;
+  --status-rejected-bg: #FEF3F3;
+  --status-changes-bg: #FFEDD5;
+  --award-gold: #B45309;
+  --award-bronze: #92400E;
+  --status-draft-solid: #4E5866;
+  --status-pending-solid: #B45309;
+  --status-review-solid: #5B4BC4;
+  --status-approved-solid: #047857;
+  --status-rejected-solid: #A80D14;
+  --status-changes-solid: #C2410C;
+}
+[data-theme='dark'],
+.dark {
+  --canvas: #070B18;
+  --surface: #02081C;
+  --surface-raised: #0B1224;
+  --surface-sunken: #04081A;
+  --surface-inset: #0A0F20;
+  --surface-inverse: #FFFFFF;
+  --border: #1E2942;
+  --border-strong: #2C3A5A;
+  --border-inverse: #C3CBD8;
+  --text: #F1F4FA;
+  --text-secondary: #A8B4CC;
+  --text-muted: #7C8AA6;
+  --text-inverse: #041030;
+  --text-brand: #FF6B72;
+  --brand: #E0272F;
+  --brand-hover: #F0343C;
+  --brand-active: #F74B52;
+  --brand-soft: rgba(237, 30, 38, 0.16);
+  --brand-soft-text: #FF8A90;
+  --brand-ring: #F2606A;
+  --accent: #E4E8F0;
+  --accent-hover: #FFFFFF;
+  --on-primary: #FFFFFF;
+  --focus: #FF6B72;
+  --overlay-scrim: rgba(2, 8, 28, 0.66);
+  --status-draft: #94A0BA;
+  --status-pending: #FBBF24;
+  --status-review: #A78BFA;
+  --status-approved: #34D399;
+  --status-rejected: #FB7185;
+  --status-changes: #FB923C;
+  --award-gold: #B45309;
+  --award-bronze: #92400E;
+  --status-draft-solid: #4E5866;
+  --status-pending-solid: #B45309;
+  --status-review-solid: #5B4BC4;
+  --status-approved-solid: #047857;
+  --status-rejected-solid: #A80D14;
+  --status-changes-solid: #C2410C;
+  --status-draft-bg: rgba(148, 160, 186, 0.14);
+  --status-pending-bg: rgba(251, 191, 36, 0.14);
+  --status-review-bg: rgba(167, 139, 250, 0.14);
+  --status-approved-bg: rgba(52, 211, 153, 0.14);
+  --status-rejected-bg: rgba(251, 113, 133, 0.14);
+  --status-changes-bg: rgba(251, 146, 60, 0.14);
+}
+:root {
+  --none: 0;
+  --sm: 4px;
+  ---d-e-f-a-u-l-t: 6px;
+  --md: 6px;
+  --lg: 8px;
+  --xl: 12px;
+  --full: 9999px;
+  --dur-instant: 0ms;
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+  --dur-slow: 280ms;
+  --dur-slower: 360ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-entrance: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --ease-press: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --base: 0;
+  --raised: 0 8px 20px -6px rgba(4, 16, 48, 0.12);
+  --sticky: 20;
+  --overlay: 30;
+  --modal: 0 24px 48px -12px rgba(4, 16, 48, 0.28);
+  --toast: 50;
+  --skip-link: 60;
+  --card: 0 1px 2px 0 rgba(4, 16, 48, 0.04), 0 1px 3px 0 rgba(4, 16, 48, 0.03);
+  --card-hover: 0 4px 8px -2px rgba(4, 16, 48, 0.08), 0 2px 4px -2px rgba(4, 16, 48, 0.04);
+  --drawer: -12px 0 32px -8px rgba(4, 16, 48, 0.16);
+  --focus: 0 0 0 3px rgba(206, 17, 25, 0.35);
+}
+:root {
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-heading: 'Sora', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
+}
+
+/* ── Base ──────────────────────────────────────────────────────────────── */
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    scrollbar-gutter: stable;
+  }
+
+  body {
+    background-color: var(--canvas);
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-synthesis-weight: none;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    transition: background-color var(--dur-base) var(--ease-standard),
+                color var(--dur-base) var(--ease-standard);
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+    text-wrap: balance;
+  }
+
+  p, li {
+    text-wrap: pretty;
+  }
+
+  input, select, textarea, button {
+    font-family: inherit;
+  }
+
+  /* A single focus treatment for the whole app. Visible on every surface
+     because the ring colour is a semantic token with a checked 5.3:1 against
+     the canvas and 4.7:1 against --surface. */
+  :focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+    border-radius: var(--sm);
+  }
+
+  /* Suppress the ring for pointer users on non-interactive surfaces, but keep
+     it on every control. */
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
+}
+
+/* ── Component layer ────────────────────────────────────────────────────────
+   The only place component classes are defined. Everything reads a semantic
+   token, so a component written once works in both themes. */
+@layer components {
+  .surface {
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--lg);
+  }
+
+  .surface-sunken {
+    background-color: var(--surface-sunken);
+    border: 1px solid var(--border);
+    border-radius: var(--lg);
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: var(--lg);
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.25rem;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+    touch-action: manipulation;
+    transition: background-color var(--dur-fast) var(--ease-standard),
+                border-color var(--dur-fast) var(--ease-standard),
+                color var(--dur-fast) var(--ease-standard),
+                opacity var(--dur-fast) var(--ease-standard),
+                transform var(--dur-fast) var(--ease-press);
+  }
+
+  /* :active at 0ms, not transitioned-in: the press must feel like it happened
+     the instant the finger landed, not one frame later. */
+  .btn:active:not(:disabled) {
+    transform: scale(0.98);
+    transition-duration: 0ms;
+  }
+
+  .btn:disabled,
+  .btn[aria-disabled='true'] {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .btn-primary {
+    background-color: var(--brand);
+    color: var(--text-inverse);
+    box-shadow: var(--shadow-card);
+  }
+  .btn-primary:hover:not(:disabled) { background-color: var(--brand-hover); }
+  .btn-primary:active:not(:disabled) { background-color: var(--brand-active); }
+
+  .btn-secondary {
+    background-color: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover:not(:disabled) {
+    background-color: var(--surface-sunken);
+    border-color: var(--border-strong);
+  }
+
+  /* One ghost treatment, used for the same intent everywhere: a low-emphasis
+     action next to a primary one. Previously the two apps each had their own. */
+  .btn-ghost {
+    background-color: transparent;
+    color: var(--text-secondary);
+  }
+  .btn-ghost:hover:not(:disabled) {
+    background-color: var(--surface-sunken);
+    color: var(--text);
+  }
+
+  .btn-danger {
+    background-color: var(--status-rejected);
+    color: var(--on-primary);
+  }
+
+  .input,
+  .select,
+  .textarea {
+    width: 100%;
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--lg);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    color: var(--text);
+    transition: border-color var(--dur-fast) var(--ease-standard),
+                box-shadow var(--dur-fast) var(--ease-standard);
+  }
+  .input::placeholder,
+  .textarea::placeholder {
+    color: var(--text-muted);
+  }
+  .input:focus,
+  .select:focus,
+  .textarea:focus {
+    outline: none;
+    border-color: var(--brand);
+    box-shadow: var(--shadow-focus);
+  }
+  .input:disabled,
+  .select:disabled,
+  .textarea:disabled {
+    background-color: var(--surface-sunken);
+    color: var(--text-muted);
+    cursor: not-allowed;
+  }
+  /* An invalid field keeps the 2px brand ring rather than swapping to a
+     colour, so "wrong" never reads as "unfocused". */
+  .input[aria-invalid='true'],
+  .select[aria-invalid='true'],
+  .textarea[aria-invalid='true'] {
+    border-color: var(--status-rejected);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--status-rejected) 28%, transparent);
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.125rem 0.5rem;
+    border-radius: var(--full);
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1rem;
+    white-space: nowrap;
+  }
+  .badge-draft    { background: var(--status-draft-bg);    color: var(--status-draft); }
+  .badge-pending  { background: var(--status-pending-bg);  color: var(--status-pending); }
+  .badge-review   { background: var(--status-review-bg);   color: var(--status-review); }
+  .badge-approved { background: var(--status-approved-bg); color: var(--status-approved); }
+  .badge-rejected { background: var(--status-rejected-bg); color: var(--status-rejected); }
+  .badge-changes  { background: var(--status-changes-bg);  color: var(--status-changes); }
+  .badge-brand    { background: var(--brand-soft);         color: var(--brand-soft-text); }
+
+  .label {
+    display: block;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 0.375rem;
+  }
+
+  .hint {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 0.25rem;
+  }
+
+  .error-text {
+    font-size: 0.75rem;
+    color: var(--status-rejected);
+    margin-top: 0.25rem;
+  }
+
+  /* Content that swaps in after a route change. Paired classes: the same
+     animation on the outgoing node would double the perceived wait. */
+  .page-enter {
+    animation: page-enter var(--dur-slow) var(--ease-entrance) both;
+  }
+
+  /* Skeletons. Static, not a looping shimmer: the loading states here last
+     150-400ms, and a shimmer that runs for that long reads as jank. */
+  .skeleton {
+    background-color: var(--surface-sunken);
+    border-radius: var(--md);
+    animation: skeleton-pulse 1.6s var(--ease-standard) infinite;
+  }
+}
+
+/* ── Keyframes ─────────────────────────────────────────────────────────── */
+@keyframes page-enter {
+  from { opacity: 0; transform: translate3d(0, 6px, 0); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.97); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes slide-in-left {
+  from { transform: translate3d(-100%, 0, 0); }
+  to   { transform: none; }
+}
+@keyframes slide-in-up {
+  from { transform: translate3d(0, 100%, 0); }
+  to   { transform: none; }
+}
+@keyframes drawer-in {
+  from { transform: translate3d(100%, 0, 0); }
+  to   { transform: none; }
+}
+@keyframes indeterminate {
+  0%   { transform: translate3d(-100%, 0, 0); }
+  50%  { transform: translate3d(0, 0, 0); }
+  100% { transform: translate3d(400%, 0, 0); }
+}
+@keyframes toast-in {
+  from { opacity: 0; transform: translate3d(0, 12px, 0) scale(0.98); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.55; }
+}
+
+/* ── Reduced motion ────────────────────────────────────────────────────────
+   The app's motion is hover, press and state feedback, all of which collapse
+   to an instant state without losing information. One block, no per-component
+   guards, because every duration in the system routes through a token. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ── Scrollbars ────────────────────────────────────────────────────────── */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background-color: var(--border-strong);
+  border-radius: 9999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover { background-color: var(--text-muted); }

@@ -1,160 +1,93 @@
+/* Self-hosted webfonts. Must come before the Tailwind layers so `font-display`
+   never wins over a real face, and so the browser can start fetching the woff2
+   files as soon as this stylesheet parses instead of waiting on a third party. */
+@import './fonts.css';
+
+/* The design system: palette, semantic theme tokens, motion, radius, layers,
+   keyframes, reduced-motion override, and the base/component layers. GENERATED
+   from `shared/tokens.mjs` — edit that and run `npm run tokens`, never this. */
+@import '../../shared/tokens.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* ============================================================
-   ELITE Academic Portal Design System — Global CSS
-   Source: assests/.../DESIGN.md
-   Font: Inter (Google Fonts, loaded in index.html)
-   ============================================================ */
+/* Everything above came from `shared/`. What remains is the few things that are
+   genuinely specific to this app. The old file defined its own :root block with
+   the indigo palette, its own scrollbars, its own `elite-*` component layer and
+   a Bootstrap grid shim; those now live in `shared/tokens.css` except for the
+   pieces below. */
 
-@layer base {
-  html {
-    scroll-behavior: smooth;
-    overflow-x: hidden;
-  }
-
-  body {
-    background-color: #F7F8FC;  /* surface-canvas */
-    color: #0F172A;              /* text-primary */
-    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    overflow-x: hidden;
-    width: 100%;
-  }
-
-  h1, h2, h3, h4, h5, h6, .font-heading, .font-display {
-    font-family: 'Sora', system-ui, sans-serif;
-  }
-
-  /* Form elements inherit Plus Jakarta Sans */
-  input, select, textarea, button {
-    font-family: inherit;
-  }
-
-  /* Accessible focus ring — Indigo */
-  *:focus-visible {
-    outline: 2px solid #4F46E5;
-    outline-offset: 2px;
-  }
-}
-
-/* ── CSS custom properties ─────────────────────────────────── */
-:root {
-  /* Core brand tokens */
-  --primary-brand: #4F46E5;
-  --primary-deep:  #3730A3;
-  --primary-pale:  #E0E7FF;
-  --accent-rose:   #E11D48;
-  --accent-dark:   #BE123C;
-
-  /* Surfaces & Borders */
-  --surface-canvas: #F7F8FC;
-  --surface-card:   #FFFFFF;
-  --border-subtle:  #E4E7F2;
-  --border-strong:  #CBD5E1;
-
-  /* Text */
-  --text-primary:   #0F172A;
-  --text-secondary: #475569;
-  --text-muted:     #94A3B8;
-
-  /* Status tokens */
-  --status-draft:    #64748B;
-  --status-pending:  #D97706;
-  --status-review:   #7C3AED;
-  --status-approved: #059669;
-  --status-rejected: #E11D48;
-  --status-changes:  #EA580C;
-
-  /* Elevation shadows */
-  --shadow-card:       0 1px 2px 0 rgba(15, 23, 42, 0.04);
-  --shadow-card-hover: 0 4px 6px -1px rgba(15, 23, 42, 0.06), 0 2px 4px -2px rgba(15, 23, 42, 0.04);
-  --shadow-drawer:     0 20px 25px -5px rgba(15, 23, 42, 0.1);
-  --shadow-modal:      0 25px 50px -12px rgba(15, 23, 42, 0.25);
-  --modal-backdrop:    rgba(15, 23, 42, 0.4);
-
-  /* Motion */
-  --dur-fast: 120ms;
-  --dur:      220ms;
-  --ease:     cubic-bezier(0.2, 0, 0, 1);
-}
-
-/* ── Indeterminate Progress Animation ───────────────────────── */
+/* ── Indeterminate progress ──────────────────────────────────
+   Migrated from the local `left`/`width` keyframes to a single transformed
+   element. Animating `left` is not compositor-friendly, so this bar dropped
+   frames on the scrolling tables it sits inside. */
 @keyframes indeterminate-progress {
-  0% {
-    left: -35%;
-    width: 35%;
-  }
-  50% {
-    left: 40%;
-    width: 50%;
-  }
-  100% {
-    left: 100%;
-    width: 25%;
-  }
+  0%   { transform: translate3d(-100%, 0, 0); }
+  50%  { transform: translate3d(0, 0, 0); }
+  100% { transform: translate3d(400%, 0, 0); }
 }
 .animate-indeterminate {
-  animation: indeterminate-progress 1.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  animation: indeterminate-progress 1.4s var(--ease-standard) infinite;
 }
 
-/* ── Scrollbar ─────────────────────────────────────────────── */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: #F7F8FC; }
-::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
-
-/* ── Status badge component layer ──────────────────────────── */
-/* Usage: <span class="elite-badge elite-badge--approved">Approved</span> */
+/* ── Legacy component classes ───────────────────────────────
+   Still consumed by roughly 200 files, so they stay until the page-migration
+   batches replace them with the shared `.btn-*` / `.surface` classes. Each one
+   now reads a semantic token, so none of them carries a hex. Delete this block
+   once the last `elite-*` reference is gone; `grep -rn 'elite-' src/` should
+   return nothing. */
 @layer components {
   .elite-badge {
     @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-xs font-semibold;
   }
-  .elite-badge--draft    { @apply bg-slate-100  text-status-draft;    }
-  .elite-badge--pending  { @apply bg-amber-50   text-status-pending;  }
-  .elite-badge--review   { @apply bg-purple-50  text-status-review;   }
-  .elite-badge--approved { @apply bg-emerald-50 text-status-approved; }
-  .elite-badge--rejected { @apply bg-rose-50    text-status-rejected; }
-  .elite-badge--changes  { @apply bg-orange-50  text-status-changes;  }
+  .elite-badge--draft    { @apply bg-status-bg-draft    text-status-draft; }
+  .elite-badge--pending  { @apply bg-status-bg-pending  text-status-pending; }
+  .elite-badge--review   { @apply bg-status-bg-review   text-status-review; }
+  .elite-badge--approved { @apply bg-status-bg-approved text-status-approved; }
+  .elite-badge--rejected { @apply bg-status-bg-rejected text-status-rejected; }
+  .elite-badge--changes  { @apply bg-status-bg-changes  text-status-changes; }
 
-  /* Standard card: white surface, 1px #E4E7F2 border, subtle shadow, 8px radius */
   .elite-card {
-    @apply bg-white border border-[#E4E7F2] rounded-lg shadow-card;
+    @apply bg-surface border border-edge rounded-lg shadow-card;
   }
 
-  /* Primary CTA button — solid indigo #4F46E5, white text, subtle hover opacity fade */
   .elite-btn-primary {
     @apply inline-flex items-center justify-center gap-2 px-4 py-2.5
-           bg-[#4F46E5] hover:bg-[#4338CA] text-white font-semibold text-sm
-           rounded-lg transition-all duration-150 shadow-sm hover:opacity-95 active:scale-[0.99] cursor-pointer;
+           bg-brand text-on-primary font-semibold text-sm
+           rounded-lg transition-colors duration-fast shadow-card cursor-pointer;
   }
+  .elite-btn-primary:hover:not(:disabled) { @apply bg-brand-hover; }
+  .elite-btn-primary:active:not(:disabled) { @apply bg-brand-active scale-[0.99] transition-none; }
 
-  /* Secondary / Accent CTA button — solid rose #E11D48, reserved for one clear action */
   .elite-btn-accent {
     @apply inline-flex items-center justify-center gap-2 px-4 py-2.5
-           bg-[#E11D48] hover:bg-[#BE123C] text-white font-semibold text-sm
-           rounded-lg transition-all duration-150 shadow-sm hover:opacity-95 active:scale-[0.99] cursor-pointer;
+           bg-accent text-on-primary font-semibold text-sm
+           rounded-lg transition-colors duration-fast shadow-card cursor-pointer;
   }
+  .elite-btn-accent:hover:not(:disabled) { @apply bg-accent-hover; }
+  .elite-btn-accent:active:not(:disabled) { @apply scale-[0.99] transition-none; }
 
-  /* Subtle outline button */
   .elite-btn-outline {
     @apply inline-flex items-center justify-center gap-2 px-4 py-2.5
-           bg-white border border-[#E4E7F2] text-[#0F172A] hover:bg-[#F7F8FC] hover:border-[#CBD5E1]
-           font-semibold text-sm rounded-lg transition-all duration-150 shadow-card cursor-pointer;
+           bg-surface border border-edge text-ink
+           hover:bg-surface-sunken hover:border-edge-strong
+           font-semibold text-sm rounded-lg transition-colors duration-fast shadow-card cursor-pointer;
   }
 
-  /* Standard input */
   .elite-input {
-    @apply w-full bg-white border border-[#E4E7F2] rounded-lg px-3 py-2
-           text-sm text-[#0F172A] placeholder:text-[#94A3B8]
-           focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-[#4F46E5]
+    @apply w-full bg-surface border border-edge rounded-lg px-3 py-2
+           text-sm text-ink placeholder:text-ink-muted
+           focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand
            transition-shadow;
   }
 }
 
-/* ── Bootstrap Grid System Compatibility Layer ─────────────── */
+/* ── Bootstrap Grid System Compatibility Layer ───────────────
+   A handful of pages were scaffolded with Bootstrap's grid classes before the
+   app moved to Tailwind. Pure CSS, ~50 lines, cheaper to keep than to unpick
+   from every JSX file. Note the `px-3` is Bootstrap's gutter (0.75rem), not
+   Tailwind's, which is why these do not map onto the shared scale. */
 .container-fluid {
   width: 100%;
   padding-right: 1rem;

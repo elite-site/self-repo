@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { api, resolveMediaUrl } from '../../services/api';
 import { Achievement } from '../../types';
 import { Plus, Trophy, Loader2, AlertCircle, Trash2, X, Calendar, Pencil, ExternalLink } from 'lucide-react';
@@ -20,6 +20,10 @@ export const AchievementsTab: React.FC = () => {
   const [organization, setOrganization] = useState('');
   const [date, setDate] = useState('');
 
+  const modalTitleRef = useRef<HTMLHeadingElement>(null);
+  const firstInputRef = useRef<HTMLInputElement>(null);
+  const lastFocusedElement = useRef<HTMLElement | null>(null);
+
   const loadAchievements = async () => {
     setLoading(true);
     setError(null);
@@ -36,6 +40,17 @@ export const AchievementsTab: React.FC = () => {
   useEffect(() => {
     loadAchievements();
   }, []);
+
+  // Focus management for modal
+  useEffect(() => {
+    if (modalOpen) {
+      lastFocusedElement.current = document.activeElement as HTMLElement;
+      // Focus the first input after modal renders
+      setTimeout(() => firstInputRef.current?.focus(), 0);
+    } else if (lastFocusedElement.current) {
+      lastFocusedElement.current.focus();
+    }
+  }, [modalOpen]);
 
   const handleOpenCreateModal = () => {
     setEditingAchievement(null);
@@ -97,62 +112,82 @@ export const AchievementsTab: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="py-16">
+      <div className="py-16 animate-fade-in">
         <BrandedLoading fullScreen={false} message="Loading Achievements..." />
       </div>
     );
   }
 
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'APPROVED':
+        return <span className="badge badge-approved">Approved</span>;
+      case 'CHANGES_REQUESTED':
+        return <span className="badge badge-changes">Revision Requested</span>;
+      case 'REJECTED':
+        return <span className="badge badge-rejected">Rejected</span>;
+      case 'PENDING':
+        return <span className="badge badge-pending">Pending Review</span>;
+      case 'DRAFT':
+        return <span className="badge badge-draft">Draft</span>;
+      default:
+        return <span className="badge badge-draft">{status}</span>;
+    }
+  };
+
   return (
-    <div className="space-y-6 text-left">
+    <div className="space-y-6 text-left page-enter" role="main">
       {/* HEADER */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-lg font-bold text-[#0F172A] font-heading">Honors & Achievements</h2>
-          <p className="text-xs text-[#475569]">Record hackathon awards, academic distinctions, and competitions</p>
+          <h2 className="text-body-lg font-bold text-ink font-heading">Honors & Achievements</h2>
+          <p className="text-body-sm text-ink-secondary">Record hackathon awards, academic distinctions, and competitions</p>
         </div>
         <button
           onClick={handleOpenCreateModal}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-[#4F46E5] hover:bg-[#3730A3] text-white text-xs font-bold rounded-lg transition-opacity shadow-xs cursor-pointer"
+          className="btn btn-primary"
+          aria-label="Add new achievement"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-4 h-4" aria-hidden="true" />
           <span>Add Achievement</span>
         </button>
       </div>
 
       {error && (
-        <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-xs text-[#E11D48] flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 shrink-0" />
+        <div className="surface-sunken border border-status-rejected bg-status-bg-rejected text-status-rejected text-body-sm flex items-center gap-2 animate-fade-in" role="alert">
+          <AlertCircle className="w-4 h-4 shrink-0" aria-hidden="true" />
           <span>{error}</span>
         </div>
       )}
 
       {/* ACHIEVEMENTS LIST */}
       {achievements.length === 0 ? (
-        <div className="text-center py-16 px-4 border-2 border-dashed border-[#E4E7F2] rounded-lg bg-[#F7F8FC]">
-          <Trophy className="w-12 h-12 text-[#94A3B8] mx-auto mb-3" />
-          <h3 className="text-sm font-bold text-[#0F172A] font-heading">No achievements recorded yet</h3>
-          <p className="text-xs text-[#475569] mt-1 max-w-sm mx-auto mb-4">
+        <div className="surface text-center py-16 px-4 animate-fade-in">
+          <div className="w-12 h-12 rounded-full bg-brand-soft flex items-center justify-center mx-auto mb-4">
+            <Trophy className="w-6 h-6 text-brand" aria-hidden="true" />
+          </div>
+          <h3 className="text-body-lg font-bold text-ink font-heading">No achievements recorded yet</h3>
+          <p className="text-body-sm text-ink-secondary mt-1 max-w-sm mx-auto mb-4">
             Add contest wins, hackathon certificates, coding competition ranks, or academic honors.
           </p>
           <button
             onClick={handleOpenCreateModal}
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#4F46E5] hover:bg-[#3730A3] text-white rounded-lg text-xs font-bold transition-opacity cursor-pointer shadow-xs"
+            className="btn btn-primary"
           >
-            <Plus className="w-3.5 h-3.5" />
+            <Plus className="w-3.5 h-3.5" aria-hidden="true" />
             <span>Add Achievement</span>
           </button>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-3 animate-fade-in">
           {achievements.map((a) => (
             <div
               key={a.id}
-              className="p-5 border border-[#E4E7F2] rounded-lg bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-[#4F46E5]/40 transition-all text-left shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+              className="surface p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
             >
               <div className="flex items-start sm:items-center gap-4 flex-1 min-w-0">
                 {a.thumbnailUrl && (
-                  <div className="w-16 h-12 rounded-lg bg-[#F7F8FC] overflow-hidden shrink-0 border border-[#E4E7F2]">
+                  <div className="w-16 h-12 rounded-lg bg-surface-sunken overflow-hidden shrink-0 border border-edge">
                     <img
                       src={resolveMediaUrl(a.thumbnailUrl)}
                       alt={a.title}
@@ -163,45 +198,35 @@ export const AchievementsTab: React.FC = () => {
                   </div>
                 )}
                 <div className="space-y-1 flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-bold text-sm text-[#0F172A] font-heading">{a.title}</h3>
-                    <span
-                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                        a.status === 'APPROVED'
-                          ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                          : a.status === 'CHANGES_REQUESTED'
-                          ? 'bg-orange-50 text-orange-800 border border-orange-200'
-                          : 'bg-amber-50 text-amber-800 border border-amber-200'
-                      }`}
-                    >
-                      {a.status === 'CHANGES_REQUESTED' ? 'Revision Requested' : (a.status || 'Pending')}
-                    </span>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="font-bold text-body-sm text-ink font-heading">{a.title}</h3>
+                    {getStatusBadge(a.status || 'PENDING')}
                   </div>
-                  <p className="text-xs text-[#475569]">{a.description}</p>
+                  <p className="text-body-sm text-ink-secondary">{a.description}</p>
                   {a.status === 'CHANGES_REQUESTED' && (
-                    <div className="p-2.5 bg-orange-50 border border-orange-200 rounded-lg text-xs text-orange-900 my-1.5">
+                    <div className="p-2.5 bg-status-bg-changes border border-status-changes rounded-lg text-body-sm text-status-changes my-1.5">
                       <strong className="font-bold">Faculty Revision Note: </strong>
                       <span>{a.reviewNote || 'The admin requested changes on this achievement. Click the edit icon to update and re-submit.'}</span>
                     </div>
                   )}
-                  <div className="flex flex-wrap items-center gap-3 text-[11px] text-[#94A3B8] pt-1">
+                  <div className="flex flex-wrap items-center gap-3 text-label-sm text-ink-muted pt-1">
                     <span>{a.organization || 'Department'}</span>
-                    <span>·</span>
+                    <span aria-hidden="true">·</span>
                     <span className="flex items-center gap-1">
-                      <Calendar className="w-3 h-3" />
-                      {a.date ? new Date(a.date).toLocaleDateString() : 'N/A'}
+                      <Calendar className="w-3 h-3" aria-hidden="true" />
+                      {a.date ? new Date(a.date).toLocaleDateString() : 'To be announced'}
                     </span>
                     {(a.viewUrl || a.proofUrl) && (
                       <>
-                        <span>·</span>
+                        <span aria-hidden="true">·</span>
                         <a
                           href={resolveMediaUrl((a.viewUrl || a.proofUrl)!)}
                           target="_blank"
                           rel="noreferrer"
-                          className="inline-flex items-center gap-1 text-[11px] font-bold text-[#4F46E5] hover:underline"
+                          className="inline-flex items-center gap-1 text-label-sm font-bold text-brand hover:underline"
                         >
                           <span>Proof</span>
-                          <ExternalLink className="w-3 h-3" />
+                          <ExternalLink className="w-3 h-3" aria-hidden="true" />
                         </a>
                       </>
                     )}
@@ -212,17 +237,17 @@ export const AchievementsTab: React.FC = () => {
               <div className="flex items-center gap-1 self-end sm:self-center">
                 <button
                   onClick={() => handleOpenEditModal(a)}
-                  className="p-2 text-[#94A3B8] hover:text-[#0F172A] transition-colors cursor-pointer rounded-lg hover:bg-[#F7F8FC]"
-                  title="Edit achievement"
+                  className="btn btn-ghost p-2"
+                  aria-label={`Edit ${a.title}`}
                 >
-                  <Pencil className="w-4 h-4" />
+                  <Pencil className="w-4 h-4" aria-hidden="true" />
                 </button>
                 <button
                   onClick={() => handleDelete(a.id)}
-                  className="p-2 text-[#94A3B8] hover:text-[#E11D48] transition-colors cursor-pointer rounded-lg hover:bg-rose-50"
-                  title="Delete achievement"
+                  className="btn btn-ghost p-2 text-status-rejected hover:bg-status-bg-rejected"
+                  aria-label={`Delete ${a.title}`}
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <Trash2 className="w-4 h-4" aria-hidden="true" />
                 </button>
               </div>
             </div>
@@ -232,69 +257,76 @@ export const AchievementsTab: React.FC = () => {
 
       {/* ADD / EDIT ACHIEVEMENT MODAL */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="bg-white rounded-lg max-w-lg w-full p-6 shadow-2xl border border-[#E4E7F2] animate-in fade-in zoom-in-95 duration-150 text-left">
-            <div className="flex items-center justify-between pb-3 border-b border-[#E4E7F2]">
-              <h3 className="text-base font-bold text-[#0F172A] font-heading">
+        <div className="fixed inset-0 z-modal flex items-center justify-center p-4 bg-scrim backdrop-blur-xs animate-fade-in" role="dialog" aria-modal="true" aria-labelledby="achievement-modal-title">
+          <div className="surface max-w-lg w-full p-6 shadow-modal animate-scale-in text-left" ref={modalTitleRef}>
+            <div className="flex items-center justify-between pb-3 border-b border-edge">
+              <h3 id="achievement-modal-title" className="text-body-lg font-bold text-ink font-heading">
                 {editingAchievement ? 'Edit Honor or Achievement' : 'Add Honor or Achievement'}
               </h3>
               <button
                 onClick={() => setModalOpen(false)}
-                className="p-1 text-[#94A3B8] hover:text-[#0F172A] rounded-lg cursor-pointer"
+                className="btn btn-ghost p-1"
+                aria-label="Close modal"
               >
-                <X className="w-5 h-5" />
+                <X className="w-5 h-5" aria-hidden="true" />
               </button>
             </div>
 
             <form onSubmit={handleSaveAchievement} className="space-y-4 pt-4">
               {modalError && (
-                <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-xs text-[#E11D48] flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
+                <div className="surface-sunken border border-status-rejected bg-status-bg-rejected text-status-rejected text-body-sm flex items-center gap-2" role="alert">
+                  <AlertCircle className="w-4 h-4 shrink-0" aria-hidden="true" />
                   <span>{modalError}</span>
                 </div>
               )}
 
               <div>
-                <label className="block text-xs font-bold text-[#0F172A] mb-1 font-heading">Achievement Title *</label>
+                <label htmlFor="achievement-title" className="label">Achievement Title <span className="text-status-rejected" aria-hidden="true">*</span></label>
                 <input
+                  id="achievement-title"
+                  ref={firstInputRef}
                   type="text"
                   required
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="e.g. 1st Place - Smart India Hackathon"
-                  className="w-full p-2.5 bg-white border border-[#E4E7F2] rounded-lg text-xs focus:outline-none focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5]"
+                  className="input"
+                  aria-required="true"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#0F172A] mb-1 font-heading">Description</label>
+                <label htmlFor="achievement-description" className="label">Description</label>
                 <textarea
+                  id="achievement-description"
                   rows={3}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Details about the award, your contribution, or rank..."
-                  className="w-full p-2.5 bg-white border border-[#E4E7F2] rounded-lg text-xs focus:outline-none focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5]"
+                  className="textarea"
                 />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-[#0F172A] mb-1 font-heading">Awarding Organization</label>
+                  <label htmlFor="achievement-organization" className="label">Awarding Organization</label>
                   <input
+                    id="achievement-organization"
                     type="text"
                     value={organization}
                     onChange={(e) => setOrganization(e.target.value)}
                     placeholder="e.g. Ministry of Education"
-                    className="w-full p-2.5 bg-white border border-[#E4E7F2] rounded-lg text-xs focus:outline-none focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5]"
+                    className="input"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-[#0F172A] mb-1 font-heading">Date Received</label>
+                  <label htmlFor="achievement-date" className="label">Date Received</label>
                   <input
+                    id="achievement-date"
                     type="date"
                     value={date}
                     onChange={(e) => setDate(e.target.value)}
-                    className="w-full p-2.5 bg-white border border-[#E4E7F2] rounded-lg text-xs focus:outline-none focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5]"
+                    className="input"
                   />
                 </div>
               </div>
@@ -303,16 +335,17 @@ export const AchievementsTab: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setModalOpen(false)}
-                  className="px-4 py-2 rounded-lg text-xs font-bold text-[#475569] hover:bg-[#F7F8FC] transition-colors cursor-pointer"
+                  className="btn btn-secondary"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={saving || !title.trim()}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#4F46E5] hover:bg-[#3730A3] text-white text-xs font-bold transition-opacity disabled:opacity-50 cursor-pointer shadow-xs"
+                  className="btn btn-primary"
+                  aria-busy={saving}
                 >
-                  {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                  {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" /> : <Plus className="w-3.5 h-3.5" aria-hidden="true" />}
                   <span>{editingAchievement ? 'Update Achievement' : 'Save Achievement'}</span>
                 </button>
               </div>

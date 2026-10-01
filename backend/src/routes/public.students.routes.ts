@@ -7,13 +7,13 @@ router.get('/', async (req: Request, res: Response) => {
   try {
     res.setHeader('Cache-Control', 'public, max-age=60');
     const { search, year, section, skills, skillName, status } = req.query;
-    
+
     const where: any = {};
-    
+
     if (status === 'ACTIVE' || status === 'GRADUATED') where.status = status;
     if (year) where.year = parseInt(year as string);
     if (section) where.section = String(section);
-    
+
     if (search) {
       const term = String(search).trim();
       where.OR = [
@@ -30,7 +30,7 @@ router.get('/', async (req: Request, res: Response) => {
         }
       ];
     }
-    
+
     const skillsFilter = skills || skillName;
     if (skillsFilter) {
       const skillsArray = (Array.isArray(skillsFilter) ? skillsFilter : [skillsFilter]).map(String);
@@ -50,7 +50,7 @@ router.get('/', async (req: Request, res: Response) => {
     const page = Math.max(1, parseInt(req.query.page as string) || 1);
     const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 50));
     const skip = (page - 1) * limit;
-    
+
     const [total, students] = await Promise.all([
       prisma.student.count({ where }),
       prisma.student.findMany({
@@ -80,7 +80,7 @@ router.get('/', async (req: Request, res: Response) => {
         take: limit
       })
     ]);
-    
+
     const mapped = students.map(s => {
       const profile = s.profile ? {
         ...s.profile,
@@ -227,11 +227,11 @@ router.get('/:rollNo/resume', async (req: Request, res: Response) => {
         resumes: { where: { status: 'APPROVED' }, take: 1, orderBy: { submittedAt: 'desc' } }
       }
     });
-    
+
     if (!student || !student.resumes.length) {
       return res.status(404).json({ error: 'NOT_FOUND', message: 'Resume not available' });
     }
-    
+
     const resume = student.resumes[0];
     if (!resume.driveFileId) {
       return res.status(404).json({ error: 'NOT_FOUND', message: 'Resume file not available' });

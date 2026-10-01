@@ -21,22 +21,22 @@ interface SubmissionsTableProps {
 
 const ratingMeta: Record<SubmissionRating, { dot: string; text: string; label: string; badge: string }> = {
   GOOD: {
-    dot: 'bg-emerald-500',
-    text: 'text-emerald-700 dark:text-emerald-400',
+    dot: 'bg-status-approved',
+    text: 'text-status-approved',
     label: 'Good',
-    badge: 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800/60',
+    badge: 'bg-status-bg-approved border-edge',
   },
   AVERAGE: {
-    dot: 'bg-amber-400',
-    text: 'text-amber-700 dark:text-amber-400',
+    dot: 'bg-status-pending',
+    text: 'text-status-pending',
     label: 'Average',
-    badge: 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800/60',
+    badge: 'bg-status-bg-pending border-edge',
   },
   POOR: {
-    dot: 'bg-rose-500',
-    text: 'text-rose-700 dark:text-rose-400',
+    dot: 'bg-status-rejected',
+    text: 'text-status-rejected',
     label: 'Poor',
-    badge: 'bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800/60',
+    badge: 'bg-status-bg-rejected border-edge',
   },
 };
 
@@ -106,54 +106,54 @@ export const SubmissionsTable: React.FC<SubmissionsTableProps> = ({
   };
 
   return (
-    <div className="space-y-6 text-left">
+    <div className="space-y-6 text-left page-enter">
       {/* 1. HEADER & REFRESH */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#E4E7F2] dark:border-[#252B35] pb-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-edge pb-5">
         <div>
-          <div className="text-[11px] font-mono font-bold tracking-widest text-[#E11D48] dark:text-[#F43F5E] uppercase">
+          <div className="text-[11px] font-mono font-bold tracking-widest text-ink-brand uppercase">
             Review & Rate Introductions
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0F172A] dark:text-white font-heading tracking-tight mt-1">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-ink font-heading tracking-tight mt-1">
             Videos Submitted
           </h1>
-          <p className="text-xs text-[#475569] dark:text-[#9BA3AF] mt-1 font-normal">
+          <p className="text-xs text-ink-secondary mt-1 font-normal">
             Watch each clip, mark it, and send the student a response.
           </p>
         </div>
 
         <button
           onClick={loadSubmissions}
-          className="inline-flex items-center gap-2 px-3.5 py-2 bg-white dark:bg-[#11151C] hover:bg-[#F7F8FC] dark:hover:bg-[#151A22] border border-[#E4E7F2] dark:border-[#252B35] text-[#475569] dark:text-neutral-200 text-xs font-semibold rounded-lg transition-colors shadow-xs cursor-pointer self-start sm:self-auto"
+          className="inline-flex items-center gap-2 px-3.5 py-2 btn btn-secondary self-start sm:self-auto"
         >
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-[#4F46E5]' : ''}`} />
+          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-ink-brand' : ''}`} />
           <span>Refresh List</span>
         </button>
       </div>
 
       {/* 2. SEARCH & FILTERS BAR */}
-      <div className="bg-white dark:bg-[#11151C] border border-[#E4E7F2] dark:border-[#252B35] rounded-lg p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)] flex flex-wrap items-center gap-3">
+      <div className="surface p-4 flex flex-wrap items-center gap-3">
         {/* Search */}
         <form onSubmit={handleSearchSubmit} className="relative flex-1 min-w-[220px]">
-          <Search className="w-4 h-4 text-[#94A3B8] absolute left-3 top-1/2 -translate-y-1/2" />
+          <Search className="w-4 h-4 text-ink-muted absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             placeholder="Search by name, roll number, email..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-[#F7F8FC] dark:bg-[#0D1117] border border-[#E4E7F2] dark:border-[#252B35] rounded-lg pl-9 pr-4 py-2 text-xs text-[#0F172A] dark:text-white placeholder:text-[#94A3B8] focus:outline-none focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5] transition-colors"
+            className="input pl-9"
           />
         </form>
 
         {/* Filters */}
         <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex items-center gap-1.5 text-xs text-[#475569] dark:text-[#9BA3AF] font-medium">
+          <div className="flex items-center gap-1.5 text-xs text-ink-secondary font-medium">
             <SlidersHorizontal className="w-3.5 h-3.5" />
             <span>Filter:</span>
           </div>
 
           {/* Review Hashtag Filter */}
           <div className="relative">
-            <Hash className="w-3.5 h-3.5 text-[#94A3B8] absolute left-2.5 top-1/2 -translate-y-1/2" />
+            <Hash className="w-3.5 h-3.5 text-ink-muted absolute left-2.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               placeholder="#tag (e.g. commanding)"
@@ -162,7 +162,7 @@ export const SubmissionsTable: React.FC<SubmissionsTableProps> = ({
                 setTagFilter(e.target.value);
                 setPage(1);
               }}
-              className="bg-[#F7F8FC] dark:bg-[#0D1117] border border-[#E4E7F2] dark:border-[#252B35] rounded-lg pl-8 pr-3 py-1.5 text-xs text-[#0F172A] dark:text-neutral-200 placeholder:text-[#94A3B8] focus:outline-none focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5] transition-colors w-48"
+              className="input pl-8 w-48"
             />
           </div>
 
@@ -173,7 +173,7 @@ export const SubmissionsTable: React.FC<SubmissionsTableProps> = ({
               setSectionFilter(e.target.value);
               setPage(1);
             }}
-            className="bg-[#F7F8FC] dark:bg-[#0D1117] border border-[#E4E7F2] dark:border-[#252B35] rounded-lg px-2.5 py-1.5 text-xs text-[#0F172A] dark:text-neutral-200 focus:outline-none focus:border-[#4F46E5] cursor-pointer"
+            className="select"
           >
             <option value="">All Sections</option>
             <option value="A">Section A</option>
@@ -187,7 +187,7 @@ export const SubmissionsTable: React.FC<SubmissionsTableProps> = ({
               setYearFilter(e.target.value);
               setPage(1);
             }}
-            className="bg-[#F7F8FC] dark:bg-[#0D1117] border border-[#E4E7F2] dark:border-[#252B35] rounded-lg px-2.5 py-1.5 text-xs text-[#0F172A] dark:text-neutral-200 focus:outline-none focus:border-[#4F46E5] cursor-pointer"
+            className="select"
           >
             <option value="">All Years</option>
             <option value="2">2nd Year</option>
@@ -202,7 +202,7 @@ export const SubmissionsTable: React.FC<SubmissionsTableProps> = ({
               setRatingFilter(e.target.value);
               setPage(1);
             }}
-            className="bg-[#F7F8FC] dark:bg-[#0D1117] border border-[#E4E7F2] dark:border-[#252B35] rounded-lg px-2.5 py-1.5 text-xs text-[#0F172A] dark:text-neutral-200 focus:outline-none focus:border-[#4F46E5] cursor-pointer"
+            className="select"
           >
             <option value="">All Ratings</option>
             <option value="GOOD">Good</option>
@@ -213,45 +213,45 @@ export const SubmissionsTable: React.FC<SubmissionsTableProps> = ({
       </div>
 
       {/* 3. SUBMISSIONS TABLE */}
-      <div className="bg-white dark:bg-[#11151C] border border-[#E4E7F2] dark:border-[#252B35] rounded-lg overflow-hidden shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+      <div className="surface overflow-hidden">
         {loading ? (
           <div className="p-12">
             <BrandedLoading fullScreen={false} message="Loading Submissions..." />
           </div>
         ) : !data || data.data.length === 0 ? (
           <div className="p-16 text-center space-y-2">
-            <p className="text-sm font-semibold text-[#0F172A] dark:text-neutral-200 font-heading">No submissions found</p>
-            <p className="text-xs text-[#475569] dark:text-[#9BA3AF]">
+            <p className="text-sm font-semibold text-ink font-heading">No submissions found</p>
+            <p className="text-xs text-ink-secondary">
               Try adjusting your search query or filters.
             </p>
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
+            <table className="w-full text-left border-collapse text-xs" role="grid" aria-label="Submissions">
               <thead>
-                <tr className="bg-[#F7F8FC] dark:bg-[#0D1117] border-b border-[#E4E7F2] dark:border-[#252B35] text-[11px] font-bold text-[#475569] dark:text-[#9BA3AF] uppercase tracking-wider">
-                  <th className="py-3.5 px-5">Student</th>
-                  <th className="py-3.5 px-4">Roll Number</th>
-                  <th className="py-3.5 px-4">Section & Year</th>
-                  <th className="py-3.5 px-4 text-center">Video</th>
-                  <th className="py-3.5 px-4">Rating</th>
-                  <th className="py-3.5 px-4">Response</th>
-                  <th className="py-3.5 px-5 text-right">Action</th>
+                <tr className="bg-surface-inset border-b border-edge text-[11px] font-bold text-ink-secondary uppercase tracking-wider">
+                  <th className="py-3.5 px-5" scope="col">Student</th>
+                  <th className="py-3.5 px-4" scope="col">Roll Number</th>
+                  <th className="py-3.5 px-4" scope="col">Section & Year</th>
+                  <th className="py-3.5 px-4 text-center" scope="col">Video</th>
+                  <th className="py-3.5 px-4" scope="col">Rating</th>
+                  <th className="py-3.5 px-4" scope="col">Response</th>
+                  <th className="py-3.5 px-5 text-right" scope="col">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#E4E7F2] dark:divide-[#252B35]">
+              <tbody className="divide-y divide-edge">
                 {data.data.map((sub) => {
                   const meta = sub.rating ? ratingMeta[sub.rating] : null;
                   return (
                     <tr
                       key={sub.id}
                       onClick={() => onSelectSubmission(sub)}
-                      className="hover:bg-[#F7F8FC] dark:hover:bg-[#151A22] transition-colors cursor-pointer group"
+                      className="hover:bg-surface-canvas transition-colors cursor-pointer group"
                     >
                       {/* Name & Email */}
                       <td className="py-3.5 px-5">
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-lg bg-[#EEF2FF] dark:bg-[#4F46E5]/20 text-[#4F46E5] dark:text-[#818CF8] flex items-center justify-center text-xs font-extrabold font-heading shrink-0">
+                          <div className="w-9 h-9 rounded-lg bg-brand-soft text-brand-soft-text flex items-center justify-center text-xs font-extrabold font-heading shrink-0">
                             {sub.name
                               .split(' ')
                               .filter(Boolean)
@@ -260,10 +260,10 @@ export const SubmissionsTable: React.FC<SubmissionsTableProps> = ({
                               .join('') || '?'}
                           </div>
                           <div className="min-w-0">
-                            <div className="font-bold text-[#0F172A] dark:text-white group-hover:text-[#4F46E5] dark:group-hover:text-[#818CF8] transition-colors truncate">
+                            <div className="font-bold text-ink group-hover:text-ink-brand transition-colors truncate">
                               {sub.name}
                             </div>
-                            <div className="text-[11px] text-[#475569] dark:text-[#9BA3AF] mt-0.5 truncate">
+                            <div className="text-[11px] text-ink-secondary mt-0.5 truncate">
                               {sub.email}
                             </div>
                           </div>
@@ -271,27 +271,27 @@ export const SubmissionsTable: React.FC<SubmissionsTableProps> = ({
                       </td>
 
                       {/* Roll Number */}
-                      <td className="py-3.5 px-4 font-semibold text-[#475569] dark:text-neutral-300">
+                      <td className="py-3.5 px-4 font-semibold text-ink-secondary">
                         {sub.rollNo}
                       </td>
 
                       {/* Section & Year */}
-                      <td className="py-3.5 px-4 text-[#475569] dark:text-neutral-300">
-                        <span className="font-semibold text-[#0F172A] dark:text-white">{sub.branch}-{sub.section}</span>
-                        <span className="text-[#94A3B8] mx-1.5">•</span>
+                      <td className="py-3.5 px-4 text-ink-secondary">
+                        <span className="font-semibold text-ink">{sub.branch}-{sub.section}</span>
+                        <span className="text-ink-muted mx-1.5">•</span>
                         <span>Year {sub.year}</span>
                       </td>
 
                       {/* Video Presence */}
                       <td className="py-3.5 px-4 text-center">
                         {sub.videoDriveId ? (
-                          <span className="inline-flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 text-[11px] font-bold">
-                            <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+                          <span className="inline-flex items-center gap-1.5 text-status-approved text-[11px] font-bold">
+                            <span className="w-2 h-2 rounded-full bg-status-approved inline-block" />
                             UPLOADED
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1.5 text-[#94A3B8] text-[11px] font-semibold">
-                            <span className="w-2 h-2 rounded-full bg-neutral-300 dark:bg-neutral-600 inline-block" />
+                          <span className="inline-flex items-center gap-1.5 text-ink-muted text-[11px] font-semibold">
+                            <span className="w-2 h-2 rounded-full bg-surface-inset inline-block" />
                             REMOVED
                           </span>
                         )}
@@ -305,8 +305,8 @@ export const SubmissionsTable: React.FC<SubmissionsTableProps> = ({
                             <span className="text-[11px] font-bold tracking-wide uppercase">{meta.label}</span>
                           </div>
                         ) : (
-                          <div className="inline-flex items-center gap-1.5 text-[#94A3B8] font-medium text-[11px] tracking-wide">
-                            <span className="w-2 h-2 rounded-full bg-neutral-300 dark:bg-neutral-600 inline-block" />
+                          <div className="inline-flex items-center gap-1.5 text-ink-muted font-medium text-[11px] tracking-wide">
+                            <span className="w-2 h-2 rounded-full bg-surface-inset inline-block" />
                             <span>NOT RATED</span>
                           </div>
                         )}
@@ -315,13 +315,13 @@ export const SubmissionsTable: React.FC<SubmissionsTableProps> = ({
                       {/* Admin response badge */}
                       <td className="py-3.5 px-4">
                         {sub.reviewedAt && (sub.reviewText || (sub.reviewPros?.length ?? 0) > 0 || (sub.reviewCons?.length ?? 0) > 0) ? (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-emerald-200 dark:border-emerald-800/60 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400">
-                            <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+                          <span className="badge badge-approved">
+                            <span className="w-2 h-2 rounded-full bg-status-approved inline-block" />
                             <span className="text-[11px] font-bold tracking-wide uppercase">Responded</span>
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1.5 text-amber-600 dark:text-amber-400 font-medium text-[11px] tracking-wide">
-                            <span className="w-2 h-2 rounded-full bg-amber-400 inline-block" />
+                          <span className="badge badge-pending">
+                            <span className="w-2 h-2 rounded-full bg-status-pending inline-block" />
                             <span>Pending</span>
                           </span>
                         )}
@@ -335,7 +335,7 @@ export const SubmissionsTable: React.FC<SubmissionsTableProps> = ({
                               e.stopPropagation();
                               onSelectSubmission(sub);
                             }}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#EEF2FF] dark:bg-[#4F46E5]/20 text-[#4F46E5] dark:text-[#818CF8] hover:bg-[#4F46E5] hover:text-white rounded-lg font-semibold text-xs transition-colors cursor-pointer"
+                            className="btn btn-secondary"
                           >
                             <Eye className="w-3.5 h-3.5" />
                             <span>Review</span>
@@ -345,7 +345,7 @@ export const SubmissionsTable: React.FC<SubmissionsTableProps> = ({
                             disabled={deletingId === sub.id}
                             onClick={(e) => handleRowDelete(e, sub)}
                             title="Delete Submission & Files"
-                            className="p-1.5 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-[#E11D48] dark:text-[#F43F5E] border border-rose-200 dark:border-rose-900/50 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                            className="btn btn-ghost text-status-rejected hover:bg-status-bg-rejected hover:text-status-rejected border border-status-bg-rejected disabled:opacity-50"
                           >
                             <Trash2 className={`w-3.5 h-3.5 ${deletingId === sub.id ? 'animate-spin' : ''}`} />
                           </button>
@@ -361,24 +361,24 @@ export const SubmissionsTable: React.FC<SubmissionsTableProps> = ({
 
         {/* 4. PAGINATION CONTROLS */}
         {data && data.pagination.totalPages > 1 && (
-          <div className="p-4 bg-[#F7F8FC] dark:bg-[#0D1117] border-t border-[#E4E7F2] dark:border-[#252B35] flex items-center justify-between text-xs text-[#475569] dark:text-[#9BA3AF]">
+          <div className="p-4 bg-surface-inset border-t border-edge flex items-center justify-between text-xs text-ink-secondary">
             <div>
-              Showing page <span className="font-bold text-[#0F172A] dark:text-white">{data.pagination.page}</span> of{' '}
-              <span className="font-bold text-[#0F172A] dark:text-white">{data.pagination.totalPages}</span> ({data.pagination.total} total submissions)
+              Showing page <span className="font-bold text-ink">{data.pagination.page}</span> of{' '}
+              <span className="font-bold text-ink">{data.pagination.totalPages}</span> ({data.pagination.total} total submissions)
             </div>
 
             <div className="flex items-center gap-2">
               <button
                 disabled={page <= 1}
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
-                className="p-1.5 rounded-lg border border-[#E4E7F2] dark:border-[#252B35] bg-white dark:bg-[#11151C] hover:bg-[#F7F8FC] dark:hover:bg-[#151A22] text-[#475569] dark:text-neutral-200 disabled:opacity-40 transition-colors cursor-pointer"
+                className="btn btn-secondary p-1.5"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
               <button
                 disabled={page >= data.pagination.totalPages}
                 onClick={() => setPage((p) => p + 1)}
-                className="p-1.5 rounded-lg border border-[#E4E7F2] dark:border-[#252B35] bg-white dark:bg-[#11151C] hover:bg-[#F7F8FC] dark:hover:bg-[#151A22] text-[#475569] dark:text-neutral-200 disabled:opacity-40 transition-colors cursor-pointer"
+                className="btn btn-secondary p-1.5"
               >
                 <ChevronRight className="w-4 h-4" />
               </button>

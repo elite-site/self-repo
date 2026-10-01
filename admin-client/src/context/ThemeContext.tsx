@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { AdminUser } from '../types';
 
 export type ThemeMode = 'light' | 'dark' | 'system';
@@ -6,7 +6,6 @@ export type ThemeMode = 'light' | 'dark' | 'system';
 interface ThemeContextType {
   theme: ThemeMode;
   setTheme: (mode: ThemeMode) => void;
-  isDark: boolean;
   setAdminUser: (user: AdminUser | null) => void;
 }
 
@@ -18,58 +17,74 @@ const getStorageKey = (user?: AdminUser | null) => {
   return 'elite_admin_theme_default';
 };
 
+const resolveTheme = (mode: ThemeMode): boolean => {
+  if (mode === 'dark') return true;
+  if (mode === 'light') return false;
+  return window.matchMedia('(prefers-color-scheme: dark)').matches;
+};
+
 export const AdminThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
 
   const [theme, setThemeState] = useState<ThemeMode>(() => {
-    const saved = localStorage.getItem('elite_admin_theme_default') as ThemeMode;
-    return saved && (saved === 'light' || saved === 'dark' || saved === 'system') ? saved : 'system';
+    try {
+      const saved = localStorage.getItem('elite_admin_theme_default') as ThemeMode;
+      return saved && (saved === 'light' || saved === 'dark' || saved === 'system') ? saved : 'system';
+    } catch {
+      return 'system';
+    }
   });
 
-  const [isDark, setIsDark] = useState<boolean>(false);
+  const prevThemeRef = useRef<ThemeMode>(theme);
+  const prevUserRef = useRef<AdminUser | null>(null);
 
   // Restore user-specific preference when admin changes or logs in
   useEffect(() => {
     if (adminUser) {
       const userKey = getStorageKey(adminUser);
-      const saved = localStorage.getItem(userKey) as ThemeMode;
-      if (saved && (saved === 'light' || saved === 'dark' || saved === 'system')) {
-        setThemeState(saved);
+      try {
+        const saved = localStorage.getItem(userKey) as ThemeMode;
+        if (saved && (saved === 'light' || saved === 'dark' || saved === 'system')) {
+          setThemeState(saved);
+        }
+      } catch {
+        // ignore localStorage errors
       }
     }
   }, [adminUser?.userId, adminUser?.username]);
 
-  // Compute isDark and apply to document root and scoped container
+  // Resolve the theme and apply data-theme to <html> for the token system
   useEffect(() => {
-    let dark = false;
-    if (theme === 'dark') {
-      dark = true;
-    } else if (theme === 'light') {
-      dark = false;
-    } else {
-      dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    }
-    setIsDark(dark);
+    const dark = resolveTheme(theme);
 
+    // Apply to <html> for the token system
     if (dark) {
-      document.documentElement.classList.add('dark');
-      document.body.classList.add('dark');
-      document.documentElement.style.colorScheme = 'dark';
+      document.documentElement.setAttribute('data-theme', 'dark');
     } else {
-      document.documentElement.classList.remove('dark');
-      document.body.classList.remove('dark');
-      document.documentElement.style.colorScheme = 'light';
+      document.documentElement.removeAttribute('data-theme');
     }
 
-    // Save to user-specific storage
-    const userKey = getStorageKey(adminUser);
-    localStorage.setItem(userKey, theme);
-    localStorage.setItem('elite_admin_theme_default', theme);
+    // Save ONLY when the resolved theme actually changed
+    if (theme !== prevThemeRef.current || adminUser !== prevUserRef.current) {
+      prevThemeRef.current = theme;
+      prevUserRef.current = adminUser;
+      try {
+        const userKey = getStorageKey(adminUser);
+        localStorage.setItem(userKey, theme);
+        localStorage.setItem('elite_admin_theme_default', theme);
+      } catch {
+        // ignore localStorage errors
+      }
+    }
 
     if (theme === 'system') {
       const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
       const listener = (e: MediaQueryListEvent) => {
-        setIsDark(e.matches);
+        if (e.matches) {
+          document.documentElement.setAttribute('data-theme', 'dark');
+        } else {
+          document.documentElement.removeAttribute('data-theme');
+        }
       };
       mediaQuery.addEventListener('change', listener);
       return () => mediaQuery.removeEventListener('change', listener);
@@ -81,14 +96,8 @@ export const AdminThemeProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   };
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme, isDark, setAdminUser }}>
-      {/* SCOPED ADMIN ROOT: Dark class is applied ONLY to this container */}
-      <div
-        id="admin-root"
-        className={`min-h-screen ${isDark ? 'dark bg-neutral-950 text-slate-100' : 'bg-[#F7F8FC] text-[#0F172A]'} w-full transition-colors`}
-      >
-        {children}
-      </div>
+    <ThemeContext.Provider value={{ theme, setTheme, setAdminUser }}>
+      {children}
     </ThemeContext.Provider>
   );
 };

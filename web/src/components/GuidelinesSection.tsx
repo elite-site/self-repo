@@ -1,61 +1,67 @@
 import React from 'react';
 import { ShieldCheck, Video, FileCheck, CheckCircle2 } from 'lucide-react';
 
+const STANDARDS = [
+  {
+    icon: ShieldCheck,
+    title: 'Profile authenticity',
+    body: 'Profile information, project repositories, and listed skills must reflect your own work and your official college enrolment.',
+  },
+  {
+    icon: Video,
+    title: 'Introduction video standards',
+    body: 'Clips should run 60-90 seconds in MP4 or WEBM format, up to 25 MB. Speak naturally with clear audio and even lighting.',
+  },
+  {
+    icon: FileCheck,
+    title: 'Verification review',
+    body: 'Achievements, certificates, and resumes are reviewed by department coordinators before a profile is endorsed in the public directory.',
+  },
+];
+
+/**
+ * Public-facing statement of what the department expects from a profile.
+ * Rendered on the landing page so a first-time visitor learns the rules before
+ * signing in, not after uploading something that gets rejected.
+ */
 export const GuidelinesSection: React.FC = () => {
   return (
-    <section id="guidelines" aria-labelledby="guidelines-title" className="py-16 sm:py-20 bg-white border-t border-neutral-200/80 text-left">
-      <div className="max-w-7xl mx-auto px-6 sm:px-10 space-y-8">
-        <div className="space-y-2">
-          <div className="inline-flex items-center gap-2 text-xs font-mono font-bold tracking-widest text-elite-red uppercase">
-            <ShieldCheck className="w-3.5 h-3.5" />
-            <span>STANDARDS & POLICIES</span>
+    <section id="guidelines" aria-labelledby="guidelines-title" className="border-t border-edge">
+      <div className="max-w-7xl mx-auto px-6 sm:px-10 py-14 sm:py-16">
+        <div className="max-w-2xl">
+          <div className="inline-flex items-center gap-2 text-xs font-bold text-accent">
+            <ShieldCheck className="w-3.5 h-3.5" aria-hidden="true" />
+            <span>Standards and policies</span>
           </div>
-          <h2 id="guidelines-title" className="text-3xl sm:text-4xl font-extrabold text-elite-black font-display tracking-tight">
-            Portal Guidelines & Student Standards
+          <h2
+            id="guidelines-title"
+            className="mt-3 text-2xl sm:text-3xl font-extrabold text-ink font-heading tracking-tight"
+          >
+            What a published profile has to meet
           </h2>
-          <p className="text-sm text-neutral-600 max-w-2xl leading-relaxed">
-            Key policies governing verified student profiles, portfolio reviews, video introductions, and department activities.
+          <p className="mt-3 text-sm text-ink-secondary leading-relaxed">
+            Three checks run before anything appears in the public directory.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="bg-neutral-50 border border-neutral-200/90 rounded-2xl p-6 space-y-3">
-            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-elite-black">
-              <ShieldCheck className="w-4 h-4 text-elite-red" />
-              <span>Profile Authenticity</span>
+        <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-5">
+          {STANDARDS.map(({ icon: Icon, title, body }) => (
+            <div key={title} className="elite-card p-5">
+              <Icon className="w-5 h-5 text-accent" aria-hidden="true" />
+              <h3 className="mt-3 text-sm font-bold text-ink font-heading">{title}</h3>
+              <p className="mt-2 text-sm text-ink-secondary leading-relaxed">{body}</p>
             </div>
-            <p className="text-xs text-neutral-600 leading-relaxed">
-              All profile information, project repositories, and technical skills must represent your genuine work and official college enrollment.
-            </p>
-          </div>
+          ))}
+        </div>
 
-          <div className="bg-neutral-50 border border-neutral-200/90 rounded-2xl p-6 space-y-3">
-            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-elite-black">
-              <Video className="w-4 h-4 text-elite-red" />
-              <span>Intro Video Standards</span>
-            </div>
-            <p className="text-xs text-neutral-600 leading-relaxed">
-              Introduction clips should run 60–90 seconds in MP4/WEBM format (max 25MB). Speak naturally with clear audio and good lighting.
-            </p>
-          </div>
-
-          <div className="bg-neutral-50 border border-neutral-200/90 rounded-2xl p-6 space-y-3">
-            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-elite-black">
-              <FileCheck className="w-4 h-4 text-elite-red" />
-              <span>Verification Audit</span>
-            </div>
-            <p className="text-xs text-neutral-600 leading-relaxed">
-              Achievements, certificates, and resumes undergo review by department coordinators before public directory endorsement.
-            </p>
-          </div>
-
-          <div className="bg-slate-900 text-white border border-slate-800 rounded-2xl p-6 space-y-3">
-            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-white">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-              <span>Code of Conduct</span>
-            </div>
-            <p className="text-xs text-slate-300 leading-relaxed">
-              Respectful collaboration in event teams, fair voting conduct, and adherence to SASI IT institutional ethics are required at all times.
+        <div className="mt-5 rounded-lg bg-brand-soft border border-brand-soft p-5 sm:p-6 sm:flex sm:items-start sm:gap-4">
+          <CheckCircle2 className="w-5 h-5 text-brand shrink-0" aria-hidden="true" />
+          <div className="mt-2 sm:mt-0">
+            <h3 className="text-sm font-bold text-ink font-heading">Code of conduct</h3>
+            <p className="mt-1.5 text-sm text-ink-secondary leading-relaxed max-w-[70ch]">
+              Event teams collaborate in good faith, voting stays fair, and department ethics apply
+              to everything published under your name. Conduct that breaches these rules removes a
+              profile from the directory.
             </p>
           </div>
         </div>

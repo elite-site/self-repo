@@ -114,38 +114,54 @@ export const ResumePage: React.FC = () => {
   const fileUrl = rawUrl ? resolveMediaUrl(rawUrl) : null;
   const embedUrl = fileUrl;
 
+  // Helper to map status to badge class
+  const getStatusBadgeClass = (status?: string) => {
+    switch (status) {
+      case 'APPROVED': return 'badge badge-approved';
+      case 'PENDING':
+      case 'SUBMITTED': return 'badge badge-pending';
+      case 'REVIEW': return 'badge badge-review';
+      case 'REJECTED': return 'badge badge-rejected';
+      case 'CHANGES_REQUESTED': return 'badge badge-changes';
+      case 'DRAFT': return 'badge badge-draft';
+      default: return 'badge badge-draft';
+    }
+  };
+
+  const getStatusIcon = (status?: string) => {
+    switch (status) {
+      case 'APPROVED': return <CheckCircle2 className="w-3.5 h-3.5" />;
+      case 'CHANGES_REQUESTED': return <AlertCircle className="w-3.5 h-3.5" />;
+      case 'REJECTED': return <AlertCircle className="w-3.5 h-3.5" />;
+      default: return <Clock className="w-3.5 h-3.5" />;
+    }
+  };
+
+  const getStatusLabel = (status?: string) => {
+    switch (status) {
+      case 'CHANGES_REQUESTED': return 'Revision Requested';
+      case 'REJECTED': return 'Rejected';
+      case 'APPROVED': return 'Approved';
+      default: return status || 'Under Review';
+    }
+  };
+
   return (
-    <div className="space-y-6 text-left">
+    <div className="space-y-6 text-left page-enter">
       {/* HEADER */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-black text-[#0F172A] font-heading">Professional Resume</h1>
-          <p className="text-xs text-[#475569]">
+          <h1 className="text-xl sm:text-2xl font-black text-ink font-heading">Professional Resume</h1>
+          <p className="text-xs text-ink-secondary">
             One-page curriculum vitae rendered for campus recruiters and department records
           </p>
         </div>
 
         {hasValidFile && (
           <div className="flex items-center gap-3 shrink-0">
-            <span
-              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${
-                resumeData.status === 'APPROVED'
-                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                  : resumeData.status === 'CHANGES_REQUESTED'
-                  ? 'bg-orange-50 text-orange-700 border border-orange-200'
-                  : resumeData.status === 'REJECTED'
-                  ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                  : 'bg-amber-50 text-amber-700 border border-amber-200'
-              }`}
-            >
-              {resumeData.status === 'APPROVED' ? (
-                <CheckCircle2 className="w-3.5 h-3.5" />
-              ) : resumeData.status === 'CHANGES_REQUESTED' ? (
-                <AlertCircle className="w-3.5 h-3.5" />
-              ) : (
-                <Clock className="w-3.5 h-3.5" />
-              )}
-              <span>{resumeData.status === 'CHANGES_REQUESTED' ? 'Revision Requested' : (resumeData.status || 'Under Review')}</span>
+            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadgeClass(resumeData.status)}`}>
+              {getStatusIcon(resumeData.status)}
+              <span>{getStatusLabel(resumeData.status)}</span>
             </span>
 
             <input
@@ -158,7 +174,8 @@ export const ResumePage: React.FC = () => {
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg border border-[#E4E7F2] bg-white hover:bg-[#F7F8FC] text-xs font-bold text-[#475569] hover:text-[#0F172A] transition-colors cursor-pointer disabled:opacity-50"
+              className="btn btn-secondary"
+              aria-label="Replace PDF resume"
             >
               <RotateCcw className="w-3.5 h-3.5" />
               <span>Replace PDF</span>
@@ -166,8 +183,8 @@ export const ResumePage: React.FC = () => {
             <button
               onClick={handleDelete}
               disabled={deleting || uploading}
-              title="Delete your submitted resume"
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg border border-[#E4E7F2] bg-white hover:bg-rose-50 hover:border-rose-200 text-xs font-bold text-[#94A3B8] hover:text-[#E11D48] transition-colors cursor-pointer disabled:opacity-50"
+              className="btn btn-ghost text-status-rejected hover:bg-status-bg-rejected hover:border-status-rejected"
+              aria-label="Delete your submitted resume"
             >
               {deleting ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -181,9 +198,9 @@ export const ResumePage: React.FC = () => {
       </div>
 
       {resumeData && resumeData.status === 'CHANGES_REQUESTED' && (
-        <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg text-orange-900 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="p-4 bg-status-bg-changes border border-status-changes rounded-lg text-status-changes text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-start gap-2.5">
-            <AlertCircle className="w-4 h-4 shrink-0 text-orange-600 mt-0.5" />
+            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
             <div>
               <span className="font-bold">Faculty Revision Requested: </span>
               <span>{resumeData.reviewNote || 'The admin requested updates on your resume. Please click "Replace PDF" to upload a revised copy.'}</span>
@@ -191,7 +208,7 @@ export const ResumePage: React.FC = () => {
           </div>
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="shrink-0 px-3.5 py-1.5 bg-[#E11D48] hover:bg-[#BE123C] text-white font-bold rounded-lg text-xs cursor-pointer transition-colors self-start sm:self-auto"
+            className="btn btn-primary text-xs shrink-0"
           >
             Upload Revision
           </button>
@@ -199,9 +216,9 @@ export const ResumePage: React.FC = () => {
       )}
 
       {resumeData && resumeData.status === 'REJECTED' && (
-        <div className="p-4 bg-rose-50 border border-rose-200 rounded-lg text-rose-800 text-xs flex items-center justify-between">
+        <div className="p-4 bg-status-bg-rejected border border-status-rejected rounded-lg text-status-rejected text-xs flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+            <AlertCircle className="w-4 h-4 shrink-0" />
             <div>
               <span className="font-bold">Resume Returned by Administrator: </span>
               <span>{resumeData.reviewNote || 'Please upload a revised, single-page PDF document.'}</span>
@@ -211,9 +228,9 @@ export const ResumePage: React.FC = () => {
       )}
 
       {error && (
-        <div className="p-4 bg-rose-50 border border-rose-200 rounded-lg text-rose-800 text-xs flex items-center justify-between">
+        <div className="p-4 bg-status-bg-rejected border border-status-rejected rounded-lg text-status-rejected text-xs flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+            <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{error}</span>
           </div>
           <button onClick={loadResume} className="font-bold underline cursor-pointer">
@@ -223,8 +240,8 @@ export const ResumePage: React.FC = () => {
       )}
 
       {uploadSuccess && (
-        <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-xs flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+        <div className="p-4 bg-status-bg-approved border border-status-approved rounded-lg text-status-approved text-xs flex items-center gap-2">
+          <CheckCircle2 className="w-4 h-4 shrink-0" />
           <span>Resume uploaded successfully!</span>
         </div>
       )}
@@ -233,7 +250,7 @@ export const ResumePage: React.FC = () => {
       {!hasValidFile ? (
         <div
           onClick={() => fileInputRef.current?.click()}
-          className="border-2 border-dashed border-[#E4E7F2] hover:border-[#4F46E5] bg-white rounded-lg p-16 flex flex-col items-center text-center justify-center min-h-[350px] transition-all cursor-pointer group shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+          className="surface border-2 border-dashed border-edge hover:border-brand bg-surface p-16 flex flex-col items-center text-center justify-center min-h-[350px] transition-colors cursor-pointer shadow-card"
         >
           <input
             type="file"
@@ -242,27 +259,27 @@ export const ResumePage: React.FC = () => {
             onChange={handleFileSelect}
             className="hidden"
           />
-          <div className="w-16 h-16 rounded-lg bg-[#E0E7FF]/50 text-[#4F46E5] flex items-center justify-center mb-4 group-hover:scale-105 transition-transform shadow-xs">
+          <div className="w-16 h-16 rounded-lg bg-brand-soft text-brand-soft-text flex items-center justify-center mb-4 group-hover:scale-105 transition-transform shadow-card">
             <FileText className="w-8 h-8" />
           </div>
-          <h3 className="font-bold text-base text-[#0F172A] font-heading">Upload your Curriculum Vitae / Resume</h3>
-          <p className="text-xs text-[#475569] max-w-sm mt-1.5 mb-6">
+          <h3 className="font-bold text-base text-ink font-heading">Upload your Curriculum Vitae / Resume</h3>
+          <p className="text-xs text-ink-secondary max-w-sm mt-1.5 mb-6">
             PDF documents only (max 10MB). Clean ATS-friendly single-page format is recommended for technical placements.
           </p>
           <button
             type="button"
             disabled={uploading}
-            className="px-6 py-2.5 bg-[#4F46E5] hover:bg-[#3730A3] text-white text-xs font-bold rounded-lg shadow-xs transition-opacity cursor-pointer"
+            className="btn btn-primary"
           >
             {uploading ? 'Uploading...' : 'Select PDF File'}
           </button>
         </div>
       ) : (
         <div className="space-y-4">
-          <div className="bg-white border border-[#E4E7F2] rounded-lg p-4 flex items-center justify-between shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+          <div className="surface p-4 flex items-center justify-between shadow-card">
             <div className="flex items-center gap-3">
               {resumeData.thumbnailUrl ? (
-                <div className="w-10 h-14 rounded-lg bg-neutral-100 overflow-hidden shrink-0 border border-[#E4E7F2] shadow-2xs">
+                <div className="w-10 h-14 rounded-lg bg-surface-sunken overflow-hidden shrink-0 border border-edge shadow-sm">
                   <img
                     src={resolveMediaUrl(resumeData.thumbnailUrl)}
                     alt="Resume thumbnail"
@@ -272,13 +289,13 @@ export const ResumePage: React.FC = () => {
                   />
                 </div>
               ) : (
-                <div className="p-2.5 rounded-lg bg-[#E0E7FF] text-[#4F46E5]">
+                <div className="p-2.5 rounded-lg bg-brand-soft text-brand-soft-text">
                   <FileText className="w-5 h-5" />
                 </div>
               )}
               <div>
-                <h4 className="font-bold text-xs text-[#0F172A] font-heading">{resumeData.filename || 'resume.pdf'}</h4>
-                <span className="text-[11px] text-[#475569]">
+                <h4 className="font-bold text-xs text-ink font-heading">{resumeData.filename || 'resume.pdf'}</h4>
+                <span className="text-[11px] text-ink-secondary">
                   Submitted {resumeData.submittedAt ? new Date(resumeData.submittedAt).toLocaleDateString() : 'Recently'}
                 </span>
               </div>
@@ -289,7 +306,8 @@ export const ResumePage: React.FC = () => {
                 <a
                   href={`${fileUrl}${fileUrl.includes('?') ? '&' : '?'}download=1`}
                   rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#4F46E5] hover:bg-[#3730A3] text-white text-xs font-bold transition-opacity shadow-xs"
+                  className="btn btn-primary"
+                  download
                 >
                   <Download className="w-3.5 h-3.5" />
                   <span>Download PDF</span>
@@ -300,7 +318,7 @@ export const ResumePage: React.FC = () => {
 
           {/* Embedded PDF Viewer */}
           {embedUrl && (
-            <div className="bg-white rounded-lg shadow-[0_1px_2px_rgba(15,23,42,0.04)] border border-[#E4E7F2] overflow-hidden h-[750px] w-full relative">
+            <div className="surface rounded-lg shadow-card border border-edge overflow-hidden h-[750px] w-full relative">
               <iframe
                 src={embedUrl}
                 className="w-full h-full border-0"
@@ -316,4 +334,3 @@ export const ResumePage: React.FC = () => {
 };
 
 export default ResumePage;
-

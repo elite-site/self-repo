@@ -22,9 +22,9 @@ interface StatsDashboardProps {
 }
 
 const ratingColors: Record<string, { dot: string; text: string; bg: string; label: string }> = {
-  GOOD: { dot: 'bg-emerald-500', text: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-950/30', label: 'Good' },
-  AVERAGE: { dot: 'bg-amber-400', text: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-950/30', label: 'Average' },
-  POOR: { dot: 'bg-rose-500', text: 'text-rose-600 dark:text-rose-400', bg: 'bg-rose-50 dark:bg-rose-950/30', label: 'Poor' },
+  GOOD: { dot: 'bg-status-approved', text: 'text-status-approved', bg: 'bg-status-bg-approved', label: 'Good' },
+  AVERAGE: { dot: 'bg-status-pending', text: 'text-status-pending', bg: 'bg-status-bg-pending', label: 'Average' },
+  POOR: { dot: 'bg-status-rejected', text: 'text-status-rejected', bg: 'bg-status-bg-rejected', label: 'Poor' },
 };
 
 export const StatsDashboard: React.FC<StatsDashboardProps> = ({
@@ -45,16 +45,16 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
   return (
     <div className="space-y-6 text-left transition-colors">
       {/* 1. WELCOME & IDENTITY BANNER */}
-      <div className="bg-white dark:bg-[#11151C] border border-[#E4E7F2] dark:border-[#252B35] rounded-lg p-6 sm:p-8 shadow-[0_1px_2px_rgba(15,23,42,0.04)] flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+      <div className="bg-surface border border-edge rounded-lg p-6 sm:p-8 shadow-card flex flex-col sm:flex-row sm:items-center justify-between gap-6">
         <div className="space-y-2">
-          <div className="text-[11px] font-mono font-bold tracking-widest text-[#E11D48] dark:text-[#F43F5E] uppercase flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-[#E11D48] dark:bg-[#F43F5E] animate-pulse" />
+          <div className="text-[11px] font-mono font-bold tracking-widest text-accent uppercase flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
             <span>ELITE ADMIN PORTAL · DEPT OF INFORMATION TECHNOLOGY</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0F172A] dark:text-white font-heading tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-ink font-heading tracking-tight">
             OPERATIONS & PORTAL DASHBOARD
           </h1>
-          <p className="text-xs sm:text-sm text-[#475569] dark:text-[#9BA3AF] max-w-2xl font-normal leading-relaxed">
+          <p className="text-xs sm:text-sm text-ink-secondary max-w-2xl font-normal leading-relaxed">
             Unified institutional management for student rosters, verified portfolios, event registrations, department voting, and faculty moderation.
           </p>
         </div>
@@ -62,7 +62,7 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
         {portal && portal.pendingModeration > 0 && onNavigateTab && (
           <button
             onClick={() => onNavigateTab('moderation')}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[#E11D48] hover:bg-[#BE123C] text-white text-xs font-bold transition-all cursor-pointer shadow-xs shrink-0 self-start sm:self-center"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-accent hover:bg-status-solid-rejected text-on-primary text-xs font-bold transition-colors cursor-pointer shadow-xs shrink-0 self-start sm:self-center"
           >
             <AlertCircle className="w-4 h-4" />
             <span>{portal.pendingModeration} items awaiting review</span>
@@ -72,33 +72,33 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
       </div>
 
       {/* 2. PROGRESS / COMPLETION MODULE */}
-      <div className="bg-white dark:bg-[#11151C] border border-[#E4E7F2] dark:border-[#252B35] rounded-lg p-5 sm:p-6 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+      <div className="bg-surface border border-edge rounded-lg p-5 sm:p-6 shadow-card">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-[#EEF2FF] dark:bg-[#4F46E5]/20 text-[#4F46E5] dark:text-[#818CF8] flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-brand-soft text-brand flex items-center justify-center">
               <Clapperboard className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-xs font-bold uppercase tracking-wider text-[#0F172A] dark:text-white font-heading">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-ink font-heading">
                 Video Evaluation & Moderation Progress
               </h2>
-              <span className="text-[11px] text-[#475569] dark:text-[#9BA3AF]">
+              <span className="text-[11px] text-ink-secondary">
                 {rated} of {submitted} uploaded self-introduction videos evaluated
               </span>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-[#475569] dark:text-[#9BA3AF]">Coverage</span>
-            <span className="text-lg font-black text-[#4F46E5] dark:text-[#818CF8] font-heading">
+            <span className="text-xs font-semibold text-ink-secondary">Coverage</span>
+            <span className="text-lg font-black text-brand font-heading">
               {ratedPct}%
             </span>
           </div>
         </div>
 
         {/* Determinate progress bar in primary indigo */}
-        <div className="w-full h-2 bg-[#E0E7FF] dark:bg-neutral-800 rounded-full overflow-hidden">
+        <div className="w-full h-2 bg-brand-soft rounded-full overflow-hidden">
           <div
-            className="h-full bg-[#4F46E5] dark:bg-[#6366F1] rounded-full transition-all duration-500"
+            className="h-full bg-brand rounded-full transition-colors duration-slower"
             style={{ width: `${Math.min(100, Math.max(submitted > 0 ? 4 : 0, ratedPct))}%` }}
           />
         </div>
@@ -109,17 +109,17 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
         {/* TOTAL ENROLLED STUDENTS */}
         <div
           onClick={() => onNavigateTab && onNavigateTab('students')}
-          className="bg-white dark:bg-[#11151C] border border-[#E4E7F2] dark:border-[#252B35] rounded-lg p-5 hover:border-[#4F46E5]/50 transition-all shadow-[0_1px_2px_rgba(15,23,42,0.04)] cursor-pointer group"
+          className="bg-surface border border-edge rounded-lg p-5 hover:border-edge-strong/50 transition-colors shadow-card cursor-pointer group"
         >
-          <div className="flex items-center justify-between text-[#475569] dark:text-[#9BA3AF] text-[11px] uppercase font-bold tracking-wider mb-2">
+          <div className="flex items-center justify-between text-ink-secondary text-[11px] uppercase font-bold tracking-wider mb-2">
             <span>Enrolled Students</span>
-            <Users className="w-4 h-4 text-[#4F46E5] dark:text-[#818CF8]" />
+            <Users className="w-4 h-4 text-brand" />
           </div>
-          <div className="text-3xl font-black text-[#0F172A] dark:text-white font-heading tracking-tight">
+          <div className="text-3xl font-black text-ink font-heading tracking-tight">
             {portal ? portal.totalStudents : 120}
           </div>
-          <div className="text-[11px] text-[#475569] dark:text-[#9BA3AF] mt-2 font-medium flex items-center gap-1.5">
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+          <div className="text-[11px] text-ink-secondary mt-2 font-medium flex items-center gap-1.5">
+            <CheckCircle2 className="w-3.5 h-3.5 text-status-approved" />
             <span>{portal ? portal.totalProfiles : 84} active profiles</span>
           </div>
         </div>
@@ -127,19 +127,19 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
         {/* PORTFOLIO ARTIFACTS */}
         <div
           onClick={() => onNavigateTab && onNavigateTab('moderation')}
-          className="bg-white dark:bg-[#11151C] border border-[#E4E7F2] dark:border-[#252B35] rounded-lg p-5 hover:border-[#4F46E5]/50 transition-all shadow-[0_1px_2px_rgba(15,23,42,0.04)] cursor-pointer group"
+          className="bg-surface border border-edge rounded-lg p-5 hover:border-edge-strong/50 transition-colors shadow-card cursor-pointer group"
         >
-          <div className="flex items-center justify-between text-[#475569] dark:text-[#9BA3AF] text-[11px] uppercase font-bold tracking-wider mb-2">
+          <div className="flex items-center justify-between text-ink-secondary text-[11px] uppercase font-bold tracking-wider mb-2">
             <span>Portfolio Builds</span>
-            <Briefcase className="w-4 h-4 text-purple-500" />
+            <Briefcase className="w-4 h-4 text-status-review" />
           </div>
-          <div className="text-3xl font-black text-[#0F172A] dark:text-white font-heading tracking-tight">
+          <div className="text-3xl font-black text-ink font-heading tracking-tight">
             {portal
               ? portal.totalProjects + portal.totalAchievements + portal.totalCertificates
               : 65}
           </div>
-          <div className="text-[11px] text-[#475569] dark:text-[#9BA3AF] mt-2 font-medium flex items-center gap-1.5">
-            <Trophy className="w-3.5 h-3.5 text-amber-500" />
+          <div className="text-[11px] text-ink-secondary mt-2 font-medium flex items-center gap-1.5">
+            <Trophy className="w-3.5 h-3.5 text-status-pending" />
             <span>
               {portal ? `${portal.totalProjects} builds · ${portal.totalAchievements} awards` : 'Builds & honors'}
             </span>
@@ -149,17 +149,17 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
         {/* EVENTS & REGISTRATIONS */}
         <div
           onClick={() => onNavigateTab && onNavigateTab('events')}
-          className="bg-white dark:bg-[#11151C] border border-[#E4E7F2] dark:border-[#252B35] rounded-lg p-5 hover:border-[#4F46E5]/50 transition-all shadow-[0_1px_2px_rgba(15,23,42,0.04)] cursor-pointer group"
+          className="bg-surface border border-edge rounded-lg p-5 hover:border-edge-strong/50 transition-colors shadow-card cursor-pointer group"
         >
-          <div className="flex items-center justify-between text-[#475569] dark:text-[#9BA3AF] text-[11px] uppercase font-bold tracking-wider mb-2">
+          <div className="flex items-center justify-between text-ink-secondary text-[11px] uppercase font-bold tracking-wider mb-2">
             <span>Events & Contests</span>
-            <CalendarDays className="w-4 h-4 text-emerald-500" />
+            <CalendarDays className="w-4 h-4 text-status-approved" />
           </div>
-          <div className="text-3xl font-black text-[#0F172A] dark:text-white font-heading tracking-tight">
+          <div className="text-3xl font-black text-ink font-heading tracking-tight">
             {portal ? portal.totalEvents : 3}
           </div>
-          <div className="text-[11px] text-[#475569] dark:text-[#9BA3AF] mt-2 font-medium flex items-center gap-1.5">
-            <Layers className="w-3.5 h-3.5 text-[#4F46E5] dark:text-[#818CF8]" />
+          <div className="text-[11px] text-ink-secondary mt-2 font-medium flex items-center gap-1.5">
+            <Layers className="w-3.5 h-3.5 text-brand" />
             <span>{portal ? `${portal.totalRegistrations} participants` : 'Student registrations'}</span>
           </div>
         </div>
@@ -167,17 +167,17 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
         {/* VOTING ELECTIONS */}
         <div
           onClick={() => onNavigateTab && onNavigateTab('voting')}
-          className="bg-white dark:bg-[#11151C] border border-[#E4E7F2] dark:border-[#252B35] rounded-lg p-5 hover:border-[#4F46E5]/50 transition-all shadow-[0_1px_2px_rgba(15,23,42,0.04)] cursor-pointer group"
+          className="bg-surface border border-edge rounded-lg p-5 hover:border-edge-strong/50 transition-colors shadow-card cursor-pointer group"
         >
-          <div className="flex items-center justify-between text-[#475569] dark:text-[#9BA3AF] text-[11px] uppercase font-bold tracking-wider mb-2">
+          <div className="flex items-center justify-between text-ink-secondary text-[11px] uppercase font-bold tracking-wider mb-2">
             <span>Department Voting</span>
-            <Vote className="w-4 h-4 text-[#E11D48] dark:text-[#F43F5E]" />
+            <Vote className="w-4 h-4 text-accent" />
           </div>
-          <div className="text-3xl font-black text-[#0F172A] dark:text-white font-heading tracking-tight">
+          <div className="text-3xl font-black text-ink font-heading tracking-tight">
             {portal ? portal.totalCampaigns : 1}
           </div>
-          <div className="text-[11px] text-[#475569] dark:text-[#9BA3AF] mt-2 font-medium flex items-center gap-1.5">
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+          <div className="text-[11px] text-ink-secondary mt-2 font-medium flex items-center gap-1.5">
+            <CheckCircle2 className="w-3.5 h-3.5 text-status-approved" />
             <span>{portal ? `${portal.totalVotes} ballots cast` : 'Elections live'}</span>
           </div>
         </div>
@@ -188,40 +188,40 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
         {/* LEFT: INTRO VIDEO & CORE STATS (7 COLS) */}
         <div className="lg:col-span-7 space-y-6">
           {/* VIDEO SUBMISSIONS CARD */}
-          <div className="bg-white dark:bg-[#11151C] border border-[#E4E7F2] dark:border-[#252B35] rounded-lg p-6 shadow-[0_1px_2px_rgba(15,23,42,0.04)] space-y-5">
-            <div className="flex items-center justify-between border-b border-[#E4E7F2] dark:border-[#252B35] pb-3">
+          <div className="bg-surface border border-edge rounded-lg p-6 shadow-card space-y-5">
+            <div className="flex items-center justify-between border-b border-edge pb-3">
               <div>
-                <h2 className="text-xs font-bold uppercase tracking-widest text-[#0F172A] dark:text-white font-heading">
+                <h2 className="text-xs font-bold uppercase tracking-widest text-ink font-heading">
                   Introduction Video Campaign
                 </h2>
-                <p className="text-xs text-[#475569] dark:text-[#9BA3AF] mt-0.5">
+                <p className="text-xs text-ink-secondary mt-0.5">
                   60-90s self-introduction video intake and faculty evaluation status
                 </p>
               </div>
-              <span className="text-xs font-bold text-[#4F46E5] dark:text-[#818CF8]">
+              <span className="text-xs font-bold text-brand">
                 {submitted} uploaded
               </span>
             </div>
 
             {/* Video sub-metrics */}
             <div className="grid grid-cols-3 gap-3">
-              <div className="p-3.5 bg-[#F7F8FC] dark:bg-[#0D1117] border border-[#E4E7F2] dark:border-[#252B35] rounded-lg text-center">
-                <span className="text-[10px] font-bold uppercase text-[#94A3B8] block mb-0.5">Uploaded</span>
-                <span className="text-xl font-extrabold text-[#0F172A] dark:text-white font-heading">{submitted}</span>
+              <div className="p-3.5 bg-surface-canvas border border-edge rounded-lg text-center">
+                <span className="text-[10px] font-bold uppercase text-ink-muted block mb-0.5">Uploaded</span>
+                <span className="text-xl font-extrabold text-ink font-heading">{submitted}</span>
               </div>
-              <div className="p-3.5 bg-[#F7F8FC] dark:bg-[#0D1117] border border-[#E4E7F2] dark:border-[#252B35] rounded-lg text-center">
-                <span className="text-[10px] font-bold uppercase text-[#94A3B8] block mb-0.5">Rated</span>
-                <span className="text-xl font-extrabold text-emerald-600 dark:text-emerald-400 font-heading">{rated}</span>
+              <div className="p-3.5 bg-surface-canvas border border-edge rounded-lg text-center">
+                <span className="text-[10px] font-bold uppercase text-ink-muted block mb-0.5">Rated</span>
+                <span className="text-xl font-extrabold text-status-approved font-heading">{rated}</span>
               </div>
-              <div className="p-3.5 bg-[#F7F8FC] dark:bg-[#0D1117] border border-[#E4E7F2] dark:border-[#252B35] rounded-lg text-center">
-                <span className="text-[10px] font-bold uppercase text-[#94A3B8] block mb-0.5">Coverage</span>
-                <span className="text-xl font-extrabold text-[#4F46E5] dark:text-[#818CF8] font-heading">{ratedPct}%</span>
+              <div className="p-3.5 bg-surface-canvas border border-edge rounded-lg text-center">
+                <span className="text-[10px] font-bold uppercase text-ink-muted block mb-0.5">Coverage</span>
+                <span className="text-xl font-extrabold text-brand font-heading">{ratedPct}%</span>
               </div>
             </div>
 
             {/* Uploads by section progress bars */}
             <div className="space-y-3 pt-2">
-              <div className="text-[11px] font-bold uppercase tracking-wider text-[#94A3B8]">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-ink-muted">
                 Submissions by Section
               </div>
               {stats.bySection.map((sec, idx) => {
@@ -231,16 +231,16 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
                 return (
                   <div key={`${sec.label}-${idx}`} className="space-y-1">
                     <div className="flex items-center justify-between text-xs gap-2 min-w-0">
-                      <span className="font-semibold text-[#0F172A] dark:text-neutral-200 truncate">
+                      <span className="font-semibold text-ink truncate">
                         Section {sec.label}
                       </span>
-                      <span className="font-semibold text-[#475569] dark:text-[#9BA3AF] shrink-0">
+                      <span className="font-semibold text-ink-secondary shrink-0">
                         {sec.submitted}
                       </span>
                     </div>
-                    <div className="w-full h-2 bg-[#E0E7FF]/60 dark:bg-neutral-800 rounded-full overflow-hidden">
+                    <div className="w-full h-2 bg-brand-soft/60 rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-[#4F46E5] dark:bg-[#6366F1] rounded-full transition-all duration-300"
+                        className="h-full bg-brand rounded-full transition-colors duration-slow"
                         style={{ width: `${Math.max(sec.submitted > 0 ? 6 : 0, widthPct)}%` }}
                       />
                     </div>
@@ -248,7 +248,7 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
                 );
               })}
               {stats.bySection.length === 0 && (
-                <p className="text-xs text-[#94A3B8] py-4 text-center">
+                <p className="text-xs text-ink-muted py-4 text-center">
                   No video submissions recorded yet.
                 </p>
               )}
@@ -258,12 +258,12 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
 
         {/* RIGHT: PORTAL QUICK WORKFLOW ACTIONS (5 COLS) */}
         <div className="lg:col-span-5 space-y-4">
-          <div className="bg-white dark:bg-[#11151C] border border-[#E4E7F2] dark:border-[#252B35] rounded-lg p-6 shadow-[0_1px_2px_rgba(15,23,42,0.04)] space-y-4">
+          <div className="bg-surface border border-edge rounded-lg p-6 shadow-card space-y-4">
             <div>
-              <h2 className="text-xs font-bold uppercase tracking-widest text-[#0F172A] dark:text-white font-heading">
+              <h2 className="text-xs font-bold uppercase tracking-widest text-ink font-heading">
                 Portal Management Modules
               </h2>
-              <p className="text-xs text-[#475569] dark:text-[#9BA3AF] mt-0.5">
+              <p className="text-xs text-ink-secondary mt-0.5">
                 Direct access to faculty administration workflows
               </p>
             </div>
@@ -271,85 +271,85 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
             <div className="space-y-2.5 text-xs">
               <button
                 onClick={() => onNavigateTab && onNavigateTab('moderation')}
-                className="w-full bg-[#F7F8FC] dark:bg-[#0D1117] hover:bg-[#EEF2FF] dark:hover:bg-[#151A22] border border-[#E4E7F2] dark:border-[#252B35] rounded-lg p-3.5 text-left transition-all cursor-pointer flex items-center justify-between group"
+                className="w-full bg-surface-canvas hover:bg-brand-soft border border-edge rounded-lg p-3.5 text-left transition-colors cursor-pointer flex items-center justify-between group"
               >
                 <div>
-                  <div className="font-bold text-[#0F172A] dark:text-white group-hover:text-[#4F46E5] dark:group-hover:text-[#818CF8] transition-colors">
+                  <div className="font-bold text-ink group-hover:text-brand transition-colors">
                     Moderation Queue
                   </div>
-                  <div className="text-[11px] text-[#475569] dark:text-[#9BA3AF] mt-0.5">
+                  <div className="text-[11px] text-ink-secondary mt-0.5">
                     Review pending student projects, honors, and certificates
                   </div>
                 </div>
-                <ArrowRight className="w-4 h-4 text-[#94A3B8] group-hover:text-[#4F46E5] group-hover:translate-x-0.5 transition-all" />
+                <ArrowRight className="w-4 h-4 text-ink-muted group-hover:text-brand group-hover:translate-x-0.5 transition-colors" />
               </button>
 
               <button
                 onClick={() => onNavigateTab && onNavigateTab('students')}
-                className="w-full bg-[#F7F8FC] dark:bg-[#0D1117] hover:bg-[#EEF2FF] dark:hover:bg-[#151A22] border border-[#E4E7F2] dark:border-[#252B35] rounded-lg p-3.5 text-left transition-all cursor-pointer flex items-center justify-between group"
+                className="w-full bg-surface-canvas hover:bg-brand-soft border border-edge rounded-lg p-3.5 text-left transition-colors cursor-pointer flex items-center justify-between group"
               >
                 <div>
-                  <div className="font-bold text-[#0F172A] dark:text-white group-hover:text-[#4F46E5] dark:group-hover:text-[#818CF8] transition-colors">
+                  <div className="font-bold text-ink group-hover:text-brand transition-colors">
                     All Students Directory
                   </div>
-                  <div className="text-[11px] text-[#475569] dark:text-[#9BA3AF] mt-0.5">
+                  <div className="text-[11px] text-ink-secondary mt-0.5">
                     Search and manage department student academic rosters
                   </div>
                 </div>
-                <ArrowRight className="w-4 h-4 text-[#94A3B8] group-hover:text-[#4F46E5] group-hover:translate-x-0.5 transition-all" />
+                <ArrowRight className="w-4 h-4 text-ink-muted group-hover:text-brand group-hover:translate-x-0.5 transition-colors" />
               </button>
 
               <button
                 onClick={() => onNavigateTab && onNavigateTab('events')}
-                className="w-full bg-[#F7F8FC] dark:bg-[#0D1117] hover:bg-[#EEF2FF] dark:hover:bg-[#151A22] border border-[#E4E7F2] dark:border-[#252B35] rounded-lg p-3.5 text-left transition-all cursor-pointer flex items-center justify-between group"
+                className="w-full bg-surface-canvas hover:bg-brand-soft border border-edge rounded-lg p-3.5 text-left transition-colors cursor-pointer flex items-center justify-between group"
               >
                 <div>
-                  <div className="font-bold text-[#0F172A] dark:text-white group-hover:text-[#4F46E5] dark:group-hover:text-[#818CF8] transition-colors">
+                  <div className="font-bold text-ink group-hover:text-brand transition-colors">
                     Department Events
                   </div>
-                  <div className="text-[11px] text-[#475569] dark:text-[#9BA3AF] mt-0.5">
+                  <div className="text-[11px] text-ink-secondary mt-0.5">
                     Create symposiums, hackathons, and registration forms
                   </div>
                 </div>
-                <ArrowRight className="w-4 h-4 text-[#94A3B8] group-hover:text-[#4F46E5] group-hover:translate-x-0.5 transition-all" />
+                <ArrowRight className="w-4 h-4 text-ink-muted group-hover:text-brand group-hover:translate-x-0.5 transition-colors" />
               </button>
 
               <button
                 onClick={() => onNavigateTab && onNavigateTab('voting')}
-                className="w-full bg-[#F7F8FC] dark:bg-[#0D1117] hover:bg-[#EEF2FF] dark:hover:bg-[#151A22] border border-[#E4E7F2] dark:border-[#252B35] rounded-lg p-3.5 text-left transition-all cursor-pointer flex items-center justify-between group"
+                className="w-full bg-surface-canvas hover:bg-brand-soft border border-edge rounded-lg p-3.5 text-left transition-colors cursor-pointer flex items-center justify-between group"
               >
                 <div>
-                  <div className="font-bold text-[#0F172A] dark:text-white group-hover:text-[#4F46E5] dark:group-hover:text-[#818CF8] transition-colors">
+                  <div className="font-bold text-ink group-hover:text-brand transition-colors">
                     Elections & Voting
                   </div>
-                  <div className="text-[11px] text-[#475569] dark:text-[#9BA3AF] mt-0.5">
+                  <div className="text-[11px] text-ink-secondary mt-0.5">
                     Configure ELITE candidate ballots and track cast votes
                   </div>
                 </div>
-                <ArrowRight className="w-4 h-4 text-[#94A3B8] group-hover:text-[#4F46E5] group-hover:translate-x-0.5 transition-all" />
+                <ArrowRight className="w-4 h-4 text-ink-muted group-hover:text-brand group-hover:translate-x-0.5 transition-colors" />
               </button>
 
               <button
                 onClick={() => onNavigateTab && onNavigateTab('submissions')}
-                className="w-full bg-[#F7F8FC] dark:bg-[#0D1117] hover:bg-[#EEF2FF] dark:hover:bg-[#151A22] border border-[#E4E7F2] dark:border-[#252B35] rounded-lg p-3.5 text-left transition-all cursor-pointer flex items-center justify-between group"
+                className="w-full bg-surface-canvas hover:bg-brand-soft border border-edge rounded-lg p-3.5 text-left transition-colors cursor-pointer flex items-center justify-between group"
               >
                 <div>
-                  <div className="font-bold text-[#0F172A] dark:text-white group-hover:text-[#4F46E5] dark:group-hover:text-[#818CF8] transition-colors">
+                  <div className="font-bold text-ink group-hover:text-brand transition-colors">
                     Video Submissions Table
                   </div>
-                  <div className="text-[11px] text-[#475569] dark:text-[#9BA3AF] mt-0.5">
+                  <div className="text-[11px] text-ink-secondary mt-0.5">
                     Play clips, rate submissions, and write feedback
                   </div>
                 </div>
-                <ArrowRight className="w-4 h-4 text-[#94A3B8] group-hover:text-[#4F46E5] group-hover:translate-x-0.5 transition-all" />
+                <ArrowRight className="w-4 h-4 text-ink-muted group-hover:text-brand group-hover:translate-x-0.5 transition-colors" />
               </button>
             </div>
           </div>
 
           {/* RATING BREAKDOWN (IF ANY) */}
           {(stats.byRating.GOOD || stats.byRating.AVERAGE || stats.byRating.POOR) ? (
-            <div className="bg-white dark:bg-[#11151C] border border-[#E4E7F2] dark:border-[#252B35] rounded-lg p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] space-y-3">
-              <h2 className="text-xs font-bold uppercase tracking-widest text-[#0F172A] dark:text-white font-heading">
+            <div className="bg-surface border border-edge rounded-lg p-5 shadow-card space-y-3">
+              <h2 className="text-xs font-bold uppercase tracking-widest text-ink font-heading">
                 Evaluation Rating Distribution
               </h2>
               <div className="grid grid-cols-3 gap-2.5">
@@ -359,11 +359,11 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
                   return (
                     <div
                       key={r}
-                      className={`${meta.bg} border border-[#E4E7F2] dark:border-[#252B35] rounded-lg p-3 flex flex-col items-center gap-0.5`}
+                      className={`${meta.bg} border border-edge rounded-lg p-3 flex flex-col items-center gap-0.5`}
                     >
                       <span className={`w-2 h-2 rounded-full ${meta.dot}`} />
                       <span className={`text-lg font-black font-heading ${meta.text}`}>{count}</span>
-                      <span className="text-[10px] text-[#475569] dark:text-[#9BA3AF] font-bold uppercase tracking-wider">
+                      <span className="text-[10px] text-ink-secondary font-bold uppercase tracking-wider">
                         {meta.label}
                       </span>
                     </div>

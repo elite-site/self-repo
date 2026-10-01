@@ -66,13 +66,6 @@ export const api = {
     const res = await client.post('/student/logout');
     return res.data;
   },
-  async submitVideo(formData: FormData, onUploadProgress?: (ev: any) => void): Promise<{ success: boolean; id: string; message?: string }> {
-    const res = await client.post('/student/submission', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-      onUploadProgress,
-    });
-    return res.data;
-  },
 
   /**
    * Streaming video upload — sends the File object as a raw binary body
@@ -160,7 +153,7 @@ export const api = {
         }
       });
 
-      xhr.addEventListener('error', () => reject(new Error('Network error — check your connection and try again.')));
+      xhr.addEventListener('error', () => reject(new Error('Network error. Check your connection and try again.')));
       xhr.addEventListener('abort', () => reject(new Error('Upload was cancelled.')));
 
       // Send the File object directly — browser sets Content-Length automatically
@@ -170,21 +163,6 @@ export const api = {
   async getVideoBlobUrl(): Promise<string> {
     const res = await client.get(`/student/submission/media/video?t=${Date.now()}`, { responseType: 'blob' });
     return URL.createObjectURL(res.data as Blob);
-  },
-  getVideoStreamUrl(version?: string | number): string {
-    const base = (client.defaults.baseURL ?? 'http://localhost:5001/api')
-      .replace(/\/api\/?$/, '');
-    const token = localStorage.getItem('student_token');
-    const tokenParam = token ? `&token=${encodeURIComponent(token)}` : '';
-    const vParam = version ? `&v=${encodeURIComponent(String(version))}` : '';
-    return `${base}/api/student/submission/media/video?t=${Date.now()}${vParam}${tokenParam}`;
-  },
-  getVideoDownloadUrl(): string {
-    const base = (client.defaults.baseURL ?? 'http://localhost:5001/api')
-      .replace(/\/api\/?$/, '');
-    const token = localStorage.getItem('student_token');
-    const tokenParam = token ? `&token=${encodeURIComponent(token)}` : '';
-    return `${base}/api/student/submission/media/video?download=1${tokenParam}`;
   },
 
   /**
@@ -229,7 +207,6 @@ export const api = {
   async createProject(data: any) { const res = await client.post('/student/portfolio/projects', data); return res.data; },
   async updateProject(id: string, data: any) { const res = await client.put(`/student/portfolio/projects/${id}`, data); return res.data; },
   async deleteProject(id: string) { const res = await client.delete(`/student/portfolio/projects/${id}`); return res.data; },
-  async reorderProjects(ids: string[]) { const res = await client.put('/student/portfolio/projects/reorder', { ids }); return res.data; },
 
   // Portfolio - Achievements
   async getAchievements() { const res = await client.get('/student/portfolio/achievements'); return res.data; },

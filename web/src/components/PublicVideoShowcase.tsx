@@ -1,10 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, {  useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { api, resolveMediaUrl } from '../services/api';
-import { PublicIntroVideo } from '../types';
-import { Film, Loader2, Play, Users, EyeOff } from 'lucide-react';
+import {  resolveMediaUrl } from '../services/api';
+import { usePublicVideos, PublicVideosState } from '../hooks/usePublicVideos';
+import {   Play, Users, EyeOff } from 'lucide-react';
 
-interface PublicVideoShowcaseProps {
+interface Props extends Partial<PublicVideosState> {
   /** Optional heading override for reuse on other public pages. */
   title?: string;
   subtitle?: string;
@@ -15,43 +15,52 @@ interface PublicVideoShowcaseProps {
  *
  * Only videos that were approved by faculty AND published (by the student or
  * an admin) are returned by the API, so this component renders an empty state
- * until the very first video is approved — nothing unapproved is ever exposed.
+ * until the very first video is approved. Nothing  unapproved is ever exposed.
  *
  * Only one video plays at a time: playing a card pauses every other player so
  * the page never streams several videos at once.
+ *
+ * `videos` / `loading` / `failed` let a parent that already fetched the list
+ * hand it down, so a hero and this showcase on the same page share one request.
+ * Omit them and the component fetches for itself.
  */
-export const PublicVideoShowcase: React.FC<PublicVideoShowcaseProps> = ({
+export const PublicVideoShowcase: React.FC<Props> = ({
   title = 'Student Introduction Videos',
-  subtitle = 'Watch how our students introduce themselves — approved recordings from the department.',
+  subtitle = 'Watch how our students introduce themselves. Only faculty-approved recordings appear here.',
+  videos: preloadedVideos,
+  loading: preloadedLoading,
+  failed: preloadedFailed,
 }) => {
-  const [videos, setVideos] = useState<PublicIntroVideo[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [failed, setFailed] = useState(false);
-  const [activeId, setActiveId] = useState<string | null>(null);
-  const playerRefs = useRef<Record<string, HTMLVideoElement | null>>({});
+  const preloaded  =
+    preloadedVideos ||
+   preloadedLoading !== undefined ||
+   preloadedFailed !== undefined
+      ? {
+          videos:
+   preloadedVideos ?? [],
+          loading: preloadedLoading ?? false,
+          failed:
+   preloadedFailed ?? false,
+        }
+      : undefined;
 
-  useEffect(() => {
-    let cancelled = false;
+  const  {
+     videos, loading, failed
 
-    api
-      .getPublicVideos()
-      .then((res) => {
-        if (cancelled) return;
-        setVideos(res.items);
-      })
-      .catch(() => {
-        if (!cancelled) setFailed(true);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
+       } =
+         usePublicVideos(preloaded);
+  const [activeId,
 
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+       setActiveId] =
+         useState<string |
 
-  /** One video at a time — pause every other player when a new one starts. */
+       null>(null);
+  const playerRefs
+         = useRef<Record<string,
+
+     HTMLVideoElement | null>>({});
+
+  /** One video at a time:  pause every other player when a new one starts. */
   const handlePlay = (id: string) => {
     setActiveId(id);
     Object.entries(playerRefs.current).forEach(([key, player]) => {
@@ -63,19 +72,16 @@ export const PublicVideoShowcase: React.FC<PublicVideoShowcaseProps> = ({
     <section id="public-videos" aria-labelledby="public-videos-title" className="w-full py-12 sm:py-16">
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-6 text-left">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-50 border border-red-100 text-[10px] font-mono font-bold text-[#DC2626] tracking-wider uppercase mb-3">
-            <Film className="w-3 h-3" />
-            <span>Public Showcase</span>
-          </div>
-          <h2 id="public-videos-title" className="text-2xl sm:text-3xl font-extrabold text-[#0B192C] tracking-tight">
+
+          <h2 id="public-videos-title" className="text-2xl sm:text-3xl font-extrabold text-ink font-heading tracking-tight">
             {title}
           </h2>
-          <p className="text-xs text-neutral-500 mt-1.5 max-w-2xl leading-relaxed">{subtitle}</p>
+          <p className="text-sm text-ink-secondary mt-2 max-w-[60ch] leading-relaxed">{subtitle}</p>
         </div>
 
         {videos.length > 0 && (
-          <div className="flex items-center gap-1.5 text-[11px] font-mono text-neutral-500 shrink-0">
-            <Users className="w-3.5 h-3.5" />
+          <div className="flex items-center gap-1.5 text-xs text-ink-muted shrink-0">
+            <Users className="w-3.5 h-3.5" aria-hidden="true" />
             <span>
               {videos.length} published {videos.length === 1 ? 'video' : 'videos'}
             </span>
@@ -84,22 +90,34 @@ export const PublicVideoShowcase: React.FC<PublicVideoShowcaseProps> = ({
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-16 bg-white border border-[#E2E8F0] rounded-2xl">
-          <Loader2 className="w-6 h-6 animate-spin text-[#DC2626]" />
+        /* Skeleton matching the final card shape, not a spinner. */
+        <div aria-hidden="true" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="rounded-lg border border-edge bg-surface
+ overflow-hidden">
+              <div className="aspect-video skeleton" />
+              <div className="p-4 space-y-2">
+                <div className="h-3.5 w-2/3 rounded skeleton" />
+                <div className="h-3 w-1/2 rounded skeleton" />
+              </div>
+            </div>
+          ))}
         </div>
       ) : failed ? (
-        <div className="py-12 px-6 bg-white border border-[#E2E8F0] rounded-2xl text-center">
-          <p className="text-xs text-neutral-500">Videos are unavailable right now. Please try again later.</p>
+        <div className="py-12 px-6 surface border border-edge rounded-lg text-center">
+          <p className="text-sm text-ink-secondary">
+            Videos are unavailable right now. Please try again later.
+          </p>
         </div>
       ) : videos.length === 0 ? (
-        <div className="py-14 px-6 bg-white border border-[#E2E8F0] rounded-2xl text-center space-y-3">
-          <div className="w-14 h-14 rounded-2xl bg-neutral-100 text-neutral-400 flex items-center justify-center mx-auto">
-            <EyeOff className="w-6 h-6" />
+        <div className="py-12 px-6 surface border border-edge rounded-lg text-left sm:text-center max-w-xl mx-auto space-y-2">
+          <div className="w-11 h-11 rounded-lg bg-surface-sunken text-ink-muted flex items-center justify-center sm:mx-auto">
+            <EyeOff className="w-5 h-5" aria-hidden="true" />
           </div>
-          <h3 className="text-sm font-bold text-[#0B192C]">No published videos yet</h3>
-          <p className="text-xs text-neutral-500 max-w-md mx-auto leading-relaxed">
+          <h3 className="text-sm font-bold text-ink">No published videos yet</h3>
+          <p className="text-sm text-ink-secondary leading-relaxed">
             A student's introduction video appears here only after it is approved and published.
-            Nothing is shown before that.
+
           </p>
         </div>
       ) : (
@@ -107,9 +125,9 @@ export const PublicVideoShowcase: React.FC<PublicVideoShowcaseProps> = ({
           {videos.map((video) => (
             <article
               key={video.id}
-              className="group bg-white border border-[#E2E8F0] rounded-2xl overflow-hidden shadow-xs hover:shadow-md transition-shadow"
+              className="group surface overflow-hidden shadow-card hover:shadow-card-hover transition-shadow"
             >
-              <div className="relative bg-black aspect-video">
+              <div className="relative bg-surface-inverse aspect-video">
                 <video
                   ref={(el) => {
                     playerRefs.current[video.id] = el;
@@ -128,8 +146,8 @@ export const PublicVideoShowcase: React.FC<PublicVideoShowcaseProps> = ({
 
                 {activeId !== video.id && (
                   <div className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <span className="w-14 h-14 rounded-full bg-black/55 backdrop-blur-sm border border-white/25 flex items-center justify-center">
-                      <Play className="w-6 h-6 text-white fill-white ml-0.5" />
+                    <span className="w-14 h-14 rounded-full bg-on-primary/55 backdrop-blur-sm border border-on-primary/25 flex items-center justify-center">
+                      <Play className="w-6 h-6 text-on-primary fill-on-primary ml-0.5" />
                     </span>
                   </div>
                 )}
@@ -137,17 +155,17 @@ export const PublicVideoShowcase: React.FC<PublicVideoShowcaseProps> = ({
 
               <div className="p-4 flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <h3 className="text-sm font-bold text-[#0B192C] truncate">{video.name}</h3>
-                  <p className="text-[11px] font-mono text-neutral-500 truncate">
+                  <h3 className="text-sm font-bold text-ink truncate">{video.name}</h3>
+                  <p className="text-xs text-ink-muted truncate">
                     {video.rollNo} · Year {video.year} · Section {video.section}
                   </p>
                 </div>
 
                 <Link
                   to={video.profileUrl}
-                  className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-[#DC2626] hover:text-[#B5121B] whitespace-nowrap"
+                  className="shrink-0 text-xs font-bold text-brand hover:text-brand-hover whitespace-nowrap"
                 >
-                  Profile
+                  View profile
                 </Link>
               </div>
             </article>

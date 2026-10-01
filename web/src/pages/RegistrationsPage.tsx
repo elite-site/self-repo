@@ -46,36 +46,50 @@ export const RegistrationsPage: React.FC = () => {
     }
   };
 
+  const formatDate = (date?: string) => (date ? new Date(date).toLocaleDateString() : 'To be announced');
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'REGISTERED':
+      case 'CONFIRMED':
+        return { className: 'badge badge-approved', label: 'Registered' };
+      case 'CANCELLED':
+        return { className: 'badge badge-draft', label: 'Cancelled' };
+      default:
+        return { className: 'badge badge-pending', label: status };
+    }
+  };
+
   if (loading) {
     return (
-      <div className="py-20">
+      <div className="py-20" role="status" aria-live="polite">
         <BrandedLoading fullScreen={false} message="Loading Registrations..." />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 text-left">
+    <div className="space-y-6 text-left page-enter" role="main">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-black text-[#0F172A] font-heading">My Event Registrations</h1>
-          <p className="text-xs text-[#475569]">
+          <h1 className="text-headline-md font-black text-ink font-heading">My Event Registrations</h1>
+          <p className="text-body-sm text-ink-muted">
             Track confirmed registrations, upcoming competition dates, and participation status
           </p>
         </div>
         <Link
           to="/events"
-          className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#4F46E5] hover:bg-[#3730A3] text-white text-xs font-bold rounded-lg transition-all shadow-xs shrink-0"
+          className="btn btn-primary inline-flex items-center gap-1.5 shrink-0"
         >
           <span>Explore Events</span>
-          <ExternalLink className="w-3.5 h-3.5" />
+          <ExternalLink className="w-3.5 h-3.5" aria-hidden="true" />
         </Link>
       </div>
 
       {error && (
-        <div className="p-4 bg-rose-50 border border-rose-200 rounded-lg text-rose-800 text-xs flex items-center justify-between">
+        <div className="p-4 bg-status-bg-rejected border border-edge-strong rounded-lg text-status-rejected text-body-sm flex items-center justify-between" role="alert">
           <div className="flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+            <AlertCircle className="w-4 h-4 shrink-0" aria-hidden="true" />
             <span>{error}</span>
           </div>
           <button onClick={() => loadRegistrations(true)} className="font-bold underline cursor-pointer">
@@ -85,53 +99,45 @@ export const RegistrationsPage: React.FC = () => {
       )}
 
       {regs.length === 0 ? (
-        <div className="text-center py-20 bg-white border border-[#E4E7F2] rounded-lg shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-          <CalendarX2 className="w-12 h-12 text-[#94A3B8] mx-auto mb-3" />
-          <h3 className="font-bold text-sm text-[#0F172A] font-heading">No event registrations found</h3>
-          <p className="text-xs text-[#475569] mt-1 max-w-sm mx-auto mb-4">
+        <div className="surface text-center py-20" role="status">
+          <CalendarX2 className="w-12 h-12 text-ink-muted mx-auto mb-3" aria-hidden="true" />
+          <h3 className="text-body-md font-bold text-ink font-heading">No event registrations found</h3>
+          <p className="text-body-sm text-ink-muted mt-1 max-w-sm mx-auto mb-4">
             You haven't signed up for any upcoming hackathons, guest lectures, or workshops yet.
           </p>
           <Link
             to="/events"
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#4F46E5] hover:bg-[#3730A3] text-white rounded-lg text-xs font-bold transition-opacity shadow-xs cursor-pointer"
+            className="btn btn-primary inline-flex items-center gap-1.5"
           >
             <span>Browse Upcoming Events</span>
           </Link>
         </div>
       ) : (
-        <div className="bg-white border border-[#E4E7F2] rounded-lg overflow-hidden shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+        <div className="surface overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full text-left border-collapse" role="table">
               <thead>
-                <tr className="bg-[#F7F8FC] border-b border-[#E4E7F2] text-xs font-bold text-[#475569] uppercase tracking-wider">
-                  <th className="p-4 sm:px-6">Event Title</th>
-                  <th className="p-4 sm:px-6">Registered Date</th>
-                  <th className="p-4 sm:px-6">Status</th>
-                  <th className="p-4 sm:px-6 text-right">Actions</th>
+                <tr className="bg-surface-sunken border-b border-edge text-label-sm font-bold text-ink-secondary uppercase tracking-wider">
+                  <th className="p-4 sm:px-6" scope="col">Event Title</th>
+                  <th className="p-4 sm:px-6" scope="col">Registered Date</th>
+                  <th className="p-4 sm:px-6" scope="col">Status</th>
+                  <th className="p-4 sm:px-6 text-right" scope="col">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#E4E7F2] text-xs">
+              <tbody className="divide-y divide-edge text-body-sm">
                 {regs.map((r) => (
-                  <tr key={r.id} className="hover:bg-[#F7F8FC] transition-colors">
-                    <td className="p-4 sm:px-6 font-bold text-[#0F172A]">
-                      <Link to={`/events/${r.eventId}`} className="hover:text-[#4F46E5] transition-colors">
+                  <tr key={r.id} className="hover:bg-surface-sunken transition-colors">
+                    <td className="p-4 sm:px-6 font-bold text-ink">
+                      <Link to={`/events/${r.eventId}`} className="hover:text-ink-brand transition-colors">
                         {r.eventTitle}
                       </Link>
                     </td>
-                    <td className="p-4 sm:px-6 text-[#475569]">
-                      {r.registeredAt ? new Date(r.registeredAt).toLocaleDateString() : 'N/A'}
+                    <td className="p-4 sm:px-6 text-ink-secondary">
+                      {formatDate(r.registeredAt)}
                     </td>
                     <td className="p-4 sm:px-6">
-                      <span
-                        className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold inline-block border ${
-                          r.status === 'REGISTERED' || r.status === 'CONFIRMED'
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                            : r.status === 'CANCELLED'
-                            ? 'bg-neutral-100 text-neutral-600 border-neutral-200'
-                            : 'bg-amber-50 text-amber-700 border-amber-200'
-                        }`}
-                      >
-                        {r.status === 'CONFIRMED' ? 'REGISTERED' : r.status}
+                      <span className={getStatusBadge(r.status).className}>
+                        {getStatusBadge(r.status).label}
                       </span>
                     </td>
                     <td className="p-4 sm:px-6 text-right">
@@ -139,12 +145,13 @@ export const RegistrationsPage: React.FC = () => {
                         <button
                           onClick={() => handleCancel(r.id)}
                           disabled={cancellingId === r.id}
-                          className="text-xs font-bold text-[#94A3B8] hover:text-[#E11D48] disabled:opacity-50 cursor-pointer inline-flex items-center gap-1 transition-colors"
+                          className="text-label-sm font-bold text-ink-muted hover:text-status-rejected disabled:opacity-50 cursor-pointer inline-flex items-center gap-1 transition-colors"
+                          aria-label={`Cancel registration for ${r.eventTitle}`}
                         >
                           {cancellingId === r.id ? (
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />
                           ) : (
-                            <Trash2 className="w-3.5 h-3.5" />
+                            <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
                           )}
                           <span>Cancel Registration</span>
                         </button>
@@ -162,4 +169,3 @@ export const RegistrationsPage: React.FC = () => {
 };
 
 export default RegistrationsPage;
-

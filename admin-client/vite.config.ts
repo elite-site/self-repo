@@ -11,6 +11,12 @@ export default defineConfig({
   },
   server: {
     port: 5175,
+    fs: {
+      // `shared/tokens.css` lives at the repo root, outside this Vite root.
+      // Serving it needs explicit permission; without this the dev server
+      // returns 403 on the token stylesheet and the page renders unstyled.
+      allow: ['..'],
+    },
     proxy: {
       '/admin/api': {
         target: 'http://localhost:5001',

@@ -1,284 +1,42 @@
+/* Self-hosted webfonts. Must come before the Tailwind layers so `font-display`
+   never wins over a real face, and so the browser can start fetching the woff2
+   files as soon as this stylesheet parses instead of waiting on a third party. */
+@import './fonts.css';
+
+/* The design system, shared verbatim with the student portal: palette, semantic
+   theme tokens, motion, radius, layers, keyframes, reduced-motion override, and
+   the base/component layers. GENERATED from `shared/tokens.mjs` — edit that and
+   run `npm run tokens`, never this.
+
+   This replaces a 291-line local stylesheet that declared its own `#admin-root`
+   token block, its own indigo-on-dark palette, and its own copy of the scrollbar
+   and focus-ring rules. One palette now drives both apps. */
+@import '../../shared/tokens.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* ============================================================
-   ELITE Academic Portal Design System — Admin Client CSS
-   Professional Deep-Dark Surface Hierarchy (Scoped to #admin-root)
-   Page: #090B10
-   Sidebar: #0D1016
-   Header: #0B0E14
-   Cards: #11151C
-   Elevated / Modals: #151A22
-   Inputs: #0D1117 (border: #252B35)
-   Primary Text: #F3F5F7
-   Secondary Text: #9BA3AF
-   Muted Text: #6F7785
-   Accent: #E5252A
-   ============================================================ */
+/* Nothing app-specific is left.
 
-@layer base {
-  body {
-    background-color: #F7F8FC;
-    color: #0F172A;
-    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
-    overflow-x: hidden;
-    width: 100%;
-  }
+   This file used to carry a 120-line `!important` override wall that repainted
+   light-mode utilities (`bg-white`, `text-neutral-900`, `border-slate-200`) with
+   dark values whenever `.dark` was on the ancestor. It existed because the admin
+   was dark-mode-first while its pages were written light-mode-first, and it is
+   why the two apps ended up with different dark palettes for the same brand.
 
-  h1, h2, h3, h4, h5, h6, .font-heading, .font-display {
-    font-family: 'Sora', system-ui, sans-serif;
-  }
+   Every page now names a semantic token, which is correct in both themes with no
+   `dark:` variant and nothing forcing it, so the wall is gone rather than
+   commented out: `node tools/check-utilities.mjs` fails if any page has drifted
+   back to a class the preset no longer defines. `.dark` on `<html>` is a no-op
+   class now; `data-theme` is the switch.
 
-  input, select, textarea, button {
-    font-family: inherit;
-  }
+   The scrollbar and focus-ring rules the wall duplicated live in
+   `shared/tokens.css` now, unprefixed and shared with the student portal. */
 
-  *:focus-visible {
-    outline: 2px solid #4F46E5;
-    outline-offset: 2px;
-  }
-}
-
-/* ── Light Mode Default Custom Properties ───────────────────── */
-#admin-root {
-  --admin-bg: #F7F8FC;
-  --admin-sidebar: #FFFFFF;
-  --admin-header: #FFFFFF;
-  --admin-card: #FFFFFF;
-  --admin-card-elevated: #FFFFFF;
-  --admin-input: #FFFFFF;
-  --admin-border: #E4E7F2;
-  --admin-border-subtle: #F1F5F9;
-  --admin-text: #0F172A;
-  --admin-text-secondary: #475569;
-  --admin-text-muted: #94A3B8;
-  --admin-accent: #E11D48;
-  --admin-primary: #4F46E5;
-  --admin-table-row: #FFFFFF;
-  --admin-table-hover: #F7F8FC;
-}
-
-/* ── Professional Deep-Dark Surface System (Admin Scoped) ────── */
-#admin-root.dark {
-  --admin-bg: #090B10;
-  --admin-sidebar: #0D1016;
-  --admin-header: #0B0E14;
-  --admin-card: #11151C;
-  --admin-card-elevated: #151A22;
-  --admin-input: #0D1117;
-  --admin-border: #252B35;
-  --admin-border-subtle: rgba(255, 255, 255, 0.08);
-  --admin-text: #F3F5F7;
-  --admin-text-secondary: #9BA3AF;
-  --admin-text-muted: #6F7785;
-  --admin-accent: #F43F5E;
-  --admin-primary: #6366F1;
-  --admin-table-row: #11151C;
-  --admin-table-hover: #151A22;
-}
-
-#admin-root.dark {
-  background-color: var(--admin-bg) !important;
-  color: var(--admin-text) !important;
-}
-
-#admin-root.dark header {
-  background-color: var(--admin-header) !important;
-  border-color: var(--admin-border) !important;
-}
-
-#admin-root.dark aside {
-  background-color: var(--admin-sidebar) !important;
-  border-color: var(--admin-border) !important;
-}
-
-/* Cards & Modals */
-#admin-root.dark .bg-white,
-#admin-root.dark .bg-surface-card {
-  background-color: var(--admin-card) !important;
-}
-
-/* Insets & Search bars */
-#admin-root.dark .bg-\[\#f8fafc\],
-#admin-root.dark .bg-\[\#fafafa\],
-#admin-root.dark .bg-neutral-50,
-#admin-root.dark .bg-slate-50,
-#admin-root.dark .bg-gray-50 {
-  background-color: var(--admin-input) !important;
-}
-
-#admin-root.dark .bg-neutral-100,
-#admin-root.dark .bg-slate-100,
-#admin-root.dark .bg-gray-100 {
-  background-color: var(--admin-card-elevated) !important;
-}
-
-/* Borders */
-#admin-root.dark .border-neutral-200,
-#admin-root.dark .border-slate-200,
-#admin-root.dark .border-gray-200,
-#admin-root.dark .border-neutral-100,
-#admin-root.dark .border-slate-100,
-#admin-root.dark .border-\[\#E2E8F0\],
-#admin-root.dark .border-\[\#CBD5E1\] {
-  border-color: var(--admin-border) !important;
-}
-
-#admin-root.dark .border-dashed {
-  border-color: var(--admin-border) !important;
-}
-
-/* Text Hierarchy */
-#admin-root.dark .text-neutral-900,
-#admin-root.dark .text-slate-900,
-#admin-root.dark .text-gray-900,
-#admin-root.dark .text-\[\#0B192C\],
-#admin-root.dark .text-\[\#0F172A\],
-#admin-root.dark .text-black {
-  color: var(--admin-text) !important;
-}
-
-#admin-root.dark .text-neutral-800,
-#admin-root.dark .text-neutral-700,
-#admin-root.dark .text-neutral-600,
-#admin-root.dark .text-slate-700,
-#admin-root.dark .text-slate-600 {
-  color: var(--admin-text-secondary) !important;
-}
-
-#admin-root.dark .text-neutral-500,
-#admin-root.dark .text-neutral-400,
-#admin-root.dark .text-slate-500,
-#admin-root.dark .text-slate-400 {
-  color: var(--admin-text-muted) !important;
-}
-
-/* Form Controls */
-#admin-root.dark input,
-#admin-root.dark select,
-#admin-root.dark textarea {
-  background-color: var(--admin-input) !important;
-  border-color: var(--admin-border) !important;
-  color: var(--admin-text) !important;
-}
-
-#admin-root.dark input::placeholder,
-#admin-root.dark textarea::placeholder {
-  color: var(--admin-text-muted) !important;
-}
-
-#admin-root.dark input:focus,
-#admin-root.dark select:focus,
-#admin-root.dark textarea:focus {
-  border-color: var(--admin-accent) !important;
-  box-shadow: 0 0 0 1px var(--admin-accent) !important;
-  outline: none !important;
-}
-
-/* Tables */
-#admin-root.dark table {
-  background-color: var(--admin-card) !important;
-  color: var(--admin-text) !important;
-}
-
-#admin-root.dark thead,
-#admin-root.dark thead tr,
-#admin-root.dark thead th {
-  background-color: var(--admin-card-elevated) !important;
-  color: var(--admin-text-secondary) !important;
-  border-color: var(--admin-border) !important;
-}
-
-#admin-root.dark tbody tr {
-  background-color: var(--admin-card) !important;
-  border-color: var(--admin-border) !important;
-  color: var(--admin-text) !important;
-}
-
-#admin-root.dark tbody tr:hover {
-  background-color: var(--admin-card-elevated) !important;
-}
-
-#admin-root.dark td {
-  border-color: var(--admin-border) !important;
-}
-
-/* Modals & Dropdown Elevation */
-#admin-root.dark .shadow-xl,
-#admin-root.dark .shadow-2xl {
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.6), 0 8px 10px -6px rgba(0, 0, 0, 0.5) !important;
-}
-
-/* Status Badges in Dark Mode (Subtle tints) */
-#admin-root.dark .bg-emerald-50,
-#admin-root.dark .bg-emerald-100 {
-  background-color: rgba(16, 185, 129, 0.12) !important;
-  color: #34D399 !important;
-}
-
-#admin-root.dark .bg-amber-50,
-#admin-root.dark .bg-amber-100 {
-  background-color: rgba(245, 158, 11, 0.12) !important;
-  color: #FBBF24 !important;
-}
-
-#admin-root.dark .bg-red-50,
-#admin-root.dark .bg-red-100 {
-  background-color: rgba(220, 38, 38, 0.15) !important;
-  color: #F87171 !important;
-}
-
-#admin-root.dark .bg-blue-50,
-#admin-root.dark .bg-blue-100 {
-  background-color: rgba(59, 130, 246, 0.12) !important;
-  color: #60A5FA !important;
-}
-
-#admin-root.dark .bg-purple-50,
-#admin-root.dark .bg-purple-100 {
-  background-color: rgba(168, 85, 247, 0.12) !important;
-  color: #C084FC !important;
-}
-
-/* Dark Scrollbars */
-@keyframes indeterminate-progress {
-  0% {
-    left: -35%;
-    width: 35%;
-  }
-  50% {
-    left: 40%;
-    width: 50%;
-  }
-  100% {
-    left: 100%;
-    width: 25%;
-  }
-}
-.animate-indeterminate {
-  animation: indeterminate-progress 1.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-}
-
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: #F7F8FC; }
-::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
-
-#admin-root.dark ::-webkit-scrollbar-track {
-  background: #090B10;
-}
-#admin-root.dark ::-webkit-scrollbar-thumb {
-  background: #252B35;
-}
-#admin-root.dark ::-webkit-scrollbar-thumb:hover {
-  background: #374151;
-}
-
-/* Responsive Table Container */
+/* ── Responsive table container ─────────────────────────────
+   Identical to the shim in web/src/index.css; both apps need it and neither
+   wants a dependency for six lines. */
 .table-responsive {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;

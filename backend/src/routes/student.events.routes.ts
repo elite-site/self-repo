@@ -15,7 +15,7 @@ router.get('/', async (req: Request, res: Response) => {
       where: { id: studentId }
     });
     if (!student) return res.status(404).json({ error: 'NOT_FOUND', message: 'Student not found' });
-    
+
     const events = await prisma.event.findMany({
       where: { status: 'OPEN' },
       orderBy: { createdAt: 'desc' }

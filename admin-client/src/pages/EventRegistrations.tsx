@@ -285,37 +285,37 @@ export const EventRegistrations: React.FC = () => {
     switch (status) {
       case 'CONFIRMED':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-            <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Confirmed
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-status-bg-approved text-status-approved border border-edge">
+            <CheckCircle2 className="w-3 h-3 text-status-approved" /> Confirmed
           </span>
         );
       case 'PENDING':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
-            <Clock className="w-3 h-3 text-amber-600" /> Pending Review
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-status-bg-pending text-status-pending border border-edge">
+            <Clock className="w-3 h-3 text-status-pending" /> Pending Review
           </span>
         );
       case 'WAITLISTED':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-sky-50 text-sky-700 border border-sky-200">
-            <UserCheck className="w-3 h-3 text-sky-600" /> Waitlisted
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-status-bg-approved text-status-approved border border-edge">
+            <UserCheck className="w-3 h-3 text-status-approved" /> Waitlisted
           </span>
         );
       case 'CANCELLED':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
-            <X className="w-3 h-3 text-slate-500" /> Cancelled
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-surface-sunken text-ink-secondary border border-edge">
+            <X className="w-3 h-3 text-ink-muted" /> Cancelled
           </span>
         );
       case 'REJECTED':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
-            <XCircle className="w-3 h-3 text-rose-600" /> Rejected
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-status-bg-rejected text-status-rejected border border-edge">
+            <XCircle className="w-3 h-3 text-status-rejected" /> Rejected
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700">
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-surface-sunken text-ink-secondary">
             {status}
           </span>
         );
@@ -326,25 +326,25 @@ export const EventRegistrations: React.FC = () => {
     switch (status) {
       case 'COMPLETE':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-status-bg-approved text-status-approved border border-edge">
             <CheckCircle2 className="w-3 h-3" /> Complete
           </span>
         );
       case 'ACTIVE':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-status-bg-approved text-status-approved border border-edge">
             <Sparkles className="w-3 h-3" /> Active
           </span>
         );
       case 'FORMING':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-status-bg-pending text-status-pending border border-edge">
             <Clock className="w-3 h-3" /> Forming
           </span>
         );
       case 'REJECTED':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-status-bg-rejected text-status-rejected border border-edge">
             <XCircle className="w-3 h-3" /> Rejected
           </span>
         );
@@ -356,21 +356,21 @@ export const EventRegistrations: React.FC = () => {
   return (
     <div className="space-y-6 text-left">
       {/* 1. TOP HEADER & VIEW TOGGLES */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-neutral-900 p-6 rounded-2xl border border-[#E2E8F0] dark:border-neutral-800 shadow-xs">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-surface p-6 rounded-2xl border border-edge shadow-xs">
         <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 rounded-xl bg-red-50 dark:bg-red-950/40 text-[#DC2626] flex items-center justify-center shrink-0 border border-red-100 dark:border-red-900/50">
+          <div className="w-12 h-12 rounded-xl bg-status-bg-rejected text-status-rejected flex items-center justify-center shrink-0 border border-edge">
             <Layers className="w-6 h-6" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl sm:text-2xl font-black text-[#0B192C] dark:text-neutral-100">
+              <h1 className="text-xl sm:text-2xl font-black text-ink">
                 Event Registrations
               </h1>
-              <span className="px-2 py-0.5 text-[10px] font-extrabold uppercase rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400">
+              <span className="px-2 py-0.5 text-[10px] font-extrabold uppercase rounded bg-surface-sunken text-ink-secondary">
                 ADM-08 / ADM-09
               </span>
             </div>
-            <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+            <p className="text-xs text-ink-muted mt-0.5">
               Operational participant management, custom questionnaire review, and team administration.
             </p>
           </div>
@@ -379,7 +379,7 @@ export const EventRegistrations: React.FC = () => {
         {/* Header Actions */}
         <div className="flex items-center gap-2.5 flex-wrap">
           {/* View switcher pills */}
-          <div className="flex items-center bg-neutral-100 dark:bg-neutral-800 p-1 rounded-xl border border-neutral-200 dark:border-neutral-700">
+          <div className="flex items-center bg-surface-sunken p-1 rounded-xl border border-edge">
             <button
               onClick={() => {
                 setActiveView('table');
@@ -387,13 +387,13 @@ export const EventRegistrations: React.FC = () => {
               }}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
                 activeView === 'table'
-                  ? 'bg-white dark:bg-neutral-900 text-[#0B192C] dark:text-white shadow-xs'
-                  : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-200'
+                  ? 'bg-surface text-ink shadow-xs'
+                  : 'text-ink-muted hover:text-ink'
               }`}
             >
               <Layers className="w-3.5 h-3.5" />
               <span>Registrations</span>
-              <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-neutral-200 dark:bg-neutral-700">
+              <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-surface-inset">
                 {stats.total}
               </span>
             </button>
@@ -404,13 +404,13 @@ export const EventRegistrations: React.FC = () => {
               }}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
                 activeView === 'teams'
-                  ? 'bg-white dark:bg-neutral-900 text-[#0B192C] dark:text-white shadow-xs'
-                  : 'text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-200'
+                  ? 'bg-surface text-ink shadow-xs'
+                  : 'text-ink-muted hover:text-ink'
               }`}
             >
               <Users className="w-3.5 h-3.5" />
               <span>Team View</span>
-              <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-neutral-200 dark:bg-neutral-700">
+              <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-surface-inset">
                 {stats.totalTeams}
               </span>
             </button>
@@ -422,14 +422,14 @@ export const EventRegistrations: React.FC = () => {
               else fetchTeams();
             }}
             title="Refresh list"
-            className="p-2 border border-[#E2E8F0] dark:border-neutral-700 rounded-xl hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-300 transition-colors cursor-pointer"
+            className="p-2 border border-edge rounded-xl hover:bg-surface-sunken text-ink-secondary transition-colors cursor-pointer"
           >
             <RefreshCw className={`w-4 h-4 ${loading || teamsLoading ? 'animate-spin' : ''}`} />
           </button>
 
           <button
             onClick={handleExport}
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-[#0B192C] hover:bg-[#1E293B] text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-surface-inverse text-ink-inverse hover:opacity-90 rounded-xl text-xs font-bold transition-colors shadow-xs cursor-pointer"
           >
             <Download className="w-3.5 h-3.5" />
             <span>Export Excel</span>
@@ -439,87 +439,87 @@ export const EventRegistrations: React.FC = () => {
 
       {/* 2. STATS OVERVIEW CARDS */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        <div className="bg-white dark:bg-neutral-900 p-4 rounded-xl border border-[#E2E8F0] dark:border-neutral-800">
+        <div className="bg-surface p-4 rounded-xl border border-edge">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">Total</span>
-            <Layers className="w-4 h-4 text-blue-500" />
+            <span className="text-[11px] font-bold text-ink-muted uppercase tracking-wider">Total</span>
+            <Layers className="w-4 h-4 text-status-approved" />
           </div>
-          <div className="text-2xl font-black text-[#0B192C] dark:text-neutral-100 mt-2">
+          <div className="text-2xl font-black text-ink mt-2">
             {stats.total}
           </div>
-          <div className="text-[10px] text-neutral-400 mt-0.5">All applications</div>
+          <div className="text-[10px] text-ink-muted mt-0.5">All applications</div>
         </div>
 
-        <div className="bg-white dark:bg-neutral-900 p-4 rounded-xl border border-[#E2E8F0] dark:border-neutral-800">
+        <div className="bg-surface p-4 rounded-xl border border-edge">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">Confirmed</span>
-            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+            <span className="text-[11px] font-bold text-ink-muted uppercase tracking-wider">Confirmed</span>
+            <CheckCircle2 className="w-4 h-4 text-status-approved" />
           </div>
-          <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-2">
+          <div className="text-2xl font-black text-status-approved mt-2">
             {stats.confirmed}
           </div>
-          <div className="text-[10px] text-emerald-600/80 font-medium mt-0.5">Approved & active</div>
+          <div className="text-[10px] text-status-approved/80 font-medium mt-0.5">Approved & active</div>
         </div>
 
-        <div className="bg-white dark:bg-neutral-900 p-4 rounded-xl border border-[#E2E8F0] dark:border-neutral-800">
+        <div className="bg-surface p-4 rounded-xl border border-edge">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">Pending</span>
-            <Clock className="w-4 h-4 text-amber-500" />
+            <span className="text-[11px] font-bold text-ink-muted uppercase tracking-wider">Pending</span>
+            <Clock className="w-4 h-4 text-status-pending" />
           </div>
-          <div className="text-2xl font-black text-amber-600 dark:text-amber-400 mt-2">
+          <div className="text-2xl font-black text-status-pending mt-2">
             {stats.pending}
           </div>
-          <div className="text-[10px] text-amber-600/80 font-medium mt-0.5">Requires review</div>
+          <div className="text-[10px] text-status-pending/80 font-medium mt-0.5">Requires review</div>
         </div>
 
-        <div className="bg-white dark:bg-neutral-900 p-4 rounded-xl border border-[#E2E8F0] dark:border-neutral-800">
+        <div className="bg-surface p-4 rounded-xl border border-edge">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">Waitlist</span>
-            <UserCheck className="w-4 h-4 text-sky-500" />
+            <span className="text-[11px] font-bold text-ink-muted uppercase tracking-wider">Waitlist</span>
+            <UserCheck className="w-4 h-4 text-status-approved" />
           </div>
-          <div className="text-2xl font-black text-sky-600 dark:text-sky-400 mt-2">
+          <div className="text-2xl font-black text-status-approved mt-2">
             {stats.waitlisted}
           </div>
-          <div className="text-[10px] text-sky-600/80 font-medium mt-0.5">Backup roster</div>
+          <div className="text-[10px] text-status-approved/80 font-medium mt-0.5">Backup roster</div>
         </div>
 
-        <div className="bg-white dark:bg-neutral-900 p-4 rounded-xl border border-[#E2E8F0] dark:border-neutral-800">
+        <div className="bg-surface p-4 rounded-xl border border-edge">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">Cancelled</span>
-            <X className="w-4 h-4 text-slate-400" />
+            <span className="text-[11px] font-bold text-ink-muted uppercase tracking-wider">Cancelled</span>
+            <X className="w-4 h-4 text-ink-muted" />
           </div>
-          <div className="text-2xl font-black text-slate-600 dark:text-slate-400 mt-2">
+          <div className="text-2xl font-black text-ink-secondary mt-2">
             {stats.cancelled + stats.rejected}
           </div>
-          <div className="text-[10px] text-slate-400 mt-0.5">Withdrawn/rejected</div>
+          <div className="text-[10px] text-ink-muted mt-0.5">Withdrawn/rejected</div>
         </div>
 
-        <div className="bg-white dark:bg-neutral-900 p-4 rounded-xl border border-[#E2E8F0] dark:border-neutral-800">
+        <div className="bg-surface p-4 rounded-xl border border-edge">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">Teams</span>
-            <Users className="w-4 h-4 text-purple-500" />
+            <span className="text-[11px] font-bold text-ink-muted uppercase tracking-wider">Teams</span>
+            <Users className="w-4 h-4 text-status-review" />
           </div>
-          <div className="text-2xl font-black text-purple-600 dark:text-purple-400 mt-2">
+          <div className="text-2xl font-black text-status-review mt-2">
             {stats.totalTeams}
           </div>
-          <div className="text-[10px] text-purple-600/80 font-medium mt-0.5">
+          <div className="text-[10px] text-status-review/80 font-medium mt-0.5">
             {stats.completedTeams} completed
           </div>
         </div>
       </div>
 
       {/* 3. FILTERS & SEARCH TOOLBAR */}
-      <div className="bg-white dark:bg-neutral-900 p-4 rounded-2xl border border-[#E2E8F0] dark:border-neutral-800 space-y-3 shadow-xs">
+      <div className="bg-surface p-4 rounded-2xl border border-edge space-y-3 shadow-xs">
         <form onSubmit={handleSearchSubmit} className="flex flex-col md:flex-row gap-3">
           {/* Search bar */}
           <div className="relative flex-1">
-            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400" />
+            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-muted" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search by student name, roll number, email, or team name..."
-              className="w-full pl-10 pr-4 py-2 text-xs bg-neutral-50 dark:bg-neutral-800/60 border border-neutral-200 dark:border-neutral-700 rounded-xl focus:outline-none focus:border-[#DC2626] dark:text-white"
+              className="w-full pl-10 pr-4 py-2 text-xs bg-surface-sunken border border-edge rounded-xl focus:outline-none focus:border-status-rejected"
             />
           </div>
 
@@ -531,7 +531,7 @@ export const EventRegistrations: React.FC = () => {
                 setSelectedEventId(e.target.value);
                 setPage(1);
               }}
-              className="px-3 py-2 text-xs font-semibold bg-neutral-50 dark:bg-neutral-800/60 border border-neutral-200 dark:border-neutral-700 rounded-xl text-[#0B192C] dark:text-neutral-200 focus:outline-none focus:border-[#DC2626]"
+              className="px-3 py-2 text-xs font-semibold bg-surface-sunken border border-edge rounded-xl text-ink focus:outline-none focus:border-status-rejected"
             >
               <option value="all">All Events</option>
               {events.map((ev) => (
@@ -548,7 +548,7 @@ export const EventRegistrations: React.FC = () => {
                 setSelectedStatus(e.target.value);
                 setPage(1);
               }}
-              className="px-3 py-2 text-xs font-semibold bg-neutral-50 dark:bg-neutral-800/60 border border-neutral-200 dark:border-neutral-700 rounded-xl text-[#0B192C] dark:text-neutral-200 focus:outline-none focus:border-[#DC2626]"
+              className="px-3 py-2 text-xs font-semibold bg-surface-sunken border border-edge rounded-xl text-ink focus:outline-none focus:border-status-rejected"
             >
               <option value="ALL">All Statuses</option>
               <option value="CONFIRMED">Confirmed</option>
@@ -565,7 +565,7 @@ export const EventRegistrations: React.FC = () => {
                 setSelectedYear(e.target.value);
                 setPage(1);
               }}
-              className="px-3 py-2 text-xs font-semibold bg-neutral-50 dark:bg-neutral-800/60 border border-neutral-200 dark:border-neutral-700 rounded-xl text-[#0B192C] dark:text-neutral-200 focus:outline-none focus:border-[#DC2626]"
+              className="px-3 py-2 text-xs font-semibold bg-surface-sunken border border-edge rounded-xl text-ink focus:outline-none focus:border-status-rejected"
             >
               <option value="ALL">All Years</option>
               <option value="1">Year 1</option>
@@ -581,7 +581,7 @@ export const EventRegistrations: React.FC = () => {
                 setSelectedSection(e.target.value);
                 setPage(1);
               }}
-              className="px-3 py-2 text-xs font-semibold bg-neutral-50 dark:bg-neutral-800/60 border border-neutral-200 dark:border-neutral-700 rounded-xl text-[#0B192C] dark:text-neutral-200 focus:outline-none focus:border-[#DC2626]"
+              className="px-3 py-2 text-xs font-semibold bg-surface-sunken border border-edge rounded-xl text-ink focus:outline-none focus:border-status-rejected"
             >
               <option value="ALL">All Sections</option>
               <option value="A">Section A</option>
@@ -597,7 +597,7 @@ export const EventRegistrations: React.FC = () => {
                 setSelectedTeamFilter(e.target.value as any);
                 setPage(1);
               }}
-              className="px-3 py-2 text-xs font-semibold bg-neutral-50 dark:bg-neutral-800/60 border border-neutral-200 dark:border-neutral-700 rounded-xl text-[#0B192C] dark:text-neutral-200 focus:outline-none focus:border-[#DC2626]"
+              className="px-3 py-2 text-xs font-semibold bg-surface-sunken border border-edge rounded-xl text-ink focus:outline-none focus:border-status-rejected"
             >
               <option value="all">Team & Solo</option>
               <option value="team">In Team</option>
@@ -608,7 +608,7 @@ export const EventRegistrations: React.FC = () => {
               <button
                 type="button"
                 onClick={handleResetFilters}
-                className="px-3 py-2 text-xs font-bold text-[#DC2626] hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl transition-colors cursor-pointer"
+                className="px-3 py-2 text-xs font-bold text-status-rejected hover:bg-status-bg-rejected rounded-xl transition-colors cursor-pointer"
               >
                 Reset
               </button>
@@ -620,33 +620,33 @@ export const EventRegistrations: React.FC = () => {
       {/* 4. MAIN CONTENT VIEW: TABLE OR TEAMS */}
       {activeView === 'table' ? (
         /* TABLE VIEW */
-        <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-[#E2E8F0] dark:border-neutral-800 overflow-hidden shadow-xs">
+        <div className="bg-surface rounded-2xl border border-edge overflow-hidden shadow-xs">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-20 gap-3">
-              <Loader2 className="w-8 h-8 animate-spin text-[#DC2626]" />
-              <span className="text-xs text-neutral-400 font-medium">Loading registrations...</span>
+              <Loader2 className="w-8 h-8 animate-spin text-status-rejected" />
+              <span className="text-xs text-ink-muted font-medium">Loading registrations...</span>
             </div>
           ) : error ? (
             <div className="flex flex-col items-center justify-center py-16 gap-3 text-center px-4">
-              <AlertCircle className="w-10 h-10 text-rose-500" />
-              <h3 className="font-bold text-sm text-[#0B192C] dark:text-neutral-200">
+              <AlertCircle className="w-10 h-10 text-status-rejected" />
+              <h3 className="font-bold text-sm text-ink">
                 Failed to load registrations
               </h3>
-              <p className="text-xs text-neutral-400 max-w-sm">{error}</p>
+              <p className="text-xs text-ink-muted max-w-sm">{error}</p>
               <button
                 onClick={fetchRegistrations}
-                className="px-4 py-2 bg-[#DC2626] text-white text-xs font-bold rounded-xl hover:bg-red-700 cursor-pointer"
+                className="px-4 py-2 bg-status-solid-rejected text-on-primary text-xs font-bold rounded-xl hover:bg-brand cursor-pointer"
               >
                 Try Again
               </button>
             </div>
           ) : registrations.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 gap-3 text-center px-4">
-              <Layers className="w-12 h-12 text-neutral-300 dark:text-neutral-700" />
-              <h3 className="font-bold text-sm text-[#0B192C] dark:text-neutral-200">
+              <Layers className="w-12 h-12 text-ink-muted" />
+              <h3 className="font-bold text-sm text-ink">
                 No registrations found
               </h3>
-              <p className="text-xs text-neutral-400 max-w-sm">
+              <p className="text-xs text-ink-muted max-w-sm">
                 {hasActiveFilters
                   ? 'No registrations match the selected filters. Try broadening your criteria.'
                   : 'No students have registered for this event yet.'}
@@ -654,7 +654,7 @@ export const EventRegistrations: React.FC = () => {
               {hasActiveFilters && (
                 <button
                   onClick={handleResetFilters}
-                  className="px-3.5 py-1.5 text-xs font-bold text-[#DC2626] border border-red-200 rounded-lg hover:bg-red-50 cursor-pointer"
+                  className="px-3.5 py-1.5 text-xs font-bold text-status-rejected border border-edge rounded-lg hover:bg-status-bg-rejected cursor-pointer"
                 >
                   Clear Filters
                 </button>
@@ -664,7 +664,7 @@ export const EventRegistrations: React.FC = () => {
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse text-xs">
                 <thead>
-                  <tr className="bg-neutral-50 dark:bg-neutral-800/50 border-b border-[#E2E8F0] dark:border-neutral-800 text-neutral-500 dark:text-neutral-400 font-bold uppercase tracking-wider">
+                  <tr className="bg-surface-sunken border-b border-edge text-ink-muted font-bold uppercase tracking-wider">
                     <th className="py-3.5 px-4">Student</th>
                     <th className="py-3.5 px-4">Academic</th>
                     <th className="py-3.5 px-4">Event</th>
@@ -675,7 +675,7 @@ export const EventRegistrations: React.FC = () => {
                     <th className="py-3.5 px-4 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#E2E8F0] dark:divide-neutral-800">
+                <tbody className="divide-y divide-edge">
                   {registrations.map((reg) => {
                     const initials = reg.student.name
                       ? reg.student.name
@@ -690,19 +690,19 @@ export const EventRegistrations: React.FC = () => {
                     return (
                       <tr
                         key={reg.id}
-                        className="hover:bg-neutral-50/80 dark:hover:bg-neutral-800/40 transition-colors"
+                        className="hover:bg-surface-sunken/80 transition-colors"
                       >
                         {/* Student Info */}
                         <td className="py-3.5 px-4">
                           <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-red-100 dark:bg-red-950/60 text-[#DC2626] font-black flex items-center justify-center text-[11px] shrink-0 border border-red-200 dark:border-red-900/40">
+                            <div className="w-8 h-8 rounded-full bg-status-bg-rejected text-status-rejected font-black flex items-center justify-center text-[11px] shrink-0 border border-edge">
                               {initials}
                             </div>
                             <div className="min-w-0">
-                              <div className="font-bold text-[#0B192C] dark:text-neutral-100 truncate max-w-[180px]">
+                              <div className="font-bold text-ink truncate max-w-[180px]">
                                 {reg.student.name}
                               </div>
-                              <div className="text-[11px] font-mono font-semibold text-neutral-500 dark:text-neutral-400">
+                              <div className="text-[11px] font-mono font-semibold text-ink-muted">
                                 {reg.student.rollNo}
                               </div>
                             </div>
@@ -711,28 +711,28 @@ export const EventRegistrations: React.FC = () => {
 
                         {/* Year & Section */}
                         <td className="py-3.5 px-4">
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-md font-semibold text-[11px] bg-slate-100 dark:bg-neutral-800 text-slate-700 dark:text-neutral-300">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-md font-semibold text-[11px] bg-surface-sunken text-ink-secondary">
                             Y{reg.student.year} · Sec {reg.student.section}
                           </span>
                         </td>
 
                         {/* Event */}
                         <td className="py-3.5 px-4">
-                          <div className="font-semibold text-neutral-800 dark:text-neutral-200 truncate max-w-[150px]">
+                          <div className="font-semibold text-ink truncate max-w-[150px]">
                             {reg.event.name}
                           </div>
-                          <div className="text-[10px] text-neutral-400">{reg.event.year}</div>
+                          <div className="text-[10px] text-ink-muted">{reg.event.year}</div>
                         </td>
 
                         {/* Participation (Team or Solo) */}
                         <td className="py-3.5 px-4">
                           {reg.team ? (
-                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-900/50">
-                              <Users className="w-3 h-3 text-purple-600" />
+                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-status-bg-review text-status-review border border-edge">
+                              <Users className="w-3 h-3 text-status-review" />
                               <span className="truncate max-w-[120px]">{reg.team.name}</span>
                             </div>
                           ) : (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-neutral-100 dark:bg-neutral-800 text-neutral-500">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-surface-sunken text-ink-muted">
                               Solo
                             </span>
                           )}
@@ -743,13 +743,13 @@ export const EventRegistrations: React.FC = () => {
                           {reg.answers && reg.answers.length > 0 ? (
                             <button
                               onClick={() => setSelectedRegistration(reg)}
-                              className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                              className="inline-flex items-center gap-1 text-[11px] font-semibold text-status-approved hover:underline cursor-pointer"
                             >
                               <HelpCircle className="w-3 h-3" />
                               <span>{reg.answers.length} answers</span>
                             </button>
                           ) : (
-                            <span className="text-[11px] text-neutral-400">None</span>
+                            <span className="text-[11px] text-ink-muted">None</span>
                           )}
                         </td>
 
@@ -757,7 +757,7 @@ export const EventRegistrations: React.FC = () => {
                         <td className="py-3.5 px-4">{renderStatusBadge(reg.status)}</td>
 
                         {/* Registered Date */}
-                        <td className="py-3.5 px-4 text-neutral-500 dark:text-neutral-400 whitespace-nowrap">
+                        <td className="py-3.5 px-4 text-ink-muted whitespace-nowrap">
                           {new Date(reg.registeredAt).toLocaleDateString(undefined, {
                             month: 'short',
                             day: 'numeric',
@@ -771,7 +771,7 @@ export const EventRegistrations: React.FC = () => {
                             <button
                               onClick={() => setSelectedRegistration(reg)}
                               title="View Registration Details"
-                              className="p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-300 rounded-lg cursor-pointer transition-colors"
+                              className="p-1.5 hover:bg-surface-sunken text-ink-secondary rounded-lg cursor-pointer transition-colors"
                             >
                               <Eye className="w-4 h-4" />
                             </button>
@@ -781,7 +781,7 @@ export const EventRegistrations: React.FC = () => {
                               <button
                                 onClick={() => handleUpdateStatus(reg.id, 'CONFIRMED')}
                                 title="Approve / Confirm"
-                                className="p-1.5 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 text-emerald-600 rounded-lg cursor-pointer transition-colors"
+                                className="p-1.5 hover:bg-status-bg-approved text-status-approved rounded-lg cursor-pointer transition-colors"
                               >
                                 <Check className="w-4 h-4" />
                               </button>
@@ -791,7 +791,7 @@ export const EventRegistrations: React.FC = () => {
                               <button
                                 onClick={() => handleUpdateStatus(reg.id, 'WAITLISTED')}
                                 title="Move to Waitlist"
-                                className="p-1.5 hover:bg-sky-50 dark:hover:bg-sky-950/30 text-sky-600 rounded-lg cursor-pointer transition-colors"
+                                className="p-1.5 hover:bg-status-bg-approved text-status-approved rounded-lg cursor-pointer transition-colors"
                               >
                                 <UserCheck className="w-4 h-4" />
                               </button>
@@ -801,7 +801,7 @@ export const EventRegistrations: React.FC = () => {
                               <button
                                 onClick={() => handleUpdateStatus(reg.id, 'CANCELLED')}
                                 title="Cancel Registration"
-                                className="p-1.5 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-rose-500 rounded-lg cursor-pointer transition-colors"
+                                className="p-1.5 hover:bg-status-bg-rejected text-status-rejected rounded-lg cursor-pointer transition-colors"
                               >
                                 <X className="w-4 h-4" />
                               </button>
@@ -818,13 +818,13 @@ export const EventRegistrations: React.FC = () => {
 
           {/* Pagination bar */}
           {!loading && registrations.length > 0 && (
-            <div className="p-4 border-t border-[#E2E8F0] dark:border-neutral-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-neutral-500">
+            <div className="p-4 border-t border-edge flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-ink-muted">
               <div>
-                Showing <span className="font-bold text-neutral-800 dark:text-neutral-200">{(page - 1) * limit + 1}</span> to{' '}
-                <span className="font-bold text-neutral-800 dark:text-neutral-200">
+                Showing <span className="font-bold text-ink">{(page - 1) * limit + 1}</span> to{' '}
+                <span className="font-bold text-ink">
                   {Math.min(page * limit, totalRegistrations)}
                 </span>{' '}
-                of <span className="font-bold text-neutral-800 dark:text-neutral-200">{totalRegistrations}</span>{' '}
+                of <span className="font-bold text-ink">{totalRegistrations}</span>{' '}
                 registrations
               </div>
 
@@ -832,7 +832,7 @@ export const EventRegistrations: React.FC = () => {
                 <button
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page <= 1}
-                  className="px-3 py-1.5 border border-neutral-200 dark:border-neutral-700 rounded-lg disabled:opacity-40 hover:bg-neutral-50 dark:hover:bg-neutral-800 font-semibold cursor-pointer disabled:cursor-not-allowed"
+                  className="px-3 py-1.5 border border-edge rounded-lg disabled:opacity-40 hover:bg-surface-sunken font-semibold cursor-pointer disabled:cursor-not-allowed"
                 >
                   Previous
                 </button>
@@ -842,7 +842,7 @@ export const EventRegistrations: React.FC = () => {
                 <button
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page >= totalPages}
-                  className="px-3 py-1.5 border border-neutral-200 dark:border-neutral-700 rounded-lg disabled:opacity-40 hover:bg-neutral-50 dark:hover:bg-neutral-800 font-semibold cursor-pointer disabled:cursor-not-allowed"
+                  className="px-3 py-1.5 border border-edge rounded-lg disabled:opacity-40 hover:bg-surface-sunken font-semibold cursor-pointer disabled:cursor-not-allowed"
                 >
                   Next
                 </button>
@@ -854,15 +854,15 @@ export const EventRegistrations: React.FC = () => {
         /* TEAM ADMINISTRATION VIEW (ADM-09) */
         <div className="space-y-4">
           {teamsLoading ? (
-            <div className="flex flex-col items-center justify-center py-20 bg-white dark:bg-neutral-900 rounded-2xl border border-[#E2E8F0] dark:border-neutral-800 gap-3">
-              <Loader2 className="w-8 h-8 animate-spin text-[#DC2626]" />
-              <span className="text-xs text-neutral-400 font-medium">Loading teams...</span>
+            <div className="flex flex-col items-center justify-center py-20 bg-surface rounded-2xl border border-edge gap-3">
+              <Loader2 className="w-8 h-8 animate-spin text-status-rejected" />
+              <span className="text-xs text-ink-muted font-medium">Loading teams...</span>
             </div>
           ) : teams.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 bg-white dark:bg-neutral-900 rounded-2xl border border-[#E2E8F0] dark:border-neutral-800 gap-3 text-center px-4">
-              <Users className="w-12 h-12 text-neutral-300 dark:text-neutral-700" />
-              <h3 className="font-bold text-sm text-[#0B192C] dark:text-neutral-200">No teams found</h3>
-              <p className="text-xs text-neutral-400 max-w-sm">
+            <div className="flex flex-col items-center justify-center py-20 bg-surface rounded-2xl border border-edge gap-3 text-center px-4">
+              <Users className="w-12 h-12 text-ink-muted" />
+              <h3 className="font-bold text-sm text-ink">No teams found</h3>
+              <p className="text-xs text-ink-muted max-w-sm">
                 No teams have been formed for this event matching the selected criteria.
               </p>
             </div>
@@ -875,19 +875,19 @@ export const EventRegistrations: React.FC = () => {
                 return (
                   <div
                     key={team.id}
-                    className="bg-white dark:bg-neutral-900 rounded-2xl border border-[#E2E8F0] dark:border-neutral-800 p-5 space-y-4 shadow-xs"
+                    className="bg-surface rounded-2xl border border-edge p-5 space-y-4 shadow-xs"
                   >
                     {/* Team Header */}
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <div className="flex items-center gap-2">
-                          <h3 className="font-black text-sm text-[#0B192C] dark:text-neutral-100">
+                          <h3 className="font-black text-sm text-ink">
                             {team.name}
                           </h3>
                           {renderTeamStatusBadge(team.status)}
                         </div>
-                        <div className="text-[11px] text-neutral-400 mt-0.5">
-                          Event: <span className="font-semibold text-neutral-600 dark:text-neutral-300">{team.event?.name}</span>
+                        <div className="text-[11px] text-ink-muted mt-0.5">
+                          Event: <span className="font-semibold text-ink-secondary">{team.event?.name}</span>
                         </div>
                       </div>
 
@@ -896,7 +896,7 @@ export const EventRegistrations: React.FC = () => {
                         {team.status !== 'COMPLETE' && (
                           <button
                             onClick={() => handleUpdateTeamStatus(team.id, 'COMPLETE')}
-                            className="px-2 py-1 text-[10px] font-bold rounded bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 cursor-pointer"
+                            className="px-2 py-1 text-[10px] font-bold rounded bg-status-bg-approved text-status-approved border border-edge hover:bg-status-bg-approved cursor-pointer"
                           >
                             Mark Complete
                           </button>
@@ -904,7 +904,7 @@ export const EventRegistrations: React.FC = () => {
                         {team.status !== 'ACTIVE' && team.status !== 'COMPLETE' && (
                           <button
                             onClick={() => handleUpdateTeamStatus(team.id, 'ACTIVE')}
-                            className="px-2 py-1 text-[10px] font-bold rounded bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 cursor-pointer"
+                            className="px-2 py-1 text-[10px] font-bold rounded bg-status-bg-approved text-status-approved border border-edge hover:bg-status-bg-approved cursor-pointer"
                           >
                             Activate
                           </button>
@@ -912,7 +912,7 @@ export const EventRegistrations: React.FC = () => {
                         {team.status !== 'REJECTED' && (
                           <button
                             onClick={() => handleUpdateTeamStatus(team.id, 'REJECTED')}
-                            className="px-2 py-1 text-[10px] font-bold rounded bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 cursor-pointer"
+                            className="px-2 py-1 text-[10px] font-bold rounded bg-status-bg-rejected text-status-rejected border border-edge hover:bg-status-bg-rejected cursor-pointer"
                           >
                             Reject
                           </button>
@@ -921,20 +921,20 @@ export const EventRegistrations: React.FC = () => {
                     </div>
 
                     {/* Team Leader Banner */}
-                    <div className="p-2.5 rounded-xl bg-purple-50/70 dark:bg-purple-950/20 border border-purple-100 dark:border-purple-900/40 flex items-center justify-between text-xs">
+                    <div className="p-2.5 rounded-xl bg-status-bg-review/70 border border-edge flex items-center justify-between text-xs">
                       <div className="flex items-center gap-2">
-                        <Shield className="w-3.5 h-3.5 text-purple-600" />
-                        <span className="font-bold text-purple-900 dark:text-purple-200">Leader:</span>
-                        <span className="font-semibold text-neutral-700 dark:text-neutral-300">{leaderName}</span>
+                        <Shield className="w-3.5 h-3.5 text-status-review" />
+                        <span className="font-bold text-ink">Leader:</span>
+                        <span className="font-semibold text-ink-secondary">{leaderName}</span>
                       </div>
-                      <span className="font-mono text-[11px] font-bold text-purple-700 dark:text-purple-300">
+                      <span className="font-mono text-[11px] font-bold text-status-review">
                         {leaderRoll}
                       </span>
                     </div>
 
                     {/* Members List */}
                     <div>
-                      <div className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 mb-2 flex items-center justify-between">
+                      <div className="text-[11px] font-bold uppercase tracking-wider text-ink-muted mb-2 flex items-center justify-between">
                         <span>Members ({team.members?.length || 0})</span>
                       </div>
 
@@ -945,22 +945,22 @@ export const EventRegistrations: React.FC = () => {
                             return (
                               <div
                                 key={m.id}
-                                className="flex items-center justify-between p-2 rounded-xl bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-100 dark:border-neutral-800 text-xs"
+                                className="flex items-center justify-between p-2 rounded-xl bg-surface-sunken border border-edge text-xs"
                               >
                                 <div className="flex items-center gap-2 min-w-0">
-                                  <div className="w-6 h-6 rounded-full bg-neutral-200 dark:bg-neutral-700 flex items-center justify-center text-[10px] font-bold text-neutral-600 dark:text-neutral-300 shrink-0">
+                                  <div className="w-6 h-6 rounded-full bg-surface-inset flex items-center justify-center text-[10px] font-bold text-ink-secondary shrink-0">
                                     {m.student.name?.[0] || 'M'}
                                   </div>
                                   <div className="min-w-0">
-                                    <div className="font-semibold text-[#0B192C] dark:text-neutral-200 truncate">
+                                    <div className="font-semibold text-ink truncate">
                                       {m.student.name}
                                       {isLeader && (
-                                        <span className="ml-1.5 text-[9px] font-bold uppercase px-1.5 py-0.2 rounded bg-purple-100 text-purple-700">
+                                        <span className="ml-1.5 text-[9px] font-bold uppercase px-1.5 py-0.2 rounded bg-status-bg-review text-status-review">
                                           Leader
                                         </span>
                                       )}
                                     </div>
-                                    <div className="text-[10px] font-mono text-neutral-400">
+                                    <div className="text-[10px] font-mono text-ink-muted">
                                       {m.student.rollNo} · Y{m.student.year} ({m.student.section})
                                     </div>
                                   </div>
@@ -978,7 +978,7 @@ export const EventRegistrations: React.FC = () => {
                                       })
                                     }
                                     title="Remove member from team (ADM-09)"
-                                    className="p-1 hover:bg-rose-50 text-neutral-400 hover:text-rose-600 rounded transition-colors cursor-pointer"
+                                    className="p-1 hover:bg-status-bg-rejected text-ink-muted hover:text-status-rejected rounded transition-colors cursor-pointer"
                                   >
                                     <UserMinus className="w-3.5 h-3.5" />
                                   </button>
@@ -987,24 +987,24 @@ export const EventRegistrations: React.FC = () => {
                             );
                           })
                         ) : (
-                          <div className="text-xs text-neutral-400 italic">No members yet</div>
+                          <div className="text-xs text-ink-muted italic">No members yet</div>
                         )}
                       </div>
                     </div>
 
                     {/* Pending Invitations (if any) */}
                     {team.invitations && team.invitations.length > 0 && (
-                      <div className="pt-2 border-t border-neutral-100 dark:border-neutral-800">
-                        <div className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 mb-1.5">
+                      <div className="pt-2 border-t border-edge">
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-ink-muted mb-1.5">
                           Pending Invitations ({team.invitations.length})
                         </div>
                         <div className="flex flex-wrap gap-1.5">
                           {team.invitations.map((inv) => (
                             <span
                               key={inv.id}
-                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400"
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-surface-sunken text-ink-secondary"
                             >
-                              <Clock className="w-2.5 h-2.5 text-amber-500" />
+                              <Clock className="w-2.5 h-2.5 text-status-pending" />
                               {inv.student.rollNo} ({inv.status.toLowerCase()})
                             </span>
                           ))}
@@ -1021,21 +1021,21 @@ export const EventRegistrations: React.FC = () => {
 
       {/* 5. REGISTRATION DETAIL DRAWER (ADM-08) */}
       {selectedRegistration && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex justify-end">
-          <div className="w-full max-w-lg bg-white dark:bg-neutral-900 h-full shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-right duration-200">
+        <div className="fixed inset-0 z-50 bg-on-primary/40 backdrop-blur-xs flex justify-end">
+          <div className="w-full max-w-lg bg-surface h-full shadow-2xl flex flex-col overflow-hidden animate-fade-in slide-in-from-right duration-base">
             {/* Drawer Header */}
-            <div className="p-5 border-b border-[#E2E8F0] dark:border-neutral-800 flex items-center justify-between">
+            <div className="p-5 border-b border-edge flex items-center justify-between">
               <div>
-                <h2 className="text-base font-black text-[#0B192C] dark:text-neutral-100">
+                <h2 className="text-base font-black text-ink">
                   Registration Details
                 </h2>
-                <p className="text-[11px] text-neutral-400 mt-0.5">
+                <p className="text-[11px] text-ink-muted mt-0.5">
                   ID: <span className="font-mono">{selectedRegistration.id}</span>
                 </p>
               </div>
               <button
                 onClick={() => setSelectedRegistration(null)}
-                className="p-1.5 text-neutral-400 hover:text-neutral-700 dark:hover:text-white rounded-lg cursor-pointer"
+                className="p-1.5 text-ink-muted hover:text-ink-secondary rounded-lg cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1044,34 +1044,34 @@ export const EventRegistrations: React.FC = () => {
             {/* Drawer Content */}
             <div className="flex-1 overflow-y-auto p-5 space-y-5">
               {/* Student Summary */}
-              <div className="bg-[#F8FAFC] dark:bg-neutral-800/50 p-4 rounded-xl border border-neutral-200 dark:border-neutral-700/60 space-y-3">
-                <div className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">
+              <div className="bg-surface-canvas p-4 rounded-xl border border-edge space-y-3">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-ink-muted">
                   Student Information
                 </div>
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-red-100 text-[#DC2626] font-black flex items-center justify-center text-sm shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-status-bg-rejected text-status-rejected font-black flex items-center justify-center text-sm shrink-0">
                     {selectedRegistration.student.name?.[0] || 'S'}
                   </div>
                   <div>
-                    <h3 className="font-bold text-sm text-[#0B192C] dark:text-neutral-100">
+                    <h3 className="font-bold text-sm text-ink">
                       {selectedRegistration.student.name}
                     </h3>
-                    <div className="text-xs text-neutral-500 font-mono">
+                    <div className="text-xs text-ink-muted font-mono">
                       {selectedRegistration.student.rollNo}
                     </div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-neutral-200/60 dark:border-neutral-700">
+                <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-edge/60">
                   <div>
-                    <span className="text-neutral-400">Email:</span>
-                    <div className="font-semibold text-neutral-800 dark:text-neutral-200 truncate">
+                    <span className="text-ink-muted">Email:</span>
+                    <div className="font-semibold text-ink truncate">
                       {selectedRegistration.student.email || 'N/A'}
                     </div>
                   </div>
                   <div>
-                    <span className="text-neutral-400">Class:</span>
-                    <div className="font-semibold text-neutral-800 dark:text-neutral-200">
+                    <span className="text-ink-muted">Class:</span>
+                    <div className="font-semibold text-ink">
                       Year {selectedRegistration.student.year} · Sec {selectedRegistration.student.section} (
                       {selectedRegistration.student.branch})
                     </div>
@@ -1081,23 +1081,23 @@ export const EventRegistrations: React.FC = () => {
 
               {/* Event & Registration Metadata */}
               <div className="space-y-2">
-                <div className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-ink-muted">
                   Event & Status
                 </div>
-                <div className="p-3 rounded-xl border border-[#E2E8F0] dark:border-neutral-800 space-y-2 text-xs">
+                <div className="p-3 rounded-xl border border-edge space-y-2 text-xs">
                   <div className="flex items-center justify-between">
-                    <span className="text-neutral-500">Event:</span>
-                    <span className="font-bold text-[#0B192C] dark:text-neutral-200">
+                    <span className="text-ink-muted">Event:</span>
+                    <span className="font-bold text-ink">
                       {selectedRegistration.event.name}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-neutral-500">Current Status:</span>
+                    <span className="text-ink-muted">Current Status:</span>
                     {renderStatusBadge(selectedRegistration.status)}
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-neutral-500">Registered On:</span>
-                    <span className="font-semibold text-neutral-700 dark:text-neutral-300">
+                    <span className="text-ink-muted">Registered On:</span>
+                    <span className="font-semibold text-ink-secondary">
                       {new Date(selectedRegistration.registeredAt).toLocaleString()}
                     </span>
                   </div>
@@ -1106,15 +1106,15 @@ export const EventRegistrations: React.FC = () => {
 
               {/* Team Information */}
               <div className="space-y-2">
-                <div className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-ink-muted">
                   Team Details
                 </div>
                 {selectedRegistration.team ? (
-                  <div className="p-3 rounded-xl border border-purple-200 dark:border-purple-900/50 bg-purple-50/30 dark:bg-purple-950/10 space-y-3 text-xs">
+                  <div className="p-3 rounded-xl border border-edge bg-status-bg-review/30 space-y-3 text-xs">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5">
-                        <Users className="w-4 h-4 text-purple-600" />
-                        <span className="font-black text-purple-900 dark:text-purple-200 text-sm">
+                        <Users className="w-4 h-4 text-status-review" />
+                        <span className="font-black text-ink text-sm">
                           {selectedRegistration.team.name}
                         </span>
                       </div>
@@ -1122,8 +1122,8 @@ export const EventRegistrations: React.FC = () => {
                     </div>
 
                     {selectedRegistration.team.leader && (
-                      <div className="text-xs text-neutral-600 dark:text-neutral-300">
-                        <span className="text-neutral-400">Leader:</span>{' '}
+                      <div className="text-xs text-ink-secondary">
+                        <span className="text-ink-muted">Leader:</span>{' '}
                         <span className="font-bold">{selectedRegistration.team.leader.name}</span> (
                         <span className="font-mono">{selectedRegistration.team.leader.rollNo}</span>)
                       </div>
@@ -1131,17 +1131,17 @@ export const EventRegistrations: React.FC = () => {
 
                     {selectedRegistration.team.members && (
                       <div>
-                        <span className="text-[10px] font-bold uppercase text-neutral-400 block mb-1">
+                        <span className="text-[10px] font-bold uppercase text-ink-muted block mb-1">
                           Team Members:
                         </span>
                         <div className="space-y-1">
                           {selectedRegistration.team.members.map((m) => (
                             <div
                               key={m.id}
-                              className="text-[11px] flex items-center justify-between bg-white dark:bg-neutral-800 p-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700"
+                              className="text-[11px] flex items-center justify-between bg-surface p-1.5 rounded-lg border border-edge"
                             >
                               <span>{m.student.name}</span>
-                              <span className="font-mono text-neutral-400">{m.student.rollNo}</span>
+                              <span className="font-mono text-ink-muted">{m.student.rollNo}</span>
                             </div>
                           ))}
                         </div>
@@ -1149,7 +1149,7 @@ export const EventRegistrations: React.FC = () => {
                     )}
                   </div>
                 ) : (
-                  <div className="p-3 rounded-xl border border-neutral-200 dark:border-neutral-800 text-xs text-neutral-500">
+                  <div className="p-3 rounded-xl border border-edge text-xs text-ink-muted">
                     Individual participant (Solo registration)
                   </div>
                 )}
@@ -1157,7 +1157,7 @@ export const EventRegistrations: React.FC = () => {
 
               {/* Custom Questionnaire Answers */}
               <div className="space-y-2">
-                <div className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-ink-muted">
                   Custom Registration Form Answers
                 </div>
                 {selectedRegistration.answers && selectedRegistration.answers.length > 0 ? (
@@ -1165,27 +1165,27 @@ export const EventRegistrations: React.FC = () => {
                     {selectedRegistration.answers.map((ans) => (
                       <div
                         key={ans.id}
-                        className="p-3 rounded-xl bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-200 dark:border-neutral-800 space-y-1 text-xs"
+                        className="p-3 rounded-xl bg-surface-sunken border border-edge space-y-1 text-xs"
                       >
-                        <div className="font-bold text-[#0B192C] dark:text-neutral-200">
+                        <div className="font-bold text-ink">
                           {ans.field?.label || 'Question'}
                         </div>
-                        <div className="text-neutral-700 dark:text-neutral-300 whitespace-pre-wrap font-medium">
-                          {ans.value || <span className="italic text-neutral-400">No response provided</span>}
+                        <div className="text-ink-secondary whitespace-pre-wrap font-medium">
+                          {ans.value || <span className="italic text-ink-muted">No response provided</span>}
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="p-3 rounded-xl border border-dashed border-neutral-200 dark:border-neutral-800 text-xs text-neutral-400 text-center">
+                  <div className="p-3 rounded-xl border border-dashed border-edge text-xs text-ink-muted text-center">
                     No custom questionnaire fields submitted for this event.
                   </div>
                 )}
               </div>
 
               {/* Status Action Controls */}
-              <div className="space-y-3 pt-3 border-t border-[#E2E8F0] dark:border-neutral-800">
-                <div className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">
+              <div className="space-y-3 pt-3 border-t border-edge">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-ink-muted">
                   Manage Status
                 </div>
 
@@ -1194,14 +1194,14 @@ export const EventRegistrations: React.FC = () => {
                   onChange={(e) => setStatusNote(e.target.value)}
                   placeholder="Optional audit log note / reason for status change..."
                   rows={2}
-                  className="w-full text-xs p-2.5 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl focus:outline-none focus:border-[#DC2626] resize-none"
+                  className="w-full text-xs p-2.5 bg-surface-sunken border border-edge rounded-xl focus:outline-none focus:border-status-rejected resize-none"
                 />
 
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     disabled={statusUpdateLoading || selectedRegistration.status === 'CONFIRMED'}
                     onClick={() => handleUpdateStatus(selectedRegistration.id, 'CONFIRMED')}
-                    className="flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed shadow-xs"
+                    className="flex items-center justify-center gap-1.5 px-3 py-2 bg-status-solid-approved hover:opacity-90 text-on-primary rounded-xl text-xs font-bold transition-colors disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed shadow-xs"
                   >
                     <CheckCircle2 className="w-3.5 h-3.5" /> Confirm
                   </button>
@@ -1209,7 +1209,7 @@ export const EventRegistrations: React.FC = () => {
                   <button
                     disabled={statusUpdateLoading || selectedRegistration.status === 'WAITLISTED'}
                     onClick={() => handleUpdateStatus(selectedRegistration.id, 'WAITLISTED')}
-                    className="flex items-center justify-center gap-1.5 px-3 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-bold transition-all disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed shadow-xs"
+                    className="flex items-center justify-center gap-1.5 px-3 py-2 bg-status-solid-approved hover:opacity-90 text-on-primary rounded-xl text-xs font-bold transition-colors disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed shadow-xs"
                   >
                     <UserCheck className="w-3.5 h-3.5" /> Waitlist
                   </button>
@@ -1217,7 +1217,7 @@ export const EventRegistrations: React.FC = () => {
                   <button
                     disabled={statusUpdateLoading || selectedRegistration.status === 'CANCELLED'}
                     onClick={() => handleUpdateStatus(selectedRegistration.id, 'CANCELLED')}
-                    className="flex items-center justify-center gap-1.5 px-3 py-2 bg-neutral-600 hover:bg-neutral-700 text-white rounded-xl text-xs font-bold transition-all disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed shadow-xs"
+                    className="flex items-center justify-center gap-1.5 px-3 py-2 bg-surface-inverse text-ink-inverse hover:opacity-90 rounded-xl text-xs font-bold transition-colors disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed shadow-xs"
                   >
                     <X className="w-3.5 h-3.5" /> Cancel
                   </button>
@@ -1225,7 +1225,7 @@ export const EventRegistrations: React.FC = () => {
                   <button
                     disabled={statusUpdateLoading || selectedRegistration.status === 'REJECTED'}
                     onClick={() => handleUpdateStatus(selectedRegistration.id, 'REJECTED')}
-                    className="flex items-center justify-center gap-1.5 px-3 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed shadow-xs"
+                    className="flex items-center justify-center gap-1.5 px-3 py-2 bg-status-solid-rejected hover:opacity-90 text-on-primary rounded-xl text-xs font-bold transition-colors disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed shadow-xs"
                   >
                     <XCircle className="w-3.5 h-3.5" /> Reject
                   </button>
@@ -1233,10 +1233,10 @@ export const EventRegistrations: React.FC = () => {
               </div>
 
               {/* Danger Zone */}
-              <div className="pt-4 border-t border-[#E2E8F0] dark:border-neutral-800">
+              <div className="pt-4 border-t border-edge">
                 <button
                   onClick={() => handleDeleteRegistration(selectedRegistration.id)}
-                  className="w-full flex items-center justify-center gap-1.5 px-3 py-2 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                  className="w-full flex items-center justify-center gap-1.5 px-3 py-2 text-status-rejected hover:bg-status-bg-rejected rounded-xl text-xs font-bold transition-colors cursor-pointer"
                 >
                   <Trash2 className="w-3.5 h-3.5" /> Delete Registration Record
                 </button>
@@ -1248,28 +1248,28 @@ export const EventRegistrations: React.FC = () => {
 
       {/* 6. REMOVE TEAM MEMBER DIALOG (ADM-09) */}
       {memberToRemove && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4 animate-in zoom-in-95 duration-150 border border-neutral-200 dark:border-neutral-800">
-            <div className="flex items-center gap-3 text-rose-600">
-              <div className="w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-950/50 flex items-center justify-center shrink-0">
-                <UserMinus className="w-5 h-5 text-rose-600" />
+        <div className="fixed inset-0 z-50 bg-on-primary/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-surface rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4 animate-fade-in (_m) => 'animate-scale-in' duration-fast border border-edge">
+            <div className="flex items-center gap-3 text-status-rejected">
+              <div className="w-10 h-10 rounded-xl bg-status-bg-rejected flex items-center justify-center shrink-0">
+                <UserMinus className="w-5 h-5 text-status-rejected" />
               </div>
               <div>
-                <h3 className="text-base font-black text-[#0B192C] dark:text-neutral-100">
+                <h3 className="text-base font-black text-ink">
                   Remove Team Member
                 </h3>
-                <p className="text-xs text-neutral-400">Team: {memberToRemove.teamName}</p>
+                <p className="text-xs text-ink-muted">Team: {memberToRemove.teamName}</p>
               </div>
             </div>
 
-            <p className="text-xs text-neutral-600 dark:text-neutral-300 leading-relaxed">
+            <p className="text-xs text-ink-secondary leading-relaxed">
               Are you sure you want to remove{' '}
-              <strong className="text-neutral-900 dark:text-white">{memberToRemove.studentName}</strong> (
+              <strong className="text-ink">{memberToRemove.studentName}</strong> (
               <span className="font-mono font-bold">{memberToRemove.rollNo}</span>) from the team?
             </p>
 
             <div>
-              <label className="block text-[11px] font-bold text-neutral-700 dark:text-neutral-300 uppercase tracking-wide mb-1">
+              <label className="block text-[11px] font-bold text-ink-secondary uppercase tracking-wide mb-1">
                 Reason for Removal (Required for audit log)
               </label>
               <textarea
@@ -1277,7 +1277,7 @@ export const EventRegistrations: React.FC = () => {
                 onChange={(e) => setRemoveReason(e.target.value)}
                 placeholder="e.g. Student requested removal, section mismatch, inactive participant..."
                 rows={3}
-                className="w-full text-xs p-3 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl focus:outline-none focus:border-[#DC2626] resize-none"
+                className="w-full text-xs p-3 bg-surface-sunken border border-edge rounded-xl focus:outline-none focus:border-status-rejected resize-none"
               />
             </div>
 
@@ -1289,7 +1289,7 @@ export const EventRegistrations: React.FC = () => {
                   setRemoveReason('');
                 }}
                 disabled={removingMember}
-                className="px-4 py-2 text-xs font-bold text-neutral-500 hover:text-neutral-800 dark:hover:text-white rounded-xl cursor-pointer"
+                className="px-4 py-2 text-xs font-bold text-ink-muted hover:text-ink rounded-xl cursor-pointer"
               >
                 Cancel
               </button>
@@ -1297,7 +1297,7 @@ export const EventRegistrations: React.FC = () => {
                 type="button"
                 onClick={handleConfirmRemoveMember}
                 disabled={removingMember}
-                className="flex items-center gap-1.5 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer disabled:opacity-50"
+                className="flex items-center gap-1.5 px-4 py-2 bg-status-solid-rejected hover:opacity-90 text-on-primary text-xs font-bold rounded-xl transition-colors shadow-xs cursor-pointer disabled:opacity-50"
               >
                 {removingMember && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                 Confirm Removal

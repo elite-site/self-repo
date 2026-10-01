@@ -2,14 +2,32 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/admin/elite-logo.png" />
+    <link rel="icon" type="image/svg+xml" href="/admin/favicon.svg" />
+    <link rel="alternate icon" href="/admin/favicon-32.png" sizes="32x32" />
+    <link rel="apple-touch-icon" href="/admin/apple-touch-icon.png" />
+    <link rel="manifest" href="/admin/site.webmanifest" />
+    <meta name="theme-color" content="#ED1E26" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#041030" media="(prefers-color-scheme: dark)" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ELITE Admin Portal — Department of Information Technology</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,500;1,600&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
+    <title>ELITE Admin Portal, Department of Information Technology</title>
+    <!-- Fonts are self-hosted and bundled by Vite (see src/fonts.css). A
+         third-party stylesheet here is render-blocking, and if
+         fonts.googleapis.com is slow or unreachable the page paints nothing at
+         all until the request fails. -->
+    <script>
+      (function () {
+        try {
+          var saved = localStorage.getItem('elite_admin_theme_default');
+          var mode = saved && (saved === 'light' || saved === 'dark' || saved === 'system') ? saved : 'system';
+          var dark = mode === 'dark' || (mode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          if (dark) document.documentElement.setAttribute('data-theme', 'dark');
+        } catch (e) {
+          // fail safe: localStorage unavailable or blocked
+        }
+      })();
+    </script>
   </head>
-  <body class="bg-[#F7F8FC] dark:bg-neutral-950 text-[#0F172A] dark:text-slate-100 min-h-screen selection:bg-[#4F46E5] selection:text-white antialiased font-sans">
+  <body class="bg-surface-canvas text-ink min-h-screen selection:bg-brand selection:text-on-primary antialiased font-sans">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

@@ -57,8 +57,16 @@ function normalizeExplicitDestination(value: unknown): string | null {
     }
   }
 
-  // Do not allow protocol-relative URLs to escape the portal.
-  if (candidate.startsWith('//') || /^[a-z][a-z\d+.-]*:/i.test(candidate)) {
+  // Do not allow protocol-relative or backslash-prefixed URLs to escape the portal.
+  // Browsers normalise `\` to `/` in a path, so `/\evil.com` and `\\evil.com` are
+  // protocol-relative URLs in disguise and would leave the origin on navigation
+  // (CVE-2025-68470). Reject them here rather than relying on the router.
+  if (
+    candidate.startsWith('//') ||
+    candidate.startsWith('/\\') ||
+    candidate.startsWith('\\\\') ||
+    /^[a-z][a-z\d+.-]*:/i.test(candidate)
+  ) {
     return null;
   }
 
@@ -243,9 +251,21 @@ export function getNotificationDestination(notification: NotificationRoutingTarg
   return DEFAULT_DESTINATION;
 }
 
+/**
+ * A destination safe to push through the SPA router: a single leading slash and no
+ * scheme. `//host`, `/\host` and `\\host` are protocol-relative once the browser
+ * normalises them, so they must never reach `navigate()`.
+ */
+const SAFE_INTERNAL_PATH = /^\/(?![/\\])/;
+
 /** Whether a resolved notification target is an external browser URL. */
 export function isExternalNotificationDestination(destination: string): boolean {
   return /^https?:\/\//i.test(destination);
+}
+
+/** Whether a destination is a same-origin SPA path the router can safely handle. */
+export function isSafeInternalDestination(destination: string): boolean {
+  return SAFE_INTERNAL_PATH.test(destination) && !/^[a-z][a-z\d+.-]*:/i.test(destination);
 }
 
 /** Navigate to a notification target without sending external links through the SPA router. */
@@ -253,10 +273,15 @@ export function navigateToNotification(
   destination: string,
   navigate: (path: string) => void,
 ): void {
-  if (isExternalNotificationDestination(destination)) {
-    if (typeof window !== 'undefined') window.location.assign(destination);
+  if (isSafeInternalDestination(destination)) {
+    navigate(destination);
     return;
   }
 
-  navigate(destination);
+  // Only a genuine http(s) URL is allowed to leave the app, and never via the
+  // router. Anything else — protocol-relative, backslash-prefixed, `javascript:`,
+  // or malformed — is dropped rather than pushed, which would be an open redirect.
+  if (isExternalNotificationDestination(destination) && typeof window !== 'undefined') {
+    window.location.assign(destination);
+  }
 }

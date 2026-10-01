@@ -1,5 +1,5 @@
 import multer from 'multer';
-import { env } from '../config/env';
+import { getMaxVideoHardCapMb } from '../services/limits.service';
 
 /**
  * A rejected upload the caller can fix (wrong type, bad field). Carries an
@@ -18,8 +18,10 @@ const storage = multer.memoryStorage();
 export const upload = multer({
   storage,
   limits: {
-    // Top limit is max video size (25MB by default)
-    fileSize: env.MAX_VIDEO_SIZE_MB * 1024 * 1024,
+    // Hard ceiling on the buffered body. The effective, administrator-configurable
+    // limit is enforced in ValidationService.validateVideo, which runs per request
+    // and can read the setting; multer only bounds memory.
+    fileSize: getMaxVideoHardCapMb() * 1024 * 1024,
     files: 1,
   },
 });
@@ -28,18 +30,18 @@ export const submissionUploadMiddleware = upload.fields([
   { name: 'video', maxCount: 1 },
 ]);
 
-export const profilePhotoUpload = multer({ 
-  storage: multer.memoryStorage(), 
-  limits: { fileSize: 5 * 1024 * 1024 }, 
+export const profilePhotoUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (['image/jpeg','image/png','image/webp'].includes(file.mimetype)) cb(null, true);
     else cb(new UploadValidationError('Only JPG, PNG, WebP allowed'));
   }
 }).single('photo');
 
-export const certificateUpload = multer({ 
-  storage: multer.memoryStorage(), 
-  limits: { fileSize: 10 * 1024 * 1024 }, 
+export const certificateUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (['application/pdf','image/jpeg','image/png'].includes(file.mimetype)) cb(null, true);
     else cb(new UploadValidationError('Only PDF, JPG, PNG allowed'));

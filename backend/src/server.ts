@@ -26,6 +26,7 @@ import adminApiRoutes from './routes/admin.api.routes';
 import adminPortalRoutes from './routes/admin.portal.routes';
 import adminAcademicYearRoutes from './routes/admin.academic-year.routes';
 import { startAnnouncementScheduler } from './jobs/announcementScheduler';
+import { mountFrontend } from './config/staticAssets';
 
 const app = express();
 
@@ -205,13 +206,15 @@ app.use('/admin/api/academic-year', adminAcademicYearRoutes);
 app.use('/api/admin/academic-year', adminAcademicYearRoutes);
 
 // 4. Admin Frontend Static Serving (Served strictly by backend, never Netlify)
+// Cache policy rationale lives in src/config/staticAssets.ts.
 const adminBuildPath = path.resolve(__dirname, '../public/admin');
 
 if (fs.existsSync(adminBuildPath)) {
-  app.use('/admin', express.static(adminBuildPath));
+  mountFrontend(app, '/admin', adminBuildPath);
 
   // Serve index.html for both /admin and any sub-routes /admin/*
   app.get(['/admin', '/admin/*'], (_req, res) => {
+    res.setHeader('Cache-Control', 'no-cache');
     res.sendFile(path.join(adminBuildPath, 'index.html'));
   });
 } else {
@@ -240,7 +243,7 @@ const webBuildPathCandidates = [
 const webBuildPath = webBuildPathCandidates.find((dir) => fs.existsSync(dir));
 
 if (webBuildPath) {
-  app.use(express.static(webBuildPath));
+  mountFrontend(app, '/', webBuildPath);
 
   // SPA fallback for student & public portal routes
   app.get('*', (req, res, next) => {
@@ -252,6 +255,9 @@ if (webBuildPath) {
     ) {
       return next();
     }
+    // Deep links never match a file, so this is the only place the shell is
+    // served for them. It is tiny and unhashed, so revalidate rather than cache.
+    res.setHeader('Cache-Control', 'no-cache');
     res.sendFile(path.join(webBuildPath, 'index.html'));
   });
 } else {
@@ -326,13 +332,22 @@ if (process.env.NODE_ENV !== 'test') {
       autoMigratePendingItems().catch(() => {});
     }
 
-    // Ensure all stored Drive files and folders have viewer permissions in the background
-    if (typeof driveService.ensureAllFilesViewerAccess === 'function') {
-      setTimeout(() => {
-        driveService.ensureAllFilesViewerAccess().catch((err) => {
-          console.warn('[Drive] Background viewer permissions sync encountered an error:', err?.message || err);
-        });
-      }, 5000);
+    // Sweep every stored Drive file and folder back to viewer permission.
+    // This walks the whole corpus and writes to Google Drive, so it is opt-in:
+    // admins can trigger the same sweep on demand from the admin portal, and
+    // files uploaded after boot already get viewer permission individually.
+    if (process.env.SYNC_DRIVE_PERMISSIONS === 'true') {
+      if (typeof driveService.ensureAllFilesViewerAccess === 'function') {
+        setTimeout(() => {
+          driveService.ensureAllFilesViewerAccess().catch((err) => {
+            console.warn('[Drive] Background viewer permissions sync encountered an error:', err?.message || err);
+          });
+        }, 5000);
+      }
+    } else {
+      console.log(
+        '[Drive] Skipping boot-time viewer permission sweep (set SYNC_DRIVE_PERMISSIONS=true to enable).',
+      );
     }
   });
 }

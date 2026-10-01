@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   CalendarDays, Plus, Pencil, Copy, Archive, Eye, Users,
-  AlertCircle, Loader2, CheckCircle, X
+  AlertCircle, Loader2, CheckCircle, X, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { adminApi } from '../services/api';
 
@@ -19,18 +19,15 @@ interface EventItem {
 }
 
 const StatusBadge = ({ status }: { status: string }) => {
-  const map: Record<string, string> = {
-    DRAFT: 'bg-slate-50 dark:bg-slate-900/50 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800',
-    PUBLISHED: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800',
-    OPEN: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800',
-    CLOSED: 'bg-slate-50 dark:bg-slate-900/50 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-800',
-    ARCHIVED: 'bg-neutral-50 dark:bg-neutral-900/50 text-neutral-400 dark:text-neutral-500 border-neutral-200 dark:border-neutral-800',
+  const map: Record<string, { label: string; cls: string }> = {
+    DRAFT: { label: 'Draft', cls: 'badge badge-draft' },
+    PUBLISHED: { label: 'Published', cls: 'badge badge-approved' },
+    OPEN: { label: 'Open', cls: 'badge badge-approved' },
+    CLOSED: { label: 'Closed', cls: 'badge badge-draft' },
+    ARCHIVED: { label: 'Archived', cls: 'badge badge-draft' },
   };
-  return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${map[status] ?? 'bg-slate-50 text-slate-600 border-slate-200'}`}>
-      {status}
-    </span>
-  );
+  const s = map[status] ?? { label: status, cls: 'badge badge-draft' };
+  return <span className={s.cls}>{s.label}</span>;
 };
 
 const steps = ['Basics', 'Dates', 'Eligibility', 'Form', 'Teams', 'Notifications', 'Review'];
@@ -62,25 +59,27 @@ const CreateEventWizard: React.FC<{ onClose: () => void; onCreated: () => void }
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-modal bg-on-primary/40 flex items-center justify-center p-4 animate-fade-in" role="dialog" aria-modal="true" aria-labelledby="wizard-title">
+      <div className="surface w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col shadow-modal animate-scale-in">
         {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b border-[#E2E8F0]">
-          <h2 className="text-base font-extrabold text-[#0B192C]">Create Event</h2>
-          <button onClick={onClose} className="text-neutral-400 hover:text-[#0B192C] cursor-pointer"><X className="w-5 h-5" /></button>
+        <div className="flex items-center justify-between p-5 border-b border-edge">
+          <h2 id="wizard-title" className="text-headline-sm font-extrabold text-ink">Create Event</h2>
+          <button onClick={onClose} className="btn btn-ghost p-2" aria-label="Close wizard">
+            <X className="w-5 h-5" aria-hidden="true" />
+          </button>
         </div>
 
         {/* Step indicator */}
-        <div className="flex px-5 pt-4 gap-1 overflow-x-auto">
+        <div className="flex px-5 pt-4 gap-1 overflow-x-auto border-b border-edge bg-surface-sunken" role="navigation" aria-label="Wizard steps">
           {steps.map((s, i) => (
             <div key={s} className="flex items-center gap-1 shrink-0">
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                i < step ? 'bg-emerald-500 text-white' : i === step ? 'bg-[#DC2626] text-white' : 'bg-neutral-200 text-neutral-500'
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-label-sm font-bold ${
+                i < step ? 'bg-status-approved text-on-primary' : i === step ? 'bg-brand text-on-primary' : 'bg-surface-sunken text-ink-muted border border-edge'
               }`}>
-                {i < step ? <CheckCircle className="w-3.5 h-3.5" /> : i + 1}
+                {i < step ? <CheckCircle className="w-3.5 h-3.5" aria-hidden="true" /> : i + 1}
               </div>
-              <span className={`text-[10px] font-semibold ${i === step ? 'text-[#0B192C]' : 'text-neutral-400'}`}>{s}</span>
-              {i < steps.length - 1 && <div className={`w-4 h-px ${i < step ? 'bg-emerald-300' : 'bg-neutral-200'}`} />}
+              <span className={`text-label-sm font-semibold ${i === step ? 'text-ink' : 'text-ink-muted'}`}>{s}</span>
+              {i < steps.length - 1 && <div className={`w-4 h-px ${i < step ? 'bg-status-approved' : 'border-edge'}`} />}
             </div>
           ))}
         </div>
@@ -89,17 +88,17 @@ const CreateEventWizard: React.FC<{ onClose: () => void; onCreated: () => void }
         <div className="flex-1 overflow-y-auto p-5 space-y-4">
           {step === 0 && (
             <>
-              <label className="block">
-                <span className="text-xs font-bold text-neutral-700 uppercase tracking-wide">Title *</span>
-                <input value={form.title} onChange={e => update('title', e.target.value)} placeholder="Event title" className="mt-1 w-full text-sm border border-[#E2E8F0] rounded-lg px-3 py-2 focus:outline-none focus:border-[#DC2626]" />
+              <label htmlFor="event-title" className="block">
+                <span className="label">Title *</span>
+                <input id="event-title" value={form.title} onChange={e => update('title', e.target.value)} placeholder="Event title" className="input" aria-required="true" />
               </label>
-              <label className="block">
-                <span className="text-xs font-bold text-neutral-700 uppercase tracking-wide">Description</span>
-                <textarea value={form.description} onChange={e => update('description', e.target.value)} rows={4} className="mt-1 w-full text-sm border border-[#E2E8F0] rounded-lg px-3 py-2 focus:outline-none focus:border-[#DC2626] resize-none" />
+              <label htmlFor="event-description" className="block">
+                <span className="label">Description</span>
+                <textarea id="event-description" value={form.description} onChange={e => update('description', e.target.value)} rows={4} className="textarea resize-none" />
               </label>
-              <label className="block">
-                <span className="text-xs font-bold text-neutral-700 uppercase tracking-wide">Event Type</span>
-                <select value={form.type} onChange={e => update('type', e.target.value)} className="mt-1 w-full text-sm border border-[#E2E8F0] rounded-lg px-3 py-2 focus:outline-none focus:border-[#DC2626]">
+              <label htmlFor="event-type" className="block">
+                <span className="label">Event Type</span>
+                <select id="event-type" value={form.type} onChange={e => update('type', e.target.value)} className="select">
                   {['HACKATHON', 'WORKSHOP', 'COMPETITION', 'SEMINAR', 'OTHER'].map(t => <option key={t}>{t}</option>)}
                 </select>
               </label>
@@ -108,9 +107,9 @@ const CreateEventWizard: React.FC<{ onClose: () => void; onCreated: () => void }
           {step === 1 && (
             <>
               {(['registrationStart', 'registrationEnd', 'eventDate'] as const).map((field) => (
-                <label key={field} className="block">
-                  <span className="text-xs font-bold text-neutral-700 uppercase tracking-wide">{field.replace(/([A-Z])/g, ' $1').trim()}</span>
-                  <input type="datetime-local" value={form[field]} onChange={e => update(field, e.target.value)} className="mt-1 w-full text-sm border border-[#E2E8F0] rounded-lg px-3 py-2 focus:outline-none focus:border-[#DC2626]" />
+                <label key={field} htmlFor={field} className="block">
+                  <span className="label">{field.replace(/([A-Z])/g, ' $1').trim()}</span>
+                  <input type="datetime-local" id={field} value={form[field]} onChange={e => update(field, e.target.value)} className="input" />
                 </label>
               ))}
             </>
@@ -118,42 +117,44 @@ const CreateEventWizard: React.FC<{ onClose: () => void; onCreated: () => void }
           {step === 2 && (
             <>
               <div>
-                <span className="text-xs font-bold text-neutral-700 uppercase tracking-wide">Eligible Years</span>
-                <div className="flex gap-2 mt-2 flex-wrap">
+                <span className="label">Eligible Years</span>
+                <div className="flex gap-2 mt-2 flex-wrap" role="group" aria-label="Eligible years">
                   {['1', '2', '3', '4'].map(y => (
                     <button key={y} onClick={() => update('eligibilityYears', form.eligibilityYears.includes(y) ? form.eligibilityYears.filter(e => e !== y) : [...form.eligibilityYears, y])}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold border cursor-pointer ${form.eligibilityYears.includes(y) ? 'bg-[#DC2626] text-white border-[#DC2626]' : 'border-[#E2E8F0] text-neutral-500'}`}>
+                      className={`btn ${form.eligibilityYears.includes(y) ? 'btn-primary' : 'btn-secondary'} text-label-sm`}
+                      aria-pressed={form.eligibilityYears.includes(y)}
+                    >
                       Year {y}
                     </button>
                   ))}
                 </div>
               </div>
-              <label className="block">
-                <span className="text-xs font-bold text-neutral-700 uppercase tracking-wide">Min Profile Completion %</span>
-                <input type="number" min={0} max={100} value={form.minCompletion} onChange={e => update('minCompletion', +e.target.value)} className="mt-1 w-full text-sm border border-[#E2E8F0] rounded-lg px-3 py-2 focus:outline-none focus:border-[#DC2626]" />
+              <label htmlFor="min-completion" className="block">
+                <span className="label">Min Profile Completion %</span>
+                <input type="number" id="min-completion" min={0} max={100} value={form.minCompletion} onChange={e => update('minCompletion', +e.target.value)} className="input" />
               </label>
             </>
           )}
           {step === 3 && (
-            <div className="text-center py-8 text-neutral-400">
-              <p className="text-sm">Registration form builder (drag-and-drop fields) would appear here in full implementation.</p>
+            <div className="text-center py-8 text-ink-muted surface-sunken rounded-lg">
+              <p className="text-body-sm">Registration form builder (drag-and-drop fields) would appear here in full implementation.</p>
             </div>
           )}
           {step === 4 && (
             <>
-              <label className="flex items-center gap-3">
-                <input type="checkbox" checked={form.teamEnabled} onChange={e => update('teamEnabled', e.target.checked)} className="w-4 h-4 rounded accent-[#DC2626]" />
-                <span className="text-sm font-semibold text-[#0B192C]">Enable Team Registration</span>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input type="checkbox" checked={form.teamEnabled} onChange={e => update('teamEnabled', e.target.checked)} className="w-4 h-4 rounded border-edge text-brand focus:ring-brand" />
+                <span className="text-body-md font-semibold text-ink">Enable Team Registration</span>
               </label>
               {form.teamEnabled && (
                 <div className="grid grid-cols-2 gap-4">
-                  <label className="block">
-                    <span className="text-xs font-bold text-neutral-700">Min Members</span>
-                    <input type="number" min={1} value={form.teamMin} onChange={e => update('teamMin', +e.target.value)} className="mt-1 w-full text-sm border border-[#E2E8F0] rounded-lg px-3 py-2 focus:outline-none focus:border-[#DC2626]" />
+                  <label htmlFor="team-min" className="block">
+                    <span className="label">Min Members</span>
+                    <input type="number" id="team-min" min={1} value={form.teamMin} onChange={e => update('teamMin', +e.target.value)} className="input" />
                   </label>
-                  <label className="block">
-                    <span className="text-xs font-bold text-neutral-700">Max Members</span>
-                    <input type="number" min={1} value={form.teamMax} onChange={e => update('teamMax', +e.target.value)} className="mt-1 w-full text-sm border border-[#E2E8F0] rounded-lg px-3 py-2 focus:outline-none focus:border-[#DC2626]" />
+                  <label htmlFor="team-max" className="block">
+                    <span className="label">Max Members</span>
+                    <input type="number" id="team-max" min={1} value={form.teamMax} onChange={e => update('teamMax', +e.target.value)} className="input" />
                   </label>
                 </div>
               )}
@@ -161,42 +162,42 @@ const CreateEventWizard: React.FC<{ onClose: () => void; onCreated: () => void }
           )}
           {step === 5 && (
             <>
-              <label className="flex items-center gap-3">
-                <input type="checkbox" checked={form.notifyOnOpen} onChange={e => update('notifyOnOpen', e.target.checked)} className="w-4 h-4 rounded accent-[#DC2626]" />
-                <span className="text-sm font-semibold text-[#0B192C]">Notify students when registration opens</span>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input type="checkbox" checked={form.notifyOnOpen} onChange={e => update('notifyOnOpen', e.target.checked)} className="w-4 h-4 rounded border-edge text-brand focus:ring-brand" />
+                <span className="text-body-md font-semibold text-ink">Notify students when registration opens</span>
               </label>
-              <label className="flex items-center gap-3">
-                <input type="checkbox" checked={form.notifyReminder} onChange={e => update('notifyReminder', e.target.checked)} className="w-4 h-4 rounded accent-[#DC2626]" />
-                <span className="text-sm font-semibold text-[#0B192C]">Send reminder before deadline</span>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input type="checkbox" checked={form.notifyReminder} onChange={e => update('notifyReminder', e.target.checked)} className="w-4 h-4 rounded border-edge text-brand focus:ring-brand" />
+                <span className="text-body-md font-semibold text-ink">Send reminder before deadline</span>
               </label>
             </>
           )}
           {step === 6 && (
             <div className="space-y-3">
-              <h3 className="text-sm font-bold text-[#0B192C]">Review</h3>
-              <div className="bg-[#F8FAFC] rounded-xl p-4 space-y-2 text-sm">
-                <div><span className="font-semibold">Title:</span> {form.title || '—'}</div>
-                <div><span className="font-semibold">Type:</span> {form.type}</div>
-                <div><span className="font-semibold">Event Date:</span> {form.eventDate || '—'}</div>
-                <div><span className="font-semibold">Registration:</span> {form.registrationStart || '—'} → {form.registrationEnd || '—'}</div>
-                <div><span className="font-semibold">Teams:</span> {form.teamEnabled ? `Yes (${form.teamMin}–${form.teamMax})` : 'No'}</div>
+              <h3 className="text-label-md font-bold text-ink">Review</h3>
+              <div className="surface-sunken rounded-lg p-4 space-y-2 text-body-sm">
+                <div><span className="font-semibold text-ink-secondary">Title:</span> <span className="text-ink ml-2">{form.title || 'To be announced'}</span></div>
+                <div><span className="font-semibold text-ink-secondary">Type:</span> <span className="text-ink ml-2">{form.type}</span></div>
+                <div><span className="font-semibold text-ink-secondary">Event Date:</span> <span className="text-ink ml-2">{form.eventDate || 'To be announced'}</span></div>
+                <div><span className="font-semibold text-ink-secondary">Registration:</span> <span className="text-ink ml-2">{form.registrationStart || 'To be announced'} → {form.registrationEnd || 'To be announced'}</span></div>
+                <div><span className="font-semibold text-ink-secondary">Teams:</span> <span className="text-ink ml-2">{form.teamEnabled ? `Yes (${form.teamMin}–${form.teamMax})` : 'No'}</span></div>
               </div>
             </div>
           )}
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between p-5 border-t border-[#E2E8F0]">
-          <button onClick={() => setStep(Math.max(0, step - 1))} disabled={step === 0} className="px-4 py-2 text-xs font-bold text-neutral-500 hover:text-[#0B192C] disabled:opacity-30 cursor-pointer">
-            ← Back
+        <div className="flex items-center justify-between p-5 border-t border-edge bg-surface-sunken">
+          <button onClick={() => setStep(Math.max(0, step - 1))} disabled={step === 0} className="btn btn-ghost text-label-sm" aria-label="Previous step" aria-disabled={step === 0}>
+            <ChevronLeft className="w-4 h-4" aria-hidden="true" /> Back
           </button>
           {step < steps.length - 1 ? (
-            <button onClick={() => setStep(step + 1)} className="px-5 py-2 bg-[#0B192C] text-white rounded-lg text-xs font-bold hover:bg-[#0B192C]/90 cursor-pointer">
-              Next →
+            <button onClick={() => setStep(step + 1)} className="btn btn-secondary text-label-sm">
+              Next <ChevronRight className="w-4 h-4" aria-hidden="true" />
             </button>
           ) : (
-            <button onClick={handleSubmit} disabled={submitting || !form.title} className="px-5 py-2 bg-[#DC2626] text-white rounded-lg text-xs font-bold hover:bg-red-700 disabled:opacity-50 flex items-center gap-2 cursor-pointer">
-              {submitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+            <button onClick={handleSubmit} disabled={submitting || !form.title} className="btn btn-primary text-label-sm" aria-busy={submitting}>
+              {submitting && <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />}
               Publish Event
             </button>
           )}
@@ -238,77 +239,82 @@ export const AdminEvents: React.FC = () => {
   useEffect(() => { fetchEvents(); }, []);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 page-enter">
       {showCreate && <CreateEventWizard onClose={() => setShowCreate(false)} onCreated={fetchEvents} />}
 
-      <div className="flex items-center justify-between pb-2 border-b border-neutral-200 dark:border-neutral-800">
+      <div className="flex items-center justify-between pb-2 border-b border-edge">
         <div className="flex items-center gap-3">
-          <CalendarDays className="w-6 h-6 text-[#DC2626]" />
+          <div className="w-10 h-10 rounded-lg bg-brand-soft text-brand flex items-center justify-center">
+            <CalendarDays className="w-6 h-6" aria-hidden="true" />
+          </div>
           <div>
-            <h1 className="text-xl font-extrabold text-[#0B192C] dark:text-white">Events</h1>
-            <p className="text-xs text-neutral-500 dark:text-neutral-400">Manage all department events</p>
+            <h1 className="text-headline-md font-extrabold text-ink">Events</h1>
+            <p className="text-body-sm text-ink-muted">Manage all department events</p>
           </div>
         </div>
-        <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 px-4 py-2 bg-[#DC2626] text-white rounded-lg text-xs font-bold hover:bg-red-700 cursor-pointer">
-          <Plus className="w-4 h-4" /> Create Event
+        <button onClick={() => setShowCreate(true)} className="btn btn-primary">
+          <Plus className="w-4 h-4" aria-hidden="true" /> Create Event
         </button>
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center h-48 bg-white dark:bg-neutral-900 rounded-2xl border border-[#E2E8F0] dark:border-neutral-800">
-          <Loader2 className="w-7 h-7 animate-spin text-[#DC2626]" />
+        <div className="flex items-center justify-center h-48 surface-sunken">
+          <Loader2 className="w-7 h-7 animate-spin text-brand" aria-hidden="true" />
+          <span className="sr-only">Loading events</span>
         </div>
       ) : error ? (
-        <div className="flex flex-col items-center justify-center h-48 bg-white dark:bg-neutral-900 rounded-2xl border border-red-200 dark:border-red-900/50 gap-3">
-          <AlertCircle className="w-8 h-8 text-red-400" />
-          <p className="text-sm text-neutral-500 dark:text-neutral-400">{error}</p>
-          <button onClick={fetchEvents} className="text-xs text-[#DC2626] font-semibold hover:underline cursor-pointer">Retry</button>
+        <div className="flex flex-col items-center justify-center h-48 surface-sunken gap-3 text-center" role="alert">
+          <AlertCircle className="w-8 h-8 text-status-rejected" aria-hidden="true" />
+          <p className="text-body-sm text-ink-muted">{error}</p>
+          <button onClick={fetchEvents} className="text-body-sm font-semibold text-brand hover:underline cursor-pointer">Retry</button>
         </div>
       ) : events.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-48 bg-white dark:bg-neutral-900 rounded-2xl border border-[#E2E8F0] dark:border-neutral-800 gap-3">
-          <CalendarDays className="w-10 h-10 text-neutral-200 dark:text-neutral-700" />
-          <p className="text-sm font-semibold text-neutral-500 dark:text-neutral-400">No events yet</p>
-          <button onClick={() => setShowCreate(true)} className="text-xs text-[#DC2626] font-semibold hover:underline cursor-pointer">Create your first event</button>
+        <div className="flex flex-col items-center justify-center h-48 surface-sunken gap-3 text-center">
+          <CalendarDays className="w-10 h-10 text-ink-muted" aria-hidden="true" />
+          <p className="text-body-md font-semibold text-ink-secondary">No events yet</p>
+          <button onClick={() => setShowCreate(true)} className="btn btn-ghost text-body-sm">Create your first event</button>
         </div>
       ) : (
-        <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-[#E2E8F0] dark:border-neutral-800 overflow-hidden shadow-sm">
-          <table className="w-full text-sm">
-            <thead className="bg-[#F8FAFC] dark:bg-neutral-800/80 border-b border-[#E2E8F0] dark:border-neutral-700">
-              <tr>
-                {['Event', 'Type', 'Event Date', 'Registration', 'Registrations', 'Status', 'Actions'].map(h => (
-                  <th key={h} className="text-left px-4 py-3 text-xs font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wide">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#E2E8F0] dark:divide-neutral-800">
-              {events.map((ev) => (
-                <tr key={ev.id} className="hover:bg-[#F8FAFC] dark:hover:bg-neutral-800/50 transition-colors">
-                  <td className="px-4 py-3 font-semibold text-[#0B192C] dark:text-white">{ev.title}</td>
-                  <td className="px-4 py-3 text-xs text-neutral-500 dark:text-neutral-400">{ev.type}</td>
-                  <td className="px-4 py-3 text-xs text-neutral-600 dark:text-neutral-300">{ev.eventDate ? new Date(ev.eventDate).toLocaleDateString() : '—'}</td>
-                  <td className="px-4 py-3 text-xs text-neutral-600 dark:text-neutral-300">
-                    {ev.registrationStart ? new Date(ev.registrationStart).toLocaleDateString() : '—'} →{' '}
-                    {ev.registrationEnd ? new Date(ev.registrationEnd).toLocaleDateString() : '—'}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-1 text-xs font-semibold text-neutral-700 dark:text-neutral-300">
-                      <Users className="w-3.5 h-3.5 text-neutral-400" />
-                      {ev.registrationCount}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3"><StatusBadge status={ev.status} /></td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-1">
-                      <button title="Edit" className="p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg cursor-pointer"><Pencil className="w-3.5 h-3.5 text-neutral-400" /></button>
-                      <button title="Duplicate" className="p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg cursor-pointer"><Copy className="w-3.5 h-3.5 text-neutral-400" /></button>
-                      <button title="View" className="p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg cursor-pointer"><Eye className="w-3.5 h-3.5 text-neutral-400" /></button>
-                      <button title="Archive" className="p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg cursor-pointer"><Archive className="w-3.5 h-3.5 text-neutral-400" /></button>
-                    </div>
-                  </td>
+        <div className="surface overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm" role="grid">
+              <thead className="bg-surface-inset border-b border-edge">
+                <tr>
+                  {['Event', 'Type', 'Event Date', 'Registration', 'Registrations', 'Status', 'Actions'].map(h => (
+                    <th key={h} scope="col" className="text-left px-4 py-3 text-label-sm font-bold text-ink-muted uppercase tracking-wide">{h}</th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-edge">
+                {events.map((ev) => (
+                  <tr key={ev.id} className="hover:bg-surface-sunken transition-colors">
+                    <td className="px-4 py-3 font-semibold text-ink">{ev.title}</td>
+                    <td className="px-4 py-3 text-label-sm text-ink-muted">{ev.type}</td>
+                    <td className="px-4 py-3 text-label-sm text-ink-secondary">{ev.eventDate ? new Date(ev.eventDate).toLocaleDateString() : 'To be announced'}</td>
+                    <td className="px-4 py-3 text-label-sm text-ink-secondary">
+                      {ev.registrationStart ? new Date(ev.registrationStart).toLocaleDateString() : 'To be announced'} →{' '}
+                      {ev.registrationEnd ? new Date(ev.registrationEnd).toLocaleDateString() : 'To be announced'}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1 text-label-sm font-semibold text-ink-secondary">
+                        <Users className="w-3.5 h-3.5 text-ink-muted" aria-hidden="true" />
+                        {ev.registrationCount}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3"><StatusBadge status={ev.status} /></td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1" role="group" aria-label="Event actions">
+                        <button title="Edit" className="btn btn-ghost p-2" aria-label="Edit event"><Pencil className="w-3.5 h-3.5" aria-hidden="true" /></button>
+                        <button title="Duplicate" className="btn btn-ghost p-2" aria-label="Duplicate event"><Copy className="w-3.5 h-3.5" aria-hidden="true" /></button>
+                        <button title="View" className="btn btn-ghost p-2" aria-label="View event"><Eye className="w-3.5 h-3.5" aria-hidden="true" /></button>
+                        <button title="Archive" className="btn btn-ghost p-2" aria-label="Archive event"><Archive className="w-3.5 h-3.5" aria-hidden="true" /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>

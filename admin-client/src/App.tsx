@@ -1,4 +1,12 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, Suspense } from 'react';
+import {
+  createBrowserRouter,
+  RouterProvider,
+  Navigate,
+  Outlet,
+  useLocation,
+  useNavigate,
+} from 'react-router-dom';
 import { Sidebar, AdminTab, ACTIVE_EVENT_ID } from './components/Sidebar';
 import { AdminHeader } from './components/AdminHeader';
 import { StatsDashboard } from './components/StatsDashboard';
@@ -10,8 +18,7 @@ import { LoginPage } from './components/LoginPage';
 import { AdminStats, AdminUser, Submission } from './types';
 import { adminApi } from './services/api';
 import { useTheme } from './context/ThemeContext';
-
-
+import { BrandedLoading } from './components/BrandedLoading';
 
 // Lazy Loaded Pages
 const Moderation = React.lazy(() => import('./pages/Moderation').then((m) => ({ default: m.Moderation })));
@@ -29,62 +36,148 @@ const RolesPermissions = React.lazy(() => import('./pages/RolesPermissions').the
 const AuditLogs = React.lazy(() => import('./pages/AuditLogs').then((m) => ({ default: m.AuditLogs })));
 const Settings = React.lazy(() => import('./pages/Settings').then((m) => ({ default: m.Settings })));
 const StudentDetail = React.lazy(() => import('./pages/StudentDetail').then((m) => ({ default: m.StudentDetail })));
-import { BrandedLoading } from './components/BrandedLoading';
 
 const PageLoadingFallback: React.FC = () => (
   <BrandedLoading message="Loading Module" fullScreen={false} />
 );
 
-export const App: React.FC = () => {
-  const [user, setUser] = useState<AdminUser | null>(null);
+// ──────────────────────────────────────────────
+// Route components
+// ──────────────────────────────────────────────
+
+const DashboardPage: React.FC = () => {
+  const { user } = useAuth();
+  const [stats, setStats] = useState<AdminStats | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const loadStats = useCallback(async () => {
+    if (!user) return;
+    setLoading(true);
+    try {
+      const data = await adminApi.getStats(ACTIVE_EVENT_ID);
+      setStats(data);
+    } catch (err) {
+      console.error('Failed to load stats', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (user) loadStats();
+  }, [user, loadStats]);
+
+  const navigate = useNavigate();
+
+  return (
+    <StatsDashboard
+      stats={stats}
+      loading={loading}
+      onNavigateTab={(t) => navigate(`/admin/${t}`)}
+    />
+  );
+};
+
+const SubmissionsPage: React.FC = () => {
+  const { user } = useAuth();
+  const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
+
+  const loadStats = useCallback(async () => {
+    if (!user) return;
+    try {
+      const data = await adminApi.getStats(ACTIVE_EVENT_ID);
+      return data;
+    } catch (err) {
+      console.error('Failed to load stats', err);
+    }
+  }, [user]);
+
+  return (
+    <>
+      <SubmissionsTable
+        activeEventId={ACTIVE_EVENT_ID}
+        onSelectSubmission={setSelectedSubmission}
+        onRefreshStats={loadStats}
+      />
+      {selectedSubmission && (
+        <SubmissionDetailModal
+          submission={selectedSubmission}
+          onClose={() => setSelectedSubmission(null)}
+          onUpdated={(updated) => {
+            setSelectedSubmission(updated);
+            loadStats();
+          }}
+          onDeleted={() => {
+            setSelectedSubmission(null);
+            loadStats();
+          }}
+        />
+      )}
+    </>
+  );
+};
+
+const StudentsPage: React.FC = () => {
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+  const navigate = useNavigate();
+
+  if (selectedStudentId) {
+    return (
+      <StudentDetail
+        studentId={selectedStudentId}
+        onBack={() => {
+          setSelectedStudentId(null);
+          navigate('/admin/students');
+        }}
+      />
+    );
+  }
+
+  return (
+    <StudentsTable
+      activeEventId={ACTIVE_EVENT_ID}
+      onSelectStudent={(id) => {
+        setSelectedStudentId(id);
+        navigate(`/admin/students/${id}`);
+      }}
+    />
+  );
+};
+
+const ActivityPage: React.FC = () => (
+  <ActivityLogView activeEventId={ACTIVE_EVENT_ID} />
+);
+
+// ──────────────────────────────────────────────
+// Layout components
+// ──────────────────────────────────────────────
+
+interface AuthContextValue {
+  user: AdminUser | null;
+  authChecking: boolean;
+  authError: string | null;
+  /** Called by `LoginPage` once the POST has succeeded. It hands us the user
+   *  rather than re-authenticating, so the form owns its own error copy. */
+  completeLogin: (user: AdminUser) => void;
+  logout: () => Promise<void>;
+  retryAuthCheck: () => Promise<void>;
+}
+
+const AuthContext = React.createContext<AuthContextValue | null>(null);
+
+const useAuth = () => {
+  const ctx = React.useContext(AuthContext);
+  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
+  return ctx;
+};
+
+const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { setAdminUser } = useTheme();
+  const [user, setUser] = useState<AdminUser | null>(null);
   const [authChecking, setAuthChecking] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
-  const [stats, setStats] = useState<AdminStats | null>(null);
-  const [statsLoading, setStatsLoading] = useState(false);
-  const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
-  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
-  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
-  // Check auth on load
-  useEffect(() => {
-    async function checkAuth() {
-      try {
-        const res = await adminApi.getMe();
-        if (res.authenticated && res.user) {
-          setUser(res.user);
-          setAdminUser(res.user);
-        } else {
-          setUser(null);
-          setAdminUser(null);
-        }
-      } catch (err: any) {
-        // Only an explicit auth rejection means "logged out". A 500 or a network
-        // blip must not discard the admin session, otherwise a transient server
-        // error logs the user out and dumps them back on the login page.
-        const status = err?.response?.status;
-        if (status === 401 || status === 403) {
-          setUser(null);
-          setAdminUser(null);
-        } else {
-          console.error('Could not verify admin session:', err);
-          setAuthError(
-            status
-              ? `Could not reach the server (HTTP ${status}). Please retry.`
-              : 'Could not reach the server. Please check your connection and retry.',
-          );
-        }
-      } finally {
-        setAuthChecking(false);
-      }
-    }
-    checkAuth();
-  }, [setAdminUser]);
-
-  const retryAuthCheck = useCallback(async () => {
-    setAuthError(null);
-    setAuthChecking(true);
+  const checkAuth = useCallback(async () => {
     try {
       const res = await adminApi.getMe();
       if (res.authenticated && res.user) {
@@ -100,6 +193,7 @@ export const App: React.FC = () => {
         setUser(null);
         setAdminUser(null);
       } else {
+        console.error('Could not verify admin session:', err);
         setAuthError(
           status
             ? `Could not reach the server (HTTP ${status}). Please retry.`
@@ -111,57 +205,61 @@ export const App: React.FC = () => {
     }
   }, [setAdminUser]);
 
-  // Fetch stats when user logged in
-  const loadStats = async () => {
-    if (!user) return;
-    setStatsLoading(true);
-    try {
-      const data = await adminApi.getStats(ACTIVE_EVENT_ID);
-      setStats(data);
-    } catch (err) {
-      console.error('Failed to load stats', err);
-    } finally {
-      setStatsLoading(false);
-    }
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
+
+  const retryAuthCheck = useCallback(async () => {
+    setAuthError(null);
+    setAuthChecking(true);
+    await checkAuth();
+  }, [checkAuth]);
+
+  const completeLogin = (user: AdminUser) => {
+    setAuthError(null);
+    setUser(user);
+    setAdminUser(user);
   };
 
-  useEffect(() => {
-    if (user) {
-      loadStats();
-    }
-  }, [user]);
-
-  const handleLogout = async () => {
+  const logout = async () => {
     try {
       await adminApi.logout();
-      setUser(null);
-      setAdminUser(null);
     } catch (err) {
       console.error('Logout failed', err);
+    } finally {
       setUser(null);
       setAdminUser(null);
     }
   };
+
+  return (
+    <AuthContext.Provider value={{ user, authChecking, authError, completeLogin, logout, retryAuthCheck }}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+const ProtectedLayout: React.FC = () => {
+  const { user, authChecking, authError, completeLogin, logout, retryAuthCheck } = useAuth();
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
 
   if (authChecking) {
     return <BrandedLoading message="Verifying Organizer Session" />;
   }
 
   if (!user) {
-    // A server-side failure must not masquerade as a logout — offer a retry
-    // rather than silently sending the organizer back to the login page.
     if (authError) {
       return (
-        <div className="min-h-screen bg-[#fafafa] dark:bg-neutral-950 flex items-center justify-center px-6">
-          <div className="max-w-md text-center">
-            <h1 className="text-lg font-black text-neutral-900 dark:text-white mb-2">
-              Unable to verify your session
-            </h1>
-            <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-6">{authError}</p>
+        <div className="min-h-[100dvh] bg-surface-canvas flex items-center justify-center p-6">
+          <div className="max-w-md text-center surface p-8">
+            <h1 className="text-lg font-black text-ink mb-2">Unable to verify your session</h1>
+            <p className="text-sm text-ink-muted mb-6">{authError}</p>
             <button
               type="button"
               onClick={retryAuthCheck}
-              className="px-5 py-2.5 rounded-xl bg-elite-red text-white text-sm font-bold hover:opacity-90 transition-opacity cursor-pointer"
+              className="btn btn-primary"
             >
               Retry
             </button>
@@ -169,47 +267,42 @@ export const App: React.FC = () => {
         </div>
       );
     }
-
-    return (
-      <LoginPage
-        onLoginSuccess={(u) => {
-          setUser(u);
-          setAdminUser(u);
-        }}
-      />
-    );
+    return <LoginPage onLoginSuccess={completeLogin} />;
   }
 
+  // Extract tab from path: /admin/dashboard -> dashboard, /admin -> dashboard
+  const pathTabs: AdminTab[] = [
+    'dashboard', 'submissions', 'students', 'activity', 'moderation',
+    'events', 'event-registrations', 'voting', 'voting-results',
+    'communications', 'email-automation', 'email-history', 'analytics',
+    'exports', 'storage', 'roles', 'audit-logs', 'settings'
+  ];
+
+  const currentPath = location.pathname.replace('/admin', '') || '/dashboard';
+  const currentTab = pathTabs.find(t => currentPath === `/${t}` || currentPath === `/${t}/`) || 'dashboard';
+
   return (
-    <div className="min-h-screen bg-[#f8fafc] dark:bg-neutral-950 flex flex-row w-full overflow-hidden transition-colors">
+    <div className="min-h-[100dvh] bg-surface flex flex-row w-full overflow-hidden">
       {/* 1. LEFT VERTICAL SIDEBAR (DESKTOP) */}
       <div className="hidden md:block shrink-0">
         <Sidebar
-          activeTab={activeTab}
-          onSelectTab={(tab) => {
-            setActiveTab(tab);
-            setSelectedStudentId(null);
-            if (tab === 'dashboard') loadStats();
-          }}
-          user={user}
-          onLogout={handleLogout}
+          activeTab={currentTab}
+          onSelectTab={(tab) => navigate(`/admin/${tab}`)}
+          onLogout={logout}
         />
       </div>
 
       {/* 2. MOBILE SIDEBAR OVERLAY */}
       {mobileSidebarOpen && (
-        <div className="md:hidden fixed inset-0 z-50 bg-black/50 flex">
-          <div className="w-64 bg-white dark:bg-neutral-900 h-full shadow-2xl relative">
+        <div className="md:hidden fixed inset-0 z-modal bg-scrim flex">
+          <div className="w-64 bg-surface h-full shadow-drawer relative border-r border-edge animate-drawer-in">
             <Sidebar
-              activeTab={activeTab}
+              activeTab={currentTab}
               onSelectTab={(tab) => {
-                setActiveTab(tab);
-                setSelectedStudentId(null);
+                navigate(`/admin/${tab}`);
                 setMobileSidebarOpen(false);
-                if (tab === 'dashboard') loadStats();
               }}
-              user={user}
-              onLogout={handleLogout}
+              onLogout={logout}
             />
           </div>
           <div
@@ -220,89 +313,65 @@ export const App: React.FC = () => {
       )}
 
       {/* 3. RIGHT MAIN CONTENT AREA */}
-      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto bg-[#f8fafc] dark:bg-neutral-950 transition-colors">
+      <div className="flex-1 flex flex-col min-w-0 h-[100dvh] overflow-y-auto bg-surface-canvas">
         {/* TOP HEADER BAR */}
         <AdminHeader
           user={user}
           onToggleMobileSidebar={() => setMobileSidebarOpen(!mobileSidebarOpen)}
-          onLogout={handleLogout}
-          onNavigateTab={(tab) => {
-            setActiveTab(tab);
-            setSelectedStudentId(null);
-          }}
+          onLogout={logout}
         />
 
         {/* MAIN WORKSPACE VIEW */}
-        <main className="flex-1 p-5 sm:p-8 max-w-7xl w-full mx-auto">
-          <React.Suspense fallback={<PageLoadingFallback />}>
-            {activeTab === 'dashboard' && (
-              <StatsDashboard
-                stats={stats}
-                loading={statsLoading}
-                onNavigateTab={(t) => {
-                  setActiveTab(t);
-                  setSelectedStudentId(null);
-                }}
-              />
-            )}
-
-            {activeTab === 'submissions' && (
-              <SubmissionsTable
-                activeEventId={ACTIVE_EVENT_ID}
-                onSelectSubmission={(sub) => setSelectedSubmission(sub)}
-                onRefreshStats={() => loadStats()}
-              />
-            )}
-
-            {activeTab === 'students' && (
-              selectedStudentId ? (
-                <StudentDetail
-                  studentId={selectedStudentId}
-                  onBack={() => setSelectedStudentId(null)}
-                />
-              ) : (
-                <StudentsTable
-                  activeEventId={ACTIVE_EVENT_ID}
-                  onSelectStudent={(id) => setSelectedStudentId(id)}
-                  onSelectSubmission={(sub) => setSelectedSubmission(sub)}
-                />
-              )
-            )}
-
-            {activeTab === 'moderation' && <Moderation />}
-            {activeTab === 'events' && <AdminEvents />}
-            {activeTab === 'event-registrations' && <EventRegistrations />}
-            {activeTab === 'voting' && <VotingManagement />}
-            {activeTab === 'voting-results' && <VotingResults />}
-            {activeTab === 'communications' && <Communications />}
-            {activeTab === 'email-automation' && <EmailAutomation />}
-            {activeTab === 'email-history' && <EmailHistory />}
-            {activeTab === 'analytics' && <Analytics />}
-            {activeTab === 'exports' && <Exports />}
-            {activeTab === 'storage' && <Storage />}
-            {activeTab === 'roles' && <RolesPermissions />}
-            {activeTab === 'audit-logs' && <AuditLogs />}
-            {activeTab === 'activity' && <ActivityLogView activeEventId={ACTIVE_EVENT_ID} />}
-            {activeTab === 'settings' && <Settings />}
-          </React.Suspense>
+        <main className="flex-1 p-5 sm:p-8 max-w-canvas w-full mx-auto">
+          <Suspense fallback={<PageLoadingFallback />}>
+            <Outlet />
+          </Suspense>
         </main>
       </div>
-
-      {/* 4. TRUE TOP-LAYER MODAL */}
-      {selectedSubmission && (
-        <SubmissionDetailModal
-          submission={selectedSubmission}
-          onClose={() => setSelectedSubmission(null)}
-          onUpdated={(updated) => {
-            setSelectedSubmission(updated);
-            loadStats();
-          }}
-          onDeleted={() => {
-            setSelectedSubmission(null);
-            loadStats();
-          }}
-        />
-      )}
     </div>
   );
+};
+
+// ──────────────────────────────────────────────
+// Router creation
+// ──────────────────────────────────────────────
+
+const router = createBrowserRouter([
+  {
+    path: '/admin',
+    element: <AuthProvider><ProtectedLayout /></AuthProvider>,
+    errorElement: <div className="p-8 text-center text-ink-muted">Something went wrong</div>,
+    children: [
+      { index: true, element: <Navigate to="/admin/dashboard" replace /> },
+      { path: 'dashboard', element: <DashboardPage /> },
+      { path: 'submissions', element: <SubmissionsPage /> },
+      { path: 'students', element: <StudentsPage /> },
+      { path: 'students/:studentId', element: <StudentsPage /> },
+      { path: 'activity', element: <ActivityPage /> },
+      { path: 'moderation', element: <Moderation /> },
+      { path: 'events', element: <AdminEvents /> },
+      { path: 'event-registrations', element: <EventRegistrations /> },
+      { path: 'voting', element: <VotingManagement /> },
+      { path: 'voting-results', element: <VotingResults /> },
+      { path: 'communications', element: <Communications /> },
+      { path: 'email-automation', element: <EmailAutomation /> },
+      { path: 'email-history', element: <EmailHistory /> },
+      { path: 'analytics', element: <Analytics /> },
+      { path: 'exports', element: <Exports /> },
+      { path: 'storage', element: <Storage /> },
+      { path: 'roles', element: <RolesPermissions /> },
+      { path: 'audit-logs', element: <AuditLogs /> },
+      { path: 'settings', element: <Settings /> },
+    ],
+  },
+  {
+    path: '/',
+    element: <Navigate to="/admin" replace />,
+  },
+], {
+  basename: '/admin',
+});
+
+export const App: React.FC = () => {
+  return <RouterProvider router={router} />;
 };

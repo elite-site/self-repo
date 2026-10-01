@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { api, resolveMediaUrl } from '../../services/api';
 import { StudentSession } from '../../types';
-import { Loader2, ArrowLeft, FileText, ShieldCheck, ExternalLink } from 'lucide-react';
+import { Loader2, ArrowLeft, FileText,  ExternalLink } from 'lucide-react';
 import { Navbar } from '../../components/Navbar';
 import { Footer } from '../../components/Footer';
 
@@ -44,15 +44,15 @@ export const PublicResumeViewerPage: React.FC<PublicResumeViewerProps> = ({ sess
   }, [rollNo]);
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col font-sans text-left">
+    <div className="min-h-[100dvh] bg-surface-canvas flex flex-col">
       <Navbar session={session} onLogout={onLogout} />
 
-      <div className="bg-[#0B192C] text-white py-4 px-6 sm:px-10 flex items-center justify-between border-b border-slate-800">
+      <div className="bg-surface-inverse text-ink-inverse py-4 px-6 sm:px-10 flex items-center justify-between border-b border-edge-inverse">
         <Link
           to={`/students/${rollNo}`}
-          className="inline-flex items-center gap-2 text-slate-300 hover:text-white text-xs font-semibold uppercase tracking-wider transition-colors"
+          className="inline-flex items-center gap-2 text-ink-inverse/70 hover:text-on-primary text-label-sm font-semibold uppercase tracking-wider transition-colors"
         >
-          <ArrowLeft className="w-4 h-4 text-elite-red" />
+          <ArrowLeft className="w-4 h-4 text-ink-inverse/70" aria-hidden="true" />
           <span>Back to Profile</span>
         </Link>
         <div className="flex items-center gap-3">
@@ -61,23 +61,23 @@ export const PublicResumeViewerPage: React.FC<PublicResumeViewerProps> = ({ sess
               href={`${resumeUrl}${resumeUrl.includes('?') ? '&' : '?'}download=1`}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-xl text-xs font-bold transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface-raised hover:bg-surface-sunken text-ink hover:text-ink-brand rounded-lg text-label-sm font-bold transition-colors"
             >
-              <ExternalLink className="w-3.5 h-3.5 text-elite-red" />
+              <ExternalLink className="w-3.5 h-3.5 text-ink-inverse/70" aria-hidden="true" />
               <span>Download PDF</span>
             </a>
           )}
-          <div className="text-xs font-mono font-bold text-slate-300 flex items-center gap-2">
-            <FileText className="w-4 h-4 text-elite-red" />
-            <span>{studentName ? `${studentName} — Resume` : 'Curriculum Vitae'}</span>
+          <div className="text-label-sm font-mono font-bold text-ink-inverse/70 flex items-center gap-2">
+            <FileText className="w-4 h-4 text-ink-inverse/70" aria-hidden="true" />
+            <span>{studentName ? `${studentName}, resume`  : 'Curriculum Vitae'}</span>
           </div>
         </div>
       </div>
 
-      <main className="flex-1 w-full bg-slate-900 flex flex-col">
+      <main className="flex-1 w-full bg-surface-inverse flex flex-col">
         {loading ? (
           <div className="flex-1 flex items-center justify-center min-h-[500px]">
-            <Loader2 className="w-8 h-8 animate-spin text-white" />
+            <Loader2 className="w-8 h-8 animate-spin text-ink-inverse" aria-hidden="true" />
           </div>
         ) : resumeUrl ? (
           <div className="flex-1 w-full h-[calc(100vh-140px)]">
@@ -89,18 +89,18 @@ export const PublicResumeViewerPage: React.FC<PublicResumeViewerProps> = ({ sess
             />
           </div>
         ) : (
-          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center min-h-[500px] text-slate-300 space-y-3">
-            <div className="w-14 h-14 rounded-2xl bg-slate-800 flex items-center justify-center text-slate-500">
-              <FileText className="w-7 h-7" />
+          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center min-h-[500px] text-ink-inverse/60 space-y-3">
+            <div className="w-14 h-14 rounded-lg bg-surface-raised flex items-center justify-center text-ink-inverse/40">
+              <FileText className="w-7 h-7" aria-hidden="true" />
             </div>
-            <h3 className="text-base font-bold text-white">No Approved Public Resume</h3>
-            <p className="text-xs text-slate-400 max-w-sm">
+            <h3 className="text-body-md font-bold text-on-primary">No Approved Public Resume</h3>
+            <p className="text-label-sm text-ink-inverse/50 max-w-sm">
               This student has not yet published an approved curriculum vitae to their public profile.
             </p>
             <div className="pt-2">
               <Link
                 to={`/students/${rollNo}`}
-                className="px-4 py-2 bg-neutral-800 hover:bg-neutral-700 text-white rounded-xl text-xs font-bold transition-colors inline-block"
+                className="btn btn-secondary"
               >
                 Return to Student Profile
               </Link>
@@ -115,4 +115,3 @@ export const PublicResumeViewerPage: React.FC<PublicResumeViewerProps> = ({ sess
 };
 
 export default PublicResumeViewerPage;
-

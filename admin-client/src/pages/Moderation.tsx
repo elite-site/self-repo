@@ -24,18 +24,14 @@ interface ModerationItem {
 
 const StatusBadge = ({ status }: { status: string }) => {
   const map: Record<string, { label: string; cls: string }> = {
-    PENDING: { label: 'Pending', cls: 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800' },
-    UNDER_REVIEW: { label: 'Under Review', cls: 'bg-violet-50 dark:bg-violet-950/40 text-violet-700 dark:text-violet-300 border-violet-200 dark:border-violet-800' },
-    APPROVED: { label: 'Approved', cls: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800' },
-    REJECTED: { label: 'Rejected', cls: 'bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800' },
-    CHANGES_REQUESTED: { label: 'Changes Requested', cls: 'bg-orange-50 dark:bg-orange-950/40 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-800' },
+    PENDING: { label: 'Pending', cls: 'badge badge-pending' },
+    UNDER_REVIEW: { label: 'Under Review', cls: 'badge badge-review' },
+    APPROVED: { label: 'Approved', cls: 'badge badge-approved' },
+    REJECTED: { label: 'Rejected', cls: 'badge badge-rejected' },
+    CHANGES_REQUESTED: { label: 'Changes Requested', cls: 'badge badge-changes' },
   };
-  const s = map[status] ?? { label: status, cls: 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700' };
-  return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${s.cls}`}>
-      {s.label}
-    </span>
-  );
+  const s = map[status] ?? { label: status, cls: 'badge badge-draft' };
+  return <span className={s.cls}>{s.label}</span>;
 };
 
 export const Moderation: React.FC = () => {
@@ -87,12 +83,12 @@ export const Moderation: React.FC = () => {
       showToast(
         action === 'approve'
           ? publishOnApprove
-            ? 'Video approved and published!'
-            : 'Video approved!'
+            ? 'Video approved and published.'
+            : 'Video approved.'
           : action === 'reject'
           ? 'Video rejected.'
           : action === 'changes'
-          ? 'Change requested — the student has been notified.'
+          ? 'Change requested, the student has been notified.'
           : 'Video hidden.'
       );
       setAction(null);
@@ -108,41 +104,42 @@ export const Moderation: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 text-left">
+    <div className="space-y-6 text-left page-enter">
       {/* Toast */}
       {toast && (
-        <div className="fixed top-5 right-5 z-50 bg-[#0B192C] text-white text-xs font-semibold px-4 py-2.5 rounded-lg shadow-lg animate-pulse">
+        <div className="fixed top-5 right-5 z-toast bg-surface-inverse text-ink-inverse text-xs font-semibold px-4 py-2.5 rounded-lg shadow-modal animate-fade-in" role="alert" aria-live="polite">
           {toast}
         </div>
       )}
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-neutral-200 dark:border-neutral-800">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-edge">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-950/40 text-elite-red flex items-center justify-center">
+          <div className="w-10 h-10 rounded-lg bg-brand-soft text-brand flex items-center justify-center">
             <Film className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-xl font-extrabold text-[#0B192C] dark:text-white">Video Moderation Queue</h1>
-            <p className="text-xs text-neutral-500 dark:text-neutral-400">
+            <h1 className="text-headline-sm font-extrabold text-ink">Video Moderation Queue</h1>
+            <p className="text-body-sm text-ink-muted">
               Review and approve student introduction videos
             </p>
           </div>
         </div>
         <button
           onClick={fetchItems}
-          className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-200 self-start sm:self-auto cursor-pointer"
+          className="btn btn-secondary self-start sm:self-auto"
+          aria-label="Refresh moderation queue"
         >
           Refresh Queue
         </button>
       </div>
 
       {/* Info Callout Banner */}
-      <div className="flex items-start gap-3 p-4 bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200/80 dark:border-blue-900/40 rounded-xl">
-        <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
-        <div className="text-xs text-blue-900 dark:text-blue-200 space-y-1">
+      <div className="flex items-start gap-3 p-4 bg-brand-soft border border-brand-ring rounded-xl" role="region" aria-label="Workflow information">
+        <Info className="w-5 h-5 text-brand shrink-0 mt-0.5" aria-hidden="true" />
+        <div className="text-body-sm text-brand-soft-text space-y-1">
           <p className="font-bold">Fast-Track Portfolio Workflows Enabled</p>
-          <p className="text-blue-700 dark:text-blue-300">
+          <p className="leading-relaxed">
             Resumes, honors & achievements, and certificates are automatically approved upon upload to eliminate bottleneck queues for 50+ students.
             To inspect student portfolios, request revisions, or delete any record, open the student's profile directly in the <strong>Student Roster</strong>.
           </p>
@@ -151,44 +148,49 @@ export const Moderation: React.FC = () => {
 
       {/* Content */}
       {loading ? (
-        <div className="flex items-center justify-center h-64 bg-white dark:bg-neutral-900 rounded-2xl border border-[#E2E8F0] dark:border-neutral-800">
-          <Loader2 className="w-7 h-7 animate-spin text-[#DC2626]" />
+        <div className="flex items-center justify-center h-64 surface-sunken">
+          <Loader2 className="w-7 h-7 animate-spin text-brand" aria-hidden="true" />
+          <span className="sr-only">Loading moderation queue</span>
         </div>
       ) : error ? (
-        <div className="flex flex-col items-center justify-center h-64 bg-white dark:bg-neutral-900 rounded-2xl border border-red-200 dark:border-red-900/50 gap-3">
-          <AlertCircle className="w-8 h-8 text-red-400" />
-          <p className="text-sm text-neutral-600 dark:text-neutral-400">{error}</p>
-          <button onClick={fetchItems} className="text-xs text-[#DC2626] font-semibold hover:underline cursor-pointer">Retry</button>
+        <div className="flex flex-col items-center justify-center h-64 surface-sunken gap-3 text-center" role="alert">
+          <AlertCircle className="w-8 h-8 text-status-rejected" aria-hidden="true" />
+          <p className="text-body-sm text-ink-muted">{error}</p>
+          <button onClick={fetchItems} className="text-body-sm font-semibold text-brand hover:underline cursor-pointer">Retry</button>
         </div>
       ) : items.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-64 bg-white dark:bg-neutral-900 rounded-2xl border border-[#E2E8F0] dark:border-neutral-800 gap-3">
-          <Inbox className="w-10 h-10 text-neutral-300 dark:text-neutral-600" />
-          <p className="text-sm font-semibold text-neutral-500 dark:text-neutral-400">Queue is clear</p>
-          <p className="text-xs text-neutral-400 dark:text-neutral-500">No pending student introduction videos to review right now.</p>
+        <div className="flex flex-col items-center justify-center h-64 surface-sunken gap-3 text-center">
+          <Inbox className="w-10 h-10 text-ink-muted" aria-hidden="true" />
+          <p className="text-body-md font-semibold text-ink-secondary">Queue is clear</p>
+          <p className="text-body-sm text-ink-muted">No pending student introduction videos to review right now.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
           {/* LEFT: Video Player & Metadata */}
           <div className="lg:col-span-3 space-y-4">
-            <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-[#E2E8F0] dark:border-neutral-800 overflow-hidden shadow-sm">
+            <div className="surface overflow-hidden">
               {/* Navigation header */}
-              <div className="flex items-center justify-between px-5 py-3 border-b border-[#E2E8F0] dark:border-neutral-800 bg-[#F8FAFC] dark:bg-neutral-800/60">
+              <div className="flex items-center justify-between px-5 py-3 border-b border-edge bg-surface-sunken">
                 <button
                   onClick={() => setIdx(Math.max(0, idx - 1))}
                   disabled={idx === 0}
-                  className="flex items-center gap-1 text-xs font-semibold text-neutral-500 dark:text-neutral-400 disabled:opacity-30 hover:text-[#0B192C] dark:hover:text-white cursor-pointer"
+                  className="btn btn-ghost text-body-sm"
+                  aria-label="Previous video"
+                  aria-disabled={idx === 0}
                 >
-                  <ChevronLeft className="w-4 h-4" /> Prev
+                  <ChevronLeft className="w-4 h-4" aria-hidden="true" /> Prev
                 </button>
-                <span className="text-xs font-bold text-neutral-600 dark:text-neutral-300">
+                <span className="text-body-sm font-bold text-ink-secondary" aria-live="polite">
                   {idx + 1} of {items.length}
                 </span>
                 <button
                   onClick={() => setIdx(Math.min(items.length - 1, idx + 1))}
                   disabled={idx === items.length - 1}
-                  className="flex items-center gap-1 text-xs font-semibold text-neutral-500 dark:text-neutral-400 disabled:opacity-30 hover:text-[#0B192C] dark:hover:text-white cursor-pointer"
+                  className="btn btn-ghost text-body-sm"
+                  aria-label="Next video"
+                  aria-disabled={idx === items.length - 1}
                 >
-                  Next <ChevronRight className="w-4 h-4" />
+                  Next <ChevronRight className="w-4 h-4" aria-hidden="true" />
                 </button>
               </div>
 
@@ -197,17 +199,17 @@ export const Moderation: React.FC = () => {
                 {currentItem && (
                   <>
                     {/* Student info */}
-                    <div className="flex items-center gap-3 mb-4 pb-4 border-b border-[#E2E8F0] dark:border-neutral-800">
-                      <div className="w-10 h-10 rounded-full bg-[#0B192C] dark:bg-neutral-800 text-white flex items-center justify-center font-bold text-sm">
+                    <div className="flex items-center gap-3 mb-4 pb-4 border-b border-edge">
+                      <div className="w-10 h-10 rounded-full bg-surface-inverse text-ink-inverse flex items-center justify-center font-bold text-body-sm">
                         {currentItem.studentName.charAt(0)}
                       </div>
-                      <div>
-                        <div className="font-bold text-[#0B192C] dark:text-white text-sm">{currentItem.studentName}</div>
-                        <div className="text-xs font-mono text-neutral-400">{currentItem.studentRoll}</div>
+                      <div className="min-w-0">
+                        <div className="font-bold text-ink text-body-sm truncate">{currentItem.studentName}</div>
+                        <div className="text-label-sm font-mono text-ink-muted">{currentItem.studentRoll}</div>
                       </div>
                       <div className="ml-auto flex items-center gap-2">
                         <StatusBadge status={currentItem.status} />
-                        <span className="text-[10px] text-neutral-400">
+                        <span className="text-label-sm text-ink-muted">
                           {new Date(currentItem.submittedAt).toLocaleDateString()}
                         </span>
                       </div>
@@ -221,8 +223,8 @@ export const Moderation: React.FC = () => {
 
                       return (
                         <>
-                          <div className="flex items-center justify-between mb-3 pb-2 border-b border-neutral-100 dark:border-neutral-800">
-                            <span className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
+                          <div className="flex items-center justify-between mb-3 pb-2 border-b border-edge">
+                            <span className="text-label-sm font-semibold text-ink-muted">
                               Introduction Video Attachment
                             </span>
                             <div className="flex items-center gap-2">
@@ -231,9 +233,9 @@ export const Moderation: React.FC = () => {
                                   href={watchUrl}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/60 text-blue-700 dark:text-blue-300 transition-colors"
+                                  className="btn btn-ghost text-body-sm"
                                 >
-                                  <ExternalLink className="w-3.5 h-3.5 text-blue-600" />
+                                  <ExternalLink className="w-3.5 h-3.5 text-brand" aria-hidden="true" />
                                   <span>View on Drive</span>
                                 </a>
                               )}
@@ -241,23 +243,23 @@ export const Moderation: React.FC = () => {
                                 href={watchUrl || currentItem.fileUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-200 transition-colors"
+                                className="btn btn-ghost text-body-sm"
                               >
-                                <ExternalLink className="w-3.5 h-3.5 text-[#DC2626]" />
+                                <ExternalLink className="w-3.5 h-3.5 text-brand" aria-hidden="true" />
                                 <span>Open in Tab</span>
                               </a>
                               <a
                                 href={`${currentItem.fileUrl}${currentItem.fileUrl.includes('?') ? '&' : '?'}download=1`}
-                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-200 transition-colors"
+                                className="btn btn-ghost text-body-sm"
                               >
-                                <Download className="w-3.5 h-3.5 text-blue-500" />
+                                <Download className="w-3.5 h-3.5 text-brand" aria-hidden="true" />
                                 <span>Download</span>
                               </a>
                             </div>
                           </div>
 
                           {/* Video player */}
-                          <div className="bg-neutral-900 rounded-xl overflow-hidden aspect-video">
+                          <div className="bg-surface-inverse rounded-lg overflow-hidden aspect-video">
                             <video src={currentItem.fileUrl} controls className="w-full h-full object-contain" />
                           </div>
                         </>
@@ -271,82 +273,87 @@ export const Moderation: React.FC = () => {
 
           {/* RIGHT: Decision Panel */}
           <div className="lg:col-span-2 space-y-4">
-            <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-[#E2E8F0] dark:border-neutral-800 p-5 space-y-4 shadow-sm">
-              <h3 className="text-sm font-extrabold text-[#0B192C] dark:text-white uppercase tracking-wide">Decision</h3>
+            <div className="surface p-5 space-y-4">
+              <h3 className="text-label-md font-extrabold text-ink uppercase tracking-wide">Decision</h3>
 
               {/* Action buttons */}
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-2" role="group" aria-label="Moderation actions">
                 <button
                   onClick={() => setAction('approve')}
-                  className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-bold border transition-all cursor-pointer ${
-                    action === 'approve'
-                      ? 'bg-emerald-600 text-white border-emerald-600'
-                      : 'border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40'
-                  }`}
+                  className={`btn ${action
+                     === 'approve'
+                      ? 'btn-primary'
+                      : 'btn-secondary'} text-body-sm`}
+                  aria-pressed={action === 'approve'}
                 >
-                  <CheckCircle className="w-4 h-4" /> Approve
+                  <CheckCircle className="w-4 h-4" aria-hidden="true" /> Approve
                 </button>
                 <button
                   onClick={() => setAction('reject')}
-                  className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-bold border transition-all cursor-pointer ${
-                    action === 'reject'
-                      ? 'bg-red-600 text-white border-red-600'
-                      : 'border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40'
-                  }`}
+                  className={`btn ${action
+                     === 'reject'
+                      ? 'btn-danger'
+                      : 'btn-secondary'} text-body-sm`}
+                  aria-pressed={action === 'reject'}
                 >
-                  <XCircle className="w-4 h-4" /> Reject
+                  <XCircle className="w-4 h-4" aria-hidden="true" /> Reject
                 </button>
                 <button
                   onClick={() => setAction('changes')}
-                  className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-bold border transition-all cursor-pointer ${
-                    action === 'changes'
-                      ? 'bg-orange-500 text-white border-orange-500'
-                      : 'border-orange-200 dark:border-orange-800 text-orange-700 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-950/40'
-                  }`}
+                  className={`btn ${action
+                     === 'changes'
+                      ? 'btn-primary'
+                      : 'btn-secondary'} text-body-sm`}
+                  aria-pressed={action === 'changes'}
                 >
-                  <MessageSquare className="w-4 h-4" /> Request Changes
+                  <MessageSquare className="w-4 h-4" aria-hidden="true" /> Request Changes
                 </button>
                 <button
                   onClick={() => setAction('hide')}
-                  className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-bold border transition-all cursor-pointer ${
-                    action === 'hide'
-                      ? 'bg-slate-600 text-white border-slate-600'
-                      : 'border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
-                  }`}
+                  className={`btn ${action
+                     === 'hide'
+                      ? 'btn-secondary'
+                      : 'btn-ghost'} text-body-sm`}
+                  aria-pressed={action === 'hide'}
                 >
-                  <EyeOff className="w-4 h-4" /> Hide
+                  <EyeOff className="w-4 h-4" aria-hidden="true" /> Hide
                 </button>
               </div>
 
               {/* Reason textarea — required for reject/changes */}
               {(action === 'reject' || action === 'changes') && (
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-neutral-700 dark:text-neutral-300 uppercase tracking-wide">
-                    Reason / Faculty Feedback <span className="text-[#DC2626]">*</span>
+                  <label htmlFor="moderation-reason" className="label">
+                    Reason / Faculty Feedback <span className="text-status-rejected" aria-hidden="true">*</span>
                   </label>
                   <textarea
+                    id="moderation-reason"
                     value={reason}
                     onChange={(e) => setReason(e.target.value)}
                     rows={4}
                     placeholder="Explain why this is being rejected or what needs to be changed in the re-uploaded video..."
-                    className="w-full text-xs border border-[#E2E8F0] dark:border-neutral-700 bg-white dark:bg-neutral-800 rounded-lg p-3 resize-none focus:outline-none focus:border-[#DC2626] focus:ring-1 focus:ring-[#DC2626] text-[#0B192C] dark:text-white"
+                    className="textarea"
+                    aria-required="true"
+                    aria-describedby="reason-hint"
                   />
+                  <p id="reason-hint" className="hint">Required for rejection or change requests.</p>
+
                   {!reason.trim() && (
-                    <p className="text-[10px] text-[#DC2626]">Reason is required for this action.</p>
+                    <p className="error-text">Reason  is required for this action.</p>
                   )}
                 </div>
               )}
 
               {/* Publish option — shown when approving */}
               {action === 'approve' && (
-                <label className="flex items-start gap-2.5 p-3 rounded-lg border border-emerald-200 dark:border-emerald-800/60 bg-emerald-50/50 dark:bg-emerald-950/20 cursor-pointer">
+                <label className="flex items-start gap-2.5 p-3 rounded-lg border border-status-approved/30 bg-status-bg-approved cursor-pointer">
                   <input
                     type="checkbox"
                     checked={publishOnApprove}
                     onChange={(e) => setPublishOnApprove(e.target.checked)}
-                    className="mt-0.5 w-3.5 h-3.5 rounded border-neutral-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                    className="mt-0.5 w-3.5 h-3.5 rounded border-edge text-brand focus:ring-brand focus:ring-2 cursor-pointer"
                   />
-                  <span className="text-[11px] text-emerald-800 dark:text-emerald-300 leading-relaxed">
+                  <span className="text-label-sm text-status-approved leading-relaxed">
                     <span className="font-bold">Publish on public showcase.</span> The video becomes watchable by
                     visitors on the student's public profile and directory without logging in.
                   </span>
@@ -357,9 +364,10 @@ export const Moderation: React.FC = () => {
                 <button
                   onClick={handleDecision}
                   disabled={submitting || ((action === 'reject' || action === 'changes') && !reason.trim())}
-                  className="w-full py-3 rounded-lg text-xs font-bold bg-[#0B192C] dark:bg-white text-white dark:text-neutral-900 hover:bg-[#0B192C]/90 dark:hover:bg-neutral-100 disabled:opacity-50 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  className="btn btn-primary w-full"
+                  aria-busy={submitting}
                 >
-                  {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                  {submitting ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> : null}
                   Confirm {action === 'approve' ? 'Approval' : action === 'reject' ? 'Rejection' : action === 'changes' ? 'Change Request' : 'Hide'}
                 </button>
               )}
@@ -367,9 +375,9 @@ export const Moderation: React.FC = () => {
 
             {/* Previous decision (if exists) */}
             {currentItem?.reason && (
-              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-                <p className="text-xs font-bold text-amber-700 mb-1">Previous Feedback</p>
-                <p className="text-xs text-amber-800">{currentItem.reason}</p>
+              <div className="surface-sunken p-4 border border-status-pending/30 rounded-xl" role="region" aria-label="Previous feedback">
+                <p className="text-label-sm font-bold text-status-pending mb-1">Previous Feedback</p>
+                <p className="text-body-sm text-status-pending">{currentItem.reason}</p>
               </div>
             )}
           </div>

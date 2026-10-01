@@ -2,7 +2,12 @@ import { Router, Request, Response } from 'express';
 import { requireAdminAuth } from '../middleware/auth';
 import { prisma } from '../lib/prisma';
 import { ActivityService } from '../services/activity.service';
-import { deliverAnnouncementNotifications } from '../services/announcement.service';
+import {
+  countAnnouncementAudience,
+  deliverAnnouncementNotifications,
+  resolveAnnouncementTarget,
+} from '../services/announcement.service';
+import { getDefaultMaxVideoSizeMb, getMaxVideoHardCapMb, VIDEO_SIZE_SETTING_KEY } from '../services/limits.service';
 import { notifyStudent, notifyVideoChangeRequested } from '../services/notification.service';
 import { driveService } from '../services/drive.service';
 
@@ -872,6 +877,19 @@ router.get('/voting/:id/results', async (req: Request, res: Response) => {
 });
 
 // ── Communications / Announcements
+router.get('/announcements/preview', async (req: Request, res: Response) => {
+  try {
+    const target = resolveAnnouncementTarget({
+      audience: req.query.audience,
+      targetYear: req.query.targetYear,
+      targetSection: req.query.targetSection,
+    });
+    res.json({ count: await countAnnouncementAudience(target) });
+  } catch (err: any) {
+    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+  }
+});
+
 router.get('/announcements', async (_req: Request, res: Response) => {
   try {
     const announcements = await prisma.announcement.findMany({
@@ -885,20 +903,22 @@ router.get('/announcements', async (_req: Request, res: Response) => {
 
 router.post('/announcements', async (req: Request, res: Response) => {
   try {
-    const { title, message, body, content, priority, targetYear, targetSection, targetAll, scheduledAt } = req.body;
+    const { title, message, body, content, priority, targetYear, targetSection, targetAll, audience, scheduledAt } = req.body;
     const scheduledDate = scheduledAt ? new Date(scheduledAt) : null;
     const isFutureScheduled = scheduledDate !== null && !isNaN(scheduledDate.getTime()) && scheduledDate.getTime() > Date.now();
 
-    const isTargetAll = targetAll === false ? false : (targetAll === true ? true : !(targetYear || targetSection));
+    // `audience` is what the admin UI sends (ALL / YEAR_1..YEAR_4); targetYear and
+    // friends are kept for older callers. Both resolve to the same target here.
+    const resolved = resolveAnnouncementTarget({ audience, targetYear, targetSection, targetAll });
 
     const announcement = await prisma.announcement.create({
       data: {
         title,
         message: message || body || content || '',
         priority: priority || 'normal',
-        targetYear: targetYear !== undefined && targetYear !== null && targetYear !== '' ? parseInt(String(targetYear), 10) : null,
-        targetSection: targetSection ? String(targetSection) : null,
-        targetAll: isTargetAll,
+        targetYear: resolved.targetYear,
+        targetSection: resolved.targetSection,
+        targetAll: resolved.targetAll,
         createdBy: req.adminUser?.username || 'ADMIN',
         scheduledAt: scheduledDate,
         status: isFutureScheduled ? 'SCHEDULED' : 'PUBLISHED',
@@ -1051,7 +1071,9 @@ router.get('/settings', async (_req: Request, res: Response) => {
       portal_title: 'ELITE Student Portal',
       institution_name: 'Sasi Institute of Technology & Engineering',
       department_name: 'Department of Information Technology',
-      max_video_size_mb: '100',
+      // Must match what is actually enforced when no override is stored, or the
+      // admin sees a limit the portal does not apply.
+      max_video_size_mb: String(getDefaultMaxVideoSizeMb()),
       max_photo_size_mb: '10',
       allowed_email_domain: 'sasi.ac.in',
       auto_approve_projects: 'true',
@@ -1068,6 +1090,27 @@ router.get('/settings', async (_req: Request, res: Response) => {
 router.put('/settings', async (req: Request, res: Response) => {
   try {
     const entries = Object.entries(req.body);
+
+    // The video ceiling is enforced on every upload, so reject a value that could
+    // never be applied rather than storing it and silently ignoring it later.
+    if (entries.some(([key]) => key === VIDEO_SIZE_SETTING_KEY)) {
+      const raw = entries.find(([key]) => key === VIDEO_SIZE_SETTING_KEY)![1];
+      const parsed = parseInt(String(raw), 10);
+      const cap = getMaxVideoHardCapMb();
+      if (!Number.isFinite(parsed) || parsed < 1) {
+        return res
+          .status(400)
+          .json({ error: 'VALIDATION_ERROR', field: VIDEO_SIZE_SETTING_KEY, message: 'Video size must be a number of megabytes, at least 1.' });
+      }
+      if (parsed > cap) {
+        return res.status(400).json({
+          error: 'VALIDATION_ERROR',
+          field: VIDEO_SIZE_SETTING_KEY,
+          message: `Video size cannot exceed the ${cap} MB hard ceiling.`,
+        });
+      }
+    }
+
     for (const [key, value] of entries) {
       if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
         await prisma.portalSettings.upsert({

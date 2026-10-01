@@ -1,5 +1,6 @@
 import sharp from 'sharp';
 import { env } from '../config/env';
+import { getMaxVideoSizeMb } from './limits.service';
 
 export interface FileValidationResult {
   valid: boolean;
@@ -116,19 +117,21 @@ export class ValidationService {
   }
 
   /**
-   * Validates an optional video file (max 25MB)
+   * Validates an optional video file against the portal's configured size limit.
    */
   public static async validateVideo(
     fileBuffer: Buffer,
     fileName: string,
     fileSize: number
   ): Promise<FileValidationResult> {
-    // 1. Check size limit
-    const maxSizeBytes = env.MAX_VIDEO_SIZE_MB * 1024 * 1024;
+    // 1. Check size limit against the administrator-configured value, so the
+    //    limit shown in Settings is the limit that is actually enforced.
+    const maxVideoSizeMb = await getMaxVideoSizeMb();
+    const maxSizeBytes = maxVideoSizeMb * 1024 * 1024;
     if (fileSize > maxSizeBytes) {
       return {
         valid: false,
-        error: `Video file is too large. Maximum size is ${env.MAX_VIDEO_SIZE_MB} MB.`,
+        error: `Video file is too large. Maximum size is ${maxVideoSizeMb} MB.`,
       };
     }
 
@@ -138,7 +141,7 @@ export class ValidationService {
     if (!ALLOWED_VIDEO_EXTS.includes(ext)) {
       return {
         valid: false,
-        error: `Unsupported file format. Please upload MP4, MOV, WebM, or MKV video up to ${env.MAX_VIDEO_SIZE_MB} MB.`,
+        error: `Unsupported file format. Please upload MP4, MOV, WebM, or MKV video up to ${maxVideoSizeMb} MB.`,
       };
     }
 
@@ -148,7 +151,7 @@ export class ValidationService {
       if (!type || !this.ALLOWED_VIDEO_MIMES.includes(type.mime as any)) {
         return {
           valid: false,
-          error: `Unsupported file format. Please upload MP4, MOV, WebM, or MKV video up to ${env.MAX_VIDEO_SIZE_MB} MB. Detected: ${type?.mime || 'unknown'}`,
+          error: `Unsupported file format. Please upload MP4, MOV, WebM, or MKV video up to ${maxVideoSizeMb} MB. Detected: ${type?.mime || 'unknown'}`,
         };
       }
 
@@ -159,7 +162,7 @@ export class ValidationService {
     } catch {
       return {
         valid: false,
-        error: `Unsupported file format. Please upload MP4, MOV, WebM, or MKV video up to ${env.MAX_VIDEO_SIZE_MB} MB.`,
+        error: `Unsupported file format. Please upload MP4, MOV, WebM, or MKV video up to ${maxVideoSizeMb} MB.`,
       };
     }
   }
