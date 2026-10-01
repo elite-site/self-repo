@@ -371,16 +371,21 @@ export class DriveService {
         sendNotificationEmail: false,
       });
       this.viewerPermissionCache.add(fileOrFolderId);
-      this.rememberAnyoneReadable(fileOrFolderId);
+      // Deliberately not `rememberAnyoneReadable`. This method is also called
+      // for folders — on every folder creation, and again by
+      // `ensureAllFilesViewerAccess` when it sweeps every `driveFolderCache`
+      // row — and `isPubliclyReadable` never consults a folder id. Recording
+      // them here spent the whole capped budget on entries nothing reads, which
+      // evicted the real file entries and made every view re-issue a
+      // `permissions.list`. That check confirms a file on its own anyway.
       console.log(`[Drive] Public viewer access ('anyone') granted to: ${fileOrFolderId}`);
       return true;
     } catch (permErr: any) {
       const msg = permErr?.message || String(permErr);
       if (msg.includes('already exists') || msg.includes('duplicate')) {
-        // The 'anyone' grant is what collided, so this file is anonymously
-        // readable even though we did not create the permission ourselves.
+        // The 'anyone' grant is what collided, so this is anonymously readable
+        // even though we did not create the permission ourselves.
         this.viewerPermissionCache.add(fileOrFolderId);
-        this.rememberAnyoneReadable(fileOrFolderId);
         return true;
       }
 
@@ -1008,7 +1013,11 @@ export class DriveService {
     if (!fileId || this.isMock || !this.drive) return false;
     const known = this.anyoneReadableCache.get(fileId);
     if (known !== undefined) {
-      if (Date.now() < known) return true;
+      if (Date.now() < known) {
+        // Refresh recency so a routinely-viewed file is not the next eviction.
+        this.rememberAnyoneReadable(fileId);
+        return true;
+      }
       // The grant may have been revoked since we last confirmed it. Re-check
       // rather than trusting a stale positive, which is what would otherwise
       // keep redirecting to a URL Drive now answers with 403.
@@ -1038,9 +1047,12 @@ export class DriveService {
       }
       return anyone;
     } catch (err: any) {
-      // An API failure is not evidence of a private file. Leave it uncached so
-      // the next request retries, and report "not safe to redirect" so the
-      // caller proxies this time.
+      // An API failure is not evidence of a private file, so this reports "not
+      // safe to redirect" and the caller proxies this time. It IS remembered,
+      // briefly: this route is public and the id in the URL is caller-chosen, so
+      // an unconfirmed id would otherwise cost one outbound `permissions.list`
+      // per request. Caching only delays the retry, and streaming still works.
+      this.negativePermissionCache.set(fileId, Date.now() + 60_000);
       console.warn(`[Drive] Permission check failed for ${fileId}: ${err?.message || err}`);
       return false;
     }
@@ -1055,10 +1067,15 @@ export class DriveService {
    * answers with 403 — the exact failure this cache exists to prevent.
    */
   private rememberAnyoneReadable(fileId: string): void {
+    // Re-insert so the key moves to the end of the Map's iteration order. The
+    // read path above returns early without touching the map, so without this
+    // the eviction below is least-recently-*written* — which made a video being
+    // watched constantly the first entry evicted once the cap was reached.
+    this.anyoneReadableCache.delete(fileId);
     this.anyoneReadableCache.set(fileId, Date.now() + ANYONE_READABLE_TTL_MS);
 
-    // Same reasoning as `TtlCache.maxEntries`: unbounded growth on a 500 MB
-    // instance is its own outage, so the least recently written entry goes.
+    // Unbounded growth on a 500 MB instance is its own outage, so the least
+    // recently used entry goes.
     while (this.anyoneReadableCache.size > MAX_TRACKED_ANYONE_FILES) {
       const oldest = this.anyoneReadableCache.keys().next();
       if (oldest.done) break;

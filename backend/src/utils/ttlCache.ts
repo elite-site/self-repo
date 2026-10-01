@@ -40,7 +40,7 @@
  */
 export class TtlCache<T> {
   private readonly store = new Map<string, { value: T; expiresAt: number }>();
-  private readonly inflight = new Map<string, Promise<T>>();
+  private readonly inflight = new Map<string, { token: object; promise: Promise<T> }>();
   /** Bumped by `clear()`; lets an in-flight load detect that it was cancelled. */
   private generation = 0;
 
@@ -91,25 +91,37 @@ export class TtlCache<T> {
     if (cached !== undefined) return cached;
 
     const pending = this.inflight.get(key);
-    if (pending) return pending;
+    if (pending) return pending.promise;
 
     // Capture the generation so a `clear()` during the load discards the result
     // instead of writing it back after the clear has already returned.
     const generation = this.generation;
+    // A token rather than a promise reference. `load()` runs inside the IIFE's
+    // synchronous prefix, so a loader that throws before its first `await`
+    // settles the IIFE before `inflight.set` below — and a promise-comparison
+    // guard would then be comparing against an unassigned variable. The token
+    // exists from the first statement, so the identity check always holds.
+    const token = {};
     const promise = (async () => {
       try {
-        const value = await load();
+        // Deferred through a microtask so the IIFE always suspends here. Called
+        // directly, a loader that throws before its first `await` would run this
+        // function's `finally` before `inflight.set` below, leaving a rejected
+        // promise stored in `inflight` that nothing ever removes — so every
+        // later request for the key returned the same rejection until `clear()`.
+        const value = await Promise.resolve().then(load);
         if (this.generation === generation) this.set(key, value);
         return value;
       } finally {
-        // Unconditional: single-flight guarantees only one load per key at a
-        // time, so this cannot delete a newer request's entry. `clear()` may
-        // have emptied the map already, which is also fine.
-        this.inflight.delete(key);
+        // Identity-checked, not unconditional. `clear()` empties `inflight`, so
+        // a newer `wrap` for this key can register while this load is still
+        // running; an unconditional delete would drop *that* entry and defeat
+        // single-flight for the rest of the burst.
+        if (this.inflight.get(key)?.token === token) this.inflight.delete(key);
       }
     })();
 
-    this.inflight.set(key, promise);
+    this.inflight.set(key, { token, promise });
     return promise;
   }
 

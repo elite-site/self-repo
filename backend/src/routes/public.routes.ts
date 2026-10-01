@@ -526,14 +526,20 @@ router.get('/public/media/:type/:fileId', async (req: Request, res: Response): P
     //   - The permission check keeps the proxy as a fallback, so a file that is
     //     not `anyone`-readable still streams rather than 403ing from Drive.
     //
-    // Gated on `resolvedDriveId`, not `targetDriveFileId`. When the database
-    // lookup misses, `targetDriveFileId` is whatever the caller put in the URL,
-    // and checking it would spend an outbound Drive `permissions.list` call on
-    // anonymous, attacker-chosen input. Only a file this app actually owns is
-    // worth redirecting.
-    if (resolvedDriveId && REDIRECTABLE_TYPES.has(type) && driveService.canRedirectToDrive()) {
-      const directLink = driveService.getDirectLink(resolvedDriveId);
-      if (directLink && (await driveService.isPubliclyReadable(resolvedDriveId))) {
+    // Deliberately NOT gated on `resolvedDriveId`. Admin moderation plays
+    // videos by raw Drive id (`admin.api.routes.ts` builds
+    // `/api/public/media/video/<driveFileId>`), which matches no database id, so
+    // requiring a resolved row disabled the redirect for the one caller that
+    // streams 25 MB files — while the lookup ran anyway.
+    //
+    // Amplification from caller-chosen ids is bounded instead by caching the
+    // failure: `isPubliclyReadable` remembers an id it could not confirm, so a
+    // bogus id costs one `permissions.list` per window rather than one per
+    // request. The pre-existing streaming path already spent outbound calls on
+    // the same ids, so this does not widen the surface.
+    if (REDIRECTABLE_TYPES.has(type) && driveService.canRedirectToDrive()) {
+      const directLink = driveService.getDirectLink(targetDriveFileId);
+      if (directLink && (await driveService.isPubliclyReadable(targetDriveFileId))) {
         res.setHeader('Cache-Control', 'private, max-age=3600');
         res.setHeader('ETag', etag);
         res.redirect(302, directLink);

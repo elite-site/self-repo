@@ -104,12 +104,20 @@ export const VideoPage: React.FC = () => {
   // always see the value captured on first render (null), making a "refresh in
   // place" request blank the whole page to the full-screen loader.
   const hasSubmissionData = useRef(false);
+  // Monotonic request id. Two loads can overlap — the mount revalidation and a
+  // delete's refresh — and without this the slower one wins, so a delete could
+  // be undone on screen by a response that started before it.
+  const loadSeq = useRef(0);
 
   const loadSubmission = useCallback(async (isInitial = true) => {
     if (isInitial && !hasSubmissionData.current) setLoading(true);
     setError(null);
+    const seq = ++loadSeq.current;
     try {
       const data = await api.getMe();
+      // A newer load has started; this response is stale, so drop it rather than
+      // resurrecting state it no longer reflects.
+      if (seq !== loadSeq.current) return;
       const currentVideo = data?.student?.video ?? null;
       setVideo(currentVideo);
       if (!currentVideo?.hasFile) {
@@ -126,12 +134,13 @@ export const VideoPage: React.FC = () => {
       }
       hasSubmissionData.current = true;
     } catch {
+      if (seq !== loadSeq.current) return;
       if (isInitial) {
         setError('Could not load introduction video status.');
         showToast('Could not load introduction video status.', 'error');
       }
     } finally {
-      setLoading(false);
+      if (seq === loadSeq.current) setLoading(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -302,7 +311,16 @@ export const VideoPage: React.FC = () => {
     if (seededFromSession.current) return;
     const cached = session?.student;
     if (!cached) {
+      // No session payload (still verifying, or signed out). Fetch directly,
+      // and mark the seed done so the session arriving later does not issue a
+      // second page-level `/me` on top of this one.
+      seededFromSession.current = true;
       loadSubmission(true);
+      return;
+    }
+    // The direct fetch already ran and has fresher data than this snapshot.
+    if (hasSubmissionData.current) {
+      seededFromSession.current = true;
       return;
     }
     seededFromSession.current = true;
