@@ -13,6 +13,7 @@ import {
   Users,
   Video,
   Vote,
+  type LucideIcon,
 } from 'lucide-react';
 import { cn } from '../../lib/cn';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
