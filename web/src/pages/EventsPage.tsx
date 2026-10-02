@@ -22,6 +22,9 @@ export const EventsPage: React.FC = () => {
   const [registrations, setRegistrations] = useState<EventRegistration[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const shouldReduce = useReducedMotion();
+  const staggerContainer = selectVariantsByName(shouldReduce, 'staggerFastContainer');
+  const staggerItem = selectVariantsByName(shouldReduce, 'staggerItem');
   const [activeTab, setActiveTab] = useState<'All' | 'Open' | 'Registered'>('All');
   const [search, setSearch] = useState('');
 

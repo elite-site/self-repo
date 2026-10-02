@@ -16,6 +16,9 @@ export const TeamsPage: React.FC = () => {
   const [removingTeamId, setRemovingTeamId] = useState<string | null>(null);
   const [teamError, setTeamError] = useState<string | null>(null);
   const [teamNotice, setTeamNotice] = useState<string | null>(null);
+  const shouldReduce = useReducedMotion();
+  const staggerContainer = selectVariantsByName(shouldReduce, 'staggerFastContainer');
+  const staggerItem = selectVariantsByName(shouldReduce, 'staggerItem');
 
   // Create Team Modal
   const [createModalOpen, setCreateModalOpen] = useState(false);

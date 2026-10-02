@@ -5,6 +5,8 @@ import { useSession } from '../context/SessionContext';
 import { useToast } from '../components/Toast';
 import { useConfirm } from '../components/ui/ConfirmDialog';
 import { ProgressSteps } from '../components/ui/ProgressSteps';
+import { useReducedMotion } from '../hooks/useReducedMotion';
+import { selectVariantsByName } from '../lib/motion';
 import {
   UploadCloud,
   AlertCircle,
@@ -74,6 +76,10 @@ export const VideoPage: React.FC = () => {
   const [deleteNotice, setDeleteNotice] = useState<string | null>(null);
   const [publishNotice, setPublishNotice] = useState<string | null>(null);
   const [previewError, setPreviewError] = useState(false);
+
+  const shouldReduce = useReducedMotion();
+  const staggerContainer = selectVariantsByName(shouldReduce, 'staggerFastContainer');
+  const staggerItem = selectVariantsByName(shouldReduce, 'staggerItem');
   const [isPlaying, setIsPlaying] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);

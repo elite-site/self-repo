@@ -28,6 +28,7 @@ export const Navbar: React.FC<NavbarProps> = ({ session, onLogout }) => {
   const navLinks = [
     { label: 'Students', to: '/students' },
     { label: 'Events', to: '/events' },
+    { label: 'Settings', to: '/settings' },
     { label: 'Guidelines', to: '/#guidelines' },
   ];
 

@@ -39,6 +39,9 @@ export const PublicEventsPage: React.FC<PublicEventsPageProps> = ({ session, onL
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const shouldReduce = useReducedMotion();
+  const staggerContainer = selectVariantsByName(shouldReduce, 'staggerFastContainer');
+  const staggerItem = selectVariantsByName(shouldReduce, 'staggerItem');
   const [search, setSearch] = useState('');
 
   const loadEvents = () => {

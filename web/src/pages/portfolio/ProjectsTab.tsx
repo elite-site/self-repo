@@ -4,7 +4,7 @@ import { Project } from '../../types';
 import { Plus, Github, ExternalLink, Loader2, Trash2, FolderGit2, Pencil } from 'lucide-react';
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ui/ConfirmDialog';
-import { Dialog } from '../../components/ui/Dialog';
+import { Modal } from '../../components/ui/Modal';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { ErrorState } from '../../components/ui/ErrorState';
 
@@ -331,7 +331,7 @@ export const ProjectsTab: React.FC = () => {
         </ul>
       ) : null}
 
-      <Dialog
+      <Modal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         title={editingProject ? 'Edit project' : 'Add project'}

@@ -23,6 +23,9 @@ export const ResumePage: React.FC = () => {
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState(false);
+  const shouldReduce = useReducedMotion();
+  const staggerContainer = selectVariantsByName(shouldReduce, 'staggerFastContainer');
+  const staggerItem = selectVariantsByName(shouldReduce, 'staggerItem');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   /** Withdraw the submitted resume. The server deletes the file and DB row. */

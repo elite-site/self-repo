@@ -19,6 +19,9 @@ export const VotingPage: React.FC = () => {
   const [submittingVote, setSubmittingVote] = useState(false);
   const [voteSuccess, setVoteSuccess] = useState(false);
   const [voteError, setVoteError] = useState<string | null>(null);
+  const shouldReduce = useReducedMotion();
+  const staggerContainer = selectVariantsByName(shouldReduce, 'staggerFastContainer');
+  const staggerItem = selectVariantsByName(shouldReduce, 'staggerItem');
 
   // Only auto-open for a deep link the user arrived on, not for one they left.
   const deepLinkHandled = useRef(false);

@@ -4,7 +4,7 @@ import { Certificate } from '../../types';
 import { UploadCloud, Loader2, FileText, Trash2, ExternalLink, Globe, EyeOff } from 'lucide-react';
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ui/ConfirmDialog';
-import { Dialog } from '../../components/ui/Dialog';
+import { Modal } from '../../components/ui/Modal';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { ErrorState } from '../../components/ui/ErrorState';
 
@@ -297,7 +297,7 @@ export const CertificatesTab: React.FC = () => {
         </ul>
       ) : null}
 
-      <Dialog
+      <Modal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         title="Upload certificate"

@@ -4,7 +4,7 @@ import { Achievement } from '../../types';
 import { Plus, Trophy, Loader2, Trash2, Calendar, Pencil } from 'lucide-react';
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ui/ConfirmDialog';
-import { Dialog } from '../../components/ui/Dialog';
+import { Modal } from '../../components/ui/Modal';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { ErrorState } from '../../components/ui/ErrorState';
 
@@ -245,7 +245,7 @@ export const AchievementsTab: React.FC = () => {
         </ul>
       ) : null}
 
-      <Dialog
+      <Modal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         title={editingAchievement ? 'Edit achievement' : 'Add achievement'}

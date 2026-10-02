@@ -28,6 +28,9 @@ export const EventDetailPage: React.FC = () => {
   const confirm = useConfirm();
   const navigate = useNavigate();
   const [event, setEvent] = useState<any | null>(null);
+  const shouldReduce = useReducedMotion();
+  const staggerContainer = selectVariantsByName(shouldReduce, 'staggerFastContainer');
+  const staggerItem = selectVariantsByName(shouldReduce, 'staggerItem');
   const [registration, setRegistration] = useState<EventRegistration | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

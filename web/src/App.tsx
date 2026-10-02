@@ -15,6 +15,8 @@ const PublicStudentProfilePage = lazy(() => import('./pages/public/PublicStudent
 const PublicResumeViewerPage = lazy(() => import('./pages/public/PublicResumeViewerPage'));
 const PublicEventsPage = lazy(() => import('./pages/public/PublicEventsPage'));
 const PublicEventDetailPage = lazy(() => import('./pages/public/PublicEventDetailPage'));
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 
 // Protected Student Portal Layout & Pages (isolated chunk for authenticated students)
 const AppLayout = lazy(() => import('./components/layout/AppLayout'));
@@ -135,12 +137,16 @@ const AuthWrapper: React.FC = () => {
         <Route
           path="/login"
           element={
-            <LoginRoute
-              session={session}
-              authChecking={authChecking}
-              sessionError={sessionError}
-              onRetry={retrySessionCheck}
-            />
+            authChecking && hasStoredToken() ? (
+              <RouteLoadingFallback />
+            ) : (
+              <LoginPage
+                session={session}
+                authChecking={authChecking}
+                sessionError={sessionError}
+                onRetry={retrySessionCheck}
+              />
+            )
           }
         />
         <Route
@@ -226,6 +232,7 @@ const AuthWrapper: React.FC = () => {
           <Route path="/voting/:campaignId" element={<VotingPage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/announcements/:id" element={<AnnouncementDetailPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
         </Route>
       </Routes>
     </Suspense>

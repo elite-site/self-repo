@@ -14,6 +14,9 @@ export const RegistrationsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const shouldReduce = useReducedMotion();
+  const staggerContainer = selectVariantsByName(shouldReduce, 'staggerFastContainer');
+  const staggerItem = selectVariantsByName(shouldReduce, 'staggerItem');
 
   const loadRegistrations = async (isInitial = true) => {
     if (isInitial && regs.length === 0) setLoading(true);
