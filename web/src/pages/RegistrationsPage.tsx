@@ -6,6 +6,8 @@ import { Loader2, CalendarX2, AlertCircle, Trash2, ExternalLink } from 'lucide-r
 import { SkeletonListPage } from '../components/ui/Skeleton';
 import { useToast } from '../components/Toast';
 import { useConfirm } from '../components/ui/ConfirmDialog';
+import { useReducedMotion } from '../hooks/useReducedMotion';
+import { selectVariantsByName } from '../lib/motion';
 
 export const RegistrationsPage: React.FC = () => {
   const { showToast } = useToast();

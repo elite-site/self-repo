@@ -16,7 +16,7 @@ import { selectVariantsByName } from '../../lib/motion';
  * costs nothing.
  */
 
-export interface ChipProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'children'> {
+export interface ChipProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'children' | 'onDrag' | 'onDragStart' | 'onDragEnd'> {
   label: string;
   /** Defaults to `false`. Reflected as `aria-pressed`. */
   selected?: boolean;

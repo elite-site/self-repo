@@ -13,6 +13,8 @@ import {
 import { SkeletonPage } from '../components/ui/Skeleton';
 import { useToast } from '../components/Toast';
 import { useConfirm } from '../components/ui/ConfirmDialog';
+import { useReducedMotion } from '../hooks/useReducedMotion';
+import { selectVariantsByName } from '../lib/motion';
 
 export const ResumePage: React.FC = () => {
   const { showToast } = useToast();

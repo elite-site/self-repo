@@ -27,6 +27,8 @@ import { getPhotoStyle } from '../utils/photoStyle';
 import { SkeletonPage } from '../components/ui/Skeleton';
 import { createPortal } from 'react-dom';
 import { LeetCodeIcon, CodeChefIcon } from '../components/icons/PlatformIcons';
+import { useReducedMotion } from '../hooks/useReducedMotion';
+import { selectVariantsByName } from '../lib/motion';
 
 export const ProfilePage: React.FC = () => {
   const [profile, setProfile] = useState<StudentProfile | null>(null);

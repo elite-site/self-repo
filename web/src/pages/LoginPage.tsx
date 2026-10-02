@@ -1,5 +1,6 @@
 import React from 'react';
-import { useSession, useNavigate } from '@tanstack/react-router';
+import { useNavigate } from 'react-router-dom';
+import { useSession } from '../context/SessionContext';
 import { useToast } from '../components/Toast';
 import { Button } from '../components/ui/Button';
 import { useEffect } from 'react';
@@ -82,3 +83,5 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     </div>
   );
 };
+
+export default LoginPage;

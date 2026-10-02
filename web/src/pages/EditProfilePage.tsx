@@ -29,6 +29,7 @@ const PhotoCropModal = lazy(() =>
 import { getPhotoStyle } from '../utils/photoStyle';
 import { LeetCodeIcon, CodeChefIcon } from '../components/icons/PlatformIcons';
 import { useToast } from '../components/Toast';
+import { useReducedMotion } from '../hooks/useReducedMotion';
 
 const COMMON_SKILLS = [
   'Python',

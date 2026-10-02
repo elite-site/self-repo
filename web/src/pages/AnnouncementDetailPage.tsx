@@ -10,6 +10,8 @@ import {
 import { api } from '../services/api';
 import { Announcement } from '../types';
 import { SkeletonPage } from '../components/ui/Skeleton';
+import { useReducedMotion } from '../hooks/useReducedMotion';
+import { selectVariantsByName } from '../lib/motion';
 
 export const AnnouncementDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();

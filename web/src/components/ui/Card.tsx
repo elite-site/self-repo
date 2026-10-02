@@ -16,7 +16,7 @@ import { selectVariantsByName } from '../../lib/motion';
 
 export type CardVariant = 'default' | 'elevated' | 'ghost' | 'brand' | 'interactive';
 
-export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
+export interface CardProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onDrag' | 'onDragStart' | 'onDragEnd'> {
   /** Defaults to `default`. */
   variant?: CardVariant;
   /**

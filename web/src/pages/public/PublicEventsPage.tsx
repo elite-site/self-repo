@@ -8,6 +8,8 @@ import { Navbar } from '../../components/Navbar';
 import { Footer } from '../../components/Footer';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { ErrorState } from '../../components/ui/ErrorState';
+import { useReducedMotion } from '../../hooks/useReducedMotion';
+import { selectVariantsByName } from '../../lib/motion';
 
 interface PublicEventsPageProps {
   session?: StudentSession | null;

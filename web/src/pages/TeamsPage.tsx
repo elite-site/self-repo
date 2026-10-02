@@ -5,6 +5,8 @@ import { Users, Loader2, Plus, UserPlus, Check, X, AlertCircle, Mail, Trash2 } f
 import { SkeletonListPage } from '../components/ui/Skeleton';
 import { useToast } from '../components/Toast';
 import { useConfirm } from '../components/ui/ConfirmDialog';
+import { useReducedMotion } from '../hooks/useReducedMotion';
+import { selectVariantsByName } from '../lib/motion';
 
 export const TeamsPage: React.FC = () => {
   const { showToast } = useToast();

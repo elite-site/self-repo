@@ -1,24 +1,19 @@
 import React from 'react';
 import { useSession } from '../context/SessionContext';
-import { useNavigate } from '@tanstack/react-router';
+import { useNavigate } from 'react-router-dom';
 import { useToast } from '../components/Toast';
 import { Button } from '../components/ui/Button';
 import { Select } from '../components/ui/Select';
 import { Menu } from 'lucide-react';
 
 export const SettingsPage: React.FC = () => {
-  const { session, setReducedMotion, reducedMotion } = useSession();
+  const { session } = useSession();
   const navigate = useNavigate();
   const { showToast } = useToast();
 
   const handleThemeChange = (theme: 'light' | 'dark') => {
     // Theme preference handled by ThemeContext; persist via session
-    showToast({ title: 'Theme updated', description: `Switched to ${theme} mode`, variant: 'default' });
-  };
-
-  const handleReducedMotionToggle = (enabled: boolean) => {
-    setReducedMotion(enabled);
-    showToast({ title = 'Reduced motion', description: enabled ? 'Enabled reduced motion animations' : 'Disabled reduced motion animations', variant: 'default' });
+    showToast(`Switched to ${theme} mode`);
   };
 
   return (
@@ -28,32 +23,16 @@ export const SettingsPage: React.FC = () => {
 
         {/* Theme preference */}
         <div className="mb-4">
-          <label htmlFor="theme-select" className="block text-text-primary font-medium mb-2">
-            Theme
-          </label>
           <Select
             id="theme-select"
-            onValueChange={handleThemeChange}
+            label="Theme"
+            options={[
+              { value: 'light', label: 'Light' },
+              { value: 'dark', label: 'Dark' },
+            ]}
+            onChange={(e) => handleThemeChange(e.target.value as 'light' | 'dark')}
             className="bg-surface-foreground"
-          >
-            <Select.Item value="light">Light</Select.Item>
-            <Select.Item value="dark">Dark</Select.Item>
-          </Select>
-        </div>
-
-        {/* Reduced motion preference */}
-        <div className="mb-4">
-          <label htmlFor="reduced-motion-select" className="block text-text-primary font-medium mb-2">
-            Reduced motion
-          </label>
-          <Select
-            id="reduced-motion-select"
-            onValueChange={handleReducedMotionToggle}
-            className="bg-surface-foreground"
-          >
-            <Select.Item value="false">Animation</Select.Item>
-            <Select.Item value="true">Reduced motion</Select.Item>
-          </Select>
+          />
         </div>
 
         {/* Sign out */}
@@ -72,3 +51,5 @@ export const SettingsPage: React.FC = () => {
     </div>
   );
 };
+
+export default SettingsPage;

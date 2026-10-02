@@ -420,6 +420,7 @@ export const DashboardPage: React.FC = () => {
             : undefined
           : undefined,
       to: '/intro-video',
+      destination: 'your intro video',
       icon: Video,
       state: videoState,
       tone: videoStatus.tone,

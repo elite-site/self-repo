@@ -4,6 +4,8 @@ import { useParams } from 'react-router-dom';
 import { api, resolveMediaUrl } from '../services/api';
 import { Vote, Loader2, Clock, CheckCircle2, AlertCircle, ShieldCheck, X } from 'lucide-react';
 import { SkeletonPage } from '../components/ui/Skeleton';
+import { useReducedMotion } from '../hooks/useReducedMotion';
+import { selectVariantsByName } from '../lib/motion';
 
 export const VotingPage: React.FC = () => {
   // `/voting/:campaignId` is a real route and `getNotificationDestination` emits it,

@@ -5,6 +5,8 @@ import { Event, EventRegistration } from '../types';
 import { CalendarX2, Search, Clock, CheckCircle2, ChevronRight } from 'lucide-react';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorState } from '../components/ui/ErrorState';
+import { useReducedMotion } from '../hooks/useReducedMotion';
+import { selectVariantsByName } from '../lib/motion';
 
 const eventDateParts = (value?: string | null) => {
   if (!value) return null;

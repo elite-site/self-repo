@@ -6,6 +6,8 @@ import { StudentSession } from '../../types';
 import { Navbar } from '../../components/Navbar';
 import { Footer } from '../../components/Footer';
 import { SkeletonPage } from '../../components/ui/Skeleton';
+import { useReducedMotion } from '../../hooks/useReducedMotion';
+import { selectVariantsByName } from '../../lib/motion';
 
 interface PublicEventDetailPageProps {
   session?: StudentSession | null;

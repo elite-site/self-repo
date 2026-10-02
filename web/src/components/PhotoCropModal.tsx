@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import ImageCropper from 'react-image-crop';
+import ImageCropper, { type PixelCrop } from 'react-image-crop';
 import { X, ZoomIn, ZoomOut, RotateCcw, Sparkles, Check, Loader2, Image as ImageIcon } from 'lucide-react';
 import { getCroppedImg } from '../utils/cropImage';
 
@@ -171,11 +171,11 @@ export const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
         <div className="relative w-full h-72 sm:h-80 bg-surface-inverse rounded-lg overflow-hidden shadow-inner border border-edge-strong select-none">
           <ImageCropper
             image={imageSrc}
-            crop={crop}
+            crop={crop ?? undefined}
             zoom={zoom}
             aspect={1}
             onCropChange={handleCropChange}
-            onCropComplete={({crop}) => {
+            onCropComplete={(crop: PixelCrop) => {
               setCroppedArea(crop);
             }}
             zoomWithScroll={true}

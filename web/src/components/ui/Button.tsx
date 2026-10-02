@@ -18,7 +18,7 @@ import { selectVariantsByName } from '../../lib/motion';
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'icon-only';
 export type ButtonSize = 'sm' | 'md' | 'lg';
 
-interface CommonProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'children'> {
+interface CommonProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'children' | 'onDrag' | 'onDragStart' | 'onDragEnd'> {
   /** Defaults to `primary`. `icon-only` is the neutral, square treatment. */
   variant?: ButtonVariant;
   /** Defaults to `md`. */
