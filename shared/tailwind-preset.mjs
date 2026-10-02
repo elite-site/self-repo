@@ -10,13 +10,19 @@
  *   - `brand`, `surface`, `text`, `border`, `status` are CSS-variable backed
  *     (`bg-surface`, `text-text-secondary`), so they re-theme from
  *     `shared/tokens.css` without a `dark:` variant on every element.
- *   - `red`, `navy`, `neutral` are raw fixed ramps for the rare case that needs
- *     a specific step (a chart series, a brand asset).
+ *   - `red` and `slate` are raw fixed ramps for the rare case that needs
+ *     a specific step (a chart series, a brand asset). The previous
+ *     `navy`/`neutral` ramps are gone: the neutral is `slate` now.
+ *
+ * Every scale here is a pointer at a value in `shared/tokens.mjs` — the plan's
+ * type scale (§4.2), radius (§4.4), elevation (§4.5) and motion (§4.7) plus the
+ * pre-plan names both apps already use, aliased onto the plan's steps there.
+ * Nothing in this file re-states a number.
  *
  * If you find yourself wanting a `dark:` variant, you almost certainly want a
  * semantic token instead.
  */
-import { red, navy, neutral, font, radius, motion, layer, brand } from './tokens.mjs';
+import { red, slate, font, radius, motion, layer, brand, typeScale, namedType } from './tokens.mjs';
 
 /**
  * Emit a Tailwind colour as `var(--x)`, so utilities work even if the token
@@ -80,6 +86,12 @@ export const eliteTokens = {
       brand: token('text-brand'),
     },
     focus: token('focus'),
+    // A focus ring and an active border are the same colour, so they are the
+    // same token. `--border-brand` is the plan's name for it.
+    'border-brand': token('border-brand'),
+    // WCAG 1.4.3 exempts disabled controls from the contrast minimum, so this
+    // is deliberately the weakest text step in the system.
+    'text-disabled': token('text-disabled'),
     // The scrim behind a modal or drawer. A raw `bg-black/50` was wrong in two
     // ways: pure black is not a token, and a fixed 50% reads heavier in dark mode
     // where the surface underneath is already dark. This is theme-aware.
@@ -125,34 +137,85 @@ export const eliteTokens = {
       bronze: token('award-bronze'),
     },
 
+    // ── Semantic utility colours ───────────────────────────────────────
+    // The four status hues the plan defines outright (REDESIGN_PLAN §4.1),
+    // separate from the six-state `status` map above: approved IS success,
+    // rejected IS danger, pending IS warning, review IS info. Use these when a
+    // colour is not a submission state (a validation message, a chart legend).
+    success: { DEFAULT: token('success'), subtle: token('success-subtle') },
+    warning: { DEFAULT: token('warning'), subtle: token('warning-subtle') },
+    danger: { DEFAULT: token('danger'), subtle: token('danger-subtle') },
+    info: { DEFAULT: token('info'), subtle: token('info-subtle') },
+
+    // ── The plan's own names ───────────────────────────────────────────
+    // Straight from REDESIGN_PLAN §7.2 / Appendix B, mapped to the same custom
+    // properties as the app-facing names above. A component may use either
+    // spelling; they can never disagree because they are the same variable.
+    'bg-base': token('color-bg-base'),
+    'bg-surface': token('color-bg-surface'),
+    'bg-elevated': token('color-bg-elevated'),
+    'bg-subtle': token('color-bg-subtle'),
+    'bg-inset': token('color-bg-inset'),
+    'border-base': token('color-border-base'),
+    'border-strong': token('color-border-strong'),
+    'text-primary': token('color-text-primary'),
+    'text-secondary': token('color-text-secondary'),
+    'text-muted': token('color-text-muted'),
+    'on-brand': '#FFFFFF',
+
     // ── Raw ramps ───────────────────────────────────────────────────────
     // For the rare case that needs a fixed step: a chart series, a brand asset.
     red: red,
-    navy: navy,
-    neutral: neutral,
+    slate: slate,
   },
 };
 
 /**
- * The named type scale. Carried over unchanged from the two original configs
- * so the ~200 files already using `text-body-md` / `text-headline-lg` keep
- * compiling. Sizes are px with an explicit line-height, matching what both apps
- * shipped.
+ * The type scale, in the two shapes the app needs.
+ *
+ * Both tables live in `shared/tokens.mjs` and are documented there:
+ * `typeScale` is the plan's own `text-xs`…`text-9xl` (§4.2) and `namedType` is
+ * the pre-existing `text-headline-*` / `text-body-*` scale mapped onto it.
+ * Sizes, line-heights, letter-spacings and weights all come from there; nothing
+ * below re-states a number.
+ *
+ * The `family` on each step cannot be emitted from here: Tailwind's `fontSize`
+ * extension only writes `font-size`, `line-height`, `letter-spacing` and
+ * `font-weight`, and drops a `fontFamily` key on the floor. So the family is
+ * generated as a `text-*` utility in `shared/tokens.css` instead, and
+ * `fontFamily` below keeps exposing both the four roles and one entry per named
+ * step, so `font-headline-md` still means DM Sans.
  */
+const toFontSize = (step) => {
+  const options = {};
+  if (step.lineHeight !== undefined) options.lineHeight = step.lineHeight;
+  if (step.letterSpacing !== undefined) options.letterSpacing = step.letterSpacing;
+  if (step.fontWeight !== undefined) options.fontWeight = step.fontWeight;
+  return [step.size, options];
+};
+
 const fontSize = {
-  'headline-xl': ['36px', { lineHeight: '44px', letterSpacing: '-0.025em', fontWeight: '700' }],
-  'headline-xl-mobile': ['28px', { lineHeight: '36px', letterSpacing: '-0.02em', fontWeight: '700' }],
-  'headline-lg': ['28px', { lineHeight: '36px', letterSpacing: '-0.02em', fontWeight: '600' }],
-  'headline-lg-mobile': ['22px', { lineHeight: '30px', letterSpacing: '-0.015em', fontWeight: '600' }],
-  'headline-md': ['20px', { lineHeight: '28px', letterSpacing: '-0.015em', fontWeight: '600' }],
-  'headline-sm': ['16px', { lineHeight: '24px', letterSpacing: '-0.01em', fontWeight: '600' }],
-  'body-lg': ['16px', { lineHeight: '26px', fontWeight: '400' }],
-  'body-md': ['14px', { lineHeight: '22px', fontWeight: '400' }],
-  'body-sm': ['13px', { lineHeight: '20px', fontWeight: '400' }],
-  'label-lg': ['14px', { lineHeight: '20px', fontWeight: '500' }],
-  'label-md': ['12px', { lineHeight: '16px', letterSpacing: '0.01em', fontWeight: '500' }],
-  'label-sm': ['11px', { lineHeight: '14px', letterSpacing: '0.04em', fontWeight: '600' }],
-  'data-mono': ['13px', { lineHeight: '18px', fontWeight: '400' }],
+  ...Object.fromEntries(
+    Object.entries(typeScale).map(([name, step]) => [name, toFontSize(step)]),
+  ),
+  ...Object.fromEntries(
+    Object.entries(namedType).map(([name, step]) => [name, toFontSize(step)]),
+  ),
+};
+
+/** The four roles plus a `font-<named step>` alias for every named step. */
+const typeFamily = {
+  display: font.display.split(', '), // Playfair Display — text-3xl and up
+  body: font.body.split(', '), // Inter — running text
+  ui: font.ui.split(', '), // DM Sans — labels, buttons, nav
+  // `sans` and `heading` are the pre-redesign names for body and display and are
+  // kept so the existing `font-sans` / `font-heading` utilities keep compiling.
+  sans: font.sans.split(', '),
+  heading: font.heading.split(', '),
+  mono: font.mono.split(', '), // JetBrains Mono — roll numbers, code, ids
+  ...Object.fromEntries(
+    Object.entries(namedType).map(([name, step]) => [name, font[step.family].split(', ')]),
+  ),
 };
 
 /**
@@ -179,27 +242,23 @@ const spacing = {
 export const eliteTheme = {
   extend: {
     ...eliteTokens,
-    fontFamily: {
-      sans: font.sans.split(', '),
-      heading: font.heading.split(', '),
-      display: font.heading.split(', '),
-      mono: font.mono.split(', '),
-      // Per-role families, preserved from the original configs. Heading
-      // weights come from Sora; body and data from Plus Jakarta Sans.
-      'headline-xl': ['Sora', 'system-ui', 'sans-serif'],
-      'headline-lg': ['Sora', 'system-ui', 'sans-serif'],
-      'headline-md': ['Sora', 'system-ui', 'sans-serif'],
-      'headline-sm': ['Sora', 'system-ui', 'sans-serif'],
-      'body-lg': ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
-      'body-md': ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
-      'body-sm': ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
-      'label-lg': ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
-      'label-md': ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
-      'label-sm': ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
-    },
+    fontFamily: typeFamily,
     fontSize,
     borderRadius: radius,
     boxShadow: {
+      // The plan's scale (REDESIGN_PLAN §4.5, Appendix B), read through the
+      // custom properties so the dark theme can re-elevation without a `dark:`
+      // variant on every element.
+      xs: 'var(--shadow-xs)',
+      sm: 'var(--shadow-sm)',
+      md: 'var(--shadow-md)',
+      lg: 'var(--shadow-lg)',
+      xl: 'var(--shadow-xl)',
+      '2xl': 'var(--shadow-2xl)',
+      brand: 'var(--shadow-brand)', // brand button glow on hover
+      inner: 'var(--shadow-inner)',
+      // Pre-plan names, aliased onto the steps above inside `tokens.mjs` so they
+      // follow the theme switch as well. See `shadowAliases` there.
       card: 'var(--shadow-card)',
       'card-hover': 'var(--shadow-card-hover)',
       raised: 'var(--shadow-raised)',
@@ -208,14 +267,29 @@ export const eliteTheme = {
       focus: 'var(--shadow-focus)',
     },
     transitionDuration: {
+      // REDESIGN_PLAN Appendix B / §4.7.
       instant: motion['dur-instant'],
       fast: motion['dur-fast'],
-      DEFAULT: motion['dur-base'],
-      base: motion['dur-base'],
+      quick: motion['dur-quick'],
+      normal: motion['dur-normal'],
+      moderate: motion['dur-moderate'],
       slow: motion['dur-slow'],
-      slower: motion['dur-slower'],
+      deliberate: motion['dur-deliberate'],
+      lazy: motion['dur-lazy'],
+      story: motion['dur-story'],
+      // Pre-plan names, aliased onto the steps above inside `tokens.mjs`.
+      DEFAULT: motion['dur-normal'],
+      base: motion['dur-normal'],
+      slower: motion['dur-slow'],
     },
     transitionTimingFunction: {
+      // REDESIGN_PLAN Appendix B / §4.7.
+      'ease-linear': 'var(--ease-linear)',
+      'ease-out': 'var(--ease-out)',
+      'ease-in': 'var(--ease-in)',
+      'ease-in-out': 'var(--ease-in-out)',
+      'ease-gentle': 'var(--ease-gentle)',
+      // Pre-plan names, aliased onto the easings above inside `tokens.mjs`.
       standard: 'var(--ease-standard)',
       entrance: 'var(--ease-entrance)',
       exit: 'var(--ease-exit)',
@@ -223,6 +297,14 @@ export const eliteTheme = {
     },
     zIndex: layer,
     maxWidth: { canvas: '1440px', prose: '65ch' },
+    // §4.3 base grid: Tailwind's default spacing scale is already 4pt
+    // (space-1 = 4px, space-2 = 8px, …) so it needs no override. The only
+    // screens the plan adds are these two, per Appendix B — they are additive,
+    // so no existing `sm:`/`md:`/… utility moves.
+    screens: {
+      xs: '480px',
+      '3xl': '1536px',
+    },
     spacing,
     opacity: {
       // Sits just above Tailwind's default so a 0.14 fade still reads.
@@ -280,4 +362,4 @@ export const eliteTheme = {
 };
 
 /** Handy for docs and tests: the light theme's resolved values. */
-export { brand, light as lightTheme, red, navy, neutral } from './tokens.mjs';
+export { brand, light as lightTheme, red, slate } from './tokens.mjs';

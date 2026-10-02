@@ -1,8 +1,3 @@
-/* Self-hosted webfonts. Must come before the Tailwind layers so `font-display`
-   never wins over a real face, and so the browser can start fetching the woff2
-   files as soon as this stylesheet parses instead of waiting on a third party. */
-@import './fonts.css';
-
 /* The design system, shared verbatim with the student portal: palette, semantic
    theme tokens, motion, radius, layers, keyframes, reduced-motion override, and
    the base/component layers. GENERATED from `shared/tokens.mjs` — edit that and
@@ -10,7 +5,12 @@
 
    This replaces a 291-line local stylesheet that declared its own `#admin-root`
    token block, its own indigo-on-dark palette, and its own copy of the scrollbar
-   and focus-ring rules. One palette now drives both apps. */
+   and focus-ring rules. One palette now drives both apps.
+
+   The four font families are loaded from the Google Fonts CDN in index.html, the
+   same as `web/index.html`; the stacks themselves live in `shared/tokens.mjs`.
+   The self-hosted `src/fonts.css` this file used to import is gone — it carried
+   Sora and Plus Jakarta Sans, which the shared type scale no longer names. */
 @import '../../shared/tokens.css';
 
 @tailwind base;

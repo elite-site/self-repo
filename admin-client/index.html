@@ -6,14 +6,24 @@
     <link rel="alternate icon" href="/admin/favicon-32.png" sizes="32x32" />
     <link rel="apple-touch-icon" href="/admin/apple-touch-icon.png" />
     <link rel="manifest" href="/admin/site.webmanifest" />
-    <meta name="theme-color" content="#ED1E26" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#041030" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#E11D48" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#F43F5E" media="(prefers-color-scheme: dark)" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>ELITE Admin Portal, Department of Information Technology</title>
-    <!-- Fonts are self-hosted and bundled by Vite (see src/fonts.css). A
-         third-party stylesheet here is render-blocking, and if
-         fonts.googleapis.com is slow or unreachable the page paints nothing at
-         all until the request fails. -->
+    <!-- The four families of the type system (REDESIGN_PLAN §4.2), one role each:
+         Playfair Display = display, Inter = body, DM Sans = UI, JetBrains Mono =
+         mono. Identical to `web/index.html` — one request for all four, `preconnect`
+         so the stylesheet starts on the first bytes, and `display=swap` so text
+         paints immediately in the fallback and reflows when the face arrives.
+         Every heading here used to resolve to Georgia, because the admin client
+         self-hosted Sora / Plus Jakarta Sans, which the shared preset no longer
+         names. The stacks live in `shared/tokens.mjs`. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Inter:wght@300;400;500&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+    />
     <script>
       (function () {
         try {

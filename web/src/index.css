@@ -1,11 +1,8 @@
-/* Self-hosted webfonts. Must come before the Tailwind layers so `font-display`
-   never wins over a real face, and so the browser can start fetching the woff2
-   files as soon as this stylesheet parses instead of waiting on a third party. */
-@import './fonts.css';
-
 /* The design system: palette, semantic theme tokens, motion, radius, layers,
    keyframes, reduced-motion override, and the base/component layers. GENERATED
-   from `shared/tokens.mjs` — edit that and run `npm run tokens`, never this. */
+   from `shared/tokens.mjs` — edit that and run `npm run tokens`, never this.
+   The four font families are loaded from the Google Fonts CDN in index.html
+   (`display=swap`); the stacks themselves live in `shared/tokens.mjs`. */
 @import '../../shared/tokens.css';
 
 @tailwind base;

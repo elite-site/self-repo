@@ -6,15 +6,23 @@
     <link rel="alternate icon" href="/favicon-32.png" sizes="32x32" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
-    <meta name="theme-color" content="#ED1E26" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#041030" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#E11D48" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#F43F5E" media="(prefers-color-scheme: dark)" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>ELITE Student Portal, Department of Information Technology</title>
     <meta name="description" content="ELITE Student Portal for the Department of Information Technology, SASI Institute of Technology and Engineering. Manage your academic profile, portfolio, intro video, resume, and events." />
-    <!-- Fonts are self-hosted and bundled by Vite (see src/fonts.css). A
-         third-party stylesheet here is render-blocking, and if
-         fonts.googleapis.com is slow or unreachable the page paints nothing at
-         all until the request fails. -->
+    <!-- The four families of the type system (REDESIGN_PLAN §4.2), one role each:
+         Playfair Display = display, Inter = body, DM Sans = UI, JetBrains Mono =
+         mono. `display=swap` so text paints immediately in the fallback and
+         reflows when the face arrives, and `preconnect` so the stylesheet
+         request starts on the first bytes rather than after the CSS parses.
+         One request for all four; the weights are the ones the roles use. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Inter:wght@300;400;500&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+    />
   </head>
   <body class="bg-surface-canvas text-ink min-h-screen selection:bg-brand selection:text-on-primary antialiased font-sans">
     <div id="root"></div>

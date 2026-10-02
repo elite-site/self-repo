@@ -13,7 +13,21 @@
 import { writeFileSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
-import { red, navy, neutral, font, radius, motion, layer, shadow, light, dark, brand } from '../shared/tokens.mjs';
+import {
+  red,
+  slate,
+  font,
+  radius,
+  motion,
+  layer,
+  shadow,
+  shadowDark,
+  typeScale,
+  namedType,
+  light,
+  dark,
+  brand,
+} from '../shared/tokens.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const OUT = resolve(here, '../shared/tokens.css');
@@ -22,13 +36,18 @@ const OUT = resolve(here, '../shared/tokens.css');
 const kebab = (s) => s.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
 
 /**
- * Collapse the three raw ramps into one namespaced map. They all use the same
- * numeric keys, so spreading them into a single object silently lets the last
- * one win -- which is how `--50` ended up being neutral grey while the
- * stylesheet claimed to expose a red ramp.
+ * Collapse the raw ramps into one namespaced map. They all use the same numeric
+ * keys, so spreading them into a single object silently lets the last one win --
+ * which is how `--50` ended up being neutral grey while the stylesheet claimed
+ * to expose a red ramp.
+ *
+ * The ramps are `red` and `slate`. The old ELITE `navy` ramp and its `neutral`
+ * alias are gone from `tokens.mjs`, so nothing here emits `--navy-*` or
+ * `--neutral-*`; the neutral ramp's real name is `slate` and it is emitted as
+ * `--slate-*`.
  */
 const ramps = Object.fromEntries(
-  [['red', red], ['navy', navy], ['neutral', neutral]].flatMap(([name, ramp]) =>
+  [['red', red], ['slate', slate]].flatMap(([name, ramp]) =>
     Object.entries(ramp).map(([step, value]) => [`${name}-${step}`, value]),
   ),
 );
@@ -55,6 +74,41 @@ const shadowVars = Object.fromEntries(
   Object.entries(shadow).map(([k, v]) => [`shadow-${k}`, v]),
 );
 
+/**
+ * The same names, with the plan's dark elevation values (REDESIGN_PLAN §4.5).
+ * Emitted under the dark selector so a theme switch re-elevation works without
+ * a `dark:` variant on every element, and so `--shadow-card` and friends keep
+ * resolving to something theme-appropriate.
+ */
+const darkShadowVars = Object.fromEntries(
+  Object.entries(shadowDark).map(([k, v]) => [`shadow-${k}`, v]),
+);
+
+/**
+ * The font role each type step carries, as a `text-*` utility.
+ *
+ * The plan assigns a family to every step of its type scale (§4.2), so
+ * `text-3xl` alone has to be Playfair Display. Tailwind cannot express that: its
+ * `fontSize` extension only ever emits `font-size`, `line-height`,
+ * `letter-spacing` and `font-weight`, and silently drops a `fontFamily` key
+ * (verified against tailwindcss 3.4's corePlugins). `tools/check-utilities.mjs`
+ * would not catch that either, because the class exists -- it just sets nothing.
+ *
+ * So the mapping is emitted here, into `@layer utilities`. Tailwind expands
+ * `@tailwind utilities` after this import in both apps' stylesheets, so an
+ * explicit `font-display` / `font-ui` / `font-body` / `font-mono` on the element
+ * still wins, which is the behaviour the plan wants: the size sets a default
+ * family, an explicit family overrides it.
+ */
+const typeFamilyCss = (...tables) =>
+  [...tables]
+    .flatMap((table) =>
+      Object.entries(table).map(
+        ([step, t]) => `  .text-${step} { font-family: var(--font-${t.family}); }`,
+      ),
+    )
+    .join('\n');
+
 function block(selector, map, indent = '  ') {
   const body = Object.entries(map)
     .map(([k, v]) => `${indent}--${kebab(k)}: ${v};`)
@@ -70,14 +124,18 @@ const css = `/**
  * Verify:     npm run tokens:check
  *
  * ${brand.name} Student Portal · ${brand.institution} · ${brand.department}
- * Primary ${brand.primary} (SASI red) · Accent ${brand.accent} (ELITE navy)
+ * Brand anchor ${brand.primary} (ELITE red) · interactive brand ${light['color-brand']} light / ${dark['color-brand']} dark
+ *
+ * Every value in that line is read out of the tokens below rather than typed,
+ * so the header cannot describe a palette the file no longer carries.
  *
  * Both web/ and admin-client/ import this file. It contains:
  *   1. raw colour ramps, for the rare component that needs a specific step
  *   2. semantic theme tokens under :root and [data-theme='dark']
  *   3. non-colour scales: radius, motion, layer, elevation
  *   4. the component layer (btn / card / input / badge / surface)
- *   5. keyframes and the reduced-motion override
+ *   5. the font role each type step carries, in the utilities layer
+ *   6. keyframes and the reduced-motion override
  *
  * Theming contract: components read SEMANTIC tokens (--surface, --text), never
  * raw ramps, and never write a \`dark:\` variant. That is what lets the admin
@@ -89,9 +147,13 @@ ${block(':root', light)}
 ${block(`[data-theme='dark'],\n.dark`, dark)}
 ${block(':root', { ...radius, ...motion, ...layer })}
 ${block(':root', shadowVars)}
+${block(`[data-theme='dark'],\n.dark`, darkShadowVars)}
 ${block(':root', {
-  'font-sans': font.sans,
+  'font-display': font.display,
   'font-heading': font.heading,
+  'font-body': font.body,
+  'font-sans': font.sans,
+  'font-ui': font.ui,
   'font-mono': font.mono,
 })}
 
@@ -114,7 +176,11 @@ ${block(':root', {
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-heading);
+    /* DM Sans, not Playfair: the plan (§4.2) reserves display type for page
+       titles and hero text at text-3xl and above, and it arrives explicitly
+       from the generated \`.text-3xl\`+\` utilities below. A bare heading with no
+       size utility is under 30px by definition, so it gets the UI family. */
+    font-family: var(--font-ui);
     text-wrap: balance;
   }
 
@@ -164,7 +230,10 @@ ${block(':root', {
     justify-content: center;
     gap: 0.5rem;
     padding: 0.5rem 1rem;
-    border-radius: var(--lg);
+    /* --md, not --lg: the plan gives buttons rounded-md (8px) and reserves
+       rounded-lg (12px) for cards and dropdowns. The radius scale moved onto
+       the plan's values, so this reference has to follow it. */
+    border-radius: var(--md);
     font-size: 0.875rem;
     font-weight: 600;
     line-height: 1.25rem;
@@ -233,7 +302,8 @@ ${block(':root', {
     width: 100%;
     background-color: var(--surface);
     border: 1px solid var(--border);
-    border-radius: var(--lg);
+    /* Inputs are rounded-md (8px) in the plan, like buttons. */
+    border-radius: var(--md);
     padding: 0.5rem 0.75rem;
     font-size: 0.875rem;
     line-height: 1.25rem;
@@ -326,6 +396,19 @@ ${block(':root', {
   [data-loading='true'] {
     pointer-events: none !important;
   }
+}
+
+/* ── Type roles ──────────────────────────────────────────────────────────────
+   The family each step of the plan's type scale carries, so \`text-3xl\` alone is
+   Playfair Display and \`text-xl\` alone is DM Sans (REDESIGN_PLAN §4.2). Tailwind
+   cannot emit this from \`fontSize\` -- see \`typeFamilyCss\` above.
+
+   Last of the three layers on purpose. Tailwind expands \`@tailwind utilities\`
+   after this file in both apps' stylesheets, so an explicit \`font-ui\` on the
+   element lands later in the same layer and wins. Layer ORDER also has to stay
+   base -> components -> utilities, which is the order these blocks appear in. */
+@layer utilities {
+${typeFamilyCss(typeScale, namedType)}
 }
 
 /* ── Keyframes ─────────────────────────────────────────────────────────── */

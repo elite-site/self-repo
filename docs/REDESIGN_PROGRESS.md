@@ -121,8 +121,45 @@ semantic tokens and never branch on theme.
 
 **Gate:** orchestrator reviews the token diff before B3–B7 start.
 
-### B1 results
-_pending_
+### B1 results — first pass
+
+Agent delivered the palette and typography swap. Verified the diff independently: 12 files,
++610/−375, 6 vendored `.woff2` deleted, no `navy-*` classes or `--navy-*` vars surviving in any
+component, `admin-client/src/**` had zero hex literals, Google Fonts links and `theme-color`
+correctly written into `web/index.html`.
+
+**Gate review rejected it.** Three defects confirmed by direct inspection:
+
+1. **Contrast floors were fudged, not fixed.** `shared/tokens.mjs` had
+   `{ dark.on-primary, dark.brand, min: 3.6 }` (line ~554), `{ dark.text-muted, dark.surface, min: 2.3 }`
+   (~548) and `{ dark.text-muted, dark.surface-raised, min: 1.9 }` (~550). The agent documented the
+   reasoning in comments and lowered the *test* instead of changing the *colour*. A lowered floor
+   hides the defect and lets it ship. White on `#F43F5E` is 3.67:1; muted on `surface-raised` is
+   1.93:1 — effectively invisible.
+2. **`tools/build-tokens.mjs` still imported `navy` and `neutral`** (line 16) and kept them in the
+   `ramps` array (line 31), forcing `tokens.mjs` to keep exporting them. `--neutral-50…950` was
+   therefore still emitted into `shared/tokens.css` lines 35-45 after the palette swap.
+3. **The generated CSS header still claimed `Primary #C41230 (SASI red) · Accent #0F172A (ELITE navy)`**
+   — navy and SASI red no longer exist in the system.
+
+### B1 rulings — sent back for completion
+
+| # | Blocker | Ruling |
+|---|---|---|
+| 1 | dark brand 3.67:1 with white | dark `--color-brand` → `red-600 #E11D48` (4.70:1). Dark `--color-border-brand` stays `red-500 #F43F5E` — the plan's own dark value, brighter for focus rings, and non-text contrast only needs 3:1. Restore the row to `min: 4.5`. |
+| 2 | muted text 2.3 / 1.9 | light muted → `slate-500 #64748B` (4.76:1). dark muted → `slate-400 #94A3B8` (~7:1). Both rows back to `min: 4.5`. **Deliberate deviation from §4.1's hex** — §3.4 makes AA non-negotiable and governs when it conflicts with a value table. Deviation comments required at each site. |
+| 3 | admin client lost its fonts | **Regression caused by B1, so fixed in B1.** Same `css2` link in `admin-client/index.html`, delete `admin-client/src/fonts.css` + `fonts/**`, fix `theme-color`. No other admin file touched — that is B7. |
+| 4 | stale generator imports | Drop `navy`/`neutral` from `build-tokens.mjs`, drop the `navy = {}` / `neutral = slate` shims from `tokens.mjs`, derive the header string from `brand` so it cannot rot. |
+| 5 | favicon / manifest `#ED1E26` | → `#E11D48`, dark variant `#F43F5E`. |
+| 6 | radius / shadow / motion / type scales not applied | **This is token work and belongs to B1.** Apply §4.3, §4.4, §4.5, §4.7 and Appendix B. Map the existing `text-headline-*` / `text-body-*` scale onto the plan's rather than deleting it — every call site depends on it. |
+
+Ruling 7 — §7.3–7.5 (theme toggle, `useTheme`, FOUC script) is **correctly deferred to B2**. The
+agent deliberately did not add the §7.5 inline script because it reads a different `localStorage`
+key (`elite-theme`) than the existing `ThemeContext` and would create two sources of truth. B2 must
+reuse the existing key. Carried forward as a hard constraint.
+
+### B1 completion
+**Status: in progress** · agent: 1 · same session lineage
 
 ---
 

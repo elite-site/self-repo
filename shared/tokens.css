@@ -6,14 +6,18 @@
  * Verify:     npm run tokens:check
  *
  * ELITE Student Portal · SASI Institute of Technology and Engineering · Department of Information Technology
- * Primary #ED1E26 (SASI red) · Accent #041030 (ELITE navy)
+ * Brand anchor #C41230 (ELITE red) · interactive brand #E11D48 light / #E11D48 dark
+ *
+ * Every value in that line is read out of the tokens below rather than typed,
+ * so the header cannot describe a palette the file no longer carries.
  *
  * Both web/ and admin-client/ import this file. It contains:
  *   1. raw colour ramps, for the rare component that needs a specific step
  *   2. semantic theme tokens under :root and [data-theme='dark']
  *   3. non-colour scales: radius, motion, layer, elevation
  *   4. the component layer (btn / card / input / badge / surface)
- *   5. keyframes and the reduced-motion override
+ *   5. the font role each type step carries, in the utilities layer
+ *   6. keyframes and the reduced-motion override
  *
  * Theming contract: components read SEMANTIC tokens (--surface, --text), never
  * raw ramps, and never write a `dark:` variant. That is what lets the admin
@@ -21,148 +25,222 @@
  */
 
 :root {
-  --red-50: #FEF3F3;
-  --red-100: #FDE4E5;
-  --red-200: #FBC8CB;
-  --red-300: #F79FA5;
-  --red-400: #F2606A;
-  --red-500: #ED1E26;
-  --red-600: #CE1119;
-  --red-700: #A80D14;
-  --red-800: #830E14;
-  --red-900: #6B1016;
-  --navy-50: #F3F5F9;
-  --navy-100: #E4E8F0;
-  --navy-200: #C3CBDB;
-  --navy-300: #94A0BA;
-  --navy-400: #5C6A8C;
-  --navy-500: #384763;
-  --navy-600: #23324F;
-  --navy-700: #16223A;
-  --navy-800: #0C1526;
-  --navy-900: #041030;
-  --navy-950: #02081C;
-  --neutral-50: #F7F8FB;
-  --neutral-100: #EEF1F6;
-  --neutral-200: #DFE4EC;
-  --neutral-300: #C3CBD8;
-  --neutral-400: #94A0B4;
-  --neutral-500: #6B7688;
-  --neutral-600: #4E5866;
-  --neutral-700: #3A424E;
-  --neutral-800: #252B34;
-  --neutral-900: #12161C;
+  --red-50: #FFF1F2;
+  --red-100: #FFE4E6;
+  --red-200: #FECDD3;
+  --red-300: #FDA4AF;
+  --red-400: #FB7185;
+  --red-500: #F43F5E;
+  --red-600: #E11D48;
+  --red-700: #BE123C;
+  --red-800: #9F1239;
+  --red-900: #881337;
+  --red-950: #4C0519;
+  --slate-50: #F8FAFC;
+  --slate-100: #F1F5F9;
+  --slate-200: #E2E8F0;
+  --slate-300: #CBD5E1;
+  --slate-400: #94A3B8;
+  --slate-500: #64748B;
+  --slate-600: #475569;
+  --slate-700: #334155;
+  --slate-800: #1E293B;
+  --slate-900: #0F172A;
+  --slate-950: #020617;
 }
 :root {
-  --canvas: #F7F8FB;
+  --canvas: #F8FAFC;
   --surface: #FFFFFF;
   --surface-raised: #FFFFFF;
-  --surface-sunken: #EEF1F6;
-  --surface-inset: #F7F8FB;
-  --surface-inverse: #041030;
-  --border: #DFE4EC;
-  --border-strong: #C3CBD8;
-  --border-inverse: #16223A;
-  --text: #041030;
-  --text-secondary: #4E5866;
-  --text-muted: #6B7688;
+  --surface-sunken: #F1F5F9;
+  --surface-inset: #E2E8F0;
+  --surface-inverse: #0F172A;
+  --border: #E2E8F0;
+  --border-strong: #CBD5E1;
+  --border-brand: #E11D48;
+  --border-inverse: #334155;
+  --text: #0F172A;
+  --text-secondary: #475569;
+  --text-muted: #64748B;
+  --text-disabled: #CBD5E1;
   --text-inverse: #FFFFFF;
-  --text-brand: #CE1119;
-  --brand: #CE1119;
-  --brand-hover: #A80D14;
-  --brand-active: #830E14;
-  --brand-soft: #FEF3F3;
-  --brand-soft-text: #A80D14;
-  --brand-ring: #F2606A;
-  --accent: #041030;
-  --accent-hover: #0C1526;
+  --text-brand: #E11D48;
+  --brand: #E11D48;
+  --brand-hover: #BE123C;
+  --brand-active: #9F1239;
+  --brand-soft: #FFE4E6;
+  --brand-soft-text: #BE123C;
+  --brand-ring: #F43F5E;
+  --accent: #0F172A;
+  --accent-hover: #1E293B;
   --on-primary: #FFFFFF;
-  --focus: #CE1119;
-  --overlay-scrim: rgba(4, 16, 48, 0.44);
-  --status-draft: #6B7688;
-  --status-pending: #B45309;
-  --status-review: #5B4BC4;
-  --status-approved: #047857;
-  --status-rejected: #A80D14;
+  --focus: #E11D48;
+  --overlay-scrim: rgba(15, 23, 42, 0.44);
+  --success: #16A34A;
+  --success-subtle: #DCFCE7;
+  --warning: #D97706;
+  --warning-subtle: #FEF3C7;
+  --danger: #DC2626;
+  --danger-subtle: #FEE2E2;
+  --info: #2563EB;
+  --info-subtle: #DBEAFE;
+  --status-draft: #64748B;
+  --status-pending: #D97706;
+  --status-review: #2563EB;
+  --status-approved: #16A34A;
+  --status-rejected: #DC2626;
   --status-changes: #C2410C;
-  --status-draft-bg: #EEF1F6;
+  --status-draft-bg: #F1F5F9;
   --status-pending-bg: #FEF3C7;
-  --status-review-bg: #EDE9FE;
-  --status-approved-bg: #D1FAE5;
-  --status-rejected-bg: #FEF3F3;
+  --status-review-bg: #DBEAFE;
+  --status-approved-bg: #DCFCE7;
+  --status-rejected-bg: #FEE2E2;
   --status-changes-bg: #FFEDD5;
   --award-gold: #B45309;
   --award-bronze: #92400E;
-  --status-draft-solid: #4E5866;
+  --status-draft-solid: #475569;
   --status-pending-solid: #B45309;
-  --status-review-solid: #5B4BC4;
+  --status-review-solid: #2563EB;
   --status-approved-solid: #047857;
-  --status-rejected-solid: #A80D14;
+  --status-rejected-solid: #BE123C;
   --status-changes-solid: #C2410C;
+  --color-bg-base: #F8FAFC;
+  --color-bg-surface: #FFFFFF;
+  --color-bg-elevated: #FFFFFF;
+  --color-bg-subtle: #F1F5F9;
+  --color-bg-inset: #E2E8F0;
+  --color-border-base: #E2E8F0;
+  --color-border-strong: #CBD5E1;
+  --color-border-brand: #E11D48;
+  --color-text-primary: #0F172A;
+  --color-text-secondary: #475569;
+  --color-text-muted: #64748B;
+  --color-text-disabled: #CBD5E1;
+  --color-text-on-brand: #FFFFFF;
+  --color-brand: #E11D48;
+  --color-brand-hover: #BE123C;
+  --color-brand-active: #9F1239;
+  --color-brand-subtle: #FFE4E6;
+  --color-success: #16A34A;
+  --color-success-subtle: #DCFCE7;
+  --color-warning: #D97706;
+  --color-warning-subtle: #FEF3C7;
+  --color-danger: #DC2626;
+  --color-danger-subtle: #FEE2E2;
+  --color-info: #2563EB;
+  --color-info-subtle: #DBEAFE;
 }
 [data-theme='dark'],
 .dark {
-  --canvas: #070B18;
-  --surface: #02081C;
-  --surface-raised: #0B1224;
-  --surface-sunken: #04081A;
-  --surface-inset: #0A0F20;
+  --canvas: #020617;
+  --surface: #0F172A;
+  --surface-raised: #1E293B;
+  --surface-sunken: #020617;
+  --surface-inset: #334155;
   --surface-inverse: #FFFFFF;
-  --border: #1E2942;
-  --border-strong: #2C3A5A;
-  --border-inverse: #C3CBD8;
-  --text: #F1F4FA;
-  --text-secondary: #A8B4CC;
-  --text-muted: #7C8AA6;
-  --text-inverse: #041030;
-  --text-brand: #FF6B72;
-  --brand: #E0272F;
-  --brand-hover: #F0343C;
-  --brand-active: #F74B52;
-  --brand-soft: rgba(237, 30, 38, 0.16);
-  --brand-soft-text: #FF8A90;
-  --brand-ring: #F2606A;
-  --accent: #E4E8F0;
+  --border: #1E293B;
+  --border-strong: #334155;
+  --border-brand: #F43F5E;
+  --border-inverse: #CBD5E1;
+  --text: #F8FAFC;
+  --text-secondary: #94A3B8;
+  --text-muted: #94A3B8;
+  --text-disabled: #334155;
+  --text-inverse: #0F172A;
+  --text-brand: #FB7185;
+  --brand: #E11D48;
+  --brand-hover: #FB7185;
+  --brand-active: #BE123C;
+  --brand-soft: #4C0519;
+  --brand-soft-text: #FDA4AF;
+  --brand-ring: #F43F5E;
+  --accent: #F8FAFC;
   --accent-hover: #FFFFFF;
   --on-primary: #FFFFFF;
-  --focus: #FF6B72;
-  --overlay-scrim: rgba(2, 8, 28, 0.66);
-  --status-draft: #94A0BA;
-  --status-pending: #FBBF24;
-  --status-review: #A78BFA;
-  --status-approved: #34D399;
-  --status-rejected: #FB7185;
+  --focus: #F43F5E;
+  --overlay-scrim: rgba(2, 6, 23, 0.66);
+  --success: #4ADE80;
+  --success-subtle: #14532D;
+  --warning: #FCD34D;
+  --warning-subtle: #451A03;
+  --danger: #F87171;
+  --danger-subtle: #450A0A;
+  --info: #60A5FA;
+  --info-subtle: #1E3A5F;
+  --status-draft: #94A3B8;
+  --status-pending: #FCD34D;
+  --status-review: #60A5FA;
+  --status-approved: #4ADE80;
+  --status-rejected: #F87171;
   --status-changes: #FB923C;
   --award-gold: #B45309;
   --award-bronze: #92400E;
-  --status-draft-solid: #4E5866;
+  --status-draft-solid: #475569;
   --status-pending-solid: #B45309;
-  --status-review-solid: #5B4BC4;
+  --status-review-solid: #2563EB;
   --status-approved-solid: #047857;
-  --status-rejected-solid: #A80D14;
+  --status-rejected-solid: #BE123C;
   --status-changes-solid: #C2410C;
-  --status-draft-bg: rgba(148, 160, 186, 0.14);
-  --status-pending-bg: rgba(251, 191, 36, 0.14);
-  --status-review-bg: rgba(167, 139, 250, 0.14);
-  --status-approved-bg: rgba(52, 211, 153, 0.14);
-  --status-rejected-bg: rgba(251, 113, 133, 0.14);
+  --status-draft-bg: rgba(148, 163, 184, 0.14);
+  --status-pending-bg: #451A03;
+  --status-review-bg: #1E3A5F;
+  --status-approved-bg: #14532D;
+  --status-rejected-bg: #450A0A;
   --status-changes-bg: rgba(251, 146, 60, 0.14);
+  --color-bg-base: #020617;
+  --color-bg-surface: #0F172A;
+  --color-bg-elevated: #1E293B;
+  --color-bg-subtle: #020617;
+  --color-bg-inset: #334155;
+  --color-border-base: #1E293B;
+  --color-border-strong: #334155;
+  --color-border-brand: #F43F5E;
+  --color-text-primary: #F8FAFC;
+  --color-text-secondary: #94A3B8;
+  --color-text-muted: #94A3B8;
+  --color-text-disabled: #334155;
+  --color-text-on-brand: #FFFFFF;
+  --color-brand: #E11D48;
+  --color-brand-hover: #FB7185;
+  --color-brand-active: #BE123C;
+  --color-brand-subtle: #4C0519;
+  --color-success: #4ADE80;
+  --color-success-subtle: #14532D;
+  --color-warning: #FCD34D;
+  --color-warning-subtle: #451A03;
+  --color-danger: #F87171;
+  --color-danger-subtle: #450A0A;
+  --color-info: #60A5FA;
+  --color-info-subtle: #1E3A5F;
 }
 :root {
   --none: 0;
   --sm: 4px;
   ---d-e-f-a-u-l-t: 6px;
-  --md: 6px;
-  --lg: 8px;
-  --xl: 12px;
+  --md: 8px;
+  --lg: 12px;
+  --xl: 16px;
+  --2xl: 20px;
+  --3xl: 24px;
   --full: 9999px;
   --dur-instant: 0ms;
-  --dur-fast: 120ms;
+  --dur-fast: 100ms;
+  --dur-quick: 150ms;
+  --dur-normal: 200ms;
+  --dur-moderate: 300ms;
+  --dur-slow: 400ms;
+  --dur-deliberate: 500ms;
+  --dur-lazy: 700ms;
+  --dur-story: 1000ms;
+  --ease-linear: linear;
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-gentle: cubic-bezier(0.25, 0.46, 0.45, 0.94);
   --dur-base: 200ms;
-  --dur-slow: 280ms;
-  --dur-slower: 360ms;
-  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
-  --ease-entrance: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-slower: 400ms;
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-entrance: cubic-bezier(0, 0, 0.2, 1);
   --ease-exit: cubic-bezier(0.4, 0, 1, 1);
   --ease-press: cubic-bezier(0.25, 0.46, 0.45, 0.94);
   --base: 0;
@@ -174,17 +252,45 @@
   --skip-link: 60;
 }
 :root {
-  --shadow-card: 0 1px 2px 0 rgba(4, 16, 48, 0.04), 0 1px 3px 0 rgba(4, 16, 48, 0.03);
-  --shadow-card-hover: 0 4px 8px -2px rgba(4, 16, 48, 0.08), 0 2px 4px -2px rgba(4, 16, 48, 0.04);
-  --shadow-raised: 0 8px 20px -6px rgba(4, 16, 48, 0.12);
-  --shadow-drawer: -12px 0 32px -8px rgba(4, 16, 48, 0.16);
-  --shadow-modal: 0 24px 48px -12px rgba(4, 16, 48, 0.28);
-  --shadow-focus: 0 0 0 3px rgba(206, 17, 25, 0.35);
+  --shadow-xs: 0 1px 2px 0 rgba(0,0,0,0.05);
+  --shadow-sm: 0 1px 3px 0 rgba(0,0,0,0.1), 0 1px 2px -1px rgba(0,0,0,0.1);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1);
+  --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1);
+  --shadow-2xl: 0 25px 50px -12px rgba(0,0,0,0.25);
+  --shadow-brand: 0 4px 14px 0 rgba(225,29,72,0.35);
+  --shadow-inner: inset 0 2px 4px 0 rgba(0,0,0,0.05);
+  --shadow-focus: 0 0 0 3px rgba(225, 29, 72, 0.35);
+  --shadow-card: 0 1px 3px 0 rgba(0,0,0,0.1), 0 1px 2px -1px rgba(0,0,0,0.1);
+  --shadow-card-hover: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1);
+  --shadow-raised: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1);
+  --shadow-drawer: 0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1);
+  --shadow-modal: 0 25px 50px -12px rgba(0,0,0,0.25);
+}
+[data-theme='dark'],
+.dark {
+  --shadow-xs: 0 1px 2px 0 rgba(0,0,0,0.05);
+  --shadow-sm: 0 1px 3px 0 rgba(0,0,0,0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.4);
+  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.5);
+  --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1);
+  --shadow-2xl: 0 25px 50px -12px rgba(0,0,0,0.25);
+  --shadow-brand: 0 4px 14px 0 rgba(244,63,94,0.4);
+  --shadow-inner: inset 0 2px 4px 0 rgba(0,0,0,0.05);
+  --shadow-focus: 0 0 0 3px rgba(225, 29, 72, 0.35);
+  --shadow-card: 0 1px 3px 0 rgba(0,0,0,0.3);
+  --shadow-card-hover: 0 4px 6px -1px rgba(0,0,0,0.4);
+  --shadow-raised: 0 10px 15px -3px rgba(0,0,0,0.5);
+  --shadow-drawer: 0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1);
+  --shadow-modal: 0 25px 50px -12px rgba(0,0,0,0.25);
 }
 :root {
-  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-heading: 'Sora', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
+  --font-display: 'Playfair Display', Georgia, 'Times New Roman', serif;
+  --font-heading: 'Playfair Display', Georgia, 'Times New Roman', serif;
+  --font-body: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-ui: 'DM Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
 }
 
 /* ── Base ──────────────────────────────────────────────────────────────── */
@@ -206,7 +312,11 @@
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-heading);
+    /* DM Sans, not Playfair: the plan (§4.2) reserves display type for page
+       titles and hero text at text-3xl and above, and it arrives explicitly
+       from the generated `.text-3xl`+` utilities below. A bare heading with no
+       size utility is under 30px by definition, so it gets the UI family. */
+    font-family: var(--font-ui);
     text-wrap: balance;
   }
 
@@ -256,7 +366,10 @@
     justify-content: center;
     gap: 0.5rem;
     padding: 0.5rem 1rem;
-    border-radius: var(--lg);
+    /* --md, not --lg: the plan gives buttons rounded-md (8px) and reserves
+       rounded-lg (12px) for cards and dropdowns. The radius scale moved onto
+       the plan's values, so this reference has to follow it. */
+    border-radius: var(--md);
     font-size: 0.875rem;
     font-weight: 600;
     line-height: 1.25rem;
@@ -325,7 +438,8 @@
     width: 100%;
     background-color: var(--surface);
     border: 1px solid var(--border);
-    border-radius: var(--lg);
+    /* Inputs are rounded-md (8px) in the plan, like buttons. */
+    border-radius: var(--md);
     padding: 0.5rem 0.75rem;
     font-size: 0.875rem;
     line-height: 1.25rem;
@@ -418,6 +532,44 @@
   [data-loading='true'] {
     pointer-events: none !important;
   }
+}
+
+/* ── Type roles ──────────────────────────────────────────────────────────────
+   The family each step of the plan's type scale carries, so `text-3xl` alone is
+   Playfair Display and `text-xl` alone is DM Sans (REDESIGN_PLAN §4.2). Tailwind
+   cannot emit this from `fontSize` -- see `typeFamilyCss` above.
+
+   Last of the three layers on purpose. Tailwind expands `@tailwind utilities`
+   after this file in both apps' stylesheets, so an explicit `font-ui` on the
+   element lands later in the same layer and wins. Layer ORDER also has to stay
+   base -> components -> utilities, which is the order these blocks appear in. */
+@layer utilities {
+  .text-xs { font-family: var(--font-ui); }
+  .text-sm { font-family: var(--font-ui); }
+  .text-base { font-family: var(--font-body); }
+  .text-lg { font-family: var(--font-body); }
+  .text-xl { font-family: var(--font-ui); }
+  .text-2xl { font-family: var(--font-ui); }
+  .text-3xl { font-family: var(--font-display); }
+  .text-4xl { font-family: var(--font-display); }
+  .text-5xl { font-family: var(--font-display); }
+  .text-6xl { font-family: var(--font-display); }
+  .text-7xl { font-family: var(--font-display); }
+  .text-8xl { font-family: var(--font-display); }
+  .text-9xl { font-family: var(--font-display); }
+  .text-headline-xl { font-family: var(--font-display); }
+  .text-headline-xl-mobile { font-family: var(--font-ui); }
+  .text-headline-lg { font-family: var(--font-ui); }
+  .text-headline-lg-mobile { font-family: var(--font-ui); }
+  .text-headline-md { font-family: var(--font-ui); }
+  .text-headline-sm { font-family: var(--font-ui); }
+  .text-body-lg { font-family: var(--font-body); }
+  .text-body-md { font-family: var(--font-body); }
+  .text-body-sm { font-family: var(--font-body); }
+  .text-label-lg { font-family: var(--font-ui); }
+  .text-label-md { font-family: var(--font-ui); }
+  .text-label-sm { font-family: var(--font-ui); }
+  .text-data-mono { font-family: var(--font-mono); }
 }
 
 /* ── Keyframes ─────────────────────────────────────────────────────────── */
