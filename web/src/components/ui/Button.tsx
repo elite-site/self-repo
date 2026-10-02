@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import type { TargetAndTransition, Transition } from 'framer-motion';
+import type { TargetAndTransition, Transition, HTMLMotionProps } from 'framer-motion';
 import { Loader2, type LucideIcon } from 'lucide-react';
 import { cn } from '../../lib/cn';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
@@ -18,7 +18,7 @@ import { selectVariantsByName } from '../../lib/motion';
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'icon-only';
 export type ButtonSize = 'sm' | 'md' | 'lg';
 
-interface CommonProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'children' | 'onDrag' | 'onDragStart' | 'onDragEnd'> {
+interface CommonProps extends Omit<HTMLMotionProps<'button'>, 'children'> {
   /** Defaults to `primary`. `icon-only` is the neutral, square treatment. */
   variant?: ButtonVariant;
   /** Defaults to `md`. */

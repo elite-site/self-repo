@@ -1,9 +1,7 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useSession } from '../context/SessionContext';
-import { useToast } from '../components/Toast';
 import { Button } from '../components/ui/Button';
-import { useEffect } from 'react';
+import { api } from '../services/api';
 
 interface LoginPageProps {
   session: any;
@@ -19,8 +17,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   onRetry,
 }) => {
   const navigate = useNavigate();
-  const { setSession } = useSession();
-  const { showToast } = useToast();
 
   useEffect(() => {
     // If already signed in, redirect to dashboard
@@ -65,14 +61,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               Sign in with your SASI college Google account to access the portal.
             </p>
             <Button
-              onClick={() => setSession({
-                accessToken: 'google-token-placeholder',
-                userId: 'sasi-student',
-                name: '',
-                email: '',
-                picture: '',
-                reducedMotion: false,
-              } as any)}
+              onClick={() => {
+                window.location.href = api.getOAuthAuthorizeUrl();
+              }}
               className="w-full text-left justify-start px-6 py-3 rounded-xl bg-brand text-on-primary hover:bg-red-700 transition-colors"
             >
               Sign in with Google

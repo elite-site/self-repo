@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import type { TargetAndTransition, Transition } from 'framer-motion';
+import type { TargetAndTransition, Transition, HTMLMotionProps } from 'framer-motion';
 import { cn } from '../../lib/cn';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { selectVariantsByName } from '../../lib/motion';
@@ -16,9 +16,10 @@ import { selectVariantsByName } from '../../lib/motion';
 
 export type CardVariant = 'default' | 'elevated' | 'ghost' | 'brand' | 'interactive';
 
-export interface CardProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onDrag' | 'onDragStart' | 'onDragEnd'> {
+export interface CardProps extends Omit<HTMLMotionProps<'div'>, 'children'> {
   /** Defaults to `default`. */
   variant?: CardVariant;
+  children?: React.ReactNode;
   /**
    * Makes the card activatable: it gains `role="button"`, `tabIndex` and
    * Enter/Space handling, whatever variant it is. A `div` rather than a `button`

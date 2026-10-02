@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import type { TargetAndTransition, Transition } from 'framer-motion';
+import type { TargetAndTransition, Transition, HTMLMotionProps } from 'framer-motion';
 import { Check, type LucideIcon } from 'lucide-react';
 import { cn } from '../../lib/cn';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
@@ -16,7 +16,7 @@ import { selectVariantsByName } from '../../lib/motion';
  * costs nothing.
  */
 
-export interface ChipProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'children' | 'onDrag' | 'onDragStart' | 'onDragEnd'> {
+export interface ChipProps extends Omit<HTMLMotionProps<'button'>, 'children'> {
   label: string;
   /** Defaults to `false`. Reflected as `aria-pressed`. */
   selected?: boolean;

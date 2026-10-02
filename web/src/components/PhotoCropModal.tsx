@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import ImageCropper, { type PixelCrop } from 'react-image-crop';
+import ImageCropper, { type Area, type Point } from 'react-easy-crop';
 import { X, ZoomIn, ZoomOut, RotateCcw, Sparkles, Check, Loader2, Image as ImageIcon } from 'lucide-react';
 import { getCroppedImg } from '../utils/cropImage';
 
@@ -27,9 +27,9 @@ export const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
   onCropSave,
   isSaving = false,
 }) => {
-  const [crop, setCrop] = useState<{x: number; y: number; width: number; height: number} | null>(null);
+  const [crop, setCrop] = useState<Point>({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
-  const [croppedArea, setCroppedArea] = useState<{x: number; y: number; width: number; height: number} | null>(null);
+  const [croppedArea, setCroppedArea] = useState<Area | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const modalRef = useRef<HTMLDivElement>(null);
@@ -38,7 +38,7 @@ export const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
   // Reset state when modal opens with a new or re-opened image
   useEffect(() => {
     if (isOpen) {
-      setCrop({ x: 0, y: 0, width: 0, height: 0 });
+      setCrop({ x: 0, y: 0 });
       setZoom(initialPosition?.photoZoom && initialPosition.photoZoom >= 1 ? initialPosition.photoZoom : 1);
       setCroppedArea(null);
       setError(null);
@@ -68,9 +68,8 @@ export const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, isSaving, isProcessing, onClose]);
 
-  const handleCropChange = useCallback((newCrop: {x: number; y: number; width: number; height: number}) => {
+  const handleCropChange = useCallback((newCrop: Point) => {
     setCrop(newCrop);
-    setCroppedArea(newCrop);
   }, []);
 
   const handleZoomIn = () => {
@@ -82,7 +81,7 @@ export const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
   };
 
   const handleReset = () => {
-    setCrop({ x: 0, y: 0, width: 0, height: 0 });
+    setCrop({ x: 0, y: 0 });
     setZoom(1);
     setCroppedArea(null);
   };
@@ -95,7 +94,7 @@ export const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
 
     try {
       // Use the cached pixel area if we have it; otherwise fall back to the crop state.
-      const pixelCrop = croppedArea ?? crop;
+      const pixelCrop = croppedArea ?? { x: crop.x, y: crop.y, width: 0, height: 0 };
       if (onSavePosition && pixelCrop) {
         const photoOffsetX = Number((pixelCrop.x + pixelCrop.width / 2).toFixed(1));
         const photoOffsetY = Number((pixelCrop.y + pixelCrop.height / 2).toFixed(1));
@@ -171,12 +170,12 @@ export const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
         <div className="relative w-full h-72 sm:h-80 bg-surface-inverse rounded-lg overflow-hidden shadow-inner border border-edge-strong select-none">
           <ImageCropper
             image={imageSrc}
-            crop={crop ?? undefined}
+            crop={crop}
             zoom={zoom}
             aspect={1}
             onCropChange={handleCropChange}
-            onCropComplete={(crop: PixelCrop) => {
-              setCroppedArea(crop);
+            onCropComplete={(_croppedArea: Area, croppedAreaPixels: Area) => {
+              setCroppedArea(croppedAreaPixels);
             }}
             zoomWithScroll={true}
             minZoom={1}
