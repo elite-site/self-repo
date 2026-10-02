@@ -156,9 +156,17 @@ export const reducedModalPanelVariants: Variants = {
   exit: { opacity: 0, transition: transitionFast },
 };
 
+/**
+ * §8.2: a bottom sheet "slides up from bottom with spring animation", so the
+ * entrance is `transitionSpring` rather than the 200ms curve the rest of the
+ * overlays use. `bounce` is the other approved spring but its damping (15)
+ * overshoots visibly on a panel this tall, so the tighter `spring` is the one
+ * the spec's wording calls for. The exit stays `transitionFast`: a spring
+ * pushing the sheet back down would rebound it back into view.
+ */
 export const bottomSheetVariants: Variants = {
   hidden: { opacity: 0, y: '100%' },
-  visible: { opacity: 1, y: 0, transition: transitionNormal },
+  visible: { opacity: 1, y: 0, transition: transitionSpring },
   exit: { opacity: 0, y: '100%', transition: transitionFast },
 };
 export const reducedBottomSheetVariants: Variants = {

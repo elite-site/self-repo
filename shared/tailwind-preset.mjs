@@ -86,12 +86,6 @@ export const eliteTokens = {
       brand: token('text-brand'),
     },
     focus: token('focus'),
-    // A focus ring and an active border are the same colour, so they are the
-    // same token. `--border-brand` is the plan's name for it.
-    'border-brand': token('border-brand'),
-    // WCAG 1.4.3 exempts disabled controls from the contrast minimum, so this
-    // is deliberately the weakest text step in the system.
-    'text-disabled': token('text-disabled'),
     // The scrim behind a modal or drawer. A raw `bg-black/50` was wrong in two
     // ways: pure black is not a token, and a fixed 50% reads heavier in dark mode
     // where the surface underneath is already dark. This is theme-aware.
@@ -148,20 +142,25 @@ export const eliteTokens = {
     info: { DEFAULT: token('info'), subtle: token('info-subtle') },
 
     // ── The plan's own names ───────────────────────────────────────────
-    // Straight from REDESIGN_PLAN §7.2 / Appendix B, mapped to the same custom
-    // properties as the app-facing names above. A component may use either
-    // spelling; they can never disagree because they are the same variable.
-    'bg-base': token('color-bg-base'),
-    'bg-surface': token('color-bg-surface'),
-    'bg-elevated': token('color-bg-elevated'),
-    'bg-subtle': token('color-bg-subtle'),
-    'bg-inset': token('color-bg-inset'),
-    'border-base': token('color-border-base'),
-    'border-strong': token('color-border-strong'),
-    'text-primary': token('color-text-primary'),
-    'text-secondary': token('color-text-secondary'),
-    'text-muted': token('color-text-muted'),
+    // `on-brand` is the plan's name for the text on a solid brand fill: the
+    // same white as `on-primary` above, and kept because the components use it.
     'on-brand': '#FFFFFF',
+
+    // This block used to carry the rest of the plan's colour names — `bg-base`,
+    // `bg-surface`, `bg-elevated`, `bg-subtle`, `bg-inset`, `border-base`,
+    // `border-strong`, `text-primary`, `text-secondary`, `text-muted`,
+    // `text-disabled` and `border-brand` — each mapping the same `--color-*`
+    // custom property as the `surface` / `edge` / `ink` group above. It was
+    // removed because it never worked: Tailwind prepends the utility prefix
+    // itself, so a colour key `bg-base` generates `bg-bg-base` and a key
+    // `text-primary` generates `text-text-primary`. Every component that wrote
+    // the readable spelling got a class that compiled to nothing and so styled
+    // nothing at all, with no error anywhere.
+    //
+    // The rule: a colour key must not begin with the utility prefix it is meant
+    // to be used behind. The `--color-*` properties those keys pointed at still
+    // exist in `shared/tokens.css`; read them through `surface.*`, `edge.*` and
+    // `ink.*`, which are the same values under names that resolve.
 
     // ── Raw ramps ───────────────────────────────────────────────────────
     // For the rare case that needs a fixed step: a chart series, a brand asset.
@@ -283,12 +282,17 @@ export const eliteTheme = {
       slower: motion['dur-slow'],
     },
     transitionTimingFunction: {
-      // REDESIGN_PLAN Appendix B / §4.7.
-      'ease-linear': 'var(--ease-linear)',
-      'ease-out': 'var(--ease-out)',
-      'ease-in': 'var(--ease-in)',
-      'ease-in-out': 'var(--ease-in-out)',
-      'ease-gentle': 'var(--ease-gentle)',
+      // REDESIGN_PLAN Appendix B / §4.7. The key is the easing's *bare* name:
+      // Tailwind supplies the `ease-` prefix, so `gentle` is what makes
+      // `ease-gentle` resolve. The `--ease-*` names are the *values* below.
+      // Keys written `ease-gentle` generated `ease-ease-gentle` and matched
+      // nothing, while the bare names below always worked — which is why
+      // `ease-standard` compiled and `ease-gentle` did not.
+      linear: 'var(--ease-linear)',
+      out: 'var(--ease-out)',
+      in: 'var(--ease-in)',
+      'in-out': 'var(--ease-in-out)',
+      gentle: 'var(--ease-gentle)',
       // Pre-plan names, aliased onto the easings above inside `tokens.mjs`.
       standard: 'var(--ease-standard)',
       entrance: 'var(--ease-entrance)',

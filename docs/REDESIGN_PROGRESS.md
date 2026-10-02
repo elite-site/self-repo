@@ -159,7 +159,246 @@ key (`elite-theme`) than the existing `ThemeContext` and would create two source
 reuse the existing key. Carried forward as a hard constraint.
 
 ### B1 completion
-**Status: in progress** · agent: 1 · same session lineage
+**Status: DONE — accepted at gate** · commit `19bd00b` · independent verification
+
+Re-verified rather than trusting the report:
+- `grep -- '--neutral-\|--navy-' shared/tokens.css` → **0**. `--slate-*` → **11**.
+- `npm run tokens:check` → pass. `npm run check:contrast` → **40/40 pairs pass WCAG AA**.
+- Six rows below `min: 4.5` remain; all six are **non-text** pairs (`focus`, `border-brand`,
+  `border-strong`) at their correct WCAG 1.4.11 floors. No text row sits below 4.5.
+- `admin-client/index.html` carries the `css2` link; `admin-client/src/fonts.css` and all six
+  `admin-client/src/fonts/**` woff2 files are gone.
+
+**AA fixes landed as colour changes, not test changes:**
+
+| Token | Plan value | Chosen | Measured |
+|---|---|---|---|
+| dark `--color-brand` | `red-500` `#F43F5E` | `red-600` `#E11D48` | white on it **4.70:1** (was 3.67:1) |
+| light `--text-muted` | `slate-400` `#94A3B8` | `slate-500` `#64748B` | **4.76:1** (was 2.56:1) |
+| dark `--text-muted` | `slate-600` `#475569` | `slate-400` `#94A3B8` | **6.96:1** surface, **5.71:1** raised (was 2.36 / 1.93) |
+
+Dark `border-brand` / `focus` / `brand-ring` stay `red-500` per the plan's own dark table
+(4.86:1, 5.49:1 — clears the 3:1 non-text floor). Each deviation carries a comment recording the
+plan value, the chosen value and the ratio, so a future agent cannot "restore" the plan value and
+silently regress AA.
+
+**Knock-on caught:** the plan's dark `brand-active` was `red-600`, which after Ruling 1 *is* the
+resting fill — `.btn-primary:active` would have had no colour change. Moved to `red-700`, the
+plan's "darken on press" direction one step further along.
+
+**Bonus invariant:** all 45 `var()` references in `tokens.css` resolve to a declaration in the same
+file (158 declared). A future radius/motion/shadow rename now fails loudly instead of silently
+dropping a property.
+
+**Generator repaired:** `tools/build-tokens.mjs` no longer imports `navy`/`neutral`; the
+`navy = {}` and `neutral = slate` shims are gone from `tokens.mjs`; the CSS header is derived from
+`light`/`dark` so it cannot rot again.
+
+**Scales applied:** radius (`md` 6→8, `lg` 8→12, `xl` 12→16, new `2xl`/`3xl`); the plan's 7-step
+shadow scale plus a dark-theme elevation block so shadows re-theme with no `dark:` variants
+(`focus` deliberately unaliased — every plan step is a cast shadow and a ring must hug the border);
+all nine plan durations and five plan easings, with the pre-existing names aliased onto them; and
+the §4.2 type scale, emitted as a generated `@layer utilities` block because Tailwind's
+`fontSize` extension silently drops a `fontFamily` key.
+
+**Type-scale mapping:** `text-headline-*` / `text-body-*` map onto the plan's steps rather than
+being deleted, since every existing call site depends on them. The previous agent's "≥28px
+Playfair" threshold was wrong — §4.2 says never below `text-3xl` (30px) — so `headline-xl` (36px,
+a page title, an explicit Playfair use case) keeps Playfair, while `headline-xl-mobile` and
+`headline-lg` (28px) move to DM Sans. **Consequence flagged, not hidden: `fontFamily.headline-lg`
+and `font-heading` now disagree by design. The mapping table in `tokens.mjs` is the thing to read
+before touching either.**
+
+### Carried forward from B1
+
+| # | Item | Where it goes |
+|---|---|---|
+| C1 | `admin-client/public/favicon.svg` + `site.webmanifest` still `#ED1E26` | B7 (outside B1's allowlist) |
+| C2 | dark `--text-muted` and `--text-secondary` are now the same value (`slate-400`); dark muted/secondary hierarchy is carried by size and weight, not a lighter grey | documented at the token; a real fix needs a new hue |
+| C3 | white on dark `brand-hover` (`red-400` `#FB7185`) = 2.69:1, and there is **no hover row in the contrast table** at all | add a hover row in B8 |
+| C4 | `--DEFAULT` emits a stray `---d-e-f-a-u-l-t` custom property from a `kebab()` quirk | reads nothing, harmless, left alone |
+| C5 | `border-strong` at 1.42:1 / 1.72:1 — decorative divider, no state attached, 1.4.11 does not cover it | floor recorded honestly; changing it is a visual decision |
+
+---
+
+## B2 — Core `lib/` + `hooks/`
+
+**Status: in progress** · agent: 1 · commit `19bd00b` + working tree
+
+`web/src/lib/{cn,motion,theme}.ts`, `web/src/hooks/{useTheme,useCommandPalette,useReducedMotion}.ts`,
+plus the §7.5 FOUC script in `web/index.html` (additive).
+
+### B2 outcome
+**Status: DONE — accepted** · commit `5d0c3a8`
+
+**First attempt silently no-opped.** A subagent returned "completed" having created nothing —
+no `lib/`, no hooks, no `index.html` change. Caught by checking the filesystem rather than the
+report. Re-run in the foreground; it succeeded. **Lesson recorded: a subagent reporting
+completion proves nothing. Every batch is verified on disk.**
+
+**B1's claim about `ThemeContext` was wrong, and it matters.** B1 reported that `ThemeContext.tsx`
+"already persists the theme under its own key", and warned that adding the §7.5 FOUC script would
+create two competing `localStorage` keys. I passed that warning into B2 as a hard constraint.
+
+Read the file myself — all 63 lines. It is the opposite:
+- `theme` is hardcoded to `'light'` in both contexts. **There is no storage key at all.**
+- Two `useEffect`s (lines 13-21 and 45-52) **actively strip `dark`** off `documentElement` and
+  `body` on mount. The comment reads: *"Student portal stays on its fixed clean academic theme,
+  strictly independent of admin."*
+
+So **dark mode is not merely absent from the student portal — it is actively suppressed by design.**
+The plan's §7 requires a working light/dark toggle with system-preference detection, and B1 already
+shipped the full dark token set. Those stripping effects are a deliberate prior decision that
+directly contradicts the plan.
+
+**Ruling:** the effects come out. §7 and the shipped dark tokens make the intent unambiguous, and
+`ThemeContext.tsx` is assigned to B4, which is the single owner of app wiring. Logged as
+**R1** below because it reverses an intentional choice rather than fixing a bug — it deserves to be
+visible rather than buried in a batch log.
+
+The single-source-of-truth intent still holds: `elite-theme` is defined once as
+`THEME_STORAGE_KEY` in `lib/theme.ts`, and the inline `<head>` script is a literal mirror of
+`readStoredTheme` → `prefersDarkScheme` → `resolveTheme` → `applyTheme`, including invalid-value
+normalisation. There is exactly one definition and one copy, so script and hook cannot disagree.
+
+**Reduced motion is machine-checkable, not just claimed.** `motionVariants` is a registry of 19
+`{ full, reduced }` pairs; verified 19 `full:` and 19 `reduced:` entries, so no variant can ship
+without a reduced half. Three patterns: drop travel and keep opacity; no-op the prop bags
+(`whileHover: {}`, `whileTap: {}`); and zero the stagger (`staggerChildren: 0`), because children
+would otherwise land *after* the container settles. Three reduced variants are honest aliases
+rather than copies, so they cannot drift.
+
+**No invented timings.** Durations and easings come from `shared/tokens.mjs`'s `motion` export
+through `MOTION_DURATIONS`/`MOTION_EASINGS`, with one `ms()` helper as the only ms→s conversion.
+Even `staggerChildren: 0.08` resolves to a token.
+
+**B1 rename damage check:** `text-ink` (545 call sites) and `bg-surface-canvas` (18) are both valid
+preset tokens (`tailwind-preset.mjs:68,81`). The token swap broke nothing.
+
+### R1 — dark mode is being actively suppressed (ruling)
+
+| | |
+|---|---|
+| **Decision reversed** | `ThemeContext.tsx` lines 13-21 and 45-52 strip `dark` from `<html>` and `<body>` on mount, pinning the student portal to light-only. |
+| **Why** | `REDESIGN_PLAN.md` §7 specifies a working light/dark toggle with persistence and system-preference detection. B1 shipped the complete dark token set and dark shadow block. Leaving the strip in place makes all of that dead code. |
+| **Action** | B4 removes both effects, wires the real provider, and mounts `<MotionConfig reducedMotion="user">`. |
+| **Watch for** | The old comment said *"strictly independent of admin"*. The admin client has its own theme handling; decoupling the two must not be assumed. Verify in B8 that toggling in one does not leak into the other. |
+
+### Carried forward from B2
+
+| # | Item | Where it goes |
+|---|---|---|
+| C6 | `motion.ts:257` spreads a union-typed `Transition` (`{ ...transitionSlow, delay }`) — may not narrow cleanly | B8 typecheck; inline the three fields if flagged |
+| C7 | Plan names the swipe threshold `SWIPE_CONFIDENCE_THRESHOLD` (§4.7); exported as `SWIPE_POWER_REQUIRED` per Appendix C | resolved, noted so nobody "fixes" the mismatch |
+| C8 | Appendix C's `staggerFastItemVariants` uses 250 ms, which is not a token step; rounded down to `duration-normal` | documented in place |
+
+---
+
+## B3 — UI primitives
+
+**Status: in progress** · 5 agents, parallel, disjoint file sets · commit `5d0c3a8` + working tree
+
+| Agent | Creates | Also owns (upgrade in place) |
+|---|---|---|
+| A | `Button`, `Card`, `Badge`, `Tag`, `Chip`, `Avatar` | — |
+| B | `Input`, `Textarea`, `Select`, `ProgressBar`, `StepIndicator` | `ProgressSteps.tsx` |
+| C | `Modal`, `Lightbox` | `Dialog.tsx`, `ConfirmDialog.tsx` |
+| D | `ToastProvider`, `Tabs` | `Toast.tsx`, `Skeleton.tsx` |
+| E | `FileUploadZone`, `VideoPlayer`, `SwipeCard` | — |
+
+**Rules given to all five**
+- **Upgrade-don't-duplicate.** Where the plan's component supersedes an existing file, bring the
+  existing file up to plan behaviour and re-export the plan's name from it. Two competing
+  implementations of "a modal" is precisely the inconsistency §3.6 exists to prevent.
+- **No deletions in B3.** Anything that goes dead is reported and cleaned up in a later batch, so
+  the tree stays buildable at every point.
+- **Whoever changes an exported API owns updating its importers.** No other agent edits their files.
+- **No raw hex, px or ms** — §3.6. Tokens only.
+- **Reduced motion on every animation** — a component that animates without a reduced variant is a
+  defect.
+- **§3.4 accessibility is non-negotiable**: visible focus rings, real `<label>` association,
+  `aria-describedby` for hints and errors, accessible names on icon-only controls, alt text on
+  images, and colour never the sole state indicator.
+- **Strict TypeScript** — no `any`, no `@ts-ignore`, no `eslint-disable`.
+- **No barrel files.** Later batches import by path.
+- Do not run build, tests, or verification scripts.
+
+Component-specific requirements worth noting: Agent B gets form accessibility as its priority;
+Agent C must use Radix for focus trapping while supplying its own skin and a responsive
+bottom-sheet variant; Agent D's toasts must announce to a live region and its skeletons must be
+`aria-hidden` so screen readers do not read placeholders as content; Agent E must keep a real
+`<input type="file">` behind the drag zone and must give every swipe action an equivalent explicit
+button, since §3.2 makes clarity win over cleverness.
+
+### B3 gate — the alias-layer defect (most valuable finding so far)
+
+All five agents reported success. **A compile check found a silent bug that every report missed.**
+
+`shared/tailwind-preset.mjs` ended its colour block with "the plan's own names" written as flat keys
+that **already begin with the Tailwind utility prefix** — `'bg-subtle'`, `'text-primary'`,
+`'border-base'`, and so on. Tailwind prepends the prefix itself, so those keys generate
+`bg-bg-subtle` and `text-text-primary`. **Every component that wrote the readable form got a class
+that resolves to nothing.**
+
+Verified by running real Tailwind + PostCSS against the actual config:
+
+```
+GENERATED:    bg-bg-subtle  bg-bg-inset  text-text-primary  border-border-base  ease-standard …
+NOT GENERATED: bg-subtle  bg-inset  text-primary  text-secondary  text-muted  border-base
+               bg-brand-subtle  ease-gentle          <-- these classes do nothing
+```
+
+**Why it was so easy to miss:** an unknown Tailwind class is not an error. It compiles, ships, and
+styles nothing. Four of five agents independently wrote the broken spelling — the alias layer is a
+trap, not just a bug. `transitionTimingFunction` had the identical defect: keys `'ease-gentle'`,
+`'ease-out'` generate `ease-ease-gentle`, while the bare `standard`/`entrance`/`exit`/`press` keys
+directly below work, which is exactly why `ease-standard` resolved and `ease-gentle` did not.
+
+**Scope established before deciding:**
+- **Zero** pre-existing files use the broken spellings — nothing depends on the layer.
+- The coherent app-facing API is already widely used: `text-ink` (39 files), `border-edge` (37),
+  `text-ink-secondary` (36), `bg-surface-sunken` (26), `bg-brand-soft` (24), `bg-surface-canvas` (11).
+- Keys that are **fine** and must not be over-deleted: `on-primary`, `scrim`, `focus` (the key does
+  not start with the prefix it is used behind), and `border-brand` (works via nested `brand`).
+
+**Decision: delete the broken alias layer, do not repair it.** Repairing would mean shipping
+`text-text-secondary` as the supported spelling — an API every future author would trip on, which
+is the very failure we just watched happen five times. The nested `brand`/`surface`/`edge`/`ink`
+scale is coherent, proven in production use, and covers every need.
+
+Explicitly rejected: adding a colour key `base` so `bg-base`/`border-base` would work. `text-base`
+is a font size in the type scale, so a colour named `base` makes `text-base` ambiguous between two
+utilities. The app-facing API already covers it (`surface.canvas`, `edge.DEFAULT`).
+
+**Lesson recorded: verifying that a class *resolves* is a different question from verifying that it
+was written from a token, and both are needed.** Reading the code proves neither — only compiling
+against the real config does. This check is now part of every batch gate that writes classes.
+
+### B3 fix batch
+**Status: in progress** · agent: 1 · commit `5d0c3a8` + working tree
+
+1. Delete the flat `'bg-*'` / `'text-*'` / `'border-*'` / `'ease-*'` alias keys from the preset,
+   leaving a comment recording the rule: *a colour key must not begin with the utility prefix it is
+   used behind.*
+2. Re-add the plan's easings as properly-named keys so `ease-gentle` and friends resolve, mapping to
+   the real `--ease-*` custom properties in `shared/tokens.mjs`.
+3. Remap every broken call site in `web/src/components/ui/*.tsx` onto the proven API.
+4. Give `bottomSheetVariants` the spring §8.2 specifies — Agent C used `transitionNormal` because
+   `motion.ts` was not its file, which was the correct call at the time.
+
+**Verification is mandatory for this batch**, not optional: the agent must compile every extracted
+utility class from the primitives against the real config and drive the not-generated list to zero,
+then delete its probe script. It also runs `tokens:check` and `check:contrast`.
+
+### Carried forward from B3
+
+| # | Item | Where it goes |
+|---|---|---|
+| C9 | `Dialog.tsx` is now a legacy alias for `Modal`; 4 pages still import it | B6 pages import `Modal` directly; delete `Dialog.tsx` once nothing imports it |
+| C10 | Agent E inlined §4.8's button classes instead of importing `Button`, to avoid a same-batch collision | swap for the primitive in a consolidation pass |
+| C11 | `BrandedLoading.tsx` is the last spinner-style loader and contradicts §3.5 (skeletons over spinners); referenced from `App.tsx` | B4 owns `App.tsx` — remove it there |
+| C12 | `web/tailwind.config.js` comment says "`ThemeContext` still toggles `.dark`" — it actually *strips* `.dark` | B4 rewrites that comment along with the context |
+| C13 | §4.8's Date Input has no owner; `Input` supports `type="date"` but the native picker skips the label/hint/error anatomy | needs an explicit decision in B6 |
 
 ---
 

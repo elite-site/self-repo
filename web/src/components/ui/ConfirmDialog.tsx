@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
-import { Dialog } from './Dialog';
+import { Modal } from './Modal';
 
 export interface ConfirmOptions {
   title: string;
@@ -51,32 +51,28 @@ export const ConfirmProvider: React.FC<{ children: React.ReactNode }> = ({ child
   return (
     <ConfirmContext.Provider value={value}>
       {children}
-      <Dialog
+      <Modal
         open={request !== null}
         onClose={handleClose}
         title={request?.title ?? ''}
+        description={request?.description}
         size="sm"
         initialFocusRef={cancelRef}
-      >
-        <p className="text-body-md text-ink-secondary">{request?.description}</p>
-        <div className="mt-5 flex flex-wrap justify-end gap-3">
-          <button
-            ref={cancelRef}
-            type="button"
-            onClick={() => settle(false)}
-            className="btn btn-secondary"
-          >
-            {request?.cancelLabel ?? 'Cancel'}
-          </button>
-          <button
-            type="button"
-            onClick={() => settle(true)}
-            className={`btn ${request?.tone === 'danger' ? 'btn-danger' : 'btn-primary'}`}
-          >
-            {request?.confirmLabel ?? 'Confirm'}
-          </button>
-        </div>
-      </Dialog>
+        footer={
+          <>
+            <button ref={cancelRef} type="button" onClick={() => settle(false)} className="btn btn-secondary">
+              {request?.cancelLabel ?? 'Cancel'}
+            </button>
+            <button
+              type="button"
+              onClick={() => settle(true)}
+              className={`btn ${request?.tone === 'danger' ? 'btn-danger' : 'btn-primary'}`}
+            >
+              {request?.confirmLabel ?? 'Confirm'}
+            </button>
+          </>
+        }
+      />
     </ConfirmContext.Provider>
   );
 };
