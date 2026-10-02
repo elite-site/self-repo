@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Navigate, Link, useNavigate, useLocation } from 'react-router-dom';
+import { Navigate, Link, useNavigate } from 'react-router-dom';
 import { StudentSession } from '../../types';
 import { api, resolveMediaUrl } from '../../services/api';
 import { Navbar } from '../../components/Navbar';
 import { Footer } from '../../components/Footer';
-import { GuidelinesSection } from '../../components/GuidelinesSection';
 import { ArrowRight, Search, Users, Calendar, GraduationCap, CheckCircle2 } from 'lucide-react';
 
 interface HomePageProps {
@@ -15,7 +14,6 @@ interface HomePageProps {
 export const HomePage: React.FC<HomePageProps> = ({ session, onLogout }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
-  const { hash } = useLocation();
 
   const [featuredStudents, setFeaturedStudents] = useState<any[]>([]);
   const [studentsLoading, setStudentsLoading] = useState(true);
@@ -40,13 +38,6 @@ export const HomePage: React.FC<HomePageProps> = ({ session, onLogout }) => {
       cancelled = true;
     };
   }, []);
-
-  // React Router does not scroll to a hash on its own, so the "Guidelines" link
-  // in the header and footer would land on the top of this page instead.
-  useEffect(() => {
-    if (!hash) return;
-    document.getElementById(hash.slice(1))?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
-  }, [hash]);
 
   if (session) {
     return <Navigate to="/dashboard" replace />;
@@ -249,9 +240,6 @@ export const HomePage: React.FC<HomePageProps> = ({ session, onLogout }) => {
             </div>
           </div>
         </section>
-
-
-        <GuidelinesSection />
 
         {/* ── EVENTS BAND ─────────────────────────────────────────────────── */}
         <section aria-labelledby="events-band-title" className="border-t border-brand-soft bg-brand-soft">

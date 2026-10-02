@@ -31,9 +31,6 @@ export const Footer: React.FC = () => (
           <Link to="/events" className="text-label-lg text-ink-secondary hover:text-ink">
             Events
           </Link>
-          <Link to="/#guidelines" className="text-label-lg text-ink-secondary hover:text-ink">
-            Guidelines
-          </Link>
         </nav>
       </div>
 
