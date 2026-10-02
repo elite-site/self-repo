@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import type { Variants } from 'framer-motion';
@@ -7,13 +7,8 @@ import { StudentSession } from '../../types';
 import { useToast } from '../../components/Toast';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { selectVariantsByName } from '../../lib/motion';
-import { Navbar } from '../../components/Navbar';
-import { Footer } from '../../components/Footer';
 import { getPhotoStyle } from '../../utils/photoStyle';
 import { LeetCodeIcon, CodeChefIcon } from '../../components/icons/PlatformIcons';
-import { Badge } from '../../components/ui/Badge';
-import { Card } from '../../components/ui/Card';
-import { Tag } from '../../components/ui/Tag';
 import { Skeleton, SkeletonText } from '../../components/ui/Skeleton';
 import { EmptyState } from '../../components/ui/EmptyState';
 import {
@@ -30,18 +25,25 @@ import {
   Award,
   Share2,
   Printer,
+  Mail,
+  MapPin,
+  GraduationCap,
+  Sparkles,
+  Menu,
+  X,
+  ChevronUp,
+  Code2,
+  Lightbulb,
+  Zap,
+  Users,
+  Rocket,
+  CheckCircle2,
 } from 'lucide-react';
 
 interface PublicProfileProps {
   session?: StudentSession | null;
   onLogout?: () => void;
 }
-
-/* ── The shape this page reads ──────────────────────────────────────────────
- * Mirrors what `GET /api/public/students/:rollNo` already returns, and nothing
- * more: the public payload is the only thing on an unauthenticated page, so a
- * field that is not in this shape is a field the page must not ask for.
- */
 
 interface PublicProfileSkill {
   skill?: { name?: string | null } | null;
@@ -111,6 +113,8 @@ interface PublicStudent {
   year?: number | null;
   section?: string | null;
   status?: string | null;
+  branch?: string | null;
+  email?: string | null;
   profile?: PublicProfileFields | null;
   projects?: PublicProject[] | null;
   achievements?: PublicAchievement[] | null;
@@ -119,129 +123,16 @@ interface PublicStudent {
   introVideo?: PublicIntroVideo | null;
 }
 
-/** Department is fixed on this portal; the public payload does not carry a branch. */
 const DEPARTMENT = 'Information Technology';
 
-/** A link opened off-site, rendered as a labelled icon button. */
-const SocialLink: React.FC<{
-  href: string;
-  label: string;
-  children: React.ReactNode;
-  tone?: string;
-}> = ({ href, label, children, tone = 'text-ink-secondary' }) => (
-  <a
-    href={href}
-    target="_blank"
-    rel="noreferrer"
-    title={label}
-    aria-label={label}
-    className={`flex h-10 w-10 items-center justify-center rounded-lg border border-edge bg-surface transition-colors duration-fast hover:border-edge-strong hover:bg-surface-sunken ${tone}`}
-  >
-    {children}
-  </a>
-);
-
-/**
- * The student's photo, or their initials.
- *
- * Deliberately not the `Avatar` primitive: that component owns its `<img>` and
- * cannot be handed a `style`, and the crop offsets below are a real feature —
- * a student positions their own photo in the editor and expects it to land
- * here exactly as they framed it. The initials fallback keeps the box the same
- * size either way, and the wrapper carries the accessible name so the image
- * itself can stay out of the a11y tree.
- */
-const ProfilePhoto: React.FC<{
-  name: string;
-  photo?: string | null;
-  profile: PublicProfileFields;
-  imageFailed: boolean;
-  onImageError: () => void;
-  className?: string;
-}> = ({ name, photo, profile, imageFailed, onImageError, className = '' }) => {
-  const initials = name
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((word) => word[0]?.toUpperCase())
-    .join('');
-
-  return (
-    <span
-      role="img"
-      aria-label={`${name}'s profile photo`}
-      className={`relative flex shrink-0 items-center justify-center overflow-hidden rounded-full border-4 border-surface bg-brand font-heading text-headline-lg font-bold text-on-brand ${className}`}
-    >
-      {photo && !imageFailed ? (
-        <img
-          src={resolveMediaUrl(photo)}
-          alt=""
-          style={getPhotoStyle(profile)}
-          onError={onImageError}
-          className="size-full object-cover"
-        />
-      ) : (
-        <span aria-hidden="true">{initials || 'IT'}</span>
-      )}
-    </span>
-  );
-};
-
-/**
- * One §6.3 section: a heading, an optional trailing action, and the body.
- * `h2` under the profile's `h1`, which is the hierarchy §6.3's accessibility
- * notes ask for.
- */
-const PublicSection: React.FC<{
-  id: string;
-  title: string;
-  variants: Variants;
-  action?: React.ReactNode;
-  children: React.ReactNode;
-}> = ({ id, title, variants, action, children }) => (
-  <motion.section
-    id={id}
-    aria-labelledby={`${id}-heading`}
-    variants={variants}
-    initial="hidden"
-    whileInView="show"
-    viewport={{ once: true, amount: 0.15 }}
-    className="scroll-mt-24"
-  >
-    <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-      <h2
-        id={`${id}-heading`}
-        className="font-heading text-headline-md tracking-tight text-ink"
-      >
-        {title}
-      </h2>
-      {action}
-    </div>
-    {children}
-  </motion.section>
-);
-
-/** The first sentence of the biography, used as the hero tagline. */
 function taglineOf(bio: string): string {
   const firstLine = bio.split('\n')[0] ?? '';
   const sentence = firstLine.match(/^.*?[.!?](\s|$)/)?.[0]?.trim();
   const candidate = sentence || firstLine.trim();
-  return candidate.length > 160 ? `${candidate.slice(0, 157).trimEnd()}…` : candidate;
+  return candidate.length > 180 ? `${candidate.slice(0, 177).trimEnd()}…` : candidate;
 }
 
-function formatDate(value: string): string {
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? '' : parsed.toLocaleDateString();
-}
-
-/**
- * A student's public profile: a standalone mini-website rather than a data
- * form (REDESIGN_PLAN §6.3). One hero, then six narrative sections — About, the
- * introduction video, Projects, Achievements, Certificates and the Resume — and
- * each one empty-states on its own so a half-filled profile still reads as
- * deliberate rather than broken.
- */
-export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session, onLogout }) => {
+export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
   const { rollNo } = useParams<{ rollNo: string }>();
   const { toast } = useToast();
   const shouldReduce = useReducedMotion();
@@ -250,6 +141,9 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
   const [student, setStudent] = useState<PublicStudent | null>(null);
   const [loading, setLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState('home');
+  const [showScrollTop, setShowScrollTop] = useState(false);
 
   useEffect(() => {
     setImageError(false);
@@ -265,22 +159,27 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
       .finally(() => setLoading(false));
   }, [rollNo]);
 
-  const shell = (content: React.ReactNode) => (
-    <div className="flex min-h-[100dvh] flex-col bg-surface-canvas text-ink print:bg-white print:text-neutral-900">
-      <div className="print:hidden">
-        <Navbar session={session} onLogout={onLogout} />
-      </div>
-      <main className="mx-auto w-full max-w-3xl flex-1 px-4 pb-16 sm:px-6 print:p-0 print:max-w-none">{content}</main>
-      <div className="print:hidden">
-        <Footer />
-      </div>
-    </div>
-  );
+  // Track active section and scroll top visibility
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowScrollTop(window.scrollY > 300);
 
-  /**
-   * §6.3's share button. Clipboard access is only granted in a secure context,
-   * so an `http://` visitor gets told what to copy rather than a silent no-op.
-   */
+      const sectionIds = ['home', 'about', 'skills', 'projects', 'education', 'contact'];
+      const scrollPosition = window.scrollY + 120;
+
+      for (let i = sectionIds.length - 1; i >= 0; i--) {
+        const el = document.getElementById(sectionIds[i]);
+        if (el && el.offsetTop <= scrollPosition) {
+          setActiveSection(sectionIds[i]);
+          break;
+        }
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   const handleShare = async () => {
     if (!navigator.clipboard?.writeText) {
       toast('Copy this page URL from your address bar to share.', { variant: 'info' });
@@ -296,61 +195,86 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
     }
   };
 
-  if (loading) {
-    return shell(
-      <div className="space-y-10" aria-busy="true">
-        <span className="sr-only" role="status">
-          Loading student profile
-        </span>
+  const navLinks = [
+    { id: 'home', label: 'Home' },
+    { id: 'about', label: 'About' },
+    { id: 'skills', label: 'Skills' },
+    { id: 'projects', label: 'Projects' },
+    { id: 'education', label: 'Education' },
+    { id: 'contact', label: 'Contact' },
+  ];
 
-        {/* §6.3's skeleton order: cover, then the header, then three sections. */}
-        <Skeleton className="h-50 w-full rounded-b-3xl sm:h-80" />
-        <div className="flex flex-col items-center gap-4">
-          <Skeleton className="-mt-16 size-32 rounded-full" />
-          <Skeleton className="h-8 w-64" />
-          <Skeleton className="h-4 w-72" />
-          <div className="flex gap-2">
-            <Skeleton className="h-6 w-24 rounded-full" />
-            <Skeleton className="h-6 w-20 rounded-full" />
-            <Skeleton className="h-6 w-20 rounded-full" />
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#070B16] text-slate-100 flex flex-col">
+        <header className="sticky top-0 z-50 h-16 border-b border-slate-800/80 bg-[#070B16]/80 backdrop-blur-md px-6 flex items-center justify-between">
+          <Skeleton className="h-6 w-32 rounded-lg" />
+          <div className="hidden md:flex gap-4">
+            <Skeleton className="h-4 w-16" />
+            <Skeleton className="h-4 w-16" />
+            <Skeleton className="h-4 w-16" />
           </div>
-        </div>
-        <div className="space-y-6">
-          <Card>
-            <Skeleton className="h-5 w-32" />
-            <SkeletonText className="mt-4" lines={3} />
-          </Card>
-          <Card>
-            <Skeleton className="h-5 w-40" />
-            <SkeletonText className="mt-4" lines={2} />
-          </Card>
-          <Card>
-            <Skeleton className="h-5 w-28" />
-            <SkeletonText className="mt-4" lines={4} />
-          </Card>
-        </div>
-      </div>,
+          <Skeleton className="h-8 w-24 rounded-lg" />
+        </header>
+
+        <main className="mx-auto max-w-[1200px] w-full px-6 py-12 space-y-12">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+            <div className="lg:col-span-5 space-y-4">
+              <Skeleton className="h-6 w-28 rounded-full" />
+              <Skeleton className="h-12 w-64 rounded-lg" />
+              <Skeleton className="h-5 w-48" />
+              <SkeletonText lines={3} />
+            </div>
+            <div className="lg:col-span-4 flex justify-center">
+              <Skeleton className="size-44 rounded-full" />
+            </div>
+            <div className="lg:col-span-3">
+              <Skeleton className="h-48 w-full rounded-2xl" />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <Skeleton className="h-64 rounded-2xl" />
+            <Skeleton className="h-64 rounded-2xl" />
+          </div>
+        </main>
+      </div>
     );
   }
 
   if (!student) {
-    return shell(
-      <div className="py-16">
-        <EmptyState
-          icon={ShieldCheck}
-          title="This profile doesn't exist or hasn't been set up yet"
-          description="That roll number is not on the department roster, or the profile is no longer public."
-          action={
-            <Link to="/students" className="btn btn-primary">
-              Back to the directory
-            </Link>
-          }
-        />
-      </div>,
+    return (
+      <div className="min-h-screen bg-[#070B16] text-slate-100 flex flex-col justify-center items-center px-4">
+        <div className="max-w-md w-full text-center space-y-6">
+          <EmptyState
+            icon={ShieldCheck}
+            title="Profile not found"
+            description="That roll number is not on the department roster, or the profile is no longer public."
+            action={
+              <Link
+                to="/students"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 text-sm font-semibold text-white shadow-md hover:from-rose-600 hover:to-pink-600 transition-colors"
+              >
+                <ArrowLeft size={16} />
+                <span>Back to Directory</span>
+              </Link>
+            }
+          />
+        </div>
+      </div>
     );
   }
 
-  const name = student.name || 'This student';
+  const name = student.name || 'Student';
+  const nameParts = name.trim().split(' ');
+  const firstName = nameParts[0] || 'Student';
+  const restOfName = nameParts.slice(1).join(' ');
+
+  const initials = nameParts
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word[0]?.toUpperCase())
+    .join('') || 'IT';
+
   const profile = student.profile || {};
   const skillsList = profile.skills || [];
   const projects = student.projects || [];
@@ -362,403 +286,728 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
   const bio = profile.biography || profile.bio || '';
   const photo = profile.viewUrl || profile.photoUrl;
 
-  const hasNoData =
-    !bio &&
-    skillsList.length === 0 &&
-    projects.length === 0 &&
-    achievements.length === 0 &&
-    certificates.length === 0 &&
-    !introVideo;
+  const resumeDownloadHref = resume?.viewUrl || resume?.fileUrl ? `${resolveMediaUrl(resume?.viewUrl || resume?.fileUrl || '')}${
+    (resume?.viewUrl || resume?.fileUrl || '').includes('?') ? '&' : '?'
+  }download=1` : null;
 
-  const resumeHref = hasResume ? `/students/${student.rollNo || rollNo || ''}/resume` : null;
-  const resumeFileHref = resume?.viewUrl || resume?.fileUrl || null;
+  const currentYearNum = student.year || 1;
+  const graduationEndYear = 2024 + 4;
+  const graduationStartYear = 2024;
 
   return (
-    <>
-      <div className="flex items-center justify-between print:hidden">
-        <Link
-          to="/students"
-          className="inline-flex min-h-11 items-center gap-1.5 text-label-lg font-semibold text-ink-secondary transition-colors hover:text-ink"
-        >
-          <ArrowLeft size={15} strokeWidth={2} aria-hidden="true" />
-          <span>Back to students</span>
-        </Link>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => window.print()}
-            className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-edge bg-surface px-3 py-1.5 text-label-md font-semibold text-ink transition-colors hover:bg-surface-sunken cursor-pointer"
-            title="Print or Save PDF"
-          >
-            <Printer size={15} strokeWidth={2} aria-hidden="true" />
-            <span>Save PDF / Print</span>
-          </button>
-          <button
-            type="button"
-            onClick={handleShare}
-            className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-edge bg-surface px-3 py-1.5 text-label-md font-semibold text-ink transition-colors hover:bg-surface-sunken cursor-pointer"
-          >
-            <Share2 size={15} strokeWidth={2} aria-hidden="true" />
-            <span>Share</span>
-          </button>
-        </div>
-      </div>
+    <div className="min-h-screen bg-[#070B16] text-slate-100 font-sans selection:bg-rose-500 selection:text-white antialiased overflow-x-hidden scroll-smooth print:bg-white print:text-black">
+      {/* Background ambient lighting */}
+      <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(ellipse_80%_60%_at_50%_-20%,rgba(225,29,72,0.14),rgba(255,255,255,0))] print:hidden" />
+      <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(ellipse_60%_50%_at_80%_100%,rgba(59,130,246,0.08),rgba(0,0,0,0))] print:hidden" />
 
-      {/* ── 1. COVER ────────────────────────────────────────────────────────
-          Compact, modern banner hidden in print mode to keep focus on student. */}
-      <div className="relative -mx-4 mt-4 h-28 overflow-hidden rounded-b-2xl sm:-mx-6 sm:h-36 print:hidden">
-        <span aria-hidden="true" className="block size-full bg-gradient-to-br from-red-950 via-red-900/80 to-slate-900" />
-      </div>
-
-      {/* ── 2. PROFILE HEADER ─────────────────────────────────────────────── */}
-      <header className="flex flex-col items-center text-center print:pt-4">
-        <ProfilePhoto
-          name={name}
-          photo={photo}
-          profile={profile}
-          imageFailed={imageError}
-          onImageError={() => setImageError(true)}
-          className="-mt-14 size-28 sm:-mt-16 sm:size-32 rounded-full border-4 border-surface shadow-card print:mt-0 print:border-2 print:border-neutral-300"
-        />
-
-        <h1 className="mt-3 font-heading text-headline-xl text-ink font-bold tracking-tight">{name}</h1>
-
-        <p className="mt-1 font-mono text-label-md font-semibold tracking-wide text-ink-muted">
-          {student.rollNo}
-        </p>
-
-        <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
-          <Badge label={DEPARTMENT} variant="brand" dot={false} />
-          <Badge label={`Year ${student.year || 1}`} variant="neutral" dot={false} />
-          <Badge label={`Section ${student.section || 'A'}`} variant="neutral" dot={false} />
-          {student.status === 'GRADUATED' && (
-            <span className="badge badge-draft">Alumni</span>
-          )}
-        </div>
-
-        <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
-          {profile.githubUrl && (
-            <SocialLink href={profile.githubUrl} label="GitHub profile">
-              <Github size={17} strokeWidth={1.75} aria-hidden="true" />
-            </SocialLink>
-          )}
-          {profile.linkedinUrl && (
-            <SocialLink href={profile.linkedinUrl} label="LinkedIn profile">
-              <Linkedin size={17} strokeWidth={1.75} aria-hidden="true" />
-            </SocialLink>
-          )}
-          {profile.leetcodeUrl && (
-            <SocialLink href={profile.leetcodeUrl} label="LeetCode profile" tone="text-award-gold">
-              <LeetCodeIcon className="h-4 w-4" />
-            </SocialLink>
-          )}
-          {profile.codechefUrl && (
-            <SocialLink href={profile.codechefUrl} label="CodeChef profile" tone="text-award-bronze">
-              <CodeChefIcon className="h-4 w-4" />
-            </SocialLink>
-          )}
-          {profile.portfolioUrl && (
-            <SocialLink href={profile.portfolioUrl} label="Personal website" tone="text-ink-brand">
-              <Globe size={17} strokeWidth={1.75} aria-hidden="true" />
-            </SocialLink>
-          )}
-
-          {resumeHref && (
-            <Link to={resumeHref} className="btn btn-primary ml-1">
-              <FileText size={15} strokeWidth={1.75} aria-hidden="true" />
-              <span>Resume</span>
+      {/* ── 1. STICKY NAVBAR ────────────────────────────────────────────── */}
+      <nav className="sticky top-0 z-50 w-full backdrop-blur-xl bg-[#070B16]/80 border-b border-slate-800/80 transition-all duration-200 print:hidden">
+        <div className="mx-auto flex h-16 max-w-[1200px] items-center justify-between px-4 sm:px-6 lg:px-8">
+          {/* Left: Directory Link + Personal Logo Mark */}
+          <div className="flex items-center gap-3">
+            <Link
+              to="/students"
+              className="group inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-white transition-colors py-1.5 px-2 rounded-lg hover:bg-slate-800/60"
+              title="Return to Student Directory"
+            >
+              <ArrowLeft size={14} className="transition-transform group-hover:-translate-x-0.5" />
+              <span className="hidden sm:inline">Directory</span>
             </Link>
-          )}
-        </div>
-      </header>
 
-      {hasNoData ? (
-        <div className="mt-10">
-          <EmptyState
-            icon={ShieldCheck}
-            title="This profile is still being written"
-            description={`${name.split(' ')[0] || 'This student'} is on the department roster. The bio, skills, projects and achievements appear here once they publish them.`}
-          />
-        </div>
-      ) : (
-        <div className="mt-10 space-y-10">
-          {/* ── 3. ABOUT ─────────────────────────────────────────────────── */}
-          {bio && (
-            <PublicSection id="about" title="About" variants={reveal}>
-              <Card>
-                <p className="whitespace-pre-line text-body-md text-ink-secondary leading-relaxed">
-                  {bio}
-                </p>
-              </Card>
-            </PublicSection>
-          )}
+            <div className="h-4 w-px bg-slate-800 hidden sm:block" />
 
-          {skillsList.length > 0 && (
-            <PublicSection id="skills" title="Skills" variants={reveal}>
-              <ul className="flex flex-wrap gap-2">
-                {skillsList.map((entry, index) => {
-                  const label =
-                    typeof entry === 'string'
-                      ? entry
-                      : entry.skill?.name || entry.name || '';
-                  if (!label) return null;
-                  return (
-                    <li key={`${label}-${index}`}>
-                      <Tag label={label} />
-                    </li>
-                  );
-                })}
-              </ul>
-            </PublicSection>
-          )}
-
-          {/* ── 4. FEATURED VIDEO ────────────────────────────────────────── */}
-          {introVideo?.streamUrl && (
-            <div className="print:hidden">
-              <PublicSection id="video" title="Introduction video" variants={reveal}>
-                <div className="w-full overflow-hidden rounded-xl border border-edge bg-surface-inverse aspect-video shadow-card">
-                  {introVideo.driveFileId && !introVideo.driveFileId.startsWith('mock_') ? (
-                    <iframe
-                      src={`https://drive.google.com/file/d/${introVideo.driveFileId}/preview`}
-                      allow="autoplay; fullscreen"
-                      className="w-full h-full border-0 rounded-xl"
-                      title={`${name}'s introduction video`}
-                    />
-                  ) : (
-                    <video
-                      src={resolveMediaUrl(introVideo.streamUrl)}
-                      poster={
-                        introVideo.thumbnailUrl
-                          ? resolveMediaUrl(introVideo.thumbnailUrl)
-                          : undefined
-                      }
-                      controls
-                      controlsList="nodownload"
-                      onContextMenu={(e) => e.preventDefault()}
-                      preload="metadata"
-                      playsInline
-                      aria-label={`${name}'s introduction video`}
-                      className="w-full h-full object-contain"
-                    >
-                      Your browser does not support video playback.
-                    </video>
-                  )}
-                </div>
-              </PublicSection>
-            </div>
-          )}
-
-          {/* ── 5. PROJECTS ──────────────────────────────────────────────── */}
-          <div className={projects.length === 0 ? 'print:hidden' : ''}>
-            <PublicSection id="projects" title="Projects" variants={reveal}>
-              {projects.length === 0 ? (
-                <Card>
-                  <EmptyState
-                    bare
-                    icon={FolderGit2}
-                    title="No projects yet"
-                    description="Projects this student publishes appear here as portfolio entries."
-                  />
-                </Card>
-              ) : (
-                <ul className={`grid gap-4 ${projects.length === 1 ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'}`}>
-                  {projects.map((project) => (
-                    <li
-                      key={project.id}
-                      className="surface flex flex-col p-5 shadow-card rounded-xl border border-edge hover:border-edge-strong transition-colors print:break-inside-avoid print:border print:border-neutral-200"
-                    >
-                    <h3 className="font-heading text-headline-sm text-ink">{project.title}</h3>
-                    {project.description && (
-                      <p className="mt-2 line-clamp-4 flex-1 text-body-sm text-ink-secondary">
-                        {project.description}
-                      </p>
-                    )}
-                    {project.techStack && project.techStack.length > 0 && (
-                      <ul className="mt-3 flex flex-wrap gap-1.5">
-                        {project.techStack.map((tech) => (
-                          <li key={tech}>
-                            <Tag label={tech} />
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                    {(project.githubUrl || project.videoUrl) && (
-                      <div className="mt-4 flex flex-wrap gap-4 border-t border-edge pt-3">
-                        {project.githubUrl && (
-                          <a
-                            href={project.githubUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex items-center gap-1.5 text-label-lg font-semibold text-ink-brand hover:text-brand-hover"
-                          >
-                            <Github size={14} strokeWidth={2} aria-hidden="true" />
-                            <span>Source</span>
-                          </a>
-                        )}
-                        {project.videoUrl && (
-                          <a
-                            href={project.videoUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex items-center gap-1.5 text-label-lg font-semibold text-ink-brand hover:text-brand-hover"
-                          >
-                            <ExternalLink size={14} strokeWidth={2} aria-hidden="true" />
-                            <span>Live demo</span>
-                          </a>
-                        )}
-                      </div>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </PublicSection>
+            <a href="#home" className="flex items-center gap-2.5">
+              <span className="flex size-8 items-center justify-center rounded-lg bg-gradient-to-tr from-rose-500 to-pink-500 font-heading text-xs font-black text-white shadow-sm">
+                {initials}
+              </span>
+              <span className="font-heading text-sm font-bold text-white tracking-tight hidden md:inline">
+                {name}
+              </span>
+            </a>
           </div>
 
-          {/* ── 6. ACHIEVEMENTS & CERTIFICATES ───────────────────────────── */}
-          {/* ── 6. ACHIEVEMENTS & CERTIFICATES ───────────────────────────── */}
+          {/* Center: Desktop Navigation Links */}
+          <div className="hidden lg:flex items-center gap-1 rounded-full border border-slate-800/80 bg-slate-900/60 p-1 backdrop-blur-md">
+            {navLinks.map((item) => (
+              <a
+                key={item.id}
+                href={`#${item.id}`}
+                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 ${
+                  activeSection === item.id
+                    ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30 shadow-sm'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                }`}
+              >
+                {item.label}
+              </a>
+            ))}
+          </div>
+
+          {/* Right: Actions */}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="inline-flex items-center gap-1.5 p-2 sm:px-3 sm:py-1.5 rounded-lg border border-slate-800/80 bg-slate-900/60 text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
+              title="Save PDF / Print"
+            >
+              <Printer size={15} />
+              <span className="hidden sm:inline">Save PDF</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleShare}
+              className="inline-flex items-center gap-1.5 p-2 sm:px-3 sm:py-1.5 rounded-lg border border-slate-800/80 bg-slate-900/60 text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
+              title="Share portfolio"
+            >
+              <Share2 size={15} />
+              <span className="hidden sm:inline">Share</span>
+            </button>
+
+            {hasResume && resumeDownloadHref && (
+              <a
+                href={resumeDownloadHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hidden sm:inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-rose-500 to-pink-500 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:from-rose-600 hover:to-pink-600 transition-all"
+              >
+                <FileText size={14} />
+                <span>Resume</span>
+              </a>
+            )}
+
+            {/* Mobile menu button */}
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="lg:hidden p-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800"
+              aria-label="Toggle navigation menu"
+            >
+              {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile dropdown menu */}
+        {mobileMenuOpen && (
+          <div className="lg:hidden border-b border-slate-800 bg-[#070B16]/95 backdrop-blur-xl px-4 py-4 space-y-1">
+            {navLinks.map((item) => (
+              <a
+                key={item.id}
+                href={`#${item.id}`}
+                onClick={() => setMobileMenuOpen(false)}
+                className={`block px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                  activeSection === item.id
+                    ? 'bg-rose-500/15 text-rose-300'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                }`}
+              >
+                {item.label}
+              </a>
+            ))}
+            {hasResume && resumeDownloadHref && (
+              <div className="pt-2 border-t border-slate-800/80">
+                <a
+                  href={resumeDownloadHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 text-xs font-semibold text-white"
+                >
+                  <FileText size={15} />
+                  <span>Download Resume PDF</span>
+                </a>
+              </div>
+            )}
+          </div>
+        )}
+      </nav>
+
+      <main className="mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8 space-y-14 sm:space-y-20 pb-20 print:p-0 print:space-y-8">
+        {/* ── 2. HERO SECTION ───────────────────────────────────────────── */}
+        <section id="home" className="scroll-mt-24 pt-6 sm:pt-12 lg:pt-14 print:pt-4">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
+            {/* Left Content */}
+            <div className="lg:col-span-5 text-center lg:text-left order-2 lg:order-1">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-rose-500/30 bg-rose-500/10 px-3 py-1 text-xs font-medium text-rose-300">
+                <span>Hello, I'm 👋</span>
+              </span>
+
+              <h1 className="mt-3 font-heading text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-white leading-tight">
+                {firstName}{' '}
+                <span className="bg-gradient-to-r from-rose-500 via-pink-500 to-amber-300 bg-clip-text text-transparent">
+                  {restOfName}
+                </span>
+              </h1>
+
+              <p className="mt-2 text-base sm:text-lg font-medium text-rose-400">
+                {student.branch || DEPARTMENT} Student
+              </p>
+
+              <p className="mt-3 text-sm sm:text-base text-slate-300 leading-relaxed max-w-prose mx-auto lg:mx-0">
+                {bio
+                  ? taglineOf(bio)
+                  : "I'm a passionate learner and developer interested in building real-world projects, solving problems, and exploring new technologies."}
+              </p>
+
+              {/* Action Buttons */}
+              <div className="mt-6 flex flex-wrap items-center justify-center lg:justify-start gap-3">
+                <a
+                  href="#contact"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 px-5 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-md shadow-rose-950/40 hover:from-rose-600 hover:to-pink-600 transition-all duration-200"
+                >
+                  <Mail size={15} />
+                  <span>Contact Me</span>
+                </a>
+
+                {hasResume && resumeDownloadHref && (
+                  <a
+                    href={resumeDownloadHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-800/80 px-4 py-2.5 text-xs sm:text-sm font-semibold text-slate-200 hover:bg-slate-800 hover:text-white transition-colors"
+                  >
+                    <FileText size={15} />
+                    <span>Download Resume</span>
+                  </a>
+                )}
+              </div>
+
+              {/* Social Links Row */}
+              <div className="mt-6 flex flex-wrap items-center justify-center lg:justify-start gap-2.5">
+                {profile.githubUrl && (
+                  <a
+                    href={profile.githubUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex size-9 items-center justify-center rounded-xl border border-slate-800 bg-slate-900/80 text-slate-300 hover:border-slate-700 hover:text-white transition-colors"
+                    title="GitHub"
+                  >
+                    <Github size={16} />
+                  </a>
+                )}
+                {profile.linkedinUrl && (
+                  <a
+                    href={profile.linkedinUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex size-9 items-center justify-center rounded-xl border border-slate-800 bg-slate-900/80 text-slate-300 hover:border-slate-700 hover:text-white transition-colors"
+                    title="LinkedIn"
+                  >
+                    <Linkedin size={16} />
+                  </a>
+                )}
+                {profile.leetcodeUrl && (
+                  <a
+                    href={profile.leetcodeUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex size-9 items-center justify-center rounded-xl border border-slate-800 bg-slate-900/80 text-slate-300 hover:border-slate-700 hover:text-amber-400 transition-colors"
+                    title="LeetCode"
+                  >
+                    <LeetCodeIcon className="size-4 text-amber-500" />
+                  </a>
+                )}
+                {profile.codechefUrl && (
+                  <a
+                    href={profile.codechefUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex size-9 items-center justify-center rounded-xl border border-slate-800 bg-slate-900/80 text-slate-300 hover:border-slate-700 hover:text-amber-600 transition-colors"
+                    title="CodeChef"
+                  >
+                    <CodeChefIcon className="size-4 text-amber-600" />
+                  </a>
+                )}
+                {profile.portfolioUrl && (
+                  <a
+                    href={profile.portfolioUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex size-9 items-center justify-center rounded-xl border border-slate-800 bg-slate-900/80 text-slate-300 hover:border-slate-700 hover:text-white transition-colors"
+                    title="Personal Website"
+                  >
+                    <Globe size={16} />
+                  </a>
+                )}
+                {student.email && (
+                  <a
+                    href={`mailto:${student.email}`}
+                    className="flex size-9 items-center justify-center rounded-xl border border-slate-800 bg-slate-900/80 text-slate-300 hover:border-slate-700 hover:text-white transition-colors"
+                    title="Email"
+                  >
+                    <Mail size={16} />
+                  </a>
+                )}
+              </div>
+            </div>
+
+            {/* Center Profile Image */}
+            <div className="lg:col-span-4 flex flex-col items-center justify-center order-1 lg:order-2">
+              <div className="relative p-1.5 rounded-full bg-gradient-to-tr from-rose-500 via-pink-500 to-indigo-500 shadow-xl shadow-rose-950/30">
+                <div className="relative size-36 sm:size-44 lg:size-48 rounded-full overflow-hidden bg-slate-950 border-4 border-[#070B16]">
+                  {photo && !imageError ? (
+                    <img
+                      src={resolveMediaUrl(photo)}
+                      alt={`${name}'s profile photo`}
+                      style={getPhotoStyle(profile)}
+                      onError={() => setImageError(true)}
+                      className="size-full object-cover"
+                    />
+                  ) : (
+                    <div className="size-full flex items-center justify-center bg-slate-900 text-rose-400 font-heading text-3xl font-black">
+                      {initials}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-3.5 inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-400 backdrop-blur-sm">
+                <span className="size-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span>{student.status === 'GRADUATED' ? 'Alumni' : 'Open to Opportunities'}</span>
+              </div>
+            </div>
+
+            {/* Right Information Card */}
+            <div className="lg:col-span-3 order-3">
+              <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 p-5 backdrop-blur-md shadow-lg space-y-3.5">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-800/80">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Student Profile</span>
+                  <span className="font-mono text-xs font-semibold text-rose-400">{student.rollNo}</span>
+                </div>
+
+                <div>
+                  <span className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold">Academic Year</span>
+                  <p className="text-sm font-bold text-white mt-0.5">Year {student.year || 1} (Section {student.section || 'A'})</p>
+                </div>
+
+                <div>
+                  <span className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold">Department</span>
+                  <p className="text-sm font-bold text-white mt-0.5">{student.branch || DEPARTMENT}</p>
+                </div>
+
+                <div>
+                  <span className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold">Institution</span>
+                  <p className="text-xs font-medium text-slate-300 mt-0.5 leading-snug">SASI Institute of Technology & Engineering</p>
+                </div>
+
+                <div className="pt-2 border-t border-slate-800/80">
+                  <span className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold">Current Focus</span>
+                  <p className="text-xs font-semibold text-rose-300 mt-0.5">Full Stack & Software Engineering</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ── 3. ABOUT + INTRODUCTION VIDEO ─────────────────────────────── */}
+        <section id="about" className="scroll-mt-24 pt-6">
+          <div className="mb-6">
+            <span className="text-xs font-bold uppercase tracking-wider text-rose-400">Overview</span>
+            <h2 className="mt-1 font-heading text-2xl sm:text-3xl font-bold tracking-tight text-white">About & Introduction</h2>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            {/* Left: About Me & Features */}
+            <div className="lg:col-span-6 space-y-6">
+              <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 p-6 backdrop-blur-sm space-y-3">
+                <h3 className="font-heading text-base font-bold text-white">About Me</h3>
+                <p className="text-sm sm:text-base text-slate-300 leading-relaxed whitespace-pre-line">
+                  {bio ||
+                    "I am an enthusiastic Information Technology student dedicated to building innovative software solutions, solving problems, and mastering modern full-stack development. I enjoy taking ideas from concept to deployed systems while learning continuously."}
+                </p>
+              </div>
+
+              {/* 4 Feature Cards */}
+              <div className="grid grid-cols-2 gap-3.5">
+                <div className="rounded-xl border border-slate-800/80 bg-slate-900/50 p-4 space-y-1">
+                  <div className="flex items-center gap-2 text-rose-400">
+                    <Lightbulb size={16} />
+                    <h4 className="text-xs font-bold text-white">Problem Solver</h4>
+                  </div>
+                  <p className="text-[11px] text-slate-400">Analytical mindset with strong problem-solving skills.</p>
+                </div>
+
+                <div className="rounded-xl border border-slate-800/80 bg-slate-900/50 p-4 space-y-1">
+                  <div className="flex items-center gap-2 text-pink-400">
+                    <Zap size={16} />
+                    <h4 className="text-xs font-bold text-white">Quick Learner</h4>
+                  </div>
+                  <p className="text-[11px] text-slate-400">Rapidly adapting to modern tech stacks and tools.</p>
+                </div>
+
+                <div className="rounded-xl border border-slate-800/80 bg-slate-900/50 p-4 space-y-1">
+                  <div className="flex items-center gap-2 text-amber-400">
+                    <Users size={16} />
+                    <h4 className="text-xs font-bold text-white">Team Player</h4>
+                  </div>
+                  <p className="text-[11px] text-slate-400">Collaborative mindset with clear communication.</p>
+                </div>
+
+                <div className="rounded-xl border border-slate-800/80 bg-slate-900/50 p-4 space-y-1">
+                  <div className="flex items-center gap-2 text-indigo-400">
+                    <Rocket size={16} />
+                    <h4 className="text-xs font-bold text-white">Tech Enthusiast</h4>
+                  </div>
+                  <p className="text-[11px] text-slate-400">Passionate builder committed to real-world impact.</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Right: Introduction Video Player */}
+            <div className="lg:col-span-6 print:hidden">
+              <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 p-5 backdrop-blur-sm space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <VideoIcon size={18} className="text-rose-400" />
+                    <h3 className="font-heading text-base font-bold text-white">Introduction Video</h3>
+                  </div>
+                  <span className="text-[11px] text-slate-400">Department Verified Recording</span>
+                </div>
+
+                {introVideo?.streamUrl ? (
+                  <div className="w-full overflow-hidden rounded-xl border border-slate-800 bg-slate-950 aspect-video shadow-md">
+                    {introVideo.driveFileId && !introVideo.driveFileId.startsWith('mock_') ? (
+                      <iframe
+                        src={`https://drive.google.com/file/d/${introVideo.driveFileId}/preview`}
+                        allow="autoplay; fullscreen"
+                        className="w-full h-full border-0 rounded-xl"
+                        title={`${name}'s introduction video`}
+                      />
+                    ) : (
+                      <video
+                        src={resolveMediaUrl(introVideo.streamUrl)}
+                        poster={introVideo.thumbnailUrl ? resolveMediaUrl(introVideo.thumbnailUrl) : undefined}
+                        controls
+                        controlsList="nodownload"
+                        onContextMenu={(e) => e.preventDefault()}
+                        preload="metadata"
+                        playsInline
+                        aria-label={`${name}'s introduction video`}
+                        className="w-full h-full object-contain"
+                      >
+                        Your browser does not support video playback.
+                      </video>
+                    )}
+                  </div>
+                ) : (
+                  <div className="py-12 px-4 text-center rounded-xl border border-dashed border-slate-800 bg-slate-950/60 space-y-2">
+                    <VideoIcon size={28} className="text-slate-600 mx-auto" />
+                    <h4 className="text-xs font-semibold text-slate-300">No introduction video published yet</h4>
+                    <p className="text-[11px] text-slate-500 max-w-xs mx-auto">
+                      A video preview appears here once verified by department coordinators.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ── 4. SKILLS & TECHNOLOGIES ─────────────────────────────────── */}
+        <section id="skills" className="scroll-mt-24 pt-6">
+          <div className="mb-6">
+            <span className="text-xs font-bold uppercase tracking-wider text-rose-400">Expertise</span>
+            <h2 className="mt-1 font-heading text-2xl sm:text-3xl font-bold tracking-tight text-white">Skills & Technologies</h2>
+          </div>
+
+          {skillsList.length > 0 ? (
+            <div className="flex flex-wrap gap-2.5">
+              {skillsList.map((entry, index) => {
+                const label =
+                  typeof entry === 'string'
+                    ? entry
+                    : entry.skill?.name || entry.name || '';
+                if (!label) return null;
+                return (
+                  <span
+                    key={`${label}-${index}`}
+                    className="inline-flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/70 px-3.5 py-2 text-xs sm:text-sm font-medium text-slate-200 shadow-sm hover:border-rose-500/50 hover:bg-slate-800/80 hover:-translate-y-0.5 transition-all duration-200 cursor-default"
+                  >
+                    <Code2 size={14} className="text-rose-400 shrink-0" />
+                    <span>{label}</span>
+                  </span>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="rounded-xl border border-dashed border-slate-800 p-8 text-center text-slate-500 text-xs">
+              No technical skills listed yet.
+            </div>
+          )}
+        </section>
+
+        {/* ── 5. PROJECTS ──────────────────────────────────────────────── */}
+        <section id="projects" className="scroll-mt-24 pt-6">
+          <div className="mb-6">
+            <span className="text-xs font-bold uppercase tracking-wider text-rose-400">Work & Creations</span>
+            <h2 className="mt-1 font-heading text-2xl sm:text-3xl font-bold tracking-tight text-white">Featured Projects</h2>
+          </div>
+
+          {projects.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {projects.map((project) => (
+                <div
+                  key={project.id}
+                  className="rounded-2xl border border-slate-800/80 bg-slate-900/60 p-5 backdrop-blur-sm hover:border-rose-500/40 hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between shadow-sm print:break-inside-avoid print:border-slate-300"
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="p-2 rounded-lg bg-rose-500/10 text-rose-400">
+                        <FolderGit2 size={18} />
+                      </div>
+                    </div>
+
+                    <div>
+                      <h3 className="font-heading text-base font-bold text-white tracking-tight line-clamp-1">
+                        {project.title}
+                      </h3>
+                      {project.description && (
+                        <p className="mt-1.5 text-xs text-slate-400 leading-relaxed line-clamp-3">
+                          {project.description}
+                        </p>
+                      )}
+                    </div>
+
+                    {project.techStack && project.techStack.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 pt-1">
+                        {project.techStack.map((tech) => (
+                          <span
+                            key={tech}
+                            className="text-[10px] font-semibold px-2 py-0.5 rounded-md border border-slate-800 bg-slate-950/80 text-slate-300"
+                          >
+                            {tech}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {(project.githubUrl || project.videoUrl) && (
+                    <div className="mt-5 pt-3 border-t border-slate-800/80 flex items-center gap-3">
+                      {project.githubUrl && (
+                        <a
+                          href={project.githubUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-rose-400 hover:text-rose-300 transition-colors"
+                        >
+                          <Github size={13} />
+                          <span>Source</span>
+                        </a>
+                      )}
+                      {project.videoUrl && (
+                        <a
+                          href={project.videoUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-300 hover:text-white transition-colors"
+                        >
+                          <ExternalLink size={13} />
+                          <span>Live Demo</span>
+                        </a>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-xl border border-dashed border-slate-800 p-8 text-center text-slate-500 text-xs">
+              No portfolio projects published yet.
+            </div>
+          )}
+        </section>
+
+        {/* ── 6. EDUCATION & TIMELINE ──────────────────────────────────── */}
+        <section id="education" className="scroll-mt-24 pt-6">
+          <div className="mb-6">
+            <span className="text-xs font-bold uppercase tracking-wider text-rose-400">Background</span>
+            <h2 className="mt-1 font-heading text-2xl sm:text-3xl font-bold tracking-tight text-white">Education & Timeline</h2>
+          </div>
+
+          <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 p-6 backdrop-blur-sm space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-800/80">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-gradient-to-tr from-rose-500/20 to-pink-500/20 text-rose-400 border border-rose-500/30">
+                  <GraduationCap size={22} />
+                </div>
+                <div>
+                  <h3 className="font-heading text-base sm:text-lg font-bold text-white">
+                    Bachelor of Technology in {student.branch || DEPARTMENT}
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Sasi Institute of Technology and Engineering, Tadepalligudem
+                  </p>
+                </div>
+              </div>
+
+              <span className="self-start sm:self-auto inline-flex items-center px-3 py-1 rounded-full border border-rose-500/30 bg-rose-500/10 text-xs font-bold text-rose-300">
+                {graduationStartYear} — {graduationEndYear}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+              <div className="rounded-xl border border-slate-800/80 bg-slate-950/50 p-3.5">
+                <span className="text-slate-400 uppercase font-semibold text-[10px] tracking-wider">Current Year</span>
+                <p className="text-sm font-bold text-white mt-1">Year {student.year || 1} (Section {student.section || 'A'})</p>
+              </div>
+
+              <div className="rounded-xl border border-slate-800/80 bg-slate-950/50 p-3.5">
+                <span className="text-slate-400 uppercase font-semibold text-[10px] tracking-wider">Department</span>
+                <p className="text-sm font-bold text-white mt-1">{student.branch || DEPARTMENT}</p>
+              </div>
+
+              <div className="rounded-xl border border-slate-800/80 bg-slate-950/50 p-3.5">
+                <span className="text-slate-400 uppercase font-semibold text-[10px] tracking-wider">Core Focus</span>
+                <p className="text-sm font-bold text-white mt-1">Software Engineering & Tools</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Achievements & Certificates sub-grid if student has any */}
           {(achievements.length > 0 || certificates.length > 0) && (
-            <div className={`grid gap-14 ${achievements.length > 0 && certificates.length > 0 ? 'lg:grid-cols-2 lg:gap-8' : 'grid-cols-1'}`}>
+            <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
               {achievements.length > 0 && (
-                <PublicSection id="achievements" title="Achievements" variants={reveal}>
-                  <ul className="space-y-3">
-                    {achievements.map((achievement) => {
-                      const href = (achievement as any).previewUrl ||
-                        ((achievement as any).driveFileId && !(achievement as any).driveFileId.startsWith('mock_')
-                          ? `https://drive.google.com/file/d/${(achievement as any).driveFileId}/preview`
-                          : null) ||
-                        (achievement as any).proofUrl ||
-                        (achievement as any).viewUrl;
-                      return (
-                        <li key={achievement.id} className="surface flex items-center justify-between gap-4 p-5 print:break-inside-avoid print:border print:border-neutral-200">
-                          <div className="min-w-0">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <h3 className="font-heading text-label-lg font-semibold text-ink">
-                                {achievement.title}
-                              </h3>
-                              <Badge label="Verified" variant="success" />
-                            </div>
-                            {achievement.description && (
-                              <p className="mt-1 text-body-sm text-ink-secondary">
-                                {achievement.description}
-                              </p>
-                            )}
-                            <p className="mt-1 text-label-md text-ink-muted">
-                              {[achievement.organization, achievement.date ? formatDate(achievement.date) : null]
-                                .filter(Boolean)
-                                .join(' · ')}
-                            </p>
-                          </div>
-                          {href && (
-                            <a
-                              href={href.startsWith('http') ? href : resolveMediaUrl(href)}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="inline-flex shrink-0 items-center gap-1 text-label-lg font-semibold text-ink-brand hover:text-brand-hover print:hidden"
-                            >
-                              <span>View Proof</span>
-                              <ExternalLink size={13} strokeWidth={2} aria-hidden="true" />
-                            </a>
-                          )}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </PublicSection>
+                <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 p-5 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Trophy size={18} className="text-amber-400" />
+                    <h3 className="font-heading text-sm font-bold text-white">Honors & Achievements</h3>
+                  </div>
+                  <div className="space-y-2.5">
+                    {achievements.map((ach) => (
+                      <div key={ach.id} className="p-3 rounded-xl border border-slate-800 bg-slate-950/50 flex items-center justify-between">
+                        <div>
+                          <h4 className="text-xs font-bold text-white">{ach.title}</h4>
+                          {ach.organization && <p className="text-[11px] text-slate-400">{ach.organization}</p>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               )}
 
               {certificates.length > 0 && (
-                <PublicSection id="certificates" title="Certificates" variants={reveal}>
-                  <ul className="space-y-3">
-                    {certificates.map((certificate) => {
-                      const href = (certificate as any).previewUrl ||
-                        ((certificate as any).driveFileId && !(certificate as any).driveFileId.startsWith('mock_')
-                          ? `https://drive.google.com/file/d/${(certificate as any).driveFileId}/preview`
-                          : null) ||
-                        certificate.viewUrl ||
-                        certificate.fileUrl;
-                      const meta = [
-                        certificate.issuer,
-                        certificate.issueDate ? formatDate(certificate.issueDate) : null,
-                      ]
-                        .filter(Boolean)
-                        .join(' · ');
-                      return (
-                        <li
-                          key={certificate.id}
-                          className="surface flex items-center justify-between gap-4 p-5 print:break-inside-avoid print:border print:border-neutral-200"
-                        >
-                          <div className="min-w-0">
-                            <h3 className="truncate font-heading text-label-lg font-semibold text-ink">
-                              {certificate.title}
-                            </h3>
-                            {meta && <p className="mt-0.5 truncate text-body-sm text-ink-muted">{meta}</p>}
-                          </div>
-                          {href && (
-                            <a
-                              href={href.startsWith('http') ? href : resolveMediaUrl(href)}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="inline-flex shrink-0 items-center gap-1 text-label-lg font-semibold text-ink-brand hover:text-brand-hover print:hidden"
-                            >
-                              <span>View</span>
-                              <ExternalLink size={13} strokeWidth={2} aria-hidden="true" />
-                            </a>
-                          )}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </PublicSection>
+                <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 p-5 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Award size={18} className="text-rose-400" />
+                    <h3 className="font-heading text-sm font-bold text-white">Certificates</h3>
+                  </div>
+                  <div className="space-y-2.5">
+                    {certificates.map((cert) => (
+                      <div key={cert.id} className="p-3 rounded-xl border border-slate-800 bg-slate-950/50 flex items-center justify-between">
+                        <div>
+                          <h4 className="text-xs font-bold text-white">{cert.title}</h4>
+                          {cert.issuer && <p className="text-[11px] text-slate-400">{cert.issuer}</p>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               )}
             </div>
           )}
+        </section>
 
-          {/* ── 7. RESUME ────────────────────────────────────────────────── */}
-          {hasResume && resume && (
-            <div className="print:hidden">
-              <PublicSection id="resume" title="Resume" variants={reveal}>
-              <Card className="flex flex-col gap-4 sm:flex-row sm:items-center">
-                <span className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-brand-soft text-brand-soft-text">
-                  <FileText size={22} strokeWidth={1.75} aria-hidden="true" />
-                </span>
+        {/* ── 7. CONTACT SECTION ───────────────────────────────────────── */}
+        <section id="contact" className="scroll-mt-24 pt-6">
+          <div className="mb-6">
+            <span className="text-xs font-bold uppercase tracking-wider text-rose-400">Connect</span>
+            <h2 className="mt-1 font-heading text-2xl sm:text-3xl font-bold tracking-tight text-white">Get In Touch</h2>
+            <p className="mt-1 text-sm text-slate-400">
+              Open to career opportunities, collaborations, and discussions.
+            </p>
+          </div>
 
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-heading text-label-lg font-semibold text-ink">
-                    {resume.filename || `${name}'s curriculum vitae`}
-                  </p>
-                  <p className="mt-0.5 text-body-sm text-ink-muted">
-                    PDF
-                    {resume.sizeMb ? ` · ${resume.sizeMb} MB` : ''}
-                  </p>
-                </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Email Card */}
+            <a
+              href={student.email ? `mailto:${student.email}` : undefined}
+              className="rounded-2xl border border-slate-800/80 bg-slate-900/60 p-5 backdrop-blur-sm hover:border-rose-500/40 hover:-translate-y-0.5 transition-all block space-y-2 group"
+            >
+              <div className="p-2 rounded-xl bg-rose-500/10 text-rose-400 w-fit group-hover:bg-rose-500/20 transition-colors">
+                <Mail size={18} />
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Email</span>
+                <p className="text-xs font-semibold text-white truncate mt-0.5">
+                  {student.email || 'Contact via portal'}
+                </p>
+              </div>
+            </a>
 
-                <div className="flex flex-wrap items-center gap-3">
-                  {resumeFileHref && (
-                    <a
-                      href={`${resolveMediaUrl(resumeFileHref)}${
-                        resolveMediaUrl(resumeFileHref).includes('?') ? '&' : '?'
-                      }download=1`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="btn btn-secondary"
-                    >
-                      <span>Download</span>
-                    </a>
-                  )}
-                  {resumeHref && (
-                    <Link to={resumeHref} className="btn btn-primary">
-                      <span>View resume</span>
-                    </Link>
-                  )}
-                </div>
-              </Card>
-            </PublicSection>
+            {/* LinkedIn Card */}
+            <a
+              href={profile.linkedinUrl || undefined}
+              target={profile.linkedinUrl ? '_blank' : undefined}
+              rel="noreferrer"
+              className="rounded-2xl border border-slate-800/80 bg-slate-900/60 p-5 backdrop-blur-sm hover:border-rose-500/40 hover:-translate-y-0.5 transition-all block space-y-2 group"
+            >
+              <div className="p-2 rounded-xl bg-pink-500/10 text-pink-400 w-fit group-hover:bg-pink-500/20 transition-colors">
+                <Linkedin size={18} />
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">LinkedIn</span>
+                <p className="text-xs font-semibold text-white truncate mt-0.5">
+                  {profile.linkedinUrl ? 'Connect on LinkedIn' : 'Profile not linked'}
+                </p>
+              </div>
+            </a>
+
+            {/* GitHub Card */}
+            <a
+              href={profile.githubUrl || undefined}
+              target={profile.githubUrl ? '_blank' : undefined}
+              rel="noreferrer"
+              className="rounded-2xl border border-slate-800/80 bg-slate-900/60 p-5 backdrop-blur-sm hover:border-rose-500/40 hover:-translate-y-0.5 transition-all block space-y-2 group"
+            >
+              <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-400 w-fit group-hover:bg-indigo-500/20 transition-colors">
+                <Github size={18} />
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">GitHub</span>
+                <p className="text-xs font-semibold text-white truncate mt-0.5">
+                  {profile.githubUrl ? 'Explore Repositories' : 'Profile not linked'}
+                </p>
+              </div>
+            </a>
+
+            {/* Location Card */}
+            <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 p-5 backdrop-blur-sm space-y-2">
+              <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400 w-fit">
+                <MapPin size={18} />
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Campus Location</span>
+                <p className="text-xs font-semibold text-white mt-0.5 leading-snug">
+                  SASI Institute, Tadepalligudem
+                </p>
+              </div>
             </div>
-          )}
+          </div>
+        </section>
+      </main>
+
+      {/* ── 8. COMPACT FOOTER ─────────────────────────────────────────── */}
+      <footer className="border-t border-slate-800/80 py-8 text-xs text-slate-400 print:hidden">
+        <div className="mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p>© {new Date().getFullYear()} {name}. All rights reserved.</p>
+          <p className="text-slate-500">Built using modern web technologies · ELITE Portal</p>
         </div>
+      </footer>
+
+      {/* Floating Scroll to Top button */}
+      {showScrollTop && (
+        <button
+          type="button"
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          className="fixed bottom-6 right-6 z-40 p-3 rounded-full bg-rose-500 text-white shadow-lg shadow-rose-950/50 hover:bg-rose-600 transition-all duration-200 print:hidden"
+          aria-label="Scroll to top"
+        >
+          <ChevronUp size={18} />
+        </button>
       )}
-    </>
+    </div>
   );
 };
 
