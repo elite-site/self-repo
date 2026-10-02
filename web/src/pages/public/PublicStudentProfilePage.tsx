@@ -29,6 +29,7 @@ import {
   FolderGit2,
   Award,
   Share2,
+  Printer,
 } from 'lucide-react';
 
 interface PublicProfileProps {
@@ -265,10 +266,14 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
   }, [rollNo]);
 
   const shell = (content: React.ReactNode) => (
-    <div className="flex min-h-[100dvh] flex-col bg-surface-canvas text-ink">
-      <Navbar session={session} onLogout={onLogout} />
-      <main className="mx-auto w-full max-w-4xl flex-1 px-6 pb-16 sm:px-10">{content}</main>
-      <Footer />
+    <div className="flex min-h-[100dvh] flex-col bg-surface-canvas text-ink print:bg-white print:text-neutral-900">
+      <div className="print:hidden">
+        <Navbar session={session} onLogout={onLogout} />
+      </div>
+      <main className="mx-auto w-full max-w-4xl flex-1 px-6 pb-16 sm:px-10 print:p-0 print:max-w-none">{content}</main>
+      <div className="print:hidden">
+        <Footer />
+      </div>
     </div>
   );
 
@@ -370,40 +375,50 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
 
   return (
     <>
-      <Link
-        to="/students"
-        className="inline-flex min-h-11 items-center gap-1.5 text-label-lg font-semibold text-ink-secondary transition-colors hover:text-ink"
-      >
-        <ArrowLeft size={15} strokeWidth={2} aria-hidden="true" />
-        <span>Back to students</span>
-      </Link>
+      <div className="flex items-center justify-between print:hidden">
+        <Link
+          to="/students"
+          className="inline-flex min-h-11 items-center gap-1.5 text-label-lg font-semibold text-ink-secondary transition-colors hover:text-ink"
+        >
+          <ArrowLeft size={15} strokeWidth={2} aria-hidden="true" />
+          <span>Back to students</span>
+        </Link>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-edge bg-surface px-3 py-1.5 text-label-md font-semibold text-ink transition-colors hover:bg-surface-sunken cursor-pointer"
+            title="Print or Save PDF"
+          >
+            <Printer size={15} strokeWidth={2} aria-hidden="true" />
+            <span>Save PDF / Print</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleShare}
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-edge bg-surface px-3 py-1.5 text-label-md font-semibold text-ink transition-colors hover:bg-surface-sunken cursor-pointer"
+          >
+            <Share2 size={15} strokeWidth={2} aria-hidden="true" />
+            <span>Share</span>
+          </button>
+        </div>
+      </div>
 
       {/* ── 1. COVER ────────────────────────────────────────────────────────
-          There is no cover-image field on the public payload, so this is the
-          §6.3 fallback: a brand gradient. The gradient itself is decorative and
-          hidden from assistive technology; the identity it sits behind is the
-          name and photo immediately after it. */}
-      <div className="relative -mx-6 mt-4 h-50 overflow-hidden rounded-b-3xl sm:-mx-10 sm:h-80">
+          Hidden in print mode to save paper and present a clean resume format. */}
+      <div className="relative -mx-6 mt-4 h-50 overflow-hidden rounded-b-3xl sm:-mx-10 sm:h-80 print:hidden">
         <span aria-hidden="true" className="block size-full bg-gradient-to-br from-red-950 via-red-900 to-red-800" />
-        <button
-          type="button"
-          onClick={handleShare}
-          className="absolute right-4 top-4 inline-flex min-h-11 items-center gap-1.5 rounded-full bg-surface/80 px-3 py-1.5 text-label-lg font-semibold text-ink backdrop-blur-sm transition-colors duration-fast hover:bg-surface sm:right-6 sm:top-6"
-        >
-          <Share2 size={15} strokeWidth={2} aria-hidden="true" />
-          <span>Share</span>
-        </button>
       </div>
 
       {/* ── 2. PROFILE HEADER ─────────────────────────────────────────────── */}
-      <header className="flex flex-col items-center text-center">
+      <header className="flex flex-col items-center text-center print:pt-4">
         <ProfilePhoto
           name={name}
           photo={photo}
           profile={profile}
           imageFailed={imageError}
           onImageError={() => setImageError(true)}
-          className="-mt-16 size-32"
+          className="-mt-16 size-32 print:mt-0 print:border-2 print:border-neutral-300"
         />
 
         <h1 className="mt-4 font-heading text-headline-xl text-ink">{name}</h1>
@@ -507,70 +522,73 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
           </PublicSection>
 
           {/* ── 4. FEATURED VIDEO ────────────────────────────────────────── */}
-          <PublicSection id="video" title="Introduction video" variants={reveal}>
-            {introVideo?.streamUrl ? (
-              <div className="overflow-hidden rounded-xl border border-edge bg-surface-inverse aspect-video">
-                {introVideo.driveFileId && !introVideo.driveFileId.startsWith('mock_') ? (
-                  <iframe
-                    src={`https://drive.google.com/file/d/${introVideo.driveFileId}/preview`}
-                    allow="autoplay; fullscreen"
-                    className="w-full h-full border-0 rounded-xl"
-                    title={`${name}'s introduction video`}
+          <div className="print:hidden">
+            <PublicSection id="video" title="Introduction video" variants={reveal}>
+              {introVideo?.streamUrl ? (
+                <div className="overflow-hidden rounded-xl border border-edge bg-surface-inverse aspect-video">
+                  {introVideo.driveFileId && !introVideo.driveFileId.startsWith('mock_') ? (
+                    <iframe
+                      src={`https://drive.google.com/file/d/${introVideo.driveFileId}/preview`}
+                      allow="autoplay; fullscreen"
+                      className="w-full h-full border-0 rounded-xl"
+                      title={`${name}'s introduction video`}
+                    />
+                  ) : (
+                    <video
+                      src={resolveMediaUrl(introVideo.streamUrl)}
+                      poster={
+                        introVideo.thumbnailUrl
+                          ? resolveMediaUrl(introVideo.thumbnailUrl)
+                          : undefined
+                      }
+                      controls
+                      controlsList="nodownload"
+                      onContextMenu={(e) => e.preventDefault()}
+                      preload="none"
+                      playsInline
+                      aria-label={`${name}'s introduction video`}
+                      className="aspect-video w-full object-contain"
+                    >
+                      Your browser does not support video playback.
+                    </video>
+                  )}
+                </div>
+              ) : (
+                <Card>
+                  <EmptyState
+                    bare
+                    icon={VideoIcon}
+                    title="No introduction video yet"
+                    description="A recording appears here once the department approves it and the student publishes it."
                   />
-                ) : (
-                  <video
-                    src={resolveMediaUrl(introVideo.streamUrl)}
-                    poster={
-                      introVideo.thumbnailUrl
-                        ? resolveMediaUrl(introVideo.thumbnailUrl)
-                        : undefined
-                    }
-                    controls
-                    controlsList="nodownload"
-                    onContextMenu={(e) => e.preventDefault()}
-                    preload="none"
-                    playsInline
-                    aria-label={`${name}'s introduction video`}
-                    className="aspect-video w-full object-contain"
-                  >
-                    Your browser does not support video playback.
-                  </video>
-                )}
-              </div>
-            ) : (
-              <Card>
-                <EmptyState
-                  bare
-                  icon={VideoIcon}
-                  title="No introduction video yet"
-                  description="A recording appears here once the department approves it and the student publishes it."
-                />
-              </Card>
-            )}
-          </PublicSection>
+                </Card>
+              )}
+            </PublicSection>
+          </div>
 
           {/* ── 5. PROJECTS ──────────────────────────────────────────────── */}
-          <PublicSection id="projects" title="Projects" variants={reveal}>
-            {projects.length === 0 ? (
-              <Card>
-                <EmptyState
-                  bare
-                  icon={FolderGit2}
-                  title="No projects yet"
-                  description="Projects this student publishes appear here as portfolio entries."
-                />
-              </Card>
-            ) : (
-              <ul className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                {projects.map((project, index) => (
-                  <li
-                    key={project.id}
-                    className={
-                      index === 0
-                        ? 'surface flex flex-col p-5 shadow-card md:col-span-2'
-                        : 'surface flex flex-col p-5'
-                    }
-                  >
+          <div className={projects.length === 0 ? 'print:hidden' : ''}>
+            <PublicSection id="projects" title="Projects" variants={reveal}>
+              {projects.length === 0 ? (
+                <Card>
+                  <EmptyState
+                    bare
+                    icon={FolderGit2}
+                    title="No projects yet"
+                    description="Projects this student publishes appear here as portfolio entries."
+                  />
+                </Card>
+              ) : (
+                <ul className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  {projects.map((project, index) => (
+                    <li
+                      key={project.id}
+                      className={
+                        index === 0
+                          ? 'surface flex flex-col p-5 shadow-card md:col-span-2 print:break-inside-avoid print:border print:border-neutral-200'
+                          : 'surface flex flex-col p-5 print:break-inside-avoid print:border print:border-neutral-200'
+                      }
+                    >
                     <h3 className="font-heading text-headline-sm text-ink">{project.title}</h3>
                     {project.description && (
                       <p className="mt-2 line-clamp-4 flex-1 text-body-sm text-ink-secondary">
@@ -617,124 +635,130 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
               </ul>
             )}
           </PublicSection>
+          </div>
 
           {/* ── 6. ACHIEVEMENTS & CERTIFICATES ───────────────────────────── */}
-          <div className="grid gap-14 lg:grid-cols-2 lg:gap-8">
-            <PublicSection id="achievements" title="Achievements" variants={reveal}>
-              {achievements.length === 0 ? (
-                <Card>
-                  <EmptyState
-                    bare
-                    icon={Trophy}
-                    title="No achievements yet"
-                    description="Faculty-endorsed achievements appear here."
-                  />
-                </Card>
-              ) : (
-                <ul className="space-y-3">
-                  {achievements.map((achievement) => {
-                    const href = (achievement as any).previewUrl ||
-                      ((achievement as any).driveFileId && !(achievement as any).driveFileId.startsWith('mock_')
-                        ? `https://drive.google.com/file/d/${(achievement as any).driveFileId}/preview`
-                        : null) ||
-                      (achievement as any).proofUrl ||
-                      (achievement as any).viewUrl;
-                    return (
-                      <li key={achievement.id} className="surface flex items-center justify-between gap-4 p-5">
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <h3 className="font-heading text-label-lg font-semibold text-ink">
-                              {achievement.title}
-                            </h3>
-                            <Badge label="Verified" variant="success" />
-                          </div>
-                          {achievement.description && (
-                            <p className="mt-1 text-body-sm text-ink-secondary">
-                              {achievement.description}
+          <div className={`grid gap-14 lg:grid-cols-2 lg:gap-8 ${achievements.length === 0 && certificates.length === 0 ? 'print:hidden' : ''}`}>
+            <div className={achievements.length === 0 ? 'print:hidden' : ''}>
+              <PublicSection id="achievements" title="Achievements" variants={reveal}>
+                {achievements.length === 0 ? (
+                  <Card>
+                    <EmptyState
+                      bare
+                      icon={Trophy}
+                      title="No achievements yet"
+                      description="Faculty-endorsed achievements appear here."
+                    />
+                  </Card>
+                ) : (
+                  <ul className="space-y-3">
+                    {achievements.map((achievement) => {
+                      const href = (achievement as any).previewUrl ||
+                        ((achievement as any).driveFileId && !(achievement as any).driveFileId.startsWith('mock_')
+                          ? `https://drive.google.com/file/d/${(achievement as any).driveFileId}/preview`
+                          : null) ||
+                        (achievement as any).proofUrl ||
+                        (achievement as any).viewUrl;
+                      return (
+                        <li key={achievement.id} className="surface flex items-center justify-between gap-4 p-5 print:break-inside-avoid print:border print:border-neutral-200">
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h3 className="font-heading text-label-lg font-semibold text-ink">
+                                {achievement.title}
+                              </h3>
+                              <Badge label="Verified" variant="success" />
+                            </div>
+                            {achievement.description && (
+                              <p className="mt-1 text-body-sm text-ink-secondary">
+                                {achievement.description}
+                              </p>
+                            )}
+                            <p className="mt-1 text-label-md text-ink-muted">
+                              {[achievement.organization, achievement.date ? formatDate(achievement.date) : null]
+                                .filter(Boolean)
+                                .join(' · ')}
                             </p>
+                          </div>
+                          {href && (
+                            <a
+                              href={href.startsWith('http') ? href : resolveMediaUrl(href)}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex shrink-0 items-center gap-1 text-label-lg font-semibold text-ink-brand hover:text-brand-hover print:hidden"
+                            >
+                              <span>View Proof</span>
+                              <ExternalLink size={13} strokeWidth={2} aria-hidden="true" />
+                            </a>
                           )}
-                          <p className="mt-1 text-label-md text-ink-muted">
-                            {[achievement.organization, achievement.date ? formatDate(achievement.date) : null]
-                              .filter(Boolean)
-                              .join(' · ')}
-                          </p>
-                        </div>
-                        {href && (
-                          <a
-                            href={href.startsWith('http') ? href : resolveMediaUrl(href)}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex shrink-0 items-center gap-1 text-label-lg font-semibold text-ink-brand hover:text-brand-hover"
-                          >
-                            <span>View Proof</span>
-                            <ExternalLink size={13} strokeWidth={2} aria-hidden="true" />
-                          </a>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </PublicSection>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </PublicSection>
+            </div>
 
-            <PublicSection id="certificates" title="Certificates" variants={reveal}>
-              {certificates.length === 0 ? (
-                <Card>
-                  <EmptyState
-                    bare
-                    icon={Award}
-                    title="No certificates yet"
-                    description="Certificates this student has made public appear here."
-                  />
-                </Card>
-              ) : (
-                <ul className="space-y-3">
-                  {certificates.map((certificate) => {
-                    const href = (certificate as any).previewUrl ||
-                      ((certificate as any).driveFileId && !(certificate as any).driveFileId.startsWith('mock_')
-                        ? `https://drive.google.com/file/d/${(certificate as any).driveFileId}/preview`
-                        : null) ||
-                      certificate.viewUrl ||
-                      certificate.fileUrl;
-                    const meta = [
-                      certificate.issuer,
-                      certificate.issueDate ? formatDate(certificate.issueDate) : null,
-                    ]
-                      .filter(Boolean)
-                      .join(' · ');
-                    return (
-                      <li
-                        key={certificate.id}
-                        className="surface flex items-center justify-between gap-4 p-5"
-                      >
-                        <div className="min-w-0">
-                          <h3 className="truncate font-heading text-label-lg font-semibold text-ink">
-                            {certificate.title}
-                          </h3>
-                          {meta && <p className="mt-0.5 truncate text-body-sm text-ink-muted">{meta}</p>}
-                        </div>
-                        {href && (
-                          <a
-                            href={href.startsWith('http') ? href : resolveMediaUrl(href)}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex shrink-0 items-center gap-1 text-label-lg font-semibold text-ink-brand hover:text-brand-hover"
-                          >
-                            <span>View</span>
-                            <ExternalLink size={13} strokeWidth={2} aria-hidden="true" />
-                          </a>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </PublicSection>
+            <div className={certificates.length === 0 ? 'print:hidden' : ''}>
+              <PublicSection id="certificates" title="Certificates" variants={reveal}>
+                {certificates.length === 0 ? (
+                  <Card>
+                    <EmptyState
+                      bare
+                      icon={Award}
+                      title="No certificates yet"
+                      description="Certificates this student has made public appear here."
+                    />
+                  </Card>
+                ) : (
+                  <ul className="space-y-3">
+                    {certificates.map((certificate) => {
+                      const href = (certificate as any).previewUrl ||
+                        ((certificate as any).driveFileId && !(certificate as any).driveFileId.startsWith('mock_')
+                          ? `https://drive.google.com/file/d/${(certificate as any).driveFileId}/preview`
+                          : null) ||
+                        certificate.viewUrl ||
+                        certificate.fileUrl;
+                      const meta = [
+                        certificate.issuer,
+                        certificate.issueDate ? formatDate(certificate.issueDate) : null,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ');
+                      return (
+                        <li
+                          key={certificate.id}
+                          className="surface flex items-center justify-between gap-4 p-5 print:break-inside-avoid print:border print:border-neutral-200"
+                        >
+                          <div className="min-w-0">
+                            <h3 className="truncate font-heading text-label-lg font-semibold text-ink">
+                              {certificate.title}
+                            </h3>
+                            {meta && <p className="mt-0.5 truncate text-body-sm text-ink-muted">{meta}</p>}
+                          </div>
+                          {href && (
+                            <a
+                              href={href.startsWith('http') ? href : resolveMediaUrl(href)}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex shrink-0 items-center gap-1 text-label-lg font-semibold text-ink-brand hover:text-brand-hover print:hidden"
+                            >
+                              <span>View</span>
+                              <ExternalLink size={13} strokeWidth={2} aria-hidden="true" />
+                            </a>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </PublicSection>
+            </div>
           </div>
 
           {/* ── 7. RESUME ────────────────────────────────────────────────── */}
           {hasResume && resume && (
-            <PublicSection id="resume" title="Resume" variants={reveal}>
+            <div className="print:hidden">
+              <PublicSection id="resume" title="Resume" variants={reveal}>
               <Card className="flex flex-col gap-4 sm:flex-row sm:items-center">
                 <span className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-brand-soft text-brand-soft-text">
                   <FileText size={22} strokeWidth={1.75} aria-hidden="true" />
@@ -771,6 +795,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
                 </div>
               </Card>
             </PublicSection>
+            </div>
           )}
         </div>
       )}

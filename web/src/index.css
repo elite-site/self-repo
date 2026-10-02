@@ -192,3 +192,53 @@ video,
 svg {
   max-width: 100%;
 }
+
+/* ── Print / PDF Export Styling ─────────────────────────────
+   Ensures saving as PDF produces a clean, professional paper document
+   with no dark background, no broken video frames, and no empty cards. */
+@media print {
+  @page {
+    margin: 12mm 15mm;
+    size: auto;
+  }
+
+  html,
+  body,
+  #root,
+  main {
+    background: #ffffff !important;
+    color: #111827 !important;
+  }
+
+  /* Reset surfaces from dark theme to crisp document paper */
+  .surface,
+  .bg-surface,
+  .bg-surface-canvas,
+  .bg-surface-inverse {
+    background: #ffffff !important;
+    color: #111827 !important;
+    border-color: #e5e7eb !important;
+    box-shadow: none !important;
+  }
+
+  .text-ink {
+    color: #111827 !important;
+  }
+
+  .text-ink-secondary,
+  .text-ink-muted {
+    color: #4b5563 !important;
+  }
+
+  .border-edge {
+    border-color: #e5e7eb !important;
+  }
+
+  /* Prevent awkward page break splits */
+  section,
+  article,
+  li {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+}
