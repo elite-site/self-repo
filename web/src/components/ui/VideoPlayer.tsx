@@ -400,7 +400,7 @@ export const VideoPlayer = React.forwardRef<HTMLDivElement, VideoPlayerProps>(fu
       // land on is invisible.
       onFocus={revealControls}
       className={cn(
-        'relative aspect-video w-full overflow-hidden rounded-xl bg-black [color-scheme:dark]',
+        'relative aspect-video w-full max-w-2xl max-h-[70vh] mx-auto overflow-hidden rounded-xl bg-black [color-scheme:dark]',
         className,
       )}
     >

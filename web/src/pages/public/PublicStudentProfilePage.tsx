@@ -405,9 +405,9 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
       </div>
 
       {/* ── 1. COVER ────────────────────────────────────────────────────────
-          Hidden in print mode to save paper and present a clean resume format. */}
-      <div className="relative -mx-6 mt-4 h-50 overflow-hidden rounded-b-3xl sm:-mx-10 sm:h-80 print:hidden">
-        <span aria-hidden="true" className="block size-full bg-gradient-to-br from-red-950 via-red-900 to-red-800" />
+          Compact, modern banner hidden in print mode to keep focus on student. */}
+      <div className="relative -mx-6 mt-4 h-28 overflow-hidden rounded-b-2xl sm:-mx-10 sm:h-36 print:hidden">
+        <span aria-hidden="true" className="block size-full bg-gradient-to-br from-red-950 via-red-900/80 to-slate-900" />
       </div>
 
       {/* ── 2. PROFILE HEADER ─────────────────────────────────────────────── */}
@@ -418,22 +418,16 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
           profile={profile}
           imageFailed={imageError}
           onImageError={() => setImageError(true)}
-          className="-mt-16 size-32 print:mt-0 print:border-2 print:border-neutral-300"
+          className="-mt-14 size-28 sm:-mt-16 sm:size-32 rounded-full border-4 border-surface shadow-card print:mt-0 print:border-2 print:border-neutral-300"
         />
 
-        <h1 className="mt-4 font-heading text-headline-xl text-ink">{name}</h1>
+        <h1 className="mt-3 font-heading text-headline-xl text-ink font-bold tracking-tight">{name}</h1>
 
-        <p className="mt-2 max-w-prose text-body-lg text-ink-secondary">
-          {bio ? taglineOf(bio) : `${student.rollNo ?? ''} · Year ${student.year || 1} · Section ${student.section || 'A'}`}
+        <p className="mt-1 font-mono text-label-md font-semibold tracking-wide text-ink-muted">
+          {student.rollNo}
         </p>
 
-        {bio && (
-          <p className="mt-1 text-data-mono text-ink-muted">
-            {student.rollNo} · Year {student.year || 1} · Section {student.section || 'A'}
-          </p>
-        )}
-
-        <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
           <Badge label={DEPARTMENT} variant="brand" dot={false} />
           <Badge label={`Year ${student.year || 1}`} variant="neutral" dot={false} />
           <Badge label={`Section ${student.section || 'A'}`} variant="neutral" dot={false} />
@@ -489,21 +483,20 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
       ) : (
         <div className="mt-14 space-y-14">
           {/* ── 3. ABOUT ─────────────────────────────────────────────────── */}
-          <PublicSection id="about" title="About" variants={reveal}>
-            <Card>
-              {bio ? (
-                <p className="max-w-prose whitespace-pre-line text-body-lg text-ink-secondary">
+          {bio && (
+            <PublicSection id="about" title="About" variants={reveal}>
+              <Card>
+                <p className="whitespace-pre-line text-body-md text-ink-secondary leading-relaxed">
                   {bio}
                 </p>
-              ) : (
-                <p className="text-body-md text-ink-muted">No biography yet.</p>
-              )}
+              </Card>
+            </PublicSection>
+          )}
 
-              <h3 className="mt-6 font-heading text-headline-sm text-ink">Skills</h3>
-              {skillsList.length === 0 ? (
-                <p className="mt-2 text-body-sm text-ink-muted">No skills listed yet.</p>
-              ) : (
-                <ul className="mt-3 flex flex-wrap gap-1.5">
+          {skillsList.length > 0 && (
+            <PublicSection id="skills" title="Skills" variants={reveal}>
+              <Card>
+                <ul className="flex flex-wrap gap-2">
                   {skillsList.map((entry, index) => {
                     const label =
                       typeof entry === 'string'
@@ -517,15 +510,15 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
                     );
                   })}
                 </ul>
-              )}
-            </Card>
-          </PublicSection>
+              </Card>
+            </PublicSection>
+          )}
 
           {/* ── 4. FEATURED VIDEO ────────────────────────────────────────── */}
-          <div className="print:hidden">
-            <PublicSection id="video" title="Introduction video" variants={reveal}>
-              {introVideo?.streamUrl ? (
-                <div className="overflow-hidden rounded-xl border border-edge bg-surface-inverse aspect-video">
+          {introVideo?.streamUrl && (
+            <div className="print:hidden">
+              <PublicSection id="video" title="Introduction video" variants={reveal}>
+                <div className="mx-auto max-w-2xl overflow-hidden rounded-xl border border-edge bg-surface-inverse aspect-video shadow-card">
                   {introVideo.driveFileId && !introVideo.driveFileId.startsWith('mock_') ? (
                     <iframe
                       src={`https://drive.google.com/file/d/${introVideo.driveFileId}/preview`}
@@ -544,27 +537,18 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
                       controls
                       controlsList="nodownload"
                       onContextMenu={(e) => e.preventDefault()}
-                      preload="none"
+                      preload="metadata"
                       playsInline
                       aria-label={`${name}'s introduction video`}
-                      className="aspect-video w-full object-contain"
+                      className="w-full h-full object-contain"
                     >
                       Your browser does not support video playback.
                     </video>
                   )}
                 </div>
-              ) : (
-                <Card>
-                  <EmptyState
-                    bare
-                    icon={VideoIcon}
-                    title="No introduction video yet"
-                    description="A recording appears here once the department approves it and the student publishes it."
-                  />
-                </Card>
-              )}
-            </PublicSection>
-          </div>
+              </PublicSection>
+            </div>
+          )}
 
           {/* ── 5. PROJECTS ──────────────────────────────────────────────── */}
           <div className={projects.length === 0 ? 'print:hidden' : ''}>
@@ -638,19 +622,11 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
           </div>
 
           {/* ── 6. ACHIEVEMENTS & CERTIFICATES ───────────────────────────── */}
-          <div className={`grid gap-14 lg:grid-cols-2 lg:gap-8 ${achievements.length === 0 && certificates.length === 0 ? 'print:hidden' : ''}`}>
-            <div className={achievements.length === 0 ? 'print:hidden' : ''}>
-              <PublicSection id="achievements" title="Achievements" variants={reveal}>
-                {achievements.length === 0 ? (
-                  <Card>
-                    <EmptyState
-                      bare
-                      icon={Trophy}
-                      title="No achievements yet"
-                      description="Faculty-endorsed achievements appear here."
-                    />
-                  </Card>
-                ) : (
+          {/* ── 6. ACHIEVEMENTS & CERTIFICATES ───────────────────────────── */}
+          {(achievements.length > 0 || certificates.length > 0) && (
+            <div className={`grid gap-14 ${achievements.length > 0 && certificates.length > 0 ? 'lg:grid-cols-2 lg:gap-8' : 'grid-cols-1'}`}>
+              {achievements.length > 0 && (
+                <PublicSection id="achievements" title="Achievements" variants={reveal}>
                   <ul className="space-y-3">
                     {achievements.map((achievement) => {
                       const href = (achievement as any).previewUrl ||
@@ -694,22 +670,11 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
                       );
                     })}
                   </ul>
-                )}
-              </PublicSection>
-            </div>
+                </PublicSection>
+              )}
 
-            <div className={certificates.length === 0 ? 'print:hidden' : ''}>
-              <PublicSection id="certificates" title="Certificates" variants={reveal}>
-                {certificates.length === 0 ? (
-                  <Card>
-                    <EmptyState
-                      bare
-                      icon={Award}
-                      title="No certificates yet"
-                      description="Certificates this student has made public appear here."
-                    />
-                  </Card>
-                ) : (
+              {certificates.length > 0 && (
+                <PublicSection id="certificates" title="Certificates" variants={reveal}>
                   <ul className="space-y-3">
                     {certificates.map((certificate) => {
                       const href = (certificate as any).previewUrl ||
@@ -750,10 +715,10 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
                       );
                     })}
                   </ul>
-                )}
-              </PublicSection>
+                </PublicSection>
+              )}
             </div>
-          </div>
+          )}
 
           {/* ── 7. RESUME ────────────────────────────────────────────────── */}
           {hasResume && resume && (

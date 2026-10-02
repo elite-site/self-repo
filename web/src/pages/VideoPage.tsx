@@ -876,7 +876,7 @@ export const VideoPage: React.FC = () => {
                 </div>
               </div>
             ) : playbackUrl ? (
-              <div className="bg-surface-inverse rounded-lg overflow-hidden aspect-video border border-edge-strong shadow-inner">
+              <div className="mx-auto max-w-2xl max-h-[420px] bg-surface-inverse rounded-lg overflow-hidden aspect-video border border-edge-strong shadow-inner">
                 {playbackUrl ? (
                   <video
                     ref={videoRef}
