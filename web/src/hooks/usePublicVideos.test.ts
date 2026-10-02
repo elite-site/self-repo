@@ -1,8 +1,24 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { createElement, ReactNode } from 'react';
 import { renderHook, waitFor } from '@testing-library/react';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { api } from '../services/api';
+import { createQueryClient } from '../lib/queryClient';
 import { usePublicVideos } from './usePublicVideos';
 import { PublicIntroVideo } from '../types';
+
+/**
+ * The hook reads the React Query cache, so it needs a client in context — and a
+ * *fresh* one for each test. Entries are keyed by query key and outlive a single
+ * test, so a shared client would hand the rejection test the successful result an
+ * earlier test cached (and, being fresh, would suppress the request it is
+ * asserting on). `createElement` rather than JSX because this file is `.ts`.
+ */
+const withFreshClient = () => {
+  const client = createQueryClient();
+  return ({ children }: { children: ReactNode }) =>
+    createElement(QueryClientProvider, { client }, children);
+};
 
 const video = (id: string): PublicIntroVideo => ({
   id,
@@ -32,7 +48,7 @@ describe('usePublicVideos', () => {
       .spyOn(api, 'getPublicVideos')
       .mockResolvedValue({ items: [video('a')], total: 1 });
 
-    const { result } = renderHook(() => usePublicVideos());
+    const { result } = renderHook(() => usePublicVideos(), { wrapper: withFreshClient() });
 
     expect(result.current.loading).toBe(true);
     await waitFor(() => expect(result.current.loading).toBe(false));
@@ -50,7 +66,9 @@ describe('usePublicVideos', () => {
     const spy = vi.spyOn(api, 'getPublicVideos').mockResolvedValue({ items: [], total: 0 });
 
     const preloaded = { videos: [video('x'), video('y')], loading: false, failed: false };
-    const { result } = renderHook(() => usePublicVideos(preloaded));
+    const { result } = renderHook(() => usePublicVideos(preloaded), {
+      wrapper: withFreshClient(),
+    });
 
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.videos).toHaveLength(2);
@@ -60,7 +78,7 @@ describe('usePublicVideos', () => {
   it('marks the request failed when the API rejects, and keeps an empty list', async () => {
     vi.spyOn(api, 'getPublicVideos').mockRejectedValue(new Error('offline'));
 
-    const { result } = renderHook(() => usePublicVideos());
+    const { result } = renderHook(() => usePublicVideos(), { wrapper: withFreshClient() });
 
     await waitFor(() => expect(result.current.failed).toBe(true));
     expect(result.current.loading).toBe(false);
@@ -70,8 +88,9 @@ describe('usePublicVideos', () => {
   it('stays not-loading when preloaded results say loading is done', () => {
     const spy = vi.spyOn(api, 'getPublicVideos').mockResolvedValue({ items: [], total: 0 });
 
-    const { result } = renderHook(() =>
-      usePublicVideos({ videos: [], loading: true, failed: false }),
+    const { result } = renderHook(
+      () => usePublicVideos({ videos: [], loading: true, failed: false }),
+      { wrapper: withFreshClient() },
     );
 
     // A parent that still has the request in flight hands down loading:true.
@@ -87,7 +106,7 @@ describe('usePublicVideos', () => {
       }),
     );
 
-    const { unmount } = renderHook(() => usePublicVideos());
+    const { unmount } = renderHook(() => usePublicVideos(), { wrapper: withFreshClient() });
     unmount();
     resolveFn({ items: [video('late')], total: 1 });
 
