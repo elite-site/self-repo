@@ -23,6 +23,29 @@
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Inter:wght@300;400;500&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
     />
+    <!-- Theme init, REDESIGN_PLAN §7.5. Runs before first paint so a dark-mode
+         visitor never sees a light frame first. Reads localStorage (or the OS
+         preference when there is nothing stored) and writes both `data-theme`
+         and the `dark` class onto <html> — see `web/src/lib/theme.ts`, which
+         defines the key and the resolution rules this mirrors. The whole body is
+         in a try/catch because localStorage throws in Safari private mode; the
+         catch leaves a usable light theme rather than no theme. Edit both places
+         together — a mismatch between them is a flash of the wrong theme. -->
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem('elite-theme');
+          if (stored !== 'light' && stored !== 'dark' && stored !== 'system') stored = null;
+          var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          var dark = stored === 'dark' || ((stored === 'system' || stored === null) && prefersDark);
+          var resolved = dark ? 'dark' : 'light';
+          document.documentElement.setAttribute('data-theme', resolved);
+          document.documentElement.classList.toggle('dark', resolved === 'dark');
+        } catch (e) {
+          document.documentElement.setAttribute('data-theme', 'light');
+        }
+      })();
+    </script>
   </head>
   <body class="bg-surface-canvas text-ink min-h-screen selection:bg-brand selection:text-on-primary antialiased font-sans">
     <div id="root"></div>
