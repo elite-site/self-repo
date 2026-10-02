@@ -15,9 +15,11 @@ import { eliteTheme } from '../shared/tailwind-preset.mjs';
 
 export default {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
-  // `data-theme` is the token-driven switch; `class` stays enabled because
-  // `ThemeContext` still toggles `.dark` during the portal migration and any
-  // surviving `dark:` utility needs it.
+  // `data-theme` is the token-driven switch and `class` stays enabled alongside
+  // it because `shared/tokens.css` keeps a `.dark` alias on the same block, so
+  // any surviving `dark:` utility still resolves. Both are applied together by
+  // `web/src/lib/theme.ts`; there is no third mechanism, and nothing strips
+  // either one at runtime.
   darkMode: ['class', '[data-theme="dark"]'],
   theme: eliteTheme,
   plugins: [],

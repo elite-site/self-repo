@@ -5,6 +5,7 @@ import { PublicThemeProvider, StudentThemeProvider } from './context/ThemeContex
 import { SessionProvider, useSession } from './context/SessionContext';
 import { ToastProvider } from './components/Toast';
 import { ConfirmProvider } from './components/ui/ConfirmDialog';
+import { SkeletonPage } from './components/ui/Skeleton';
 import { hasStoredToken } from './utils/sessionBootstrap';
 
 // Public Pages (isolated chunk for public visitors)
@@ -16,7 +17,7 @@ const PublicEventsPage = lazy(() => import('./pages/public/PublicEventsPage'));
 const PublicEventDetailPage = lazy(() => import('./pages/public/PublicEventDetailPage'));
 
 // Protected Student Portal Layout & Pages (isolated chunk for authenticated students)
-const StudentLayout = lazy(() => import('./components/layout/StudentLayout'));
+const AppLayout = lazy(() => import('./components/layout/AppLayout'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const EditProfilePage = lazy(() => import('./pages/EditProfilePage'));
@@ -30,10 +31,12 @@ const TeamsPage = lazy(() => import('./pages/TeamsPage'));
 const VotingPage = lazy(() => import('./pages/VotingPage'));
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
 const AnnouncementDetailPage = lazy(() => import('./pages/AnnouncementDetailPage'));
-import { BrandedLoading } from './components/BrandedLoading';
-
 const RouteLoadingFallback: React.FC = () => (
-  <BrandedLoading message="Loading ELITE Portal" />
+  <div className="min-h-[100dvh] bg-surface-canvas px-4 py-8 sm:px-6 sm:py-10">
+    <div className="mx-auto w-full max-w-canvas">
+      <SkeletonPage label="Loading ELITE Portal" />
+    </div>
+  </div>
 );
 
 const LoginRoute: React.FC<{
@@ -43,7 +46,7 @@ const LoginRoute: React.FC<{
   onRetry: () => void;
 }> = ({ session, authChecking, sessionError, onRetry }) => {
   if (authChecking) {
-    return <BrandedLoading message="Signing in to Student Portal" />;
+    return <RouteLoadingFallback />;
   }
   if (session) {
     return <Navigate to="/dashboard" replace />;
@@ -84,7 +87,7 @@ const AuthWrapper: React.FC = () => {
   // than silently sending the student back to the sign-in page.
   const protectedShell = () => {
     if (authChecking) {
-      return <BrandedLoading message="Verifying Student Session" />;
+      return <RouteLoadingFallback />;
     }
     if (sessionError && !session) {
       return (
@@ -108,11 +111,7 @@ const AuthWrapper: React.FC = () => {
     }
     return (
       <StudentThemeProvider>
-        <StudentLayout
-          session={session}
-          onLogout={handleLogout}
-          onPhotoChange={setPhoto}
-        />
+        <AppLayout session={session} onLogout={handleLogout} onPhotoChange={setPhoto} />
       </StudentThemeProvider>
     );
   };
@@ -125,7 +124,7 @@ const AuthWrapper: React.FC = () => {
           path="/"
           element={
             authChecking && hasStoredToken() ? (
-              <BrandedLoading message="Verifying Student Session" />
+              <RouteLoadingFallback />
             ) : (
               <PublicThemeProvider>
                 <HomePage session={session} onLogout={handleLogout} />
@@ -178,14 +177,10 @@ const AuthWrapper: React.FC = () => {
         <Route
           element={
             authChecking && hasStoredToken() ? (
-              <BrandedLoading message="Verifying Student Session" />
+              <RouteLoadingFallback />
             ) : session ? (
               <StudentThemeProvider>
-                <StudentLayout
-                  session={session}
-                  onLogout={handleLogout}
-                  onPhotoChange={setPhoto}
-                />
+                <AppLayout session={session} onLogout={handleLogout} onPhotoChange={setPhoto} />
               </StudentThemeProvider>
             ) : (
               <PublicThemeProvider>

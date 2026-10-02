@@ -19,7 +19,7 @@ import {
 import { SkeletonPage } from '../components/ui/Skeleton';
 import { api, resolveMediaUrl } from '../services/api';
 import { normalizeSocialLink, type SocialLinkKind } from '../utils/socialLinks';
-import type { StudentOutletContext } from '../components/layout/StudentLayout';
+import type { StudentOutletContext } from '../components/layout/AppLayout';
 import { StudentProfile } from '../types';
 // The cropper (and react-easy-crop) is only needed once the student opens the
 // crop dialog, so it must not sit in the profile page's initial chunk.

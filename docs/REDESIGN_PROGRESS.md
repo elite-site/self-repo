@@ -390,6 +390,88 @@ against the real config does. This check is now part of every batch gate that wr
 utility class from the primitives against the real config and drive the not-generated list to zero,
 then delete its probe script. It also runs `tokens:check` and `check:contrast`.
 
+### B4 outcome
+**Status: DONE — accepted** · agent: 1 (single writer) · 9 created / 5 edited / 5 deleted
+
+**Verified independently**, not taken on trust:
+- **R1 applied.** `web/src/context/ThemeContext.tsx` no longer contains `classList.remove`; the only
+  remaining mention of `theme: 'light'` is a comment explaining what the file used to do. The dark
+  token set from B1 is now live rather than dead code.
+- **Zero dangling references.** All five deleted files — `BrandedLoading.tsx`, `StudentLayout.tsx`,
+  `StudentSidebar.tsx`, `StudentHeader.tsx`, `MobileBottomNav.tsx` — return no hits anywhere in
+  `web/src`.
+- `<MotionConfig reducedMotion="user">` is mounted, with an explicit marker comment in `main.tsx`
+  where Batch 5 inserts `QueryClientProvider`.
+- Storage keys, all namespaced and all disclosed: `elite-theme` (B2),
+  `elite-sidebar-collapsed`, `elite-recent-routes`. The theme key is still the only theme key.
+
+**R1 implementation.** Both stripping effects and the hardcoded `theme: 'light'` are gone. All
+storage and resolution now delegate to `lib/theme.ts` behind the single `elite-theme` key, with
+`hooks/useTheme.ts` as the only state owner. `PublicThemeProvider` and `StudentThemeProvider` each
+render a `ThemeScope` that calls `useTheme()` once and publishes it — and because the route table
+mounts exactly one scope per route, only one instance is ever live. `useThemeState()` is the primary
+export, with `usePublicTheme`/`useStudentTheme` as aliases, so **no existing page import changed**.
+
+**Two deviations, both documented in the files:**
+- `TopBar` is `sticky top-0`, not `fixed` as §5.3 implies. A fixed bar would need the sidebar rail's
+  animated inset handed to it separately and would lag a frame behind the collapsing rail;
+  sticky-in-flow needs no second animation and no second source of truth for where the rail ends.
+- The sidebar "Settings" row from §5.1 has no destination — **no Settings page exists in this repo.**
+  `/registrations` takes that slot. See H1 below.
+
+**B6 handoff captured by the agent** (this is the input the page agents will work from):
+- `ui/Dialog.tsx` is still a legacy alias imported by 4 pages; the rename needs JSX usage changes,
+  which exceeded B4's import-only remit. Carried as C9.
+- The command palette has **no API-backed event search** — §5.4's search needs the data layer. The
+  `allActions` array in `CommandPalette.tsx` is the plug-in point.
+- `useUnreadCount` in `AppLayout.tsx` is a plain effect, flagged as the one shell-side place to
+  convert when a data layer lands.
+- The bell now routes to `/notifications` instead of showing an inline preview dropdown, per §5.3.
+- Face-crop `getPhotoStyle` offsets are not applied to shell avatars (they use `ui/Avatar`); they
+  are still applied in `ProfilePage`, `EditProfilePage`, `Navbar` and both public pages.
+- `/login` renders a `LoginRoute` component **defined inline in `App.tsx:42`** — there is no
+  `LoginPage.tsx`. The plan's §11 file structure expects one.
+
+---
+
+## B5 — scope problem found before starting (open question)
+
+**The plan does not specify a data layer.** `REDESIGN_PLAN.md` mentions React Query, TanStack,
+`useQuery`, `useMutation`, `staleTime` and `queryKey` **zero times**. §9 Performance Strategy covers
+LCP, CLS, INP, code splitting, image optimisation, font loading, animation performance and bundle
+size — and stops there.
+
+So the previously-planned "migrate every page to React Query" batch is my invention, not the plan's.
+The dependency was approved (decision 3) and B4 left a provider marker, but approval of a package is
+not a spec for re-architecting how 13 pages fetch data.
+
+Current data layer is small and centralised:
+
+| File | Lines | Role |
+|---|---|---|
+| `web/src/services/api.ts` | 294 | the single API client — already the right shape |
+| `web/src/context/SessionContext.tsx` | 134 | manual `useEffect` fetch + state for the auth session |
+| `web/src/hooks/usePublicVideos.ts` | 50 | one data hook |
+
+Only one `fetch(` call site exists outside `services/` (`utils/cropImage.ts`, which is canvas work,
+not API). Pages use 2-4 `useEffect`s each over `api.ts`.
+
+Options, pending a decision:
+1. **Narrow** — mount `QueryClientProvider`, migrate only `SessionContext` and `usePublicVideos`.
+   Pages keep their current fetching; B6 agents adopt queries per page where it clearly helps.
+2. **Drop B5** — the plan does not ask for it; `api.ts` + `useEffect` already works.
+3. **Full migration** as originally planned — large, unspecified, touches 13+ pages, and B6 rewrites
+   those pages anyway, so it would be paid for twice.
+
+### H1 — Settings page cannot be built as specified
+
+§5.1 and §5.2 both list a Settings entry and §11 expects `pages/SettingsPage.tsx`. **No Settings page
+and no settings route exist in this repo**, and `REDESIGN_PLAN.md` §2.4 puts backend changes out of
+scope. If the plan's Settings page needs an endpoint that does not exist, it is a blocker to report,
+not something to invent. Navigation currently uses `/registrations` in that slot.
+
+---
+
 ### Carried forward from B3
 
 | # | Item | Where it goes |
