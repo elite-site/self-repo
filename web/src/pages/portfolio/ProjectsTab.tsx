@@ -461,7 +461,7 @@ export const ProjectsTab: React.FC = () => {
             </button>
           </div>
         </form>
-      </Dialog>
+      </Modal>
     </div>
   );
 };

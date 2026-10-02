@@ -19,7 +19,6 @@ export interface PhotoCropModalProps {
 }
 
 export const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
-export default PhotoCropModal;
   isOpen,
   imageSrc,
   initialPosition,
@@ -166,7 +165,7 @@ export default PhotoCropModal;
           <div className="p-3 bg-status-bg-rejected border border-status-rejected rounded-lg text-label-sm text-status-rejected flex items-center gap-2" role="alert">
             <span>{error}</span>
           </div>
-        )
+        )}
 
         {/* Crop Area (1:1 aspect ratio) */}
         <div className="relative w-full h-72 sm:h-80 bg-surface-inverse rounded-lg overflow-hidden shadow-inner border border-edge-strong select-none">

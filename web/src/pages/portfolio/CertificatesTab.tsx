@@ -391,7 +391,7 @@ export const CertificatesTab: React.FC = () => {
             </button>
           </div>
         </form>
-      </Dialog>
+      </Modal>
     </div>
   );
 };

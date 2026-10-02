@@ -336,7 +336,7 @@ export const AchievementsTab: React.FC = () => {
             </button>
           </div>
         </form>
-      </Dialog>
+      </Modal>
     </div>
   );
 };
