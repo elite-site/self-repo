@@ -14,10 +14,10 @@ import {
   Video,
   Vote,
 } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
 import { cn } from '../../lib/cn';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { selectVariantsByName, transitionTabSpring } from '../../lib/motion';
+import { prefetchRoute } from '../../utils/prefetch';
 
 // ============================================================================
 // Navigation vocabulary
@@ -197,6 +197,8 @@ export const NavItem: React.FC<NavItemProps> = ({
     <NavLink
       to={entry.path}
       onClick={onNavigate}
+      onMouseEnter={() => prefetchRoute(entry.path)}
+      onFocus={() => prefetchRoute(entry.path)}
       className={({ isActive }) =>
         cn(
           'group relative flex min-h-11 rounded-lg font-ui text-label-lg',

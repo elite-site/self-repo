@@ -863,6 +863,7 @@ export const Moderation: React.FC = () => {
                                   <img
                                     src={certUrl}
                                     alt={selectedItem.title}
+                                    loading="lazy"
                                     className="max-h-[72vh] w-auto max-w-full mx-auto object-contain rounded-lg shadow-md"
                                   />
                                 )
@@ -963,6 +964,7 @@ export const Moderation: React.FC = () => {
                                   <img
                                     src={proofUrl}
                                     alt={selectedItem.title}
+                                    loading="lazy"
                                     className="max-h-[72vh] w-auto max-w-full mx-auto object-contain rounded-lg shadow-md"
                                   />
                                 )

@@ -559,23 +559,6 @@ export class DriveService {
       }));
       return mockId;
     }
-
-    // Dynamically resolve and create the folder hierarchy in Google Drive
-    let targetFolderId = parentFolderId;
-    if (relativePath) {
-      try {
-        targetFolderId = await this.resolveFolderPath(relativePath, parentFolderId);
-      } catch (folderErr) {
-        console.warn(`Retry resolving folder path "${relativePath}":`, folderErr);
-        try {
-          targetFolderId = await this.resolveFolderPath(relativePath, parentFolderId);
-        } catch (retryErr) {
-          console.error(`Failed to resolve folder path "${relativePath}" after retry:`, retryErr);
-          throw new Error(`Failed to create or access Google Drive folder for "${relativePath}"`);
-        }
-      }
-    }
-
     const media = {
       mimeType: file.mimetype,
       body: Readable.from(file.buffer),
@@ -584,7 +567,8 @@ export class DriveService {
     const res = await this.drive.files.create({
       requestBody: {
         name: fileName,
-        parents: [targetFolderId],
+        parents: [parentFolderId],
+        copyRequiresWriterPermission: true,
       },
       media,
       supportsAllDrives: true,
@@ -593,11 +577,8 @@ export class DriveService {
 
     const fileId = res.data.id!;
 
-    // Grant viewer access to the uploaded file and its parent folder
+    // Grant viewer access to the uploaded file
     await this.setViewerPermission(fileId);
-    if (targetFolderId && targetFolderId !== parentFolderId) {
-      this.setViewerPermission(targetFolderId).catch(() => {});
-    }
 
     return fileId;
   }
@@ -767,6 +748,7 @@ export class DriveService {
       body: JSON.stringify({
         name: fileName,
         parents: [parentFolderId],
+        copyRequiresWriterPermission: true,
       }),
     });
 
@@ -882,8 +864,8 @@ export class DriveService {
         },
       );
 
-      driveReq.setTimeout(60000, () => {
-        driveReq.destroy(new Error('[Drive] Upload timed out after 60s of inactivity'));
+      driveReq.setTimeout(180_000, () => {
+        driveReq.destroy(new Error('[Drive] Upload timed out after 180s of inactivity'));
         reject(new Error('Upload timed out: Google Drive connection inactive'));
       });
 

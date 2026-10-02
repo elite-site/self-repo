@@ -46,6 +46,17 @@ router.get('/students', async (req: Request, res: Response) => {
     const submissions = await prisma.submission.findMany({
       where: { rollNo: { in: rollNos } },
       orderBy: { submittedAt: 'desc' },
+      select: {
+        id: true,
+        rollNo: true,
+        status: true,
+        submittedAt: true,
+        videoDriveId: true,
+        reviewText: true,
+        reviewPros: true,
+        reviewCons: true,
+        reviewedAt: true,
+      },
     });
     const studentsWithSubs = students.map((s) => ({
       ...s,

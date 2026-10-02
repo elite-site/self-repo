@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, lazy, Suspense } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, Link, useOutletContext } from 'react-router-dom';
 import {
   Camera,
@@ -17,15 +17,11 @@ import {
   Crop
 } from 'lucide-react';
 import { SkeletonPage } from '../components/ui/Skeleton';
-import { api, resolveMediaUrl } from '../services/api';
+import { api, resolveMediaUrl, invalidateApiCache } from '../services/api';
 import { normalizeSocialLink, type SocialLinkKind } from '../utils/socialLinks';
 import type { StudentOutletContext } from '../components/layout/AppLayout';
 import { StudentProfile } from '../types';
-// The cropper (and react-easy-crop) is only needed once the student opens the
-// crop dialog, so it must not sit in the profile page's initial chunk.
-const PhotoCropModal = lazy(() =>
-  import('../components/PhotoCropModal').then((m) => ({ default: m.PhotoCropModal })),
-);
+import { PhotoCropModal } from '../components/PhotoCropModal';
 import { getPhotoStyle } from '../utils/photoStyle';
 import { compressImageToWebP } from '../utils/cropImage';
 import { LeetCodeIcon, CodeChefIcon } from '../components/icons/PlatformIcons';
@@ -160,6 +156,7 @@ export const EditProfilePage: React.FC = () => {
       if (res.photoUrl) {
         setProfile((prev) => (prev ? { ...prev, photoUrl: res.photoUrl, photoOffsetX: 50, photoOffsetY: 50, photoZoom: 1 } : prev));
         onPhotoChange?.(res.photoUrl);
+        invalidateApiCache();
         showToast('Profile photo updated successfully', 'success');
         handleCloseCropModal();
       } else {
@@ -246,6 +243,7 @@ export const EditProfilePage: React.FC = () => {
         }),
         api.updateSkills(skills),
       ]);
+      invalidateApiCache();
       setSuccess(true);
       showToast('Profile saved.');
       setTimeout(() => {
@@ -315,6 +313,7 @@ export const EditProfilePage: React.FC = () => {
                   <img
                     src={resolveMediaUrl(profile.photoUrl)}
                     alt={profile.name}
+                    loading="lazy"
                     style={getPhotoStyle(profile)}
                   />
                 </div>
@@ -635,16 +634,14 @@ export const EditProfilePage: React.FC = () => {
 
       {/* PHOTO CROP & REPOSITION MODAL */}
       {isCropModalOpen && (
-        <Suspense fallback={null}>
-          <PhotoCropModal
-            isOpen={isCropModalOpen}
-            imageSrc={cropImageSrc}
-            initialPosition={profile}
-            onClose={handleCloseCropModal}
-            onCropSave={handleCropSave}
-            isSaving={uploadingPhoto}
-          />
-        </Suspense>
+        <PhotoCropModal
+          isOpen={isCropModalOpen}
+          imageSrc={cropImageSrc}
+          initialPosition={profile}
+          onClose={handleCloseCropModal}
+          onCropSave={handleCropSave}
+          isSaving={uploadingPhoto}
+        />
       )}
     </div>
   );

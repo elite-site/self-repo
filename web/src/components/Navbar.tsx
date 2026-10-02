@@ -4,6 +4,7 @@ import { Menu, X, LogOut, ChevronDown, ArrowRight, LayoutDashboard, Search } fro
 import { StudentSession } from '../types';
 import { api, resolveMediaUrl } from '../services/api';
 import { getPhotoStyle } from '../utils/photoStyle';
+import { prefetchRoute } from '../utils/prefetch';
 
 interface NavbarProps {
   session?: StudentSession | null;
@@ -112,6 +113,7 @@ export const Navbar: React.FC<NavbarProps> = ({ session, onLogout }) => {
             <Link
               key={link.to}
               to={link.to}
+              onMouseEnter={() => prefetchRoute(link.to)}
               aria-current={isActive(link.to) ? 'page' : undefined}
               className={`rounded-lg px-3 py-2 text-label-lg transition-colors duration-fast ${
                 isActive(link.to)
@@ -127,6 +129,7 @@ export const Navbar: React.FC<NavbarProps> = ({ session, onLogout }) => {
         <div className="ml-auto flex items-center gap-1.5">
           <Link
             to="/students"
+            onMouseEnter={() => prefetchRoute('/students')}
             className="flex h-10 w-10 items-center justify-center rounded-lg text-ink-secondary transition-colors duration-fast hover:bg-surface-sunken hover:text-ink"
             aria-label="Search students"
           >
@@ -135,7 +138,7 @@ export const Navbar: React.FC<NavbarProps> = ({ session, onLogout }) => {
 
           {session ? (
             <div className="hidden items-center gap-2 md:flex">
-              <Link to="/dashboard" className="btn btn-primary">
+              <Link to="/dashboard" onMouseEnter={() => prefetchRoute('/dashboard')} className="btn btn-primary">
                 <LayoutDashboard size={15} strokeWidth={1.75} aria-hidden="true" />
                 <span>Dashboard</span>
               </Link>

@@ -11,6 +11,7 @@ export default defineConfig({
         // change does not invalidate ~all of the cached dependency bytes.
         manualChunks: {
           react: ['react', 'react-dom', 'react-router-dom'],
+          vendor: ['axios', 'lucide-react', 'framer-motion'],
         },
       },
     },

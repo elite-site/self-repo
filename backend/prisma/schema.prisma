@@ -268,6 +268,9 @@ model Submission {
   @@unique([eventId, rollNo, year, branch, section])
   @@index([eventId, rollNo])
   @@index([eventId, branch, section, year])
+  @@index([rollNo])
+  @@index([eventId, status])
+  @@index([eventId, submittedAt])
 }
 
 model AdminUser {
@@ -403,6 +406,7 @@ model StudentSkill {
   skill     Skill          @relation(fields: [skillId], references: [id])
 
   @@unique([profileId, skillId])
+  @@index([skillId])
 }
 
 model SkillRequest {
@@ -417,6 +421,8 @@ model SkillRequest {
   reviewNote String?
   createdAt  DateTime            @default(now())
   updatedAt  DateTime            @updatedAt
+
+  @@index([studentId, status])
 }
 
 // ── Projects ────────────────────────────────────────────────
@@ -443,6 +449,7 @@ model Project {
   updatedAt DateTime @updatedAt
 
   @@index([studentId, displayOrder])
+  @@index([status])
 }
 
 // ── Achievements ────────────────────────────────────────────
@@ -485,6 +492,7 @@ model Achievement {
   @@index([studentId])
   @@index([status])
   @@index([studentId, achievedAt])
+  @@index([categoryId])
 }
 
 // ── Certificates ────────────────────────────────────────────
@@ -593,6 +601,9 @@ model ChangeRequest {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([studentId, status])
+  @@index([status])
 }
 
 // ── Event Registration ───────────────────────────────────────
@@ -631,6 +642,8 @@ model EventRegistration {
 
   @@unique([eventId, studentId])
   @@index([eventId, status])
+  @@index([studentId])
+  @@index([teamId])
 }
 
 model RegistrationAnswer {
@@ -676,6 +689,7 @@ model TeamMember {
   joinedAt DateTime @default(now())
 
   @@unique([teamId, studentId])
+  @@index([studentId])
 }
 
 model TeamInvitation {
@@ -692,6 +706,7 @@ model TeamInvitation {
   respondedAt DateTime?
 
   @@unique([teamId, studentId])
+  @@index([studentId, status])
 }
 
 // ── Voting ───────────────────────────────────────────────────
@@ -722,6 +737,9 @@ model VotingCampaign {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([eventId])
 }
 
 model VotingCandidate {
@@ -749,7 +767,7 @@ model Vote {
   castAt DateTime @default(now())
 
   @@unique([campaignId, voterId])
-  @@index([campaignId, voterId])
+  @@index([candidateId])
 }
 
 // ── Notifications ────────────────────────────────────────────

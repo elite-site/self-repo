@@ -7,7 +7,7 @@ import { env } from '../config/env';
 import { prisma } from '../lib/prisma';
 import { requireStudentAuth, STUDENT_SESSION_COOKIE_NAME } from '../middleware/studentAuth';
 import { studentLoginRateLimiter, submissionRateLimiter } from '../middleware/rateLimiter';
-import { submissionUploadMiddleware, resumeUpload } from '../middleware/upload';
+import { resumeUpload } from '../middleware/upload';
 import { ValidationService } from '../services/validation.service';
 import { driveService } from '../services/drive.service';
 import { ActivityService } from '../services/activity.service';
@@ -219,7 +219,10 @@ router.get('/google/callback', studentLoginRateLimiter, async (req: Request, res
       return;
     }
 
-    const student = await prisma.student.findUnique({ where: { email: identity.email } });
+    const student = await prisma.student.findUnique({
+      where: { email: identity.email },
+      select: { id: true, rollNo: true, name: true, email: true },
+    });
 
     if (!student) {
       res.status(403).json({
@@ -406,214 +409,19 @@ router.get('/me', requireStudentAuth, async (req: Request, res: Response): Promi
   }
 });
 
-// POST /api/student/submission — upload (or replace) the introduction video.
-// Resubmitting always swaps the previous video and clears the old admin review.
+// POST /api/student/submission — DEPRECATED: use /submission/video-stream instead.
+// The buffered upload route was removed because it held the entire video in RAM
+// (up to 25 MB per request) before forwarding to Drive, while the streaming
+// endpoint pipes bytes directly with zero buffering. The frontend already uses
+// the streaming route exclusively.
 router.post(
   '/submission',
   requireStudentAuth,
-  submissionRateLimiter,
-  submissionUploadMiddleware,
-  async (req: Request, res: Response): Promise<void> => {
-    try {
-      const student = await prisma.student.findUnique({
-        where: { id: req.student!.studentId },
-      });
-
-      if (!student) {
-        res.status(404).json({ error: 'NOT_FOUND', message: 'Student account not found.' });
-        return;
-      }
-
-      const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
-      const videoFile = files?.video?.[0];
-
-      if (!videoFile) {
-        res.status(400).json({ error: 'VALIDATION_ERROR', field: 'video', message: 'Self introduction video is required.' });
-        return;
-      }
-
-      // Validate video format & size (<= 25 MB enforced by env + multer)
-      const vVideo = await ValidationService.validateVideo(videoFile.buffer, videoFile.originalname, videoFile.size);
-      if (!vVideo.valid) {
-        await ActivityService.log({
-          eventId: EVENT_ID,
-          category: 'FILE_UPLOAD',
-          action: 'File validation failed (Video)',
-          details: vVideo.error,
-          applicantName: student.name,
-          userEmail: student.rollNo,
-          status: 'ERROR',
-          errorMessage: vVideo.error,
-        });
-        res.status(400).json({ error: 'VALIDATION_ERROR', field: 'video', message: vVideo.error });
-        return;
-      }
-
-      // Existing submission (if any). The old file is NOT deleted yet — the new
-      // video is uploaded first so a failed upload can never leave the student
-      // with no video at all.
-      const existing = await prisma.submission.findFirst({
-        where: { rollNo: student.rollNo },
-        orderBy: { submittedAt: 'desc' },
-      });
-      const previousDriveId = existing?.videoDriveId ?? null;
-
-      // Upload the new video to Google Drive (or mock storage)
-      const uploadResult = await driveService.uploadSubmissionFiles(
-        {
-          eventName: EVENT_NAME,
-          eventYear: env.EVENT_YEAR,
-          year: student.year,
-          section: student.section,
-          branch: student.branch,
-          rollNo: student.rollNo,
-          name: student.name,
-        },
-        {
-          video: {
-            buffer: videoFile.buffer,
-            originalname: videoFile.originalname,
-            mimetype: videoFile.mimetype,
-            size: videoFile.size,
-          },
-        }
-      );
-
-      const data = {
-        name: student.name,
-        rollNo: student.rollNo,
-        email: student.email ?? '',
-        section: student.section,
-        branch: student.branch,
-        year: student.year,
-        videoDriveId: uploadResult.videoDriveId || null,
-        mediaType: 'VIDEO' as const,
-        driveFolderPath: uploadResult.driveFolderPath,
-        status: 'SUBMITTED' as const,
-        submittedAt: new Date(),
-        // New upload = clean slate for the next review
-        reviewText: null,
-        reviewPros: [],
-        reviewCons: [],
-        reviewedAt: null,
-        reviewedBy: null,
-      };
-
-      const submission = existing
-        ? await prisma.submission.update({ where: { id: existing.id }, data })
-        : await prisma.submission.create({ data: { eventId: EVENT_ID, ...data } });
-
-      // Also keep prisma.introVideo in sync so Admin Moderation queue and student queries immediately reflect the video
-      const sizeMb = parseFloat((videoFile.size / (1024 * 1024)).toFixed(2));
-      let keptIntroVideoId: string | null = null;
-      try {
-        let thumbnailBuffer: Buffer | null = null;
-        if (uploadResult.videoDriveId && typeof driveService.generateThumbnail === 'function') {
-          try {
-            thumbnailBuffer = await driveService.generateThumbnail(uploadResult.videoDriveId, 'video');
-          } catch (thumbErr) {
-            console.warn('Could not generate thumbnail for intro video at upload:', thumbErr);
-          }
-        }
-
-        const existingIntroVideo = await prisma.introVideo.findFirst({
-          where: { studentId: student.id },
-          orderBy: { submittedAt: 'desc' },
-        });
-
-        if (existingIntroVideo) {
-          const updated = await prisma.introVideo.update({
-            where: { id: existingIntroVideo.id },
-            data: {
-              driveFileId: uploadResult.videoDriveId || null,
-              filename: videoFile.originalname,
-              mimeType: videoFile.mimetype,
-              sizeMb,
-              thumbnail: thumbnailBuffer,
-              status: 'PENDING',
-              reviewNote: null,
-              reviewedBy: null,
-              reviewedAt: null,
-              submittedAt: new Date(),
-              isActive: true,
-              // A replaced video must be re-approved before it is public again.
-              isPublic: false,
-              publishedAt: null,
-              changeRequestedAt: null,
-              changeRequestNote: null,
-            },
-          });
-          keptIntroVideoId = updated.id;
-        } else {
-          const created = await prisma.introVideo.create({
-            data: {
-              studentId: student.id,
-              driveFileId: uploadResult.videoDriveId || null,
-              filename: videoFile.originalname,
-              mimeType: videoFile.mimetype,
-              sizeMb,
-              thumbnail: thumbnailBuffer,
-              status: 'PENDING',
-              submittedAt: new Date(),
-              isActive: true,
-            },
-          });
-          keptIntroVideoId = created.id;
-        }
-      } catch (introVideoErr) {
-        console.warn('Could not sync introVideo table:', introVideoErr);
-      }
-
-      // The new video is stored and referenced — now override the old one and
-      // delete every superseded file from storage.
-      if (keptIntroVideoId) {
-        const orphanedFileIds = await purgeSupersededIntroVideos(
-          student.id,
-          keptIntroVideoId,
-          uploadResult.videoDriveId,
-        );
-        for (const fileId of [previousDriveId, ...orphanedFileIds]) {
-          if (fileId === uploadResult.videoDriveId) continue;
-          deleteStoredFile(fileId, uploadResult.driveFolderPath);
-        }
-      } else {
-        deleteStoredFile(previousDriveId, uploadResult.driveFolderPath);
-      }
-
-      await ActivityService.log({
-        eventId: EVENT_ID,
-        category: 'APPLICATION',
-        action: existing ? 'Student re-uploaded introduction video' : 'Application submitted',
-        details: `Media Type: VIDEO, Branch: ${student.branch}, Roll: ${student.rollNo}`,
-        applicantName: student.name,
-        userEmail: student.rollNo,
-        status: 'SUCCESS',
-      });
-
-      res.status(201).json({
-        success: true,
-        id: submission.id,
-        message: 'Your introduction video has been submitted successfully.',
-      });
-    } catch (err: any) {
-      console.error('Error handling student submission:', err);
-
-      await ActivityService.log({
-        eventId: EVENT_ID,
-        category: 'APPLICATION',
-        action: 'Student submission failed',
-        details: err?.message || 'Unexpected server error',
-        applicantName: req.student?.name,
-        userEmail: req.student?.rollNo,
-        status: 'ERROR',
-        errorMessage: err?.stack || err?.message,
-      });
-
-      res.status(500).json({
-        error: 'SUBMISSION_FAILED',
-        message: 'An error occurred while uploading your submission. Please try again.',
-      });
-    }
+  (_req: Request, res: Response) => {
+    res.status(410).json({
+      error: 'DEPRECATED',
+      message: 'This upload endpoint has been retired. Please use /submission/video-stream.',
+    });
   }
 );
 

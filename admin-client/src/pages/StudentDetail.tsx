@@ -310,6 +310,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
                 <img
                   src={profile.photoUrl}
                   alt={student.name}
+                  loading="lazy"
                   className="absolute inset-0 w-full h-full object-cover"
                   onError={(e) => {
                     (e.currentTarget as HTMLElement).style.display = 'none';

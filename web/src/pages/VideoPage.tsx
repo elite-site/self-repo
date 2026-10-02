@@ -20,15 +20,12 @@ import {
   ThumbsUp,
   ThumbsDown,
   RefreshCw,
-  Download,
   Zap,
   X,
   Gauge,
   Info,
   Globe,
   EyeOff,
-  Play,
-  Pause,
   Trash2
 } from 'lucide-react';
 import { SkeletonPage } from '../components/ui/Skeleton';
@@ -79,8 +76,6 @@ export const VideoPage: React.FC = () => {
 
   const shouldReduce = useReducedMotion();
   const staggerContainer = selectVariantsByName(shouldReduce, 'staggerFastContainer');
-  const staggerItem = selectVariantsByName(shouldReduce, 'staggerItem');
-  const [isPlaying, setIsPlaying] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   // Track object URLs so we can revoke them on unmount / re-upload (memory leak prevention)
@@ -226,37 +221,9 @@ export const VideoPage: React.FC = () => {
     [playbackUrl, localPreviewUrl],
   );
 
-  const handlePlayPause = () => {
-    const el = videoRef.current;
-    if (!el) return;
-    if (el.paused) {
-      withBlobFallback(() => el.play());
-    } else {
-      el.pause();
-    }
-  };
-
-  const handleReplay = () => {
-    const el = videoRef.current;
-    if (!el) return;
-    el.currentTime = 0;
-    withBlobFallback(() => el.play());
-  };
-
-  const handleSeek = (deltaSec: number) => {
-    const el = videoRef.current;
-    if (!el) return;
-    const dur = Number.isFinite(el.duration) ? el.duration : 0;
-    const target = dur
-      ? Math.max(0, Math.min(dur, el.currentTime + deltaSec))
-      : el.currentTime + deltaSec;
-    el.currentTime = target;
-  };
-
   // A new take invalidates any previous fallback attempt.
   useEffect(() => {
     setPreviewError(false);
-    setIsPlaying(false);
   }, [video?.id]);
 
   /** Publish / unpublish the approved video on the public showcase. */
@@ -520,24 +487,28 @@ export const VideoPage: React.FC = () => {
       }));
       setUploadSuccess(true);
       showToast(res.message || 'Your introduction video has been submitted for review.');
-      // A new take overrides the old video, so it goes back to moderation and
-      // is no longer public until it is approved again.
-      setVideo((prev) =>
-        prev
-          ? {
-              ...prev,
-              status: 'PENDING',
-              isPublic: false,
-              publishedAt: null,
-              changeRequestedAt: null,
-              changeRequestNote: null,
-            }
-          : prev,
-      );
-      // Show the freshly uploaded take immediately; the stored copy is
-      // streamed from the server on the next page load or login.
-      setLocalPreview(localUrl);
-      // Silently sync server state in the background
+      const newDriveId = res.driveFileId || (res as any)?.data?.driveFileId;
+      setVideo((prev) => ({
+        ...(prev || {}),
+        id: res.id || prev?.id || 'submission',
+        driveFileId: newDriveId || (prev as any)?.driveFileId || null,
+        filename: file.name,
+        sizeMb: parseFloat((file.size / (1024 * 1024)).toFixed(2)),
+        mimeType: file.type,
+        hasFile: true,
+        submittedAt: new Date().toISOString(),
+        status: 'PENDING',
+        isPublic: false,
+        publishedAt: null,
+        changeRequestedAt: null,
+        changeRequestNote: null,
+      } as any));
+      if (newDriveId) {
+        URL.revokeObjectURL(localUrl);
+        setLocalPreview(null);
+      } else {
+        setLocalPreview(localUrl);
+      }
       loadSubmission(false);
     } catch (err: any) {
       URL.revokeObjectURL(localUrl); // clean up unused preview URL on error
@@ -786,16 +757,6 @@ export const VideoPage: React.FC = () => {
                 className="hidden"
               />
               <div className="flex items-center gap-3">
-                {playbackUrl && (
-                  <a
-                    href={playbackUrl}
-                    download={video?.filename || 'self-introduction.mp4'}
-                    className="text-xs font-bold text-ink-secondary hover:text-ink flex items-center gap-1 cursor-pointer btn btn-ghost min-h-[44px] px-3"
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                    <span>Download</span>
-                  </a>
-                )}
                 <button
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploading}
@@ -916,14 +877,7 @@ export const VideoPage: React.FC = () => {
               </div>
             ) : playbackUrl ? (
               <div className="bg-surface-inverse rounded-lg overflow-hidden aspect-video border border-edge-strong shadow-inner">
-                {!localPreviewUrl && (video?.driveFileId || (submission as any)?.videoDriveId) && !(video?.driveFileId || (submission as any)?.videoDriveId)?.startsWith('mock_') ? (
-                  <iframe
-                    src={`https://drive.google.com/file/d/${video?.driveFileId || (submission as any)?.videoDriveId}/preview`}
-                    allow="autoplay; fullscreen"
-                    className="w-full h-full border-0 rounded-lg aspect-video"
-                    title="Introduction video preview"
-                  />
-                ) : (
+                {playbackUrl ? (
                   <video
                     ref={videoRef}
                     key={playbackUrl}
@@ -933,59 +887,24 @@ export const VideoPage: React.FC = () => {
                     controlsList="nodownload"
                     onContextMenu={(e) => e.preventDefault()}
                     playsInline
-                    preload="auto"
-                    // Sends the httpOnly session cookie when the API lives on a
-                    // different origin than the portal (local dev).
+                    preload="metadata"
                     crossOrigin="use-credentials"
                     onError={handlePlaybackError}
-                    onPlay={() => setIsPlaying(true)}
-                    onPause={() => setIsPlaying(false)}
-                    onEnded={() => setIsPlaying(false)}
                     className="w-full h-full object-contain"
                   >
                     Your browser cannot play this video.
                   </video>
-                )}
-                {/* Quick controls: Play/Pause, Replay, ±10s seek, Download. */}
-                <div className="flex flex-wrap items-center gap-2 px-3 py-2 bg-surface-inverse border-t border-edge-strong">
-                  <button
-                    type="button"
-                    onClick={handlePlayPause}
-                    className="px-3 py-1.5 rounded-lg bg-surface-sunken hover:bg-surface-raised text-ink text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs min-h-[44px] min-w-[44px]"
-                    aria-label={isPlaying ? 'Pause video' : 'Play video'}
-                  >
-                    {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
-                    {isPlaying ? 'Pause' : 'Play'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleReplay}
-                    className="px-3 py-1.5 rounded-lg bg-surface-sunken hover:bg-surface-raised text-ink text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs min-h-[44px] min-w-[44px]"
-                    aria-label="Replay video from start"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5" /> Replay
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleSeek(-10)}
-                    className="px-3 py-1.5 rounded-lg bg-surface-sunken hover:bg-surface-raised text-ink text-xs font-bold transition-colors cursor-pointer shadow-xs min-h-[44px] min-w-[44px]"
-                    aria-label="Seek back 10 seconds"
-                  >
-                    -10s
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleSeek(10)}
-                    className="px-3 py-1.5 rounded-lg bg-surface-sunken hover:bg-surface-raised text-ink text-xs font-bold transition-colors cursor-pointer shadow-xs min-h-[44px] min-w-[44px]"
-                    aria-label="Seek forward 10 seconds"
-                  >
-                    +10s
-                  </button>
-                </div>
+                ) : (video?.driveFileId || (submission as any)?.videoDriveId) && !(video?.driveFileId || (submission as any)?.videoDriveId)?.startsWith('mock_') ? (
+                  <iframe
+                    src={`https://drive.google.com/file/d/${video?.driveFileId || (submission as any)?.videoDriveId}/preview`}
+                    allow="autoplay; fullscreen"
+                    className="w-full h-full border-0 rounded-lg aspect-video"
+                    title="Introduction video preview"
+                  />
+                ) : null}
                 {previewError && (
                   <p className="px-4 py-2 text-[11px] text-ink bg-status-bg-pending border-t border-edge" role="alert">
-                    Could not load your recording from the server. Refresh the
-                    page to try again, or use Download.
+                    Could not load your recording from the server. Refresh the page to try again.
                   </p>
                 )}
               </div>

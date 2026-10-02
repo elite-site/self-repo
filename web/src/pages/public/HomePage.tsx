@@ -1,11 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Navigate, Link, useNavigate, useLocation } from 'react-router-dom';
-import { StudentSession, PublicIntroVideo } from '../../types';
+import { StudentSession } from '../../types';
 import { api, resolveMediaUrl } from '../../services/api';
 import { Navbar } from '../../components/Navbar';
 import { Footer } from '../../components/Footer';
 import { GuidelinesSection } from '../../components/GuidelinesSection';
-import { PublicVideoShowcase } from '../../components/PublicVideoShowcase';
 import { ArrowRight, Search, Users, Calendar, GraduationCap, CheckCircle2 } from 'lucide-react';
 
 interface HomePageProps {
@@ -18,42 +17,24 @@ export const HomePage: React.FC<HomePageProps> = ({ session, onLogout }) => {
   const navigate = useNavigate();
   const { hash } = useLocation();
 
-  // The published introduction videos, owned here so the hero's featured clip and
-  // the showcase below share one request rather than firing two.
-  const [videos, setVideos] = useState<PublicIntroVideo[]>([]);
-  const [videosLoading, setVideosLoading] = useState(true);
-  const [videosFailed, setVideosFailed] = useState(false);
-
-  // Real counts, fetched rather than typed in. The old hero advertised "400+
-  // students" and "50+ skills" as fixed copy, which is both unverifiable and
-  // wrong the moment the roster changes. A stat we cannot load is simply not
-  // shown.
-  const [videoTotal, setVideoTotal] = useState<number | null>(null);
+  const [featuredStudents, setFeaturedStudents] = useState<any[]>([]);
+  const [studentsLoading, setStudentsLoading] = useState(true);
   const [studentTotal, setStudentTotal] = useState<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
 
     api
-      .getPublicVideos()
-      .then((res) => {
-        if (cancelled) return;
-        setVideos(Array.isArray(res?.items) ? res.items : []);
-        setVideoTotal(typeof res?.total === 'number' ? res.total : null);
-      })
-      .catch(() => {
-        if (!cancelled) setVideosFailed(true);
-      })
-      .finally(() => {
-        if (!cancelled) setVideosLoading(false);
-      });
-
-    api
-      .getPublicStudents({ limit: 1 })
+      .getPublicStudents({ limit: 3 })
       .then((data) => {
-        if (!cancelled && typeof data?.total === 'number') setStudentTotal(data.total);
+        if (cancelled) return;
+        setFeaturedStudents(Array.isArray(data?.students) ? data.students : []);
+        if (typeof data?.total === 'number') setStudentTotal(data.total);
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setStudentsLoading(false);
+      });
 
     return () => {
       cancelled = true;
@@ -85,10 +66,8 @@ export const HomePage: React.FC<HomePageProps> = ({ session, onLogout }) => {
     window.location.href = api.getOAuthAuthorizeUrl();
   };
 
-  const featuredVideo = videos[0] ?? null;
   const stats = [
     studentTotal !== null ? { label: 'Verified profiles in the directory', value: studentTotal } : null,
-    videoTotal !== null ? { label: 'Published introduction videos', value: videoTotal } : null,
   ].filter((stat): stat is { label: string; value: number } => stat !== null);
 
   return (
@@ -146,51 +125,48 @@ export const HomePage: React.FC<HomePageProps> = ({ session, onLogout }) => {
                   </span>
                 </div>
 
-                {featuredVideo ? (
-                  <div className="pt-4">
-                    {featuredVideo.driveFileId && !featuredVideo.driveFileId.startsWith('mock_') ? (
-                      <iframe
-                        src={`https://drive.google.com/file/d/${featuredVideo.driveFileId}/preview`}
-                        allow="autoplay; fullscreen"
-                        className="aspect-video w-full rounded-lg border-0 bg-surface-inverse"
-                        title={featuredVideo.name}
-                      />
-                    ) : (
-                      <video
-                        src={resolveMediaUrl(featuredVideo.streamUrl)}
-                        poster={featuredVideo.thumbnailUrl ? resolveMediaUrl(featuredVideo.thumbnailUrl) : undefined}
-                        controls
-                        controlsList="nodownload"
-                        onContextMenu={(e) => e.preventDefault()}
-                        preload="none"
-                        playsInline
-                        className="aspect-video w-full rounded-lg bg-surface-inverse object-contain"
-                      >
-                        Your browser does not support video playback.
-                      </video>
-                    )}
-                    <div className="mt-3 flex items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="truncate font-heading text-label-lg font-semibold text-ink">
-                          {featuredVideo.name}
-                        </p>
-                        <p className="truncate text-label-md text-ink-muted">
-                          Year {featuredVideo.year} · Section {featuredVideo.section}
-                        </p>
+                {studentsLoading ? (
+                  <div className="py-8 text-center text-body-sm text-ink-secondary">
+                    Loading department profiles…
+                  </div>
+                ) : featuredStudents.length > 0 ? (
+                  <div className="divide-y divide-edge pt-2">
+                    {featuredStudents.map((st) => (
+                      <div key={st.id} className="flex items-center justify-between gap-3 py-3">
+                        <div className="flex min-w-0 items-center gap-3">
+                          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand-soft font-semibold text-brand-soft-text overflow-hidden">
+                            {st.profile?.photoUrl ? (
+                              <img
+                                src={resolveMediaUrl(st.profile.photoUrl)}
+                                alt={st.name}
+                                loading="lazy"
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              st.name.slice(0, 2).toUpperCase()
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="truncate font-heading text-label-lg font-semibold text-ink">
+                              {st.name}
+                            </p>
+                            <p className="truncate text-label-sm text-ink-muted">
+                              {st.rollNo} · Year {st.year} ({st.section})
+                            </p>
+                          </div>
+                        </div>
+                        <Link
+                          to={`/students/${st.rollNo || st.id}`}
+                          className="shrink-0 text-label-md font-semibold text-ink-brand hover:text-brand-hover"
+                        >
+                          View profile
+                        </Link>
                       </div>
-                      <Link
-                        to={featuredVideo.profileUrl}
-                        className="shrink-0 text-label-lg font-semibold text-ink-brand hover:text-brand-hover"
-                      >
-                        View profile
-                      </Link>
-                    </div>
+                    ))}
                   </div>
                 ) : (
-                  <p className="pt-4 text-body-sm text-ink-secondary">
-                    {videosLoading
-                      ? 'Loading the latest student introduction…'
-                      : 'A student introduction video appears here once faculty have approved it and the student has published it.'}
+                  <p className="py-6 text-body-sm text-ink-secondary">
+                    Browse verified student profiles in the department directory.
                   </p>
                 )}
 
@@ -274,10 +250,6 @@ export const HomePage: React.FC<HomePageProps> = ({ session, onLogout }) => {
           </div>
         </section>
 
-        {/* ── SHOWCASE: reuses the request the hero already made ──────────── */}
-        <div className="mx-auto max-w-canvas px-6 sm:px-10">
-          <PublicVideoShowcase videos={videos} loading={videosLoading} failed={videosFailed} />
-        </div>
 
         <GuidelinesSection />
 

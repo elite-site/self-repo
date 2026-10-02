@@ -9,9 +9,9 @@ import {
 } from 'react-router-dom';
 import { Sidebar, AdminTab, ACTIVE_EVENT_ID } from './components/Sidebar';
 import { AdminHeader } from './components/AdminHeader';
-import { StatsDashboard } from './components/StatsDashboard';
-import { StudentsTable } from './components/StudentsTable';
-import { ActivityLogView } from './components/ActivityLogView';
+const StatsDashboard = React.lazy(() => import('./components/StatsDashboard').then((m) => ({ default: m.StatsDashboard })));
+const StudentsTable = React.lazy(() => import('./components/StudentsTable').then((m) => ({ default: m.StudentsTable })));
+const ActivityLogView = React.lazy(() => import('./components/ActivityLogView').then((m) => ({ default: m.ActivityLogView })));
 import { LoginPage } from './components/LoginPage';
 import { AdminStats, AdminUser } from './types';
 import { adminApi } from './services/api';

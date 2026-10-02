@@ -125,6 +125,7 @@ export const Lightbox: React.FC<LightboxProps> = ({
           <img
             src={image.src}
             alt={image.alt}
+            loading="lazy"
             className="mx-auto block h-auto max-h-full w-auto max-w-full object-contain"
           />
         )}

@@ -363,6 +363,7 @@ router.get('/events', async (_req: Request, res: Response) => {
       where: { status: 'OPEN' },
       orderBy: { createdAt: 'desc' }
     });
+    res.set('Cache-Control', 'public, max-age=60');
     res.json(events);
   } catch (err: any) {
     res.status(500).json({ error: 'SERVER_ERROR', message: err.message });

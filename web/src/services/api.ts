@@ -31,6 +31,21 @@ client.interceptors.request.use((config) => {
   return config;
 });
 
+// Centralized 401 handler: purge token when authenticated requests are rejected
+client.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error?.response?.status === 401 && typeof window !== 'undefined') {
+      const url = error.config?.url || '';
+      if (url.includes('/student/') && !url.includes('/student/me')) {
+        localStorage.removeItem('student_token');
+        window.dispatchEvent(new CustomEvent('elite-session-expired'));
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 export interface UploadProgressInfo {
   loaded: number;
   total: number;
@@ -82,7 +97,7 @@ export const api = {
     file: File,
     onProgress?: (progress: UploadProgressInfo) => void,
     signal?: AbortSignal,
-  ): Promise<{ success: boolean; id: string; message?: string }> {
+  ): Promise<{ success: boolean; id: string; driveFileId?: string | null; previewUrl?: string | null; message?: string }> {
     return new Promise((resolve, reject) => {
       const base = (client.defaults.baseURL ?? 'http://localhost:5001/api')
         .replace(/\/api\/?$/, '');
@@ -268,22 +283,64 @@ export const api = {
   // Announcements
   async getAnnouncement(id: string) { const res = await client.get(`/student/announcements/${encodeURIComponent(id)}`); return res.data; },
 
-  // Public
-  async getPublicStudents(params?: any) { const res = await client.get('/public/students', { params }); return res.data; },
-  async getPublicSkills(): Promise<Array<{ id: string; name: string; category?: string | null }>> {
-    const res = await client.get('/public/students/skills');
-    return Array.isArray(res.data) ? res.data : [];
+  // Public (in-memory cached for instant navigation without loading spinners)
+  async getPublicStudents(params?: any) {
+    const key = `students_${JSON.stringify(params || {})}`;
+    return cachedFetch(key, 30_000, async () => {
+      const res = await client.get('/public/students', { params });
+      return res.data;
+    });
   },
-  async getPublicStudent(rollNo: string) { const res = await client.get(`/public/students/${rollNo}`); return res.data; },
-  async getPublicEvents() { const res = await client.get('/public/events'); return res.data; },
-  async getPublicEvent(id: string) { const res = await client.get(`/public/events/${id}`); return res.data; },
+  async getPublicSkills(): Promise<Array<{ id: string; name: string; category?: string | null }>> {
+    return cachedFetch('skills', 60_000, async () => {
+      const res = await client.get('/public/students/skills');
+      return Array.isArray(res.data) ? res.data : [];
+    });
+  },
+  async getPublicStudent(rollNo: string) {
+    return cachedFetch(`student_${rollNo}`, 30_000, async () => {
+      const res = await client.get(`/public/students/${rollNo}`);
+      return res.data;
+    });
+  },
+  async getPublicEvents() {
+    return cachedFetch('events', 30_000, async () => {
+      const res = await client.get('/public/events');
+      return res.data;
+    });
+  },
+  async getPublicEvent(id: string) {
+    return cachedFetch(`event_${id}`, 30_000, async () => {
+      const res = await client.get(`/public/events/${id}`);
+      return res.data;
+    });
+  },
 
   /** Approved + published introduction videos (empty until a video is approved). */
   async getPublicVideos(limit?: number): Promise<{ items: PublicIntroVideo[]; total: number }> {
-    const res = await client.get('/public/videos', { params: limit ? { limit } : undefined });
-    return { items: res.data?.items ?? [], total: res.data?.total ?? 0 };
+    return cachedFetch(`videos_${limit || 0}`, 30_000, async () => {
+      const res = await client.get('/public/videos', { params: limit ? { limit } : undefined });
+      return { items: res.data?.items ?? [], total: res.data?.total ?? 0 };
+    });
   },
 };
+
+const memoryCache = new Map<string, { expiresAt: number; data: any }>();
+
+async function cachedFetch<T>(key: string, ttlMs: number, fetcher: () => Promise<T>): Promise<T> {
+  const cached = memoryCache.get(key);
+  const now = Date.now();
+  if (cached && cached.expiresAt > now) {
+    return cached.data as T;
+  }
+  const fresh = await fetcher();
+  memoryCache.set(key, { expiresAt: now + ttlMs, data: fresh });
+  return fresh;
+}
+
+export function invalidateApiCache(): void {
+  memoryCache.clear();
+}
 
 /** Absolute URL for a media path returned by the API (works in <video src>). */
 export function resolveMediaUrl(pathOrUrl: string): string {

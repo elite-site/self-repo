@@ -51,7 +51,17 @@ router.get('/', async (req: Request, res: Response) => {
 
     const submission = await prisma.submission.findFirst({
       where: { rollNo: student.rollNo },
-      orderBy: { submittedAt: 'desc' }
+      orderBy: { submittedAt: 'desc' },
+      select: {
+        id: true,
+        status: true,
+        submittedAt: true,
+        videoDriveId: true,
+        reviewText: true,
+        reviewPros: true,
+        reviewCons: true,
+        reviewedAt: true,
+      },
     });
 
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');

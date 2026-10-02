@@ -25,16 +25,19 @@ const REDIRECTABLE_TYPES = new Set(['video']);
 
 // GET /api/branches
 router.get('/branches', (_req: Request, res: Response) => {
+  res.set('Cache-Control', 'public, max-age=86400');
   res.json({ branches: BRANCHES });
 });
 
 // GET /api/sections
 router.get('/sections', (_req: Request, res: Response) => {
+  res.set('Cache-Control', 'public, max-age=86400');
   res.json({ sections: SECTIONS });
 });
 
 // GET /api/years
 router.get('/years', (_req: Request, res: Response) => {
+  res.set('Cache-Control', 'public, max-age=86400');
   res.json({ years: YEARS });
 });
 
@@ -266,6 +269,7 @@ router.get('/public/events', async (_req: Request, res: Response): Promise<void>
       where: { status: 'OPEN' },
       orderBy: { createdAt: 'desc' }
     });
+    res.set('Cache-Control', 'public, max-age=60');
     res.json(events.map(e => ({
       ...e,
       title: e.name,
@@ -293,6 +297,7 @@ router.get('/public/events/:id', async (req: Request, res: Response): Promise<vo
       res.status(404).json({ error: 'NOT_FOUND', message: 'Event not found' });
       return;
     }
+    res.set('Cache-Control', 'public, max-age=60');
     res.json({
       ...event,
       title: event.name,
