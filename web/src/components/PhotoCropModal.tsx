@@ -275,7 +275,8 @@ export const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
             )}
           </button>
         </div>
-      </div>,
+      </div>
+    </div>,
     document.body
   );
 };
