@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import {
   Bell,
@@ -261,37 +262,114 @@ const DashboardSkeleton: React.FC = () => (
   </div>
 );
 
-// Fast in-memory cache so navigating back to dashboard renders in 0ms without skeleton flicker
-let dashboardCache: {
-  profile: DashboardProfile | null;
-  resume: DashboardResume | DashboardResume[] | null;
-  projects: Project[];
-  achievements: Achievement[];
-  certificates: Certificate[];
-  events: Event[];
-  registrations: EventRegistration[];
-  votingCampaigns: VotingCampaign[];
-  notifications: Notification[];
-  timestamp: number;
-} | null = null;
-
 export const DashboardPage: React.FC = () => {
-  const [profile, setProfile] = useState<DashboardProfile | null>(() => dashboardCache?.profile ?? null);
-  const [resume, setResume] = useState<DashboardResume | DashboardResume[] | null>(() => dashboardCache?.resume ?? null);
-  const [projects, setProjects] = useState<Project[]>(() => dashboardCache?.projects ?? []);
-  const [achievements, setAchievements] = useState<Achievement[]>(() => dashboardCache?.achievements ?? []);
-  const [certificates, setCertificates] = useState<Certificate[]>(() => dashboardCache?.certificates ?? []);
-  const [events, setEvents] = useState<Event[]>(() => dashboardCache?.events ?? []);
-  const [registrations, setRegistrations] = useState<EventRegistration[]>(() => dashboardCache?.registrations ?? []);
-  const [votingCampaigns, setVotingCampaigns] = useState<VotingCampaign[]>(() => dashboardCache?.votingCampaigns ?? []);
-  const [notifications, setNotifications] = useState<Notification[]>(() => dashboardCache?.notifications ?? []);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
-  const [loading, setLoading] = useState(() => !dashboardCache);
-  const [profileError, setProfileError] = useState<string | null>(null);
-  const [eventsError, setEventsError] = useState<string | null>(null);
-  const [notifError, setNotifError] = useState<string | null>(null);
-  const [votingError, setVotingError] = useState<string | null>(null);
+  const {
+    data: profileData,
+    isLoading: profileLoading,
+    isError: profileIsError,
+    refetch: refetchProfile,
+  } = useQuery<DashboardProfile>({
+    queryKey: ['dashboard', 'profile'],
+    queryFn: () => api.getProfile(),
+  });
+  const profile = profileData ?? null;
+  const profileError = profileIsError ? 'We could not load your profile right now.' : null;
+
+  const {
+    data: resumeData,
+  } = useQuery<DashboardResume | DashboardResume[] | null>({
+    queryKey: ['dashboard', 'resume'],
+    queryFn: () => api.getResume(),
+  });
+  const resume = resumeData ?? null;
+
+  const {
+    data: projectsData,
+  } = useQuery<Project[]>({
+    queryKey: ['dashboard', 'projects'],
+    queryFn: () => api.getProjects(),
+  });
+  const projects = Array.isArray(projectsData) ? projectsData : [];
+
+  const {
+    data: achievementsData,
+  } = useQuery<Achievement[]>({
+    queryKey: ['dashboard', 'achievements'],
+    queryFn: () => api.getAchievements(),
+  });
+  const achievements = Array.isArray(achievementsData) ? achievementsData : [];
+
+  const {
+    data: certificatesData,
+  } = useQuery<Certificate[]>({
+    queryKey: ['dashboard', 'certificates'],
+    queryFn: () => api.getCertificates(),
+  });
+  const certificates = Array.isArray(certificatesData) ? certificatesData : [];
+
+  const {
+    data: eventsData,
+    isError: eventsIsError,
+    refetch: refetchEvents,
+  } = useQuery<Event[]>({
+    queryKey: ['dashboard', 'events'],
+    queryFn: () => api.getEvents(),
+  });
+  const events = Array.isArray(eventsData) ? eventsData : [];
+  const eventsError = eventsIsError ? 'We could not load department events right now.' : null;
+
+  const {
+    data: registrationsData,
+  } = useQuery<EventRegistration[]>({
+    queryKey: ['dashboard', 'registrations'],
+    queryFn: () => api.getRegistrations(),
+  });
+  const registrations = Array.isArray(registrationsData) ? registrationsData : [];
+
+  const {
+    data: votingData,
+    isError: votingIsError,
+    refetch: refetchVoting,
+  } = useQuery<VotingCampaign[]>({
+    queryKey: ['dashboard', 'votingCampaigns'],
+    queryFn: () => api.getVotingCampaigns(),
+  });
+  const votingCampaigns = Array.isArray(votingData) ? votingData : [];
+  const votingError = votingIsError ? 'We could not load voting campaigns right now.' : null;
+
+  const {
+    data: notifsData,
+    isError: notifIsError,
+    refetch: refetchNotifs,
+  } = useQuery<{ items?: Notification[] } | Notification[]>({
+    queryKey: ['dashboard', 'notifications'],
+    queryFn: () => api.getNotifications(),
+  });
+  const notifications: Notification[] = Array.isArray(notifsData)
+    ? notifsData
+    : Array.isArray(notifsData?.items)
+    ? notifsData.items
+    : [];
+  const notifError = notifIsError ? 'We could not load your recent activity right now.' : null;
+
+  const markNotificationMutation = useMutation({
+    mutationFn: (id: string) => api.markNotificationRead(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dashboard', 'notifications'] });
+    },
+  });
+
+  const handleNotificationClick = (n: Notification) => {
+    if (!n.isRead && n.status !== 'READ') {
+      markNotificationMutation.mutate(n.id);
+    }
+
+    const destination = getNotificationDestination(n);
+    navigateToNotification(destination, navigate);
+  };
 
   const shouldReduce = useReducedMotion();
   // §6.2 "Animation Details": one section per 100ms, greeting first. The
@@ -299,124 +377,6 @@ export const DashboardPage: React.FC = () => {
   // late (§3.4).
   const staggerContainer = selectVariantsByName(shouldReduce, 'staggerFastContainer');
   const staggerItem = selectVariantsByName(shouldReduce, 'staggerFastItem');
-
-  const loadData = async (isInitial = true) => {
-    if (isInitial && !dashboardCache) setLoading(true);
-    setProfileError(null);
-
-    const [
-      pResult,
-      rResult,
-      projResult,
-      achResult,
-      certResult,
-      evResult,
-      regResult,
-      vResult,
-      nResult,
-    ] = await Promise.allSettled([
-      api.getProfile(),
-      api.getResume(),
-      api.getProjects(),
-      api.getAchievements(),
-      api.getCertificates(),
-      api.getEvents(),
-      api.getRegistrations(),
-      api.getVotingCampaigns(),
-      api.getNotifications(),
-    ]);
-
-    let loadedProfile = dashboardCache?.profile ?? null;
-    let loadedResume = dashboardCache?.resume ?? null;
-    let loadedProjects = dashboardCache?.projects ?? [];
-    let loadedAchievements = dashboardCache?.achievements ?? [];
-    let loadedCertificates = dashboardCache?.certificates ?? [];
-    let loadedEvents = dashboardCache?.events ?? [];
-    let loadedRegistrations = dashboardCache?.registrations ?? [];
-    let loadedVoting = dashboardCache?.votingCampaigns ?? [];
-    let loadedNotifs = dashboardCache?.notifications ?? [];
-
-    if (pResult.status === 'fulfilled') {
-      loadedProfile = pResult.value;
-      setProfile(pResult.value);
-    } else if (!dashboardCache) {
-      setProfileError('We could not load your profile right now.');
-    }
-
-    if (rResult.status === 'fulfilled') {
-      loadedResume = rResult.value;
-      setResume(rResult.value);
-    }
-    if (projResult.status === 'fulfilled' && Array.isArray(projResult.value)) {
-      loadedProjects = projResult.value;
-      setProjects(projResult.value);
-    }
-    if (achResult.status === 'fulfilled' && Array.isArray(achResult.value)) {
-      loadedAchievements = achResult.value;
-      setAchievements(achResult.value);
-    }
-    if (certResult.status === 'fulfilled' && Array.isArray(certResult.value)) {
-      loadedCertificates = certResult.value;
-      setCertificates(certResult.value);
-    }
-
-    if (evResult.status === 'fulfilled' && Array.isArray(evResult.value)) {
-      loadedEvents = evResult.value;
-      setEvents(evResult.value);
-    } else if (!dashboardCache) {
-      setEventsError('We could not load department events right now.');
-    }
-
-    if (regResult.status === 'fulfilled' && Array.isArray(regResult.value)) {
-      loadedRegistrations = regResult.value;
-      setRegistrations(regResult.value);
-    }
-
-    if (vResult.status === 'fulfilled' && Array.isArray(vResult.value)) {
-      loadedVoting = vResult.value;
-      setVotingCampaigns(vResult.value);
-    } else if (!dashboardCache) {
-      setVotingError('We could not load voting campaigns right now.');
-    }
-
-    if (nResult.status === 'fulfilled' && Array.isArray(nResult.value?.items)) {
-      loadedNotifs = nResult.value.items;
-      setNotifications(nResult.value.items);
-    } else if (!dashboardCache) {
-      setNotifError('We could not load your recent activity right now.');
-    }
-
-    dashboardCache = {
-      profile: loadedProfile,
-      resume: loadedResume,
-      projects: loadedProjects,
-      achievements: loadedAchievements,
-      certificates: loadedCertificates,
-      events: loadedEvents,
-      registrations: loadedRegistrations,
-      votingCampaigns: loadedVoting,
-      notifications: loadedNotifs,
-      timestamp: Date.now(),
-    };
-
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const handleNotificationClick = (n: Notification) => {
-    if (!n.isRead && n.status !== 'READ') {
-      api.markNotificationRead(n.id).catch(() => {});
-      setNotifications((prev) =>
-        prev.map((item) => (item.id === n.id ? { ...item, isRead: true, status: 'READ' } : item))
-      );
-    }
-
-    const destination = getNotificationDestination(n);
-    navigateToNotification(destination, navigate);
-  };
 
   // Compute real profile completion
   const checkPhoto = !!profile?.photoUrl;
@@ -558,7 +518,7 @@ export const DashboardPage: React.FC = () => {
     },
   ];
 
-  if (loading && !profile) {
+  if (profileLoading && !profile) {
     return <DashboardSkeleton />;
   }
 
@@ -594,7 +554,7 @@ export const DashboardPage: React.FC = () => {
           <ErrorState
             title="We could not load your profile"
             message={profileError}
-            onRetry={() => loadData(true)}
+            onRetry={() => refetchProfile()}
           />
         </motion.div>
       )}
@@ -684,7 +644,7 @@ export const DashboardPage: React.FC = () => {
 
             <div className="mt-4">
               {notifError ? (
-                <ErrorState bare message={notifError} onRetry={() => loadData(true)} />
+                <ErrorState bare message={notifError} onRetry={() => refetchNotifs()} />
               ) : notifications.length === 0 ? (
                 <EmptyState
                   bare
@@ -758,7 +718,7 @@ export const DashboardPage: React.FC = () => {
 
             <div className="mt-4">
               {eventsError ? (
-                <ErrorState bare message={eventsError} onRetry={() => loadData(true)} />
+                <ErrorState bare message={eventsError} onRetry={() => refetchEvents()} />
               ) : upcomingEvents.length === 0 ? (
                 <EmptyState
                   bare
@@ -895,7 +855,7 @@ export const DashboardPage: React.FC = () => {
             <ErrorState
               title="Voting is unavailable"
               message={votingError}
-              onRetry={() => loadData(true)}
+              onRetry={() => refetchVoting()}
             />
           )}
         </div>
