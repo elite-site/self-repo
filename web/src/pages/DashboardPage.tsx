@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import {
   Bell,
   Calendar,
@@ -10,26 +11,131 @@ import {
   FolderOpen,
   Plus,
   User,
+  Users,
   Video,
   Vote,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { getNotificationDestination, navigateToNotification } from '../utils/notificationRouting';
-import { StudentProfile, Project, Event, EventRegistration, VotingCampaign, Notification } from '../types';
+import {
+  Achievement,
+  Certificate,
+  StudentProfile,
+  Project,
+  Event,
+  EventRegistration,
+  VotingCampaign,
+  Notification,
+} from '../types';
+import { Card } from '../components/ui/Card';
+import { ProgressBar } from '../components/ui/ProgressBar';
+import { Skeleton } from '../components/ui/Skeleton';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorState } from '../components/ui/ErrorState';
+import { useReducedMotion } from '../hooks/useReducedMotion';
+import { selectVariantsByName } from '../lib/motion';
+import {
+  DashboardTaskBoard,
+  DashboardTaskBoardSkeleton,
+  type DashboardTask,
+  type DashboardTone,
+} from './DashboardTaskBoard';
+
+/**
+ * The dashboard, rebuilt to REDESIGN_PLAN §6.2.
+ *
+ * The plan asks for a Kanban board, a streak tracker and per-card "Complete"
+ * actions. Two of those three have no endpoint behind them — there is no streak
+ * anywhere in the API and no mutation that completes a profile section from the
+ * dashboard — so they are absent rather than faked (§2.4). What the board shows
+ * is real: the same six profile sections the completion banner has always
+ * counted, grouped by where each one actually is.
+ */
 
 /**
  * Moderation state of the introduction video, phrased for the student rather
  * than in the enum's own words. Kept identical to `ProfilePage` so the same
  * status never reads two different ways in two places.
  */
-const VIDEO_STATUS: Record<string, { tone: string; label: string }> = {
+const VIDEO_STATUS: Record<string, { tone: DashboardTone; label: string }> = {
   APPROVED: { tone: 'badge-approved', label: 'Approved' },
   SUBMITTED: { tone: 'badge-pending', label: 'Under review' },
   CHANGES_REQUESTED: { tone: 'badge-changes', label: 'Changes requested' },
   REJECTED: { tone: 'badge-rejected', label: 'Rejected' },
 };
+
+/** `api.getResume()` returns a row or a list depending on how many exist. */
+interface DashboardResume {
+  driveFileId?: string | null;
+  fileUrl?: string | null;
+}
+
+/** The API still carries a legacy `biography` column alongside `bio`. */
+type DashboardProfile = StudentProfile & { biography?: string | null };
+
+/**
+ * The five profile sections that are always present, in the order they are worth
+ * doing. The first three are the ones a single visit to `/profile/edit` fixes,
+ * which is why the completion banner's chips and the board's "To Do" column
+ * agree on which three to lead with.
+ */
+const SETUP_ITEMS = [
+  {
+    id: 'photo',
+    label: 'Profile photo',
+    to: '/profile/edit',
+    destination: 'your profile',
+    icon: User,
+    cta: 'Add photo',
+    todo: 'Not added',
+    done: 'Added',
+    hint: 'A face makes your profile recognisable at a glance.',
+  },
+  {
+    id: 'bio',
+    label: 'Biography',
+    to: '/profile/edit',
+    destination: 'your profile',
+    icon: FileText,
+    cta: 'Write biography',
+    todo: 'Not written',
+    done: 'Written',
+    hint: 'A few lines on what you build and why.',
+  },
+  {
+    id: 'skills',
+    label: 'Technical skills',
+    to: '/profile/edit',
+    destination: 'your profile',
+    icon: Plus,
+    cta: 'Add skills',
+    todo: 'None listed',
+    done: 'Listed',
+    hint: 'The tools you work in, so recruiters can search for them.',
+  },
+  {
+    id: 'resume',
+    label: 'Resume',
+    to: '/resume',
+    destination: 'your resume',
+    icon: FileText,
+    cta: 'Upload resume',
+    todo: 'Not uploaded',
+    done: 'Uploaded',
+    hint: 'One PDF a recruiter can download without asking you.',
+  },
+  {
+    id: 'project',
+    label: 'First project',
+    to: '/portfolio',
+    destination: 'your portfolio',
+    icon: FolderOpen,
+    cta: 'Add project',
+    todo: 'None yet',
+    done: 'Added',
+    hint: 'One finished project beats an empty portfolio.',
+  },
+] as const;
 
 /** The dashboard talks to a person, so the greeting follows the clock. */
 const greetingFor = (hour: number) => {
@@ -54,6 +160,12 @@ const eventDateParts = (value: string) => {
   };
 };
 
+const shortDate = (value: string | undefined) => {
+  const date = value ? new Date(value) : null;
+  if (!date || Number.isNaN(date.getTime())) return '';
+  return date.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+};
+
 /** Relative "2d ago" for the activity feed, falling back to a date past a week. */
 const relativeTime = (value: string | undefined) => {
   const time = value ? new Date(value).getTime() : NaN;
@@ -69,55 +181,92 @@ const relativeTime = (value: string | undefined) => {
 };
 
 /**
- * Shaped like the real dashboard so the page does not jump when the data
- * lands. The old full-screen branded spinner blanked the whole shell for a
- * page whose layout we already know.
+ * Shaped like the real dashboard so the page does not jump when the data lands:
+ * greeting, completion banner, then the board beside the contextual sidebar
+ * (§6.2 "Loading State"). A full-screen spinner for a layout we already know is
+ * what this replaces.
  */
 const DashboardSkeleton: React.FC = () => (
   <div className="space-y-6" aria-busy="true">
     <span className="sr-only" role="status">
       Loading your dashboard
     </span>
+
     <div className="space-y-2">
-      <div className="skeleton h-8 w-64" />
-      <div className="skeleton h-4 w-80" />
+      <Skeleton className="h-9 w-64" />
+      <Skeleton className="h-4 w-80" />
     </div>
-    <div className="surface space-y-4 p-5 sm:p-6">
-      <div className="skeleton h-5 w-40" />
-      <div className="skeleton h-2 w-full rounded-full" />
-      <div className="flex flex-wrap gap-2">
-        <div className="skeleton h-7 w-28 rounded-full" />
-        <div className="skeleton h-7 w-32 rounded-full" />
+
+    <div className="surface p-5 sm:p-6">
+      <div className="flex items-start justify-between gap-3">
+        <div className="space-y-2">
+          <Skeleton className="h-5 w-44" />
+          <Skeleton className="h-3 w-72" />
+        </div>
+        <Skeleton className="h-9 w-20" />
       </div>
-    </div>
-    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-      {[0, 1, 2, 3].map((i) => (
-        <div key={i} className="skeleton h-[72px]" />
-      ))}
-    </div>
-    <div className="grid gap-4 lg:grid-cols-3">
-      <div className="surface space-y-3 p-5 sm:p-6 lg:col-span-2">
-        <div className="skeleton h-5 w-40" />
-        {[0, 1, 2].map((i) => (
-          <div key={i} className="skeleton h-14" />
-        ))}
+      <Skeleton className="mt-4 h-2 w-full rounded-full" />
+      <div className="mt-4 flex flex-wrap gap-2">
+        <Skeleton className="h-7 w-28 rounded-full" />
+        <Skeleton className="h-7 w-32 rounded-full" />
+        <Skeleton className="h-7 w-24 rounded-full" />
       </div>
-      <div className="surface space-y-3 p-5 sm:p-6">
-        <div className="skeleton h-5 w-32" />
-        {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="skeleton h-10" />
-        ))}
+      <Skeleton className="mt-5 h-10 w-36 rounded-md" />
+    </div>
+
+    <div className="grid gap-6 lg:grid-cols-3">
+      <div className="space-y-6 lg:col-span-2">
+        <DashboardTaskBoardSkeleton />
+        <div className="surface p-5 sm:p-6">
+          <Skeleton className="h-5 w-40" />
+          <div className="mt-4 space-y-3">
+            {[0, 1, 2].map((row) => (
+              <div key={row} className="flex items-start gap-3">
+                <Skeleton className="size-8 rounded-full" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-1/2" />
+                  <Skeleton className="h-3 w-3/4" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-6">
+        <div className="surface p-5 sm:p-6">
+          <Skeleton className="h-5 w-36" />
+          <div className="mt-4 space-y-3">
+            {[0, 1, 2].map((row) => (
+              <div key={row} className="flex items-center gap-3">
+                <Skeleton className="size-12 rounded-lg" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-2/3" />
+                  <Skeleton className="h-3 w-1/2" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="surface p-5 sm:p-6">
+          <Skeleton className="h-5 w-32" />
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            {[0, 1, 2, 3].map((cell) => (
+              <Skeleton key={cell} className="h-20 rounded-xl" />
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   </div>
 );
 
 export const DashboardPage: React.FC = () => {
-  const [profile, setProfile] = useState<StudentProfile | null>(null);
-  const [resume, setResume] = useState<any | null>(null);
+  const [profile, setProfile] = useState<DashboardProfile | null>(null);
+  const [resume, setResume] = useState<DashboardResume | DashboardResume[] | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
-  const [achievements, setAchievements] = useState<any[]>([]);
-  const [certificates, setCertificates] = useState<any[]>([]);
+  const [achievements, setAchievements] = useState<Achievement[]>([]);
+  const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
   const [registrations, setRegistrations] = useState<EventRegistration[]>([]);
   const [votingCampaigns, setVotingCampaigns] = useState<VotingCampaign[]>([]);
@@ -129,6 +278,13 @@ export const DashboardPage: React.FC = () => {
   const [eventsError, setEventsError] = useState<string | null>(null);
   const [notifError, setNotifError] = useState<string | null>(null);
   const [votingError, setVotingError] = useState<string | null>(null);
+
+  const shouldReduce = useReducedMotion();
+  // §6.2 "Animation Details": one section per 100ms, greeting first. The
+  // reduced pair drops both the stagger and the travel, so nothing arrives
+  // late (§3.4).
+  const staggerContainer = selectVariantsByName(shouldReduce, 'staggerFastContainer');
+  const staggerItem = selectVariantsByName(shouldReduce, 'staggerFastItem');
 
   const loadData = async (isInitial = true) => {
     if (isInitial && !profile) setLoading(true);
@@ -196,69 +352,165 @@ export const DashboardPage: React.FC = () => {
 
   // Compute real profile completion
   const checkPhoto = !!profile?.photoUrl;
-  const checkBio = !!(profile?.bio || (profile as any)?.biography);
+  const checkBio = !!(profile?.bio || profile?.biography);
   const checkSkills = !!(profile?.skills && profile.skills.length > 0);
-  const checkVideo = !!(profile?.submission?.videoUploaded || profile?.submission?.videoUrl || profile?.submission?.status === 'APPROVED' || profile?.submission?.status === 'SUBMITTED');
+  const submissionStatus = profile?.submission?.status;
+  const checkVideo =
+    !!(profile?.submission?.videoUploaded ||
+      profile?.submission?.videoUrl ||
+      submissionStatus === 'APPROVED' ||
+      submissionStatus === 'SUBMITTED');
   const activeResume = Array.isArray(resume) ? (resume.length > 0 ? resume[0] : null) : resume;
   const checkResume = !!(activeResume?.driveFileId || activeResume?.fileUrl);
   const checkProjects = projects.length > 0;
 
-  const completionItems = [
-    { label: 'Profile photo', done: checkPhoto, link: '/profile/edit' },
-    { label: 'Biography', done: checkBio, link: '/profile/edit' },
-    { label: 'Technical skills', done: checkSkills, link: '/profile/edit' },
-    { label: 'Intro video', done: checkVideo, link: '/intro-video' },
-    { label: 'Resume', done: checkResume, link: '/resume' },
-    { label: 'First project', done: checkProjects, link: '/portfolio' },
+  const videoStatus = VIDEO_STATUS[submissionStatus ?? ''] ?? {
+    tone: 'badge-draft' as DashboardTone,
+    label: 'Not submitted',
+  };
+
+  /**
+   * A submitted video is the only thing here that is genuinely mid-flight — it
+   * is with a moderator, not with the student — so it is the only card that
+   * lands in "In Progress".
+   */
+  const videoState = checkVideo
+    ? submissionStatus === 'SUBMITTED'
+      ? ('progress' as const)
+      : ('done' as const)
+    : ('todo' as const);
+
+  const completionItems: DashboardTask[] = [
+    ...SETUP_ITEMS.map<DashboardTask>((item) => {
+      const done =
+        item.id === 'photo'
+          ? checkPhoto
+          : item.id === 'bio'
+            ? checkBio
+            : item.id === 'skills'
+              ? checkSkills
+              : item.id === 'resume'
+                ? checkResume
+                : checkProjects;
+
+      return {
+        id: item.id,
+        title: item.label,
+        hint: item.hint,
+        to: item.to,
+        destination: item.destination,
+        icon: item.icon,
+        state: done ? 'done' : 'todo',
+        tone: done ? ('badge-approved' as DashboardTone) : ('badge-draft' as DashboardTone),
+        badge: done ? item.done : item.todo,
+        cta: item.cta,
+      };
+    }),
+    {
+      id: 'video',
+      title: 'Intro video',
+      hint:
+        videoState === 'progress'
+          ? 'With the moderation team — nothing needed from you.'
+          : 'Ninety seconds of you introducing yourself.',
+      dateChip:
+        videoState === 'progress'
+          ? shortDate(profile?.submission?.submittedAt)
+            ? `Sent ${shortDate(profile?.submission?.submittedAt)}`
+            : undefined
+          : undefined,
+      to: '/intro-video',
+      icon: Video,
+      state: videoState,
+      tone: videoStatus.tone,
+      badge: videoStatus.label,
+      cta: 'Upload video',
+    },
   ];
 
-  const completedCount = completionItems.filter((i) => i.done).length;
+  const completedCount = completionItems.filter((i) => i.state === 'done').length;
   const completionPercentage = Math.round((completedCount / completionItems.length) * 100);
-  const remainingItems = completionItems.filter((i) => !i.done);
+  const remainingItems = completionItems.filter((i) => i.state !== 'done');
   const isComplete = completionPercentage === 100;
+  /** §6.2 (2): the three chips on the banner. The board still lists them all. */
+  const nextMissing = remainingItems.slice(0, 3);
 
   // Only the events worth acting on, soonest first.
   const upcomingEvents = [...events].sort((a, b) => timeOf(a.date) - timeOf(b.date)).slice(0, 3);
-  const videoStatus = VIDEO_STATUS[profile?.submission?.status ?? ''] ?? {
-    tone: 'badge-draft',
-    label: 'Not submitted',
-  };
   const firstName = (profile?.name || 'there').split(' ').filter(Boolean)[0];
   const credentialsCount = achievements.length + certificates.length;
 
-  const quickActions = [
-    { label: 'Edit profile', hint: isComplete ? 'All set' : `${remainingItems.length} step${remainingItems.length === 1 ? '' : 's'} left`, to: '/profile/edit', icon: User },
-    { label: 'Manage portfolio', hint: `${projects.length} project${projects.length === 1 ? '' : 's'} · ${credentialsCount} credential${credentialsCount === 1 ? '' : 's'}`, to: '/portfolio', icon: FolderOpen },
-    { label: 'Intro video', hint: videoStatus.label, to: '/intro-video', icon: Video },
-    { label: 'Resume', hint: checkResume ? 'Uploaded' : 'Not uploaded yet', to: '/resume', icon: FileText },
-  ];
+  /** §6.2 (1). "Semester 5" has no field behind it — `year` does. */
+  const todayLine = new Date().toLocaleDateString(undefined, {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  });
+  const contextLine = profile?.year ? `${todayLine} · Year ${profile.year}` : todayLine;
 
-  const nextStepLine = (() => {
-    const parts = [
-      isComplete
-        ? 'Your profile is complete'
-        : `${remainingItems.length} step${remainingItems.length === 1 ? '' : 's'} left to finish your profile`,
-    ];
-    if (!eventsError && upcomingEvents.length > 0) {
-      parts.push(`${upcomingEvents.length} upcoming event${upcomingEvents.length === 1 ? '' : 's'}`);
-    }
-    return `${parts.join(' · ')}.`;
-  })();
+  const quickActions = [
+    {
+      label: 'Upload video',
+      hint: videoStatus.label,
+      to: '/intro-video',
+      icon: Video,
+    },
+    {
+      label: 'Add project',
+      hint: `${projects.length} project${projects.length === 1 ? '' : 's'} · ${credentialsCount} credential${credentialsCount === 1 ? '' : 's'}`,
+      to: '/portfolio',
+      icon: FolderOpen,
+    },
+    {
+      label: 'Browse events',
+      hint: upcomingEvents.length
+        ? `${upcomingEvents.length} upcoming`
+        : 'Nothing scheduled yet',
+      to: '/events',
+      icon: Calendar,
+    },
+    {
+      label: 'View team',
+      hint: 'Your team workspace',
+      to: '/teams',
+      icon: Users,
+    },
+    {
+      label: 'Edit profile',
+      hint: isComplete ? 'All set' : `${remainingItems.length} step${remainingItems.length === 1 ? '' : 's'} left`,
+      to: '/profile/edit',
+      icon: User,
+    },
+    {
+      label: 'Resume',
+      hint: checkResume ? 'Uploaded' : 'Not uploaded yet',
+      to: '/resume',
+      icon: FileText,
+    },
+  ];
 
   if (loading && !profile) {
     return <DashboardSkeleton />;
   }
 
   return (
-    <div className="space-y-6">
+    <motion.div
+      className="space-y-6"
+      variants={staggerContainer}
+      initial="hidden"
+      animate="show"
+    >
       {/* 1. GREETING. The one thing the page has to say before anything else. */}
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <motion.header
+        variants={staggerItem}
+        className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"
+      >
         <div className="min-w-0">
-          <h1 className="font-heading text-headline-lg-mobile text-ink sm:text-headline-lg">
+          <h1 className="font-heading text-headline-xl-mobile text-ink sm:text-headline-xl">
             {greetingFor(new Date().getHours())}, {firstName}{' '}
             <span aria-hidden="true">👋</span>
           </h1>
-          {!profileError && <p className="mt-1 text-body-md text-ink-secondary">{nextStepLine}</p>}
+          {!profileError && <p className="mt-1 text-body-md text-ink-secondary">{contextLine}</p>}
         </div>
         {profile?.rollNo && (
           <Link to={`/students/${profile.rollNo}`} className="btn btn-secondary shrink-0 self-start">
@@ -266,295 +518,320 @@ export const DashboardPage: React.FC = () => {
             <ExternalLink size={14} strokeWidth={2} aria-hidden="true" />
           </Link>
         )}
-      </header>
+      </motion.header>
 
       {profileError && (
-        <ErrorState
-          title="We could not load your profile"
-          message={profileError}
-          onRetry={() => loadData(true)}
-        />
+        <motion.div variants={staggerItem}>
+          <ErrorState
+            title="We could not load your profile"
+            message={profileError}
+            onRetry={() => loadData(true)}
+          />
+        </motion.div>
       )}
 
-      {/* 2. PROFILE COMPLETION. One component, one number, one way forward. */}
-      <section className="surface p-5 sm:p-6" aria-labelledby="completion-heading">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h2 id="completion-heading" className="font-heading text-headline-sm text-ink">
-              Profile completion
-            </h2>
-            <p className="mt-0.5 text-body-sm text-ink-secondary">
-              {isComplete
-                ? 'Everything is filled in — your profile is fully showcased.'
-                : 'A complete profile ranks higher in the public directory and gives recruiters more to work with.'}
+      {/* 2. PROFILE COMPLETION. §6.2 makes this conditional on being under
+          100%; it stays mounted at 100% because the completion state is the
+          half of this the student worked for, and "Review profile" lives here. */}
+      <motion.div variants={staggerItem}>
+        <Card variant="brand" className="p-5 sm:p-6" aria-labelledby="completion-heading">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h2 id="completion-heading" className="font-heading text-headline-md text-ink">
+                Profile completion
+              </h2>
+              <p className="mt-0.5 text-body-sm text-ink-secondary">
+                {isComplete
+                  ? 'Everything is filled in — your profile is fully showcased.'
+                  : 'A complete profile ranks higher in the public directory and gives recruiters more to work with.'}
+              </p>
+            </div>
+            <p className="font-heading text-headline-xl tabular-nums text-ink">
+              {completionPercentage}
+              <span className="text-headline-md text-ink-muted">%</span>
             </p>
           </div>
-          <p className="font-heading text-headline-lg tabular-nums text-ink">
-            {completionPercentage}
-            <span className="text-headline-sm text-ink-muted">%</span>
-          </p>
-        </div>
 
-        <div
-          className="mt-4 h-2 w-full overflow-hidden rounded-full bg-surface-sunken"
-          role="progressbar"
-          aria-valuenow={completionPercentage}
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-label="Profile completion"
-        >
-          <div
-            className={`h-full rounded-full transition-[width] duration-base ease-standard ${
-              isComplete ? 'bg-status-approved' : 'bg-brand'
-            }`}
-            style={{ width: `${completionPercentage}%` }}
+          <ProgressBar
+            className="mt-4"
+            label="Profile completion"
+            value={completionPercentage}
+            barClassName={isComplete ? 'bg-status-approved' : undefined}
           />
-        </div>
 
-        {isComplete ? (
-          <p className="mt-4 flex items-center gap-2 text-body-sm text-status-approved">
-            <CheckCircle2 size={16} strokeWidth={2} aria-hidden="true" />
-            <span>All {completionItems.length} sections are done.</span>
-          </p>
-        ) : (
-          <ul className="mt-4 flex flex-wrap gap-2">
-            {remainingItems.map((item) => (
-              <li key={item.label}>
-                <Link
-                  to={item.link}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-edge bg-surface px-3 py-1.5 text-label-md text-ink-secondary transition-colors duration-fast hover:border-brand-ring hover:text-ink"
-                >
-                  <Plus size={13} strokeWidth={2.5} aria-hidden="true" />
-                  <span>{item.label}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-
-        <div className="mt-5">
-          <Link to={isComplete ? '/profile' : '/profile/edit'} className="btn btn-primary">
-            {isComplete ? 'Review profile' : 'Complete profile'}
-          </Link>
-        </div>
-      </section>
-
-      {/* 3. QUICK ACTIONS. The four things a student actually comes here to do. */}
-      <section aria-labelledby="quick-actions-heading">
-        <h2 id="quick-actions-heading" className="sr-only">
-          Quick actions
-        </h2>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {quickActions.map((action) => (
-            <Link
-              key={action.to}
-              to={action.to}
-              className="surface flex items-center gap-3 p-4 transition-colors duration-fast hover:border-edge-strong hover:bg-surface-inset"
-            >
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand-soft text-brand-soft-text">
-                <action.icon size={18} strokeWidth={1.75} aria-hidden="true" />
-              </span>
-              <span className="min-w-0">
-                <span className="block truncate font-heading text-label-lg font-semibold text-ink">
-                  {action.label}
-                </span>
-                <span className="block truncate text-body-sm text-ink-muted">{action.hint}</span>
-              </span>
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      {/* 4. UPCOMING EVENTS + RECENT ACTIVITY */}
-      <div className="grid gap-4 lg:grid-cols-3">
-        <section className="surface p-5 sm:p-6 lg:col-span-2" aria-labelledby="events-heading">
-          <div className="flex items-center justify-between gap-3">
-            <h2 id="events-heading" className="font-heading text-headline-sm text-ink">
-              Upcoming events
-            </h2>
-            <Link
-              to="/events"
-              className="flex items-center gap-1 text-label-lg font-semibold text-ink-brand transition-colors hover:text-brand-hover"
-            >
-              <span>Browse all</span>
-              <ChevronRight size={16} strokeWidth={1.75} aria-hidden="true" />
-            </Link>
-          </div>
-
-          <div className="mt-4">
-            {eventsError ? (
-              <ErrorState bare message={eventsError} onRetry={() => loadData(true)} />
-            ) : upcomingEvents.length === 0 ? (
-              <EmptyState
-                bare
-                icon={Calendar}
-                title="No events scheduled"
-                description="Competitions, hackathons and workshops appear here as soon as the department publishes them."
-                action={
-                  <Link to="/events" className="btn btn-secondary">
-                    Check the events page
-                  </Link>
-                }
-              />
-            ) : (
-              <ul className="divide-y divide-edge">
-                {upcomingEvents.map((evt) => {
-                  const date = eventDateParts(evt.date);
-                  const isRegistered = registrations.some(
-                    (r) => r.eventId === evt.id && r.status !== 'CANCELLED'
-                  );
-                  return (
-                    <li key={evt.id}>
-                      <Link
-                        to={`/events/${evt.id}`}
-                        className="-mx-2 flex items-center gap-4 rounded-lg px-2 py-3 transition-colors duration-fast hover:bg-surface-sunken"
-                      >
-                        <span className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-lg border border-edge bg-surface-inset">
-                          <span className="font-heading text-label-sm tracking-wide text-brand">
-                            {date?.month ?? 'TBA'}
-                          </span>
-                          <span className="font-heading text-headline-sm leading-none text-ink">
-                            {date?.day ?? '--'}
-                          </span>
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="flex items-center gap-2">
-                            <span className="truncate font-heading text-headline-sm text-ink">
-                              {evt.title}
-                            </span>
-                            {isRegistered && (
-                              <span className="badge badge-approved shrink-0">
-                                <CheckCircle2 size={12} strokeWidth={2.5} aria-hidden="true" />
-                                Registered
-                              </span>
-                            )}
-                          </span>
-                          <span className="mt-0.5 block truncate text-body-sm text-ink-muted">
-                            {[evt.type || 'Event', date?.full, evt.eligibility]
-                              .filter(Boolean)
-                              .join(' · ')}
-                          </span>
-                        </span>
-                        <ChevronRight
-                          size={16}
-                          strokeWidth={1.75}
-                          className="shrink-0 text-ink-muted"
-                          aria-hidden="true"
-                        />
-                      </Link>
-                    </li>
-                  );
-                })}
+          {isComplete ? (
+            <p className="mt-4 flex items-center gap-2 text-body-sm text-status-approved">
+              <CheckCircle2 size={16} strokeWidth={2} aria-hidden="true" />
+              <span>All {completionItems.length} sections are done.</span>
+            </p>
+          ) : (
+            <>
+              <p className="mt-4 text-label-sm text-ink-muted">Next up</p>
+              <ul className="mt-2 flex flex-wrap gap-2">
+                {nextMissing.map((item) => (
+                  <li key={item.id}>
+                    <Link
+                      to={item.to}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-edge bg-surface px-3 py-1.5 text-label-md text-ink-secondary transition-colors duration-fast hover:border-brand-ring hover:text-ink"
+                    >
+                      <Plus size={13} strokeWidth={2.5} aria-hidden="true" />
+                      <span>{item.title}</span>
+                    </Link>
+                  </li>
+                ))}
               </ul>
-            )}
-          </div>
-        </section>
+            </>
+          )}
 
-        <section className="surface p-5 sm:p-6" aria-labelledby="activity-heading">
-          <div className="flex items-center justify-between gap-3">
-            <h2 id="activity-heading" className="font-heading text-headline-sm text-ink">
-              Recent activity
-            </h2>
-            <Link
-              to="/notifications"
-              className="text-label-lg font-semibold text-ink-brand transition-colors hover:text-brand-hover"
-            >
-              View all
+          <div className="mt-5">
+            <Link to={isComplete ? '/profile' : '/profile/edit'} className="btn btn-primary">
+              {isComplete ? 'Review profile' : 'Complete profile'}
             </Link>
           </div>
+        </Card>
+      </motion.div>
 
-          <div className="mt-4">
-            {notifError ? (
-              <ErrorState bare message={notifError} onRetry={() => loadData(true)} />
-            ) : notifications.length === 0 ? (
-              <EmptyState
-                bare
-                icon={Bell}
-                title="You're all caught up"
-                description="Moderation decisions, announcements and event updates land here."
-              />
-            ) : (
-              <ul className="-mx-2 divide-y divide-edge">
-                {notifications.slice(0, 5).map((n) => {
-                  const isUnread = !n.isRead && n.status !== 'READ';
-                  return (
-                    <li key={n.id}>
-                      <button
-                        type="button"
-                        onClick={() => handleNotificationClick(n)}
-                        className="w-full cursor-pointer rounded-lg px-2 py-3 text-left transition-colors duration-fast hover:bg-surface-sunken"
-                      >
-                        <span className="flex items-start gap-2">
-                          {isUnread && (
-                            <span
-                              className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-brand ring-2 ring-surface"
-                              aria-label="Unread"
-                              role="img"
-                            />
-                          )}
-                          <span className="min-w-0 flex-1">
-                            <span
-                              className={`block truncate text-label-lg text-ink ${
-                                isUnread ? 'font-semibold' : ''
-                              }`}
-                            >
-                              {n.title || 'Department update'}
-                            </span>
-                            <span className="mt-0.5 line-clamp-2 block text-body-sm text-ink-secondary">
-                              {n.message || n.content}
-                            </span>
-                            <span className="mt-1 block text-label-md text-ink-muted">
-                              {relativeTime(n.createdAt)}
-                            </span>
-                          </span>
-                        </span>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </div>
-        </section>
-      </div>
+      {/* 3. MAIN + SIDEBAR. §6.2 "Layout Description": the board and the
+          activity feed in the wide column, the contextual sidebar beside it,
+          dropping below it on one-column layouts. */}
+      <motion.div variants={staggerItem} className="grid gap-6 2xl:grid-cols-3 xl:grid-cols-2">
+        <div className="space-y-6 2xl:col-span-2">
+          <DashboardTaskBoard tasks={completionItems} />
 
-      {/* 5. OPEN VOTING. Only rendered when there is something to vote on: an
-          empty "no campaigns" card was pure noise on a dashboard. */}
-      {!votingError && votingCampaigns.length > 0 && (
-        <section className="surface p-5 sm:p-6" aria-labelledby="voting-heading">
-          <div className="flex items-center gap-2">
-            <Vote size={18} strokeWidth={1.75} className="text-brand" aria-hidden="true" />
-            <h2 id="voting-heading" className="font-heading text-headline-sm text-ink">
-              Open voting
-            </h2>
-          </div>
-          <ul className="mt-4 space-y-2">
-            {votingCampaigns.map((camp) => (
-              <li
-                key={camp.id}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-edge bg-surface-inset px-4 py-3"
+          {/* 4. RECENT ACTIVITY. §6.2 (6): eight rows, "See all" out. */}
+          <section className="surface p-5 sm:p-6" aria-labelledby="activity-heading">
+            <div className="flex items-center justify-between gap-3">
+              <h2 id="activity-heading" className="font-heading text-headline-md text-ink">
+                Recent activity
+              </h2>
+              <Link
+                to="/notifications"
+                className="flex items-center gap-1 text-label-lg font-semibold text-ink-brand transition-colors hover:text-brand-hover"
               >
-                <span className="min-w-0">
-                  <span className="block font-heading text-label-lg font-semibold text-ink">
-                    {camp.title}
-                  </span>
-                  <span className="block truncate text-body-sm text-ink-secondary">
-                    {camp.description || 'Active election'}
-                  </span>
-                </span>
-                <Link to={`/voting/${camp.id}`} className="btn btn-primary shrink-0">
-                  Cast vote
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+                <span>See all</span>
+                <ChevronRight size={16} strokeWidth={1.75} aria-hidden="true" />
+              </Link>
+            </div>
 
-      {votingError && (
-        <ErrorState title="Voting is unavailable" message={votingError} onRetry={() => loadData(true)} />
-      )}
-    </div>
+            <div className="mt-4">
+              {notifError ? (
+                <ErrorState bare message={notifError} onRetry={() => loadData(true)} />
+              ) : notifications.length === 0 ? (
+                <EmptyState
+                  bare
+                  icon={Bell}
+                  title="You're all caught up"
+                  description="Moderation decisions, announcements and event updates land here."
+                />
+              ) : (
+                <ul className="-mx-2 divide-y divide-edge">
+                  {notifications.slice(0, 8).map((n) => {
+                    const isUnread = !n.isRead && n.status !== 'READ';
+                    return (
+                      <li key={n.id}>
+                        <button
+                          type="button"
+                          onClick={() => handleNotificationClick(n)}
+                          className="w-full cursor-pointer rounded-lg px-2 py-3 text-left transition-colors duration-fast hover:bg-surface-sunken"
+                        >
+                          <span className="flex items-start gap-2">
+                            {isUnread && (
+                              <span
+                                className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-brand ring-2 ring-surface"
+                                aria-label="Unread"
+                                role="img"
+                              />
+                            )}
+                            <span className="min-w-0 flex-1">
+                              <span
+                                className={`block truncate text-label-lg text-ink ${
+                                  isUnread ? 'font-semibold' : ''
+                                }`}
+                              >
+                                {n.title || 'Department update'}
+                              </span>
+                              <span className="mt-0.5 line-clamp-2 block text-body-sm text-ink-secondary">
+                                {n.message || n.content}
+                              </span>
+                              <span className="mt-1 block text-label-md text-ink-muted">
+                                {relativeTime(n.createdAt)}
+                              </span>
+                            </span>
+                          </span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          </section>
+        </div>
+
+        {/* 5. CONTEXTUAL SIDEBAR. §6.2 puts the streak tracker here; there is
+              no streak in the API, so what remains is events, quick actions
+              and the open votes. */}
+        <div className="space-y-6">
+          {/* §6.2 (7) */}
+          <section className="surface p-5 sm:p-6" aria-labelledby="events-heading">
+            <div className="flex items-center justify-between gap-3">
+              <h2 id="events-heading" className="font-heading text-headline-md text-ink">
+                Upcoming events
+              </h2>
+              <Link
+                to="/events"
+                className="flex items-center gap-1 text-label-lg font-semibold text-ink-brand transition-colors hover:text-brand-hover"
+              >
+                <span>Browse all</span>
+                <ChevronRight size={16} strokeWidth={1.75} aria-hidden="true" />
+              </Link>
+            </div>
+
+            <div className="mt-4">
+              {eventsError ? (
+                <ErrorState bare message={eventsError} onRetry={() => loadData(true)} />
+              ) : upcomingEvents.length === 0 ? (
+                <EmptyState
+                  bare
+                  icon={Calendar}
+                  title="No events coming up"
+                  description="Competitions, hackathons and workshops appear here as soon as the department publishes them."
+                  action={
+                    <Link to="/events" className="btn btn-secondary">
+                      Check the events page
+                    </Link>
+                  }
+                />
+              ) : (
+                <ul className="divide-y divide-edge">
+                  {upcomingEvents.map((evt) => {
+                    const date = eventDateParts(evt.date);
+                    const isRegistered = registrations.some(
+                      (r) => r.eventId === evt.id && r.status !== 'CANCELLED'
+                    );
+                    return (
+                      <li key={evt.id}>
+                        <Link
+                          to={`/events/${evt.id}`}
+                          className="-mx-2 flex items-center gap-3 rounded-lg px-2 py-3 transition-colors duration-fast hover:bg-surface-sunken"
+                        >
+                          <span className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-lg border border-edge bg-surface-inset">
+                            <span className="font-heading text-label-sm tracking-wide text-brand">
+                              {date?.month ?? 'TBA'}
+                            </span>
+                            <span className="font-heading text-headline-sm leading-none text-ink">
+                              {date?.day ?? '--'}
+                            </span>
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                              <span className="truncate font-heading text-headline-sm text-ink">
+                                {evt.title}
+                              </span>
+                              <span className={isRegistered ? 'badge badge-approved' : 'badge badge-draft'}>
+                                {isRegistered ? (
+                                  <>
+                                    <CheckCircle2 size={12} strokeWidth={2.5} aria-hidden="true" />
+                                    Registered
+                                  </>
+                                ) : (
+                                  <>
+                                    <Plus size={12} strokeWidth={2.5} aria-hidden="true" />
+                                    Register
+                                  </>
+                                )}
+                              </span>
+                            </span>
+                            <span className="mt-0.5 block truncate text-body-sm text-ink-muted">
+                              {[evt.type || 'Event', date?.full, evt.eligibility]
+                                .filter(Boolean)
+                                .join(' · ')}
+                            </span>
+                          </span>
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          </section>
+
+          {/* §6.2 (5). The plan names four; the two it drops (edit profile,
+              resume) stay because the completion banner only ever showed the
+              top three missing items, so these are the only way straight to
+              them. */}
+          <section className="surface p-5 sm:p-6" aria-labelledby="quick-actions-heading">
+            <h2 id="quick-actions-heading" className="font-heading text-headline-md text-ink">
+              Quick actions
+            </h2>
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              {quickActions.map((action) => (
+                <Link
+                  key={action.to + action.label}
+                  to={action.to}
+                  className="flex flex-col items-start gap-2 rounded-xl border border-edge bg-surface-sunken p-3 transition-colors duration-fast hover:border-edge-strong hover:bg-surface-inset"
+                >
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-brand-soft text-brand-soft-text">
+                    <action.icon size={17} strokeWidth={1.75} aria-hidden="true" />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block font-heading text-label-lg font-semibold leading-tight text-ink">
+                      {action.label}
+                    </span>
+                    <span className="mt-0.5 block text-body-sm leading-tight text-ink-muted">
+                      {action.hint}
+                    </span>
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </section>
+
+          {/* 6. OPEN VOTING. Not in §6.2, but a real section with a real
+              reason to exist: an empty "no campaigns" card would be noise on a
+              dashboard, so it only appears when there is something to vote on. */}
+          {!votingError && votingCampaigns.length > 0 && (
+            <section className="surface p-5 sm:p-6" aria-labelledby="voting-heading">
+              <div className="flex items-center gap-2">
+                <Vote size={18} strokeWidth={1.75} className="text-brand" aria-hidden="true" />
+                <h2 id="voting-heading" className="font-heading text-headline-md text-ink">
+                  Open voting
+                </h2>
+              </div>
+              <ul className="mt-4 space-y-2">
+                {votingCampaigns.map((camp) => (
+                  <li
+                    key={camp.id}
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-edge bg-surface-inset px-4 py-3"
+                  >
+                    <span className="min-w-0">
+                      <span className="block font-heading text-label-lg font-semibold text-ink">
+                        {camp.title}
+                      </span>
+                      <span className="block truncate text-body-sm text-ink-secondary">
+                        {camp.description || 'Active election'}
+                      </span>
+                    </span>
+                    <Link to={`/voting/${camp.id}`} className="btn btn-primary shrink-0">
+                      Cast vote
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {votingError && (
+            <ErrorState
+              title="Voting is unavailable"
+              message={votingError}
+              onRetry={() => loadData(true)}
+            />
+          )}
+        </div>
+      </motion.div>
+    </motion.div>
   );
 };
 

@@ -79,6 +79,9 @@ export const EditProfilePage: React.FC = () => {
   const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
   const objectUrlRef = useRef<string | null>(null);
 
+  // Reduced motion support
+  const shouldReduce = useReducedMotion();
+
   // Clean up any pending object URLs on unmount to prevent memory leaks
   useEffect(() => {
     return () => {

@@ -2,13 +2,21 @@ import React, { useEffect, useState } from 'react';
 import { api, resolveMediaUrl } from '../../services/api';
 import { StudentSession } from '../../types';
 import { Link, useSearchParams } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { Search, SlidersHorizontal, Users, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { Navbar } from '../../components/Navbar';
 import { Footer } from '../../components/Footer';
 import { getPhotoStyle } from '../../utils/photoStyle';
-import { Dialog } from '../../components/ui/Dialog';
+import { Modal } from '../../components/ui/Modal';
+import { Button } from '../../components/ui/Button';
+import { Card } from '../../components/ui/Card';
+import { Badge } from '../../components/ui/Badge';
+import { Chip } from '../../components/ui/Chip';
+import { Skeleton, SkeletonAvatar } from '../../components/ui/Skeleton';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { ErrorState } from '../../components/ui/ErrorState';
+import { useReducedMotion } from '../../hooks/useReducedMotion';
+import { selectVariantsByName } from '../../lib/motion';
 
 interface StudentDirectoryProps {
   session?: StudentSession | null;
@@ -22,6 +30,38 @@ const STATUS_FILTERS = [
   { value: 'ACTIVE', label: 'Active' },
   { value: 'GRADUATED', label: 'Alumni' },
 ] as const;
+
+/* ── What this page reads ───────────────────────────────────────────────────
+ * The list endpoint returns `skills` on the profile as `{ skill: { name } }`
+ * rows. Nothing outside that shape is requested: the directory is
+ * unauthenticated, so the page may only render what `/public/students` already
+ * returns to anyone.
+ */
+
+interface DirectorySkill {
+  skill?: { name?: string | null } | null;
+  name?: string | null;
+}
+
+interface DirectoryPhotoFields {
+  photoUrl?: string | null;
+  photoOffsetX?: number | null;
+  photoOffsetY?: number | null;
+  photoZoom?: number | null;
+  skills?: DirectorySkill[] | null;
+}
+
+interface DirectoryStudent {
+  id?: string;
+  rollNo: string;
+  name?: string | null;
+  year?: number | null;
+  section?: string | null;
+  status?: string | null;
+  photoUrl?: string | null;
+  skills?: DirectorySkill[] | null;
+  profile?: DirectoryPhotoFields | null;
+}
 
 interface FilterControlsProps {
   /** Desktop and mobile render the same controls, so their ids have to differ. */
@@ -52,25 +92,15 @@ const FilterControls: React.FC<FilterControlsProps> = ({
   <>
     <div>
       <span className="label">Status</span>
-      <div className="flex gap-1.5" role="group" aria-label="Student status">
-        {STATUS_FILTERS.map((option) => {
-          const active = statusFilter === option.value;
-          return (
-            <button
-              key={option.value}
-              type="button"
-              aria-pressed={active}
-              onClick={() => setStatusFilter(option.value)}
-              className={`min-h-9 flex-1 cursor-pointer rounded-lg border px-3 text-label-md transition-colors duration-fast ${
-                active
-                  ? 'border-brand bg-brand font-semibold text-on-primary'
-                  : 'border-edge bg-surface text-ink-secondary hover:bg-surface-sunken'
-              }`}
-            >
-              {option.label}
-            </button>
-          );
-        })}
+      <div className="flex flex-wrap gap-1.5" role="group" aria-label="Student status">
+        {STATUS_FILTERS.map((option) => (
+          <Chip
+            key={option.value}
+            label={option.label}
+            selected={statusFilter === option.value}
+            onClick={() => setStatusFilter(option.value)}
+          />
+        ))}
       </div>
     </div>
 
@@ -130,11 +160,55 @@ const FilterControls: React.FC<FilterControlsProps> = ({
   </>
 );
 
+/**
+ * A directory row: the student's photo (or their initials), their name, their
+ * place on the roster, and the first three skills they list.
+ *
+ * The photo element is hand-rolled for the same reason the profile page's is —
+ * `getPhotoStyle` carries the crop offsets the student chose in the photo
+ * editor, and the `Avatar` primitive owns its own `<img>` with no way to pass
+ * them. The wrapper carries the accessible name, so the image itself stays out
+ * of the accessibility tree.
+ */
+const DirectoryPhoto: React.FC<{
+  name: string;
+  src: string | null;
+  profile?: DirectoryPhotoFields | null;
+}> = ({ name, src, profile }) => {
+  const initials = (name || '')
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word[0]?.toUpperCase())
+    .join('');
+
+  return (
+    <span className="relative flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-full border border-edge bg-brand font-heading text-headline-sm font-bold text-on-brand">
+      <span aria-hidden="true">{initials || 'IT'}</span>
+      {src && (
+        <img
+          src={src}
+          alt={`${name}'s profile photo`}
+          loading="lazy"
+          decoding="async"
+          className="absolute inset-0 size-full"
+          style={getPhotoStyle(profile)}
+          onError={(event) => {
+            event.currentTarget.style.display = 'none';
+          }}
+        />
+      )}
+    </span>
+  );
+};
+
 export const StudentDirectoryPage: React.FC<StudentDirectoryProps> = ({ session, onLogout }) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialSearch = searchParams.get('search') || '';
+  const shouldReduce = useReducedMotion();
+  const reveal = selectVariantsByName(shouldReduce, 'scrollReveal');
 
-  const [students, setStudents] = useState<any[]>([]);
+  const [students, setStudents] = useState<DirectoryStudent[]>([]);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
@@ -298,7 +372,7 @@ export const StudentDirectoryPage: React.FC<StudentDirectoryProps> = ({ session,
   };
 
   return (
-    <div className="flex min-h-[100dvh] flex-col bg-surface-canvas text-ink">
+    <div className="flex min-h-dvh flex-col bg-surface-canvas text-ink">
       <Navbar session={session} onLogout={onLogout} />
 
       <main className="mx-auto w-full max-w-canvas flex-1 px-6 py-8 sm:px-10 sm:py-10">
@@ -333,7 +407,7 @@ export const StudentDirectoryPage: React.FC<StudentDirectoryProps> = ({ session,
               <button
                 type="button"
                 onClick={clearSearch}
-                className="absolute right-3 top-2.5 flex h-6 w-6 cursor-pointer items-center justify-center rounded text-ink-muted hover:text-ink"
+                className="absolute right-3 top-2.5 flex size-6 cursor-pointer items-center justify-center rounded text-ink-muted transition-colors hover:text-ink"
                 aria-label="Clear search"
               >
                 <X size={14} strokeWidth={2} aria-hidden="true" />
@@ -342,23 +416,24 @@ export const StudentDirectoryPage: React.FC<StudentDirectoryProps> = ({ session,
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              type="button"
+            <Button
+              variant="secondary"
+              className="lg:hidden"
               onClick={() => setFiltersOpen(true)}
-              className="btn btn-secondary lg:hidden"
               aria-haspopup="dialog"
+              aria-expanded={filtersOpen}
+              icon={SlidersHorizontal}
             >
-              <SlidersHorizontal size={16} strokeWidth={1.75} aria-hidden="true" />
               <span>Filters</span>
               {activeFilterCount > 0 && (
-                <span className="badge badge-brand ml-0.5">{activeFilterCount}</span>
+                <Badge label={String(activeFilterCount)} variant="brand" dot={false} />
               )}
-            </button>
+            </Button>
 
             {hasActiveFilters && (
-              <button type="button" onClick={resetFilters} className="btn btn-ghost">
+              <Button variant="ghost" onClick={resetFilters}>
                 Clear all
-              </button>
+              </Button>
             )}
           </div>
         </div>
@@ -386,11 +461,11 @@ export const StudentDirectoryPage: React.FC<StudentDirectoryProps> = ({ session,
             <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {[0, 1, 2, 3, 4, 5].map((i) => (
                 <li key={i} className="surface flex items-start gap-4 p-4">
-                  <div className="skeleton h-14 w-14 shrink-0 rounded-full" />
+                  <SkeletonAvatar className="size-14" />
                   <div className="flex-1 space-y-2">
-                    <div className="skeleton h-4 w-2/3" />
-                    <div className="skeleton h-3 w-1/2" />
-                    <div className="skeleton h-3 w-3/4" />
+                    <Skeleton className="h-4 w-2/3" />
+                    <Skeleton className="h-3 w-1/2" />
+                    <Skeleton className="h-3 w-3/4" />
                   </div>
                 </li>
               ))}
@@ -413,89 +488,90 @@ export const StudentDirectoryPage: React.FC<StudentDirectoryProps> = ({ session,
             }
             action={
               hasActiveFilters ? (
-                <button type="button" onClick={resetFilters} className="btn btn-primary">
+                <Button variant="primary" onClick={resetFilters}>
                   Clear all filters
-                </button>
+                </Button>
               ) : undefined
             }
           />
         ) : (
           <>
             <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {students.map((s: any) => {
-                const rawPhoto = s.profile?.photoUrl || s.photoUrl;
+              {students.map((student) => {
+                const rawPhoto = student.profile?.photoUrl || student.photoUrl;
                 const photoUrl = rawPhoto ? resolveMediaUrl(rawPhoto) : null;
-                const skillsList = s.profile?.skills || s.skills || [];
-                const initials = (s.name || '')
-                  .split(' ')
-                  .filter(Boolean)
-                  .slice(0, 2)
-                  .map((w: string) => w[0]?.toUpperCase())
-                  .join('');
+                const skillsList = student.profile?.skills || student.skills || [];
+                const name = student.name || '';
 
                 return (
-                  <li key={s.id || s.rollNo}>
-                    <Link
-                      to={`/students/${s.rollNo}`}
-                      className="surface group flex h-full items-start gap-4 p-4 transition-colors duration-fast hover:border-edge-strong hover:bg-surface-inset"
+                  <li key={student.id || student.rollNo}>
+                    <motion.div
+                      variants={reveal}
+                      initial="hidden"
+                      whileInView="show"
+                      viewport={{ once: true, amount: 0.2 }}
+                      className="h-full"
                     >
-                      <span className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full border border-edge bg-brand-soft font-heading text-headline-sm font-bold text-brand-soft-text">
-                        <span aria-hidden="true">{initials || 'IT'}</span>
-                        {photoUrl && (
-                          <img
+                      <Link
+                        to={`/students/${student.rollNo}`}
+                        className="group block h-full rounded-xl"
+                      >
+                        <Card variant="interactive" className="flex h-full items-start gap-4 p-4">
+                          <DirectoryPhoto
+                            name={name}
                             src={photoUrl}
-                            alt=""
-                            loading="lazy"
-                            decoding="async"
-                            className="absolute inset-0 h-full w-full"
-                            style={{ ...getPhotoStyle(s.profile), objectFit: 'cover' }}
-                            onError={(e) => {
-                              (e.currentTarget as HTMLElement).style.display = 'none';
-                            }}
+                            profile={student.profile}
                           />
-                        )}
-                      </span>
 
-                      <span className="min-w-0 flex-1">
-                        <span className="flex items-center gap-2">
-                          <span className="truncate font-heading text-label-lg font-semibold text-ink">
-                            {s.name}
-                          </span>
-                          {s.status === 'GRADUATED' && <span className="badge badge-draft">Alumni</span>}
-                        </span>
-                        <span className="mt-0.5 block truncate text-body-sm text-ink-muted">
-                          {s.rollNo} · Year {s.year || 1} · Section {s.section || 'A'}
-                        </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="flex items-center gap-2">
+                              <span className="truncate font-heading text-label-lg font-semibold text-ink">
+                                {name}
+                              </span>
+                              {student.status === 'GRADUATED' && (
+                                <span className="badge badge-draft">Alumni</span>
+                              )}
+                            </span>
+                            <span className="mt-0.5 block truncate text-body-sm text-ink-muted">
+                              {student.rollNo} · Year {student.year || 1} · Section{' '}
+                              {student.section || 'A'}
+                            </span>
 
-                        {skillsList.length > 0 && (
-                          <span className="mt-2 flex flex-wrap gap-1.5">
-                            {skillsList.slice(0, 3).map((sk: any, idx: number) => {
-                              const skillName = sk.skill?.name || sk.name || sk;
-                              return (
-                                <span
-                                  key={idx}
-                                  className="rounded border border-edge bg-surface-inset px-2 py-0.5 text-label-md text-ink-secondary"
-                                >
-                                  {skillName}
-                                </span>
-                              );
-                            })}
-                            {skillsList.length > 3 && (
-                              <span className="px-1 py-0.5 text-label-md text-ink-muted">
-                                +{skillsList.length - 3}
+                            {skillsList.length > 0 && (
+                              <span className="mt-2 flex flex-wrap gap-1.5">
+                                {skillsList.slice(0, 3).map((entry, index) => {
+                                  const skillName =
+                                    typeof entry === 'string'
+                                      ? entry
+                                      : entry.skill?.name || entry.name || '';
+                                  if (!skillName) return null;
+                                  return (
+                                    <span
+                                      key={`${skillName}-${index}`}
+                                      className="rounded border border-edge bg-surface-inset px-2 py-0.5 text-label-md text-ink-secondary"
+                                    >
+                                      {skillName}
+                                    </span>
+                                  );
+                                })}
+                                {skillsList.length > 3 && (
+                                  <span className="px-1 py-0.5 text-label-md text-ink-muted">
+                                    +{skillsList.length - 3}
+                                  </span>
+                                )}
                               </span>
                             )}
                           </span>
-                        )}
-                      </span>
 
-                      <ChevronRight
-                        size={16}
-                        strokeWidth={1.75}
-                        className="mt-1 shrink-0 text-ink-muted transition-transform duration-fast group-hover:translate-x-0.5"
-                        aria-hidden="true"
-                      />
-                    </Link>
+                          <ChevronRight
+                            size={16}
+                            strokeWidth={1.75}
+                            className="mt-1 shrink-0 text-ink-muted transition-transform duration-fast group-hover:translate-x-0.5"
+                            aria-hidden="true"
+                          />
+                        </Card>
+                      </Link>
+                    </motion.div>
                   </li>
                 );
               })}
@@ -507,32 +583,31 @@ export const StudentDirectoryPage: React.FC<StudentDirectoryProps> = ({ session,
                   Showing{' '}
                   <span className="font-semibold text-ink">{(page - 1) * limit + 1}</span> to{' '}
                   <span className="font-semibold text-ink">{Math.min(page * limit, total)}</span> of{' '}
-                  <span className="font-semibold text-ink">{total}</span> students
+                  <span className="font-semibold text-ink">{total} students</span>
                 </p>
                 <div className="flex items-center gap-2">
-                  <button
-                    type="button"
+                  <Button
+                    variant="secondary"
                     onClick={() => setPage((p) => Math.max(1, p - 1))}
                     disabled={page <= 1 || loading}
-                    className="btn btn-secondary"
                     aria-label="Previous page"
+                    icon={ChevronLeft}
                   >
-                    <ChevronLeft size={15} strokeWidth={2} aria-hidden="true" />
                     <span>Previous</span>
-                  </button>
+                  </Button>
                   <span className="px-2 text-body-sm text-ink-secondary">
                     Page {page} of {totalPages}
                   </span>
-                  <button
-                    type="button"
+                  <Button
+                    variant="secondary"
                     onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                     disabled={page >= totalPages || loading}
-                    className="btn btn-secondary"
                     aria-label="Next page"
+                    icon={ChevronRight}
+                    iconPosition="end"
                   >
                     <span>Next</span>
-                    <ChevronRight size={15} strokeWidth={2} aria-hidden="true" />
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}
@@ -540,20 +615,25 @@ export const StudentDirectoryPage: React.FC<StudentDirectoryProps> = ({ session,
         )}
       </main>
 
-      {/* MOBILE FILTER SHEET */}
-      <Dialog open={filtersOpen} onClose={() => setFiltersOpen(false)} title="Filters" size="sm">
-        <div className="space-y-4">
-          <FilterControls idPrefix="mobile" {...filterProps} />
-          <div className="flex flex-wrap justify-end gap-3 border-t border-edge pt-4">
-            <button type="button" onClick={resetFilters} className="btn btn-secondary">
+      {/* MOBILE FILTER SHEET — `Modal`, which is a bottom sheet under `md`. */}
+      <Modal
+        open={filtersOpen}
+        onClose={() => setFiltersOpen(false)}
+        title="Filters"
+        size="sm"
+        footer={
+          <>
+            <Button variant="secondary" onClick={resetFilters}>
               Clear all
-            </button>
-            <button type="button" onClick={() => setFiltersOpen(false)} className="btn btn-primary">
+            </Button>
+            <Button variant="primary" onClick={() => setFiltersOpen(false)}>
               Show results
-            </button>
-          </div>
-        </div>
-      </Dialog>
+            </Button>
+          </>
+        }
+      >
+        <FilterControls idPrefix="mobile" {...filterProps} />
+      </Modal>
 
       <Footer />
     </div>

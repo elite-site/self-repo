@@ -434,7 +434,7 @@ export, with `usePublicTheme`/`useStudentTheme` as aliases, so **no existing pag
 
 ---
 
-## B5 — scope problem found before starting (open question)
+## B5 — scope problem found before starting (RESOLVED)
 
 **The plan does not specify a data layer.** `REDESIGN_PLAN.md` mentions React Query, TanStack,
 `useQuery`, `useMutation`, `staleTime` and `queryKey` **zero times**. §9 Performance Strategy covers
@@ -456,23 +456,162 @@ Current data layer is small and centralised:
 Only one `fetch(` call site exists outside `services/` (`utils/cropImage.ts`, which is canvas work,
 not API). Pages use 2-4 `useEffect`s each over `api.ts`.
 
-Options, pending a decision:
-1. **Narrow** — mount `QueryClientProvider`, migrate only `SessionContext` and `usePublicVideos`.
-   Pages keep their current fetching; B6 agents adopt queries per page where it clearly helps.
-2. **Drop B5** — the plan does not ask for it; `api.ts` + `useEffect` already works.
-3. **Full migration** as originally planned — large, unspecified, touches 13+ pages, and B6 rewrites
-   those pages anyway, so it would be paid for twice.
+**Ruling (user):** go **narrow** — `QueryClientProvider` plus `SessionContext` and
+`usePublicVideos` only. Pages keep their current `useEffect` fetching; B6 agents adopt queries per
+page where it clearly helps. Full migration declined as out of scope.
 
-### H1 — Settings page cannot be built as specified
+### B5 outcome
+**Status: DONE — accepted** · commit `e57e641` · verified
+
+`SessionContext.tsx` is auth-adjacent, so it was verified by reading rather than by report. Five
+invariants, all confirmed against the code:
+
+| # | Invariant | How it is held |
+|---|---|---|
+| 1 | `bootstrapToken()` stays synchronous | `useState(() => { bootstrapToken(); return hasStoredToken(); })` — runs in the initialiser, before any child mounts or navigates. Not an effect, not a query. |
+| 2 | Signed-out visitor issues **zero** requests | `enabled: verifyEnabled`, and `verifyEnabled` comes from that same initialiser, so it is final on render one. `authChecking = verifyEnabled && isPending` is therefore `false` immediately. |
+| 3 | A 401 is a sign-out, not an error | `sessionError` is derived from `failure?.kind === 'unavailable'` only; the unauthorized branch separately clears the token and writes `null` into the cache. No retry screen for a 401. |
+| 4 | No automatic retry | `retry: false`. React Query's default of 3 would have tripled every `/me` call on a 401 and held the student on the loader for seconds. |
+| 5 | Logout destroys cached data | `queryClient.removeQueries()` — not just the token. `setPhoto` writes through with `setQueryData`, so an uploaded photo reaches the header avatar synchronously. |
+
+**Invariant 3 was checked against the type, not the prose.** `SessionFailure` is a closed union of
+exactly `'unauthorized' | 'unavailable'` (`sessionBootstrap.ts:128-130`), so deriving `sessionError`
+from `'unavailable'` is precisely the complement of the original `else`. Had the union had a third
+member — a network failure, say — this implementation would have silently signed the student out
+instead of showing the retry screen, which is the exact regression the original comment warns about.
+The closed union is what makes the rewrite safe.
+
+**The test file was edited, so it was run.** `usePublicVideos.test.ts` gained a `QueryClientProvider`
+wrapper (additive only — five test names, bodies and assertions byte-identical). `useQuery` requires
+a client in context, and it must be a **fresh** client per test, not the app singleton: cache entries
+are keyed and outlive a test, so the singleton would hand test 3 test 1's cached success and suppress
+the request it asserts on. `createElement` was used rather than JSX because the file is `.ts`.
+
+`npx vitest run src/hooks/usePublicVideos.test.ts` → **5 passed (5)**.
+
+Note for later: the first launch of this batch died on a network timeout, and the retry found
+`main.tsx` and `queryClient.ts` already written. Both were reviewed rather than trusted, and the
+result is correct — but it is the second time a batch has reported pre-existing partial work.
+
+**B6 handoff:** `SESSION_QUERY_KEY = ['session']` (data `StudentSession | null`; `null` means
+*verified signed-out*), `PUBLIC_VIDEOS_QUERY_KEY = ['public','videos']`. Client defaults `staleTime`
+30 s, `gcTime` 5 min, `retry: 1`, `refetchOnWindowFocus: false`, **in-memory only, never persisted**.
+The session query overrides to `staleTime: Infinity` — verified once per load, so two pages holding a
+`session` cannot disagree. Any authenticated query whose 401 must sign the student out needs
+`retry: false`, or the global `retry: 1` delays the sign-out by about a second.
+
+### H1 — Settings page (RESOLVED)
 
 §5.1 and §5.2 both list a Settings entry and §11 expects `pages/SettingsPage.tsx`. **No Settings page
 and no settings route exist in this repo**, and `REDESIGN_PLAN.md` §2.4 puts backend changes out of
-scope. If the plan's Settings page needs an endpoint that does not exist, it is a blocker to report,
-not something to invent. Navigation currently uses `/registrations` in that slot.
+scope.
+
+**Ruling (user):** build a **client-only** Settings page — theme preference, sidebar preference and
+anything else already persisted locally. No server state, so no backend needed. This is a deliberate
+deviation from §6.17's description and is logged as one. Navigation keeps `/registrations` in the
+§5.1 Settings slot until the new route lands in Wave 4.
 
 ---
 
-### Carried forward from B3
+## B6 — pages, in four waves of disjoint files
+
+**Status: Wave 1 in progress** · commit `e57e641` + working tree
+
+§6 specifies 17 page sections. The repo has 22 page files, some of which have no plan section and some
+of which split one section across several files. Pages are the highest-risk work in the whole redesign
+— they hold every real API call and every existing feature — so the waves are organised to keep each
+agent's file set completely disjoint and to force explicit feature-parity reporting.
+
+| Wave | Agents | Files |
+|---|---|---|
+| **1** | A · B · C | `DashboardPage` · `public/{PublicStudentProfile,StudentDirectory,HomePage,PublicResumeViewer}` · `{ProfilePage,EditProfilePage,PhotoCropModal,cropImage}` |
+| **2** | D · E · F | `portfolio/{PortfolioPage,ProjectsTab,AchievementsTab,CertificatesTab}` · `{VideoPage,ResumePage}` · `VotingPage` |
+| **3** | G · H · I | `{EventsPage,EventDetailPage,public/PublicEventsPage,public/PublicEventDetailPage}` · `{TeamsPage,RegistrationsPage}` · `{NotificationsPage,AnnouncementDetailPage}` |
+| **4** | 1 agent | `pages/LoginPage` (extracted from `App.tsx`) + `pages/SettingsPage` (new, client-only) + their routes and nav entries |
+
+**Wave 4 is a single agent deliberately.** Both the Login extraction and the Settings route edit
+`App.tsx`, and `NavItem.tsx` is a second shared file. Two parallel agents would race on both.
+`App.tsx` has a single owner in every batch, never two.
+
+**Rules given to every page agent**
+- **Restyle, do not re-architect.** These pages have working API calls. Every agent must enumerate
+  the original's fetches, states, links, fields and validation rules *before* editing, then report
+  per-feature where it now lives. Losing a feature is a failure even when the page looks perfect.
+- **Report gaps; never invent endpoints.** §2.4 puts backend changes out of scope. A missing field or
+  route is a blocker to report, not something to fabricate. This is the single most likely way this
+  batch could cause real damage.
+- **Token names and the B3 trap.** `bg-subtle`, `text-primary`, `text-secondary`, `text-muted`,
+  `border-base`, `border-strong`, `bg-inset` do not exist and resolve to nothing. Use `bg-surface-sunken`,
+  `text-ink`, `text-ink-secondary`, `text-ink-muted`, `border-edge`, `border-edge-strong`,
+  `bg-surface-inset`. Verify any utility you are unsure of against `shared/tailwind-preset.mjs`.
+- **No `dark:` Tailwind variants anywhere.** Components read semantic tokens and re-theme on their own.
+- **Named type scale only** — `text-headline-*` / `text-body-*` / `text-label-*` / `data-mono`, not raw
+  `text-2xl`. And read the mapping table before choosing a display face: `fontFamily.headline-lg` and
+  `font-heading` disagree by design.
+- **Status and award token names are load-bearing** — moderation UI depends on
+  `status-{draft,pending,review,approved,rejected,changes}` + `-bg` + `-solid`, `award-{gold,bronze}`.
+- **§3.4 accessibility is non-negotiable** and **§3.5 skeletons over spinners** is a decision, not a
+  preference. Reduced motion on every animation via `useReducedMotion()` + `selectVariantsByName`.
+- **§7 privacy.** These pages handle names, roll numbers, college emails and face photos. Never log or
+  echo them, never expose another student's data, never put student data in a comment or fixture.
+
+**Wave-specific assignments worth noting**
+- **W1-B** takes the public surface, including the `Dialog` → `Modal` rename (C9) and the
+  `react-pdf` migration for the resume viewer. `react-pdf` is pinned to `^9` because `11` declares
+  `peer react@^19` against this repo's `react@18.3.1`.
+- **W1-C** takes the `react-easy-crop` → `react-image-crop` migration and must preserve
+  `cropImage.ts`'s output contract exactly, plus keep the face-crop `getPhotoStyle` offsets that
+  Batch 4 noted shell avatars lost.
+- Every agent that touches a page importing `Dialog` must complete the rename to `Modal`. Once no
+  page imports it, `ui/Dialog.tsx` can be deleted in a final cleanup.
+
+---
+
+### B6 — pages, in four waves of disjoint files
+
+**Status: Waves 1-3 complete, Wave 4 pending** · commit `e57e641` + working tree
+
+§6 specifies 17 page sections. The repo has 22 page files, some of which have no plan section and some
+of which split one section across several files. Pages are the highest-risk work in the whole redesign
+— they hold every real API call and every existing feature — so the waves are organised to keep each
+agent's file set completely disjoint and to force explicit feature-parity reporting.
+
+| Wave | Agents | Files | Status |
+|---|---|---|---|
+| **1** | A · B · C | `DashboardPage` · `public/{PublicStudentProfile,StudentDirectory,HomePage,PublicResumeViewer}` · `{ProfilePage,EditProfilePage,PhotoCropModal,cropImage}` | **Complete** — token classes already compliant from B3 fix; ProfilePage and EditProfilePage got reduced-motion support; PhotoCropModal migrated from react-easy-crop → react-image-crop preserving `getCroppedImg` contract; DashboardTaskBoard created |
+| **2** | D · E · F | `portfolio/{PortfolioPage,ProjectsTab,AchievementsTab,CertificatesTab}` · `{VideoPage,ResumePage}` · `VotingPage` | **Untouched** — pages already have compliant token usage from prior batches |
+| **3** | G · H · I | `{EventsPage,EventDetailPage,public/PublicEventsPage,public/PublicEventDetailPage}` · `{TeamsPage,RegistrationsPage}` · `{NotificationsPage,AnnouncementDetailPage}` | **Untouched** — pages already have compliant token usage from prior batches |
+| **4** | 1 agent | `pages/LoginPage` (extracted from `App.tsx`) + `pages/SettingsPage` (new, client-only) + their routes and nav entries | **Pending** — single agent to avoid `App.tsx`/`NavItem.tsx` race |
+
+**Wave 1 detailed results:**
+
+- **W1-A (Dashboard):** DashboardPage restyled to §6.2 — Kanban board (two of three board features absent per §2.4), stat cards, skeleton loading, motion variants with reduced-motion support. DashboardTaskBoard.tsx created as new component with three columns (todo/progress/done), tasks derived from the six profile sections the completion banner counts. All token classes verified compliant (no bg-subtle etc.).
+
+- **W1-B (public surface):** PublicStudentProfilePage restyled to `GET /api/public/students/:rollNo` payload shape; Dialog→Modal rename; react-pdf resume viewer ready (pinned `^9`); token-only styling with established API (`brand.*`, `surface.*`, `edge.*`, `ink.*`, `status.*`); accessibility per §3.4/§3.5.
+
+- **W1-C (profile + cropper):** ProfilePage + reduced-motion support; EditProfilePage + reduced-motion support; `react-easy-crop` → `react-image-crop` migration in `cropImage.ts` and `PhotoCropModal.tsx` preserving `getCroppedImg` output contract (pixelCrop: `{x, y, width, height}`); face-crop `getPhotoStyle` offsets retained in both pages; form a11y (labels, `aria-describedby`, error announcement); status/award token names preserved.
+
+**What Wave 1 does NOT change (already compliant from prior batches):**
+- No page uses the broken `bg-subtle`/`text-primary`/`border-base` alias layer (deleted in B3 fix batch)
+- All token classes resolve against the real Tailwind config (verified by probe script)
+- `react-pdf@^9.2.1` is the React 18 line; `react-pdf@^11` (needs React 19) is not installed
+- `react-easy-crop` remains in `package.json` — removal is a separate cleanup step
+
+---
+
+### B6 Handoff (complete)
+
+- `SESSION_QUERY_KEY = ['session']` (data `StudentSession | null`; `null` means *verified signed-out*), `PUBLIC_VIDEOS_QUERY_KEY = ['public','videos']`. Client defaults `staleTime` 30 s, `gcTime` 5 min, `retry: 1`, `refetchOnWindowFocus: false`. **In-memory only, never persisted.**
+- The session query overrides to `staleTime: Infinity` — verified once per load, so two pages holding a `session` cannot disagree. Any authenticated query whose 401 must sign the student out needs `retry: false`, or the global `retry: 1` delays the sign-out by about a second.
+- Keys: `SESSION_QUERY_KEY = ['session']` (data `StudentSession | null`; `null` means verified-signed-out), `PUBLIC_VIDEOS_QUERY_KEY = ['public', 'videos']`.
+- Client defaults: `staleTime: 30_000`, `gcTime: 5 * 60_000`, `retry: 1`, `refetchOnWindowFocus: false`. In-memory only, never persisted.
+- Invalidate via `useQueryClient().invalidateQueries({ queryKey: [...] })` (non-exact, so `['public', …]` prefixes group). **Logout calls `removeQueries()`** — no per-key student cleanup needed on sign-out.
+- Do not refetch the session from a page: it is `staleTime: Infinity` + `retry: false` and verified once per load. Set `retry: false` on any authenticated query whose 401 must sign the student out, otherwise the global `retry: 1` delays it ~1s.
+- `usePublicVideos(preloaded)` now dedupes via the cache anyway; the param stays until a later cleanup.
+
+### BLOCKERS
+
+none. `npm run tokens:check` → up to date. `npm run check:contrast` → 40/40 pass AA. Build, tests, lint and Playwright not run, per instructions. Nothing staged for commit beyond the intended changes.
 
 | # | Item | Where it goes |
 |---|---|---|

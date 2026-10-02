@@ -1,4 +1,35 @@
-import type { Area } from 'react-easy-crop';
+/**
+ * The rectangle `getCroppedImg` cuts out, in the source image's own pixels.
+ *
+ * Declared here rather than imported: it is structurally identical to
+ * `react-easy-crop`'s `Area` and to `react-image-crop`'s `PixelCrop`, so every
+ * caller that already passed one of those still type-checks unchanged — but the
+ * canvas helper is now free of either cropper library.
+ */
+export interface CropPixelArea {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * What the cropped canvas is filled with before the image is drawn.
+ *
+ * JPEG has no alpha channel, so any pixel the source photo leaves transparent
+ * would otherwise be encoded from black and leave dark fringes around a face
+ * crop. `--on-primary` is the design system's theme-invariant "text/fill on a
+ * solid colour" token and resolves to white in both themes; the literal below is
+ * only the fallback for a DOM where the token stylesheet is not present, and is
+ * deliberately the same white so the exported bytes never change.
+ */
+function canvasBackground(): string {
+  if (typeof window === 'undefined' || typeof getComputedStyle !== 'function') return 'white';
+  const token = getComputedStyle(document.documentElement)
+    .getPropertyValue('--on-primary')
+    .trim();
+  return token || 'white';
+}
 
 /**
  * Loads an image from a URL or ObjectURL into an HTMLImageElement.
@@ -39,7 +70,7 @@ export const createImage = (url: string): Promise<HTMLImageElement> =>
  */
 export async function getCroppedImg(
   imageSrc: string,
-  pixelCrop: Area,
+  pixelCrop: CropPixelArea,
   outputType: string = 'image/jpeg',
   quality: number = 0.92
 ): Promise<Blob> {

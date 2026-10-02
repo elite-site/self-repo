@@ -98,6 +98,13 @@ export const ProfilePage: React.FC = () => {
     fetchProfileData();
   }, []);
 
+  // Reduced-motion-aware greeting: the stagger container uses the registry
+  // from motion.ts; the individual item variants drop travel and keep only
+  // opacity changes so they are safe for vestibular sensitivity.
+  const shouldReduce = useReducedMotion();
+  const staggerContainer = selectVariantsByName(shouldReduce, 'staggerFastContainer');
+  const staggerItem = selectVariantsByName(shouldReduce, 'staggerItem');
+
   const handleOpenModal = (field = 'name') => {
     setFieldName(field);
     setRequestedValue('');
