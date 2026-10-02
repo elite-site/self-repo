@@ -1,10 +1,11 @@
-import React, { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React from 'react';
+import { Navigate } from 'react-router-dom';
+import { StudentSession } from '../types';
 import { Button } from '../components/ui/Button';
 import { api } from '../services/api';
 
 interface LoginPageProps {
-  session: any;
+  session: StudentSession | null;
   authChecking: boolean;
   sessionError: string | null;
   onRetry: () => void;
@@ -16,17 +17,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   sessionError,
   onRetry,
 }) => {
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    // If already signed in, redirect to dashboard
-    if (session?.accessToken) {
-      navigate('/dashboard', { replace: true });
-    }
-  }, [session, navigate]);
-
   if (authChecking) {
     return null; // Loading state handled by parent RouteLoadingFallback
+  }
+
+  if (session) {
+    return <Navigate to="/dashboard" replace />;
   }
 
   if (sessionError) {
@@ -55,21 +51,19 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           <p className="text-text-secondary">Student Introduction Portal</p>
         </div>
 
-        {session?.accessToken ? null : (
-          <div>
-            <p className="text-text-secondary text-sm mb-6">
-              Sign in with your SASI college Google account to access the portal.
-            </p>
-            <Button
-              onClick={() => {
-                window.location.href = api.getOAuthAuthorizeUrl();
-              }}
-              className="w-full text-left justify-start px-6 py-3 rounded-xl bg-brand text-on-primary hover:bg-red-700 transition-colors"
-            >
-              Sign in with Google
-            </Button>
-          </div>
-        )}
+        <div>
+          <p className="text-text-secondary text-sm mb-6">
+            Sign in with your SASI college Google account to access the portal.
+          </p>
+          <Button
+            onClick={() => {
+              window.location.href = api.getOAuthAuthorizeUrl();
+            }}
+            className="w-full text-left justify-start px-6 py-3 rounded-xl bg-brand text-on-primary hover:bg-red-700 transition-colors"
+          >
+            Sign in with Google
+          </Button>
+        </div>
       </div>
     </div>
   );

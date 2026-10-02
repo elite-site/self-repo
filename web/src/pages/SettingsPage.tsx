@@ -7,7 +7,7 @@ import { Select } from '../components/ui/Select';
 import { Menu } from 'lucide-react';
 
 export const SettingsPage: React.FC = () => {
-  const { session } = useSession();
+  const { session, logout } = useSession();
   const navigate = useNavigate();
   const { showToast } = useToast();
 
@@ -38,9 +38,9 @@ export const SettingsPage: React.FC = () => {
         {/* Sign out */}
         <div className="mt-8 pt-8 border-t border-surface-border">
           <Button
-            onClick={() => {
-              // Sign out logic
-              navigate('/login', { replace: true });
+            onClick={async () => {
+              await logout();
+              navigate('/', { replace: true });
             }}
             className="w-full text-left justify-start px-6 py-3 rounded-xl bg-status-solid-rejected text-on-primary hover:bg-brand transition-colors"
           >
