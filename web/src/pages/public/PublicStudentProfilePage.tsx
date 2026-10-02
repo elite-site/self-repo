@@ -270,7 +270,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
       <div className="print:hidden">
         <Navbar session={session} onLogout={onLogout} />
       </div>
-      <main className="mx-auto w-full max-w-4xl flex-1 px-6 pb-16 sm:px-10 print:p-0 print:max-w-none">{content}</main>
+      <main className="mx-auto w-full max-w-3xl flex-1 px-4 pb-16 sm:px-6 print:p-0 print:max-w-none">{content}</main>
       <div className="print:hidden">
         <Footer />
       </div>
@@ -406,7 +406,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
 
       {/* ── 1. COVER ────────────────────────────────────────────────────────
           Compact, modern banner hidden in print mode to keep focus on student. */}
-      <div className="relative -mx-6 mt-4 h-28 overflow-hidden rounded-b-2xl sm:-mx-10 sm:h-36 print:hidden">
+      <div className="relative -mx-4 mt-4 h-28 overflow-hidden rounded-b-2xl sm:-mx-6 sm:h-36 print:hidden">
         <span aria-hidden="true" className="block size-full bg-gradient-to-br from-red-950 via-red-900/80 to-slate-900" />
       </div>
 
@@ -481,7 +481,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
           />
         </div>
       ) : (
-        <div className="mt-14 space-y-14">
+        <div className="mt-10 space-y-10">
           {/* ── 3. ABOUT ─────────────────────────────────────────────────── */}
           {bio && (
             <PublicSection id="about" title="About" variants={reveal}>
@@ -495,22 +495,20 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
 
           {skillsList.length > 0 && (
             <PublicSection id="skills" title="Skills" variants={reveal}>
-              <Card>
-                <ul className="flex flex-wrap gap-2">
-                  {skillsList.map((entry, index) => {
-                    const label =
-                      typeof entry === 'string'
-                        ? entry
-                        : entry.skill?.name || entry.name || '';
-                    if (!label) return null;
-                    return (
-                      <li key={`${label}-${index}`}>
-                        <Tag label={label} />
-                      </li>
-                    );
-                  })}
-                </ul>
-              </Card>
+              <ul className="flex flex-wrap gap-2">
+                {skillsList.map((entry, index) => {
+                  const label =
+                    typeof entry === 'string'
+                      ? entry
+                      : entry.skill?.name || entry.name || '';
+                  if (!label) return null;
+                  return (
+                    <li key={`${label}-${index}`}>
+                      <Tag label={label} />
+                    </li>
+                  );
+                })}
+              </ul>
             </PublicSection>
           )}
 
@@ -518,7 +516,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
           {introVideo?.streamUrl && (
             <div className="print:hidden">
               <PublicSection id="video" title="Introduction video" variants={reveal}>
-                <div className="mx-auto max-w-2xl overflow-hidden rounded-xl border border-edge bg-surface-inverse aspect-video shadow-card">
+                <div className="w-full overflow-hidden rounded-xl border border-edge bg-surface-inverse aspect-video shadow-card">
                   {introVideo.driveFileId && !introVideo.driveFileId.startsWith('mock_') ? (
                     <iframe
                       src={`https://drive.google.com/file/d/${introVideo.driveFileId}/preview`}
@@ -563,15 +561,11 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
                   />
                 </Card>
               ) : (
-                <ul className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  {projects.map((project, index) => (
+                <ul className={`grid gap-4 ${projects.length === 1 ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'}`}>
+                  {projects.map((project) => (
                     <li
                       key={project.id}
-                      className={
-                        index === 0
-                          ? 'surface flex flex-col p-5 shadow-card md:col-span-2 print:break-inside-avoid print:border print:border-neutral-200'
-                          : 'surface flex flex-col p-5 print:break-inside-avoid print:border print:border-neutral-200'
-                      }
+                      className="surface flex flex-col p-5 shadow-card rounded-xl border border-edge hover:border-edge-strong transition-colors print:break-inside-avoid print:border print:border-neutral-200"
                     >
                     <h3 className="font-heading text-headline-sm text-ink">{project.title}</h3>
                     {project.description && (

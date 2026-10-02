@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Edit3,
@@ -22,7 +22,7 @@ import {
   GraduationCap
 } from 'lucide-react';
 import { api, resolveMediaUrl } from '../services/api';
-import { StudentProfile, Project, Certificate, Achievement } from '../types';
+import { StudentProfile, Project, Certificate, Achievement, StudentIntroVideo } from '../types';
 import { getPhotoStyle } from '../utils/photoStyle';
 import { SkeletonPage } from '../components/ui/Skeleton';
 import { createPortal } from 'react-dom';
@@ -32,6 +32,7 @@ import { selectVariantsByName } from '../lib/motion';
 
 export const ProfilePage: React.FC = () => {
   const [profile, setProfile] = useState<StudentProfile | null>(null);
+  const [video, setVideo] = useState<StudentIntroVideo | null>(null);
   const [imageError, setImageError] = useState(false);
   const [resume, setResume] = useState<any | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -59,12 +60,13 @@ export const ProfilePage: React.FC = () => {
     setLoading(true);
     setError(null);
 
-    const [pResult, rResult, prResult, achResult, certResult] = await Promise.allSettled([
+    const [pResult, rResult, prResult, achResult, certResult, meResult] = await Promise.allSettled([
       api.getProfile(),
       api.getResume(),
       api.getProjects(),
       api.getAchievements(),
       api.getCertificates(),
+      api.getMe(),
     ]);
 
     if (pResult.status === 'fulfilled') {
@@ -73,6 +75,10 @@ export const ProfilePage: React.FC = () => {
       if (pData.changeRequests) setChangeRequests(pData.changeRequests);
     } else {
       setError('Could not load profile details. Please retry.');
+    }
+
+    if (meResult.status === 'fulfilled' && meResult.value?.student?.video) {
+      setVideo(meResult.value.student.video);
     }
 
     if (rResult.status === 'fulfilled') {
@@ -95,6 +101,15 @@ export const ProfilePage: React.FC = () => {
 
     setLoading(false);
   };
+
+  const videoPlaybackUrl = useMemo(() => {
+    if (!video?.hasFile && !video?.driveFileId) return null;
+    const base = resolveMediaUrl('/api/student/submission/media/video');
+    const stamp = new Date(video.submittedAt || 0).getTime() || 0;
+    const token = localStorage.getItem('student_token');
+    const tokenParam = token ? `&token=${encodeURIComponent(token)}` : '';
+    return `${base}?v=${encodeURIComponent(video.id || '')}-${stamp}${tokenParam}`;
+  }, [video?.id, video?.submittedAt, video?.hasFile, video?.driveFileId]);
 
   useEffect(() => {
     fetchProfileData();
@@ -167,8 +182,13 @@ export const ProfilePage: React.FC = () => {
       case 'PENDING':
       case 'SUBMITTED': return 'badge badge-pending';
       case 'REVIEW': return 'badge badge-review';
-      case 'CHANGES_REQUESTED': return 'badge badge-changes';
-      default: return 'badge badge-draft'; } }; return ( <div className="space-y-6 text-ink page-enter">
+      default: return 'badge badge-draft';
+    }
+  };
+
+  return (
+    <>
+      <div className="mx-auto max-w-4xl space-y-8 text-ink page-enter pb-12">
       {/* ERROR BANNER WITH INLINE RETRY */}
       {error && (
         <div className="flex items-center justify-between p-4 bg-status-bg-rejected border border-status-rejected rounded-lg text-status-rejected text-sm">
@@ -178,7 +198,7 @@ export const ProfilePage: React.FC = () => {
           </div>
           <button
             onClick={fetchProfileData}
-             className="btn btn-danger"
+            className="btn btn-danger"
           >
             <RefreshCw className="w-3.5 h-3.5" />
             <span>Try Again</span>
@@ -186,10 +206,10 @@ export const ProfilePage: React.FC = () => {
         </div>
       )}
 
-      {/* 1. LARGE PROFILE BANNER HEADER */}
-      <div className="surface overflow-hidden">
-        {/* Top Crimson Banner Accent */}
-        <div className="h-28 sm:h-36 bg-surface-inverse relative px-6 sm:px-8 flex items-end">
+      {/* 1. PROFILE HEADER CARD */}
+      <div className="surface overflow-hidden rounded-2xl border border-edge shadow-card">
+        {/* Cover banner */}
+        <div className="h-28 sm:h-36 bg-gradient-to-br from-red-950 via-red-900/80 to-slate-900 relative px-6 sm:px-8 flex items-end">
           <div className="absolute top-4 right-4 flex items-center gap-2">
             <span className="text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-ink-inverse bg-on-primary/10 backdrop-blur-sm px-2.5 py-1 rounded-lg border border-on-primary/20">
               Verified Student Account
@@ -199,11 +219,11 @@ export const ProfilePage: React.FC = () => {
 
         {/* Profile Details Container */}
         <div className="px-6 sm:px-8 pb-8 pt-0 relative">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 -mt-12 sm:-mt-16 mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 -mt-14 sm:-mt-16 mb-6">
             {/* Avatar */}
             <div className="relative">
               {profile?.photoUrl && !imageError ? (
-                <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-lg overflow-hidden border-4 border-on-primary shadow-md bg-surface shrink-0">
+                <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden border-4 border-surface shadow-card bg-surface shrink-0">
                   <img
                     src={resolveMediaUrl(profile.photoUrl)}
                     alt={profile.name}
@@ -212,7 +232,7 @@ export const ProfilePage: React.FC = () => {
                   />
                 </div>
               ) : (
-                <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-lg bg-brand-soft text-brand-soft-text flex items-center justify-center font-black text-3xl sm:text-4xl border-4 border-on-primary shadow-md shrink-0 font-heading">
+                <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-brand-soft text-brand-soft-text flex items-center justify-center font-black text-3xl sm:text-4xl border-4 border-surface shadow-card shrink-0 font-heading">
                   {profile?.name
                     ? profile.name
                         .split(' ')
@@ -230,9 +250,11 @@ export const ProfilePage: React.FC = () => {
               <Link
                 to={`/students/${profile?.rollNo || ''}`}
                 className="btn btn-secondary"
+                target="_blank"
+                rel="noopener noreferrer"
               >
                 <span>Public Showcase</span>
-                <ExternalLink className="w-3.5 h-3.5"  />
+                <ExternalLink className="w-3.5 h-3.5" />
               </Link>
               <Link
                 to="/profile/edit"
@@ -250,7 +272,7 @@ export const ProfilePage: React.FC = () => {
               <h1 className="text-2xl sm:text-3xl font-black text-ink font-heading tracking-tight">
                 {profile?.name || 'Student'}
               </h1>
-              <span className="text-xs font-semibold text-ink-secondary bg-surface-sunken px-2.5 py-1 rounded-md border border-edge">
+              <span className="font-mono text-xs font-semibold text-ink-secondary bg-surface-sunken px-2.5 py-1 rounded-md border border-edge">
                 {profile?.rollNo || 'IT Portal'}
               </span>
             </div>
@@ -268,20 +290,14 @@ export const ProfilePage: React.FC = () => {
             </div>
 
             {/* Bio */}
-            <div className="pt-2">
-              {profile?.bio || (profile as any)?.biography ? (
-                <p className="text-sm text-ink-secondary leading-relaxed max-w-4xl bg-surface-sunken p-4 rounded-lg border border-edge italic">
-                  "{profile?.bio || (profile as any)?.biography}"
-                </p>
-              ) : (
-                <p className="text-xs text-ink-muted italic bg-surface-sunken p-3 rounded-lg border border-dashed border-edge">
-                  No biography provided yet. Click "Edit Profile" to add your introduction, career interests, and technical focus.
-                </p>
-              )}
-            </div>
+            {Boolean(profile?.bio || (profile as any)?.biography) && (
+              <p className="text-sm text-ink-secondary leading-relaxed max-w-3xl pt-1">
+                {profile?.bio || (profile as any)?.biography}
+              </p>
+            )}
 
             {/* Social Links */}
-            <div className="flex flex-wrap items-center gap-3 pt-1">
+            <div className="flex flex-wrap items-center gap-2.5 pt-2">
               {profile?.githubUrl && (
                 <a
                   href={profile.githubUrl}
@@ -298,7 +314,7 @@ export const ProfilePage: React.FC = () => {
                   href={profile.linkedinUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="btn btn-secondary px-3 py-1.5 text-xs bg-brand-soft text-brand-soft-text border-brand-soft"
+                  className="btn btn-secondary px-3 py-1.5 text-xs"
                 >
                   <Linkedin className="w-3.5 h-3.5" />
                   <span>LinkedIn</span>
@@ -331,299 +347,310 @@ export const ProfilePage: React.FC = () => {
                   href={profile.portfolioUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="btn btn-secondary px-3 py-1.5 text-xs bg-status-bg-approved text-status-approved border-status-approved"
+                  className="btn btn-secondary px-3 py-1.5 text-xs"
                 >
                   <Globe className="w-3.5 h-3.5" />
                   <span>Portfolio Site</span>
                 </a>
-              )}
-              {!profile?.githubUrl && !profile?.linkedinUrl && !profile?.leetcodeUrl && !profile?.codechefUrl && !profile?.portfolioUrl && (
-                <span className="text-xs text-ink-muted italic">
-                  No professional links added. Add your GitHub, LinkedIn, LeetCode, or CodeChef in Edit Profile.
-                </span>
               )}
             </div>
           </div>
         </div>
       </div>
 
-      {/* 2. TWO-COLUMN LAYOUT: LEFT 7 COLS, RIGHT 5 COLS */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* LEFT COLUMN: SKILLS, PROJECTS & ACHIEVEMENTS (7 cols) */}
-        <div className="lg:col-span-7 space-y-6">
-          {/* TECHNICAL SKILLS CARD */}
-          <div className="surface p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-ink-brand" />
-                <h2 className="text-base font-bold text-ink font-heading">Technical Skills & Stacks</h2>
-              </div>
-              <Link
-                to="/profile/edit"
-                className="text-xs font-bold text-ink-brand hover:text-brand-hover flex items-center gap-0.5"
-              >
-                <span>Manage Skills</span>
-                <ChevronRight className="w-3.5 h-3.5" />
-              </Link>
-            </div>
-
-            {profile?.skills && profile.skills.length > 0 ? (
-              <div className="flex flex-wrap gap-2 pt-1">
-                {profile.skills.map((skill) => (
-                  <span
-                    key={skill}
-                    className="px-3 py-1.5 bg-brand-soft border border-brand-soft text-brand-soft-text rounded-md text-xs font-semibold"
-                  >
-                    {skill}
-                  </span>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-6 px-4 bg-surface-sunken rounded-lg border border-dashed border-edge">
-                <Sparkles className="w-6 h-6 text-ink-muted mx-auto mb-1.5" />
-                <div className="text-xs font-semibold text-ink-secondary">No technical skills added yet</div>
-                <p className="text-[11px] text-ink-muted mt-0.5 mb-3">
-                  Highlight languages, frameworks, databases, and developer tools.
-                </p>
-                <Link
-                  to="/profile/edit"
-                  className="btn btn-primary text-xs"
-                >
-                  <span>Add Skills</span>
-                </Link>
-              </div>
-            )}
+      {/* 2. INTRODUCTION VIDEO SECTION */}
+      <div className="surface p-6 rounded-2xl border border-edge shadow-card space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Video className="w-5 h-5 text-ink-brand" />
+            <h2 className="text-base font-bold text-ink font-heading">Introduction Video</h2>
           </div>
-
-          {/* PROJECT SHOWCASE PREVIEW */}
-          <div className="surface p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <FolderGit2 className="w-5 h-5 text-ink-brand" />
-                <div>
-                  <h2 className="text-base font-bold text-ink font-heading">Featured Projects</h2>
-                  <p className="text-xs text-ink-secondary">Live builds & repositories</p>
-                </div>
-              </div>
-              <Link
-                to="/portfolio"
-                className="text-xs font-bold text-ink-brand hover:text-brand-hover flex items-center gap-0.5"
-              >
-                <span>View All ({projects.length})</span>
-                <ChevronRight className="w-3.5 h-3.5" />
-              </Link>
-            </div>
-
-            {projects.length === 0 ? (
-              <div className="text-center py-8 px-4 bg-surface-sunken rounded-lg border border-dashed border-edge">
-                <FolderGit2 className="w-8 h-8 text-ink-muted mx-auto mb-2" />
-                <div className="text-xs font-bold text-ink-secondary">No projects added yet</div>
-                <p className="text-[11px] text-ink-muted mt-0.5 mb-3">
-                  Showcase software applications, AI models, hardware builds, or academic projects.
-                </p>
-                <Link
-                  to="/portfolio"
-                  className="btn btn-primary text-xs"
-                >
-                  <span>Add Project</span>
-                </Link>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                {projects.slice(0, 4).map((proj) => (
-                  <div
-                    key={proj.id}
-                    className="surface p-4 flex flex-col justify-between hover:border-edge-strong transition-colors bg-surface-sunken"
-                  >
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <span
-                           className={getItemStatusBadgeClass(proj.status)}>
-
-                          {proj.status}
-                        </span>
-                      </div>
-                      <h4 className="text-xs font-bold text-ink font-heading line-clamp-1">{proj.title}</h4>
-                      <p className="text-[11px] text-ink-secondary line-clamp-2">{proj.description}</p>
-                    </div>
-
-                    <div className="pt-3 mt-2 border-t border-edge flex items-center justify-between text-xs">
-                      <div className="flex flex-wrap gap-1 max-w-[150px] overflow-hidden">
-                        {proj.techStack?.slice(0, 2).map((t) => (
-                          <span
-                            key={t}
-                            className="text-[9px] bg-surface border border-edge text-ink-secondary px-1.5 py-0.5 rounded"
-                          >
-                            {t}
-                          </span>
-                        ))}
-                      </div>
-                      {proj.githubUrl && (
-                        <a
-                          href={proj.githubUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-ink-secondary hover:text-ink-brand"
-                          aria-label="View project on GitHub"
-                        >
-                          <Github className="w-3.5 h-3.5" />
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
+          <div className="flex items-center gap-2">
+            {(video?.status || profile?.submission?.status) && (
+              <span className={getItemStatusBadgeClass(video?.status || profile?.submission?.status)}>
+                {video?.status || profile?.submission?.status}
+              </span>
             )}
-          </div>
-
-          {/* ACHIEVEMENTS & CERTIFICATES SUMMARY */}
-          <div className="surface p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Award className="w-5 h-5 text-brand-soft-text" />
-                <div>
-                  <h2 className="text-base font-bold text-ink font-heading">Honors & Certifications</h2>
-                  <p className="text-xs text-ink-secondary">Verified credentials & awards</p>
-                </div>
-              </div>
-              <Link
-                to="/portfolio"
-                className="text-xs font-bold text-ink-brand hover:text-brand-hover flex items-center gap-0.5"
-              >
-                <span>Manage ({achievements.length + certificates.length})</span>
-                <ChevronRight className="w-3.5 h-3.5" />
-              </Link>
-            </div>
-
-            {achievements.length === 0 && certificates.length === 0 ? (
-              <div className="text-center py-6 px-4 bg-surface-sunken rounded-lg border border-dashed border-edge">
-                <Award className="w-6 h-6 text-ink-muted mx-auto mb-1.5" />
-                <div className="text-xs font-semibold text-ink-secondary">No credentials uploaded yet</div>
-                <p className="text-[11px] text-ink-muted mt-0.5">
-                  Upload competition awards, hackathon ranks, and industry certifications.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-2.5">
-                {achievements.slice(0, 3).map((ach) => (
-                  <div
-                    key={ach.id}
-                    className="surface-sunken p-3 rounded-lg border border-edge flex items-center justify-between"
-                  >
-                    <div>
-                      <h4 className="text-xs font-bold text-ink font-heading">{ach.title}</h4>
-                      <p className="text-[11px] text-ink-secondary">{ach.organization || ach.category}</p>
-                    </div>
-                    <span className={getItemStatusBadgeClass(ach.status)}>
-                      {ach.status}
-                    </span>
-                  </div>
-                ))}
-                {certificates.slice(0, 2).map((cert) => (
-                  <div
-                    key={cert.id}
-                    className="surface-sunken p-3 rounded-lg border border-edge flex items-center justify-between"
-                  >
-                    <div>
-                      <h4 className="text-xs font-bold text-ink font-heading">{cert.title}</h4>
-                      <p className="text-[11px] text-ink-secondary">{cert.issuer}</p>
-                    </div>
-                    <span className={getItemStatusBadgeClass(cert.status)}>
-                      {cert.status}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
+            <Link
+              to="/intro-video"
+              className="btn btn-secondary px-3 py-1.5 text-xs"
+            >
+              <span>{profile?.submission?.videoUploaded || video?.hasFile ? 'Manage Video' : 'Upload Video'}</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </Link>
           </div>
         </div>
 
-        {/* RIGHT COLUMN: ACADEMIC DETAILS, DELIVERABLES & CHANGE REQUESTS (5 cols) */}
-        <div className="lg:col-span-5 space-y-6">
-          {/* OFFICIAL ACADEMIC INFORMATION */}
-          <div className="surface p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <GraduationCap className="w-5 h-5 text-ink-brand" />
-                <h2 className="text-base font-bold text-ink font-heading">Academic Records</h2>
-              </div>
-              <button
-                onClick={() => handleOpenModal('name')}
-                className="text-xs font-bold text-status-rejected hover:underline cursor-pointer"
-              >
-                Request Change
-              </button>
-            </div>
+        {(video?.driveFileId && !video.driveFileId.startsWith('mock_')) ? (
+          <div className="w-full overflow-hidden rounded-xl border border-edge bg-surface-inverse aspect-video shadow-card">
+            <iframe
+              src={`https://drive.google.com/file/d/${video.driveFileId}/preview`}
+              allow="autoplay; fullscreen"
+              className="w-full h-full border-0 rounded-xl"
+              title="Introduction video preview"
+            />
+          </div>
+        ) : videoPlaybackUrl ? (
+          <div className="w-full overflow-hidden rounded-xl border border-edge bg-surface-inverse aspect-video shadow-card">
+            <video
+              src={videoPlaybackUrl}
+              poster={video?.thumbnailUrl ? resolveMediaUrl(video.thumbnailUrl) : undefined}
+              controls
+              controlsList="nodownload"
+              onContextMenu={(e) => e.preventDefault()}
+              preload="metadata"
+              playsInline
+              className="w-full h-full object-contain"
+            >
+              Your browser cannot play this video.
+            </video>
+          </div>
+        ) : (
+          <div className="text-center py-8 px-4 bg-surface-sunken rounded-xl border border-dashed border-edge">
+            <Video className="w-8 h-8 text-ink-muted mx-auto mb-2" />
+            <div className="text-xs font-bold text-ink-secondary">No introduction video uploaded yet</div>
+            <p className="text-[11px] text-ink-muted mt-0.5 mb-3">
+              Upload your 60-90 second introduction video to showcase on your profile.
+            </p>
+            <Link to="/intro-video" className="btn btn-primary text-xs">
+              <span>Upload Video</span>
+            </Link>
+          </div>
+        )}
+      </div>
 
-            <div className="space-y-3 divide-y divide-edge text-xs">
-              <div className="flex items-center justify-between pt-2">
-                <span className="text-ink-secondary font-medium">Roll Number</span>
-                <span className="font-semibold text-ink">{profile?.rollNo || 'To be announced'}</span>
-              </div>
-              <div className="flex items-center justify-between pt-2">
-                <span className="text-ink-secondary font-medium">Full Name</span>
-                <span className="font-bold text-ink">{profile?.name || 'To be announced'}</span>
-              </div>
-              <div className="flex items-center justify-between pt-2">
-                <span className="text-ink-secondary font-medium">Year & Section</span>
-                <span className="font-bold text-ink">
-                  Year {profile?.year || 'To be announced'}, Section {profile?.section || 'To be announced'}
-                </span>
-              </div>
-              <div className="flex items-center justify-between pt-2">
-                <span className="text-ink-secondary font-medium">Department</span>
-                <span className="font-bold text-ink">{profile?.branch || 'IT'}</span>
-              </div>
-              <div className="flex items-center justify-between pt-2">
-                <span className="text-ink-secondary font-medium">College Email</span>
-                <span className="text-ink-secondary truncate max-w-[180px]">
-                  {profile?.email || 'To be announced'}
-                </span>
-              </div>
-              <div className="flex items-center justify-between pt-2">
-                <span className="text-ink-secondary font-medium">Institution</span>
-                <span className="font-bold text-ink">SASI Institute</span>
-              </div>
-            </div>
+      {/* 3. TECHNICAL SKILLS */}
+      <div className="surface p-6 rounded-2xl border border-edge shadow-card space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-ink-brand" />
+            <h2 className="text-base font-bold text-ink font-heading">Technical Skills</h2>
+          </div>
+          <Link
+            to="/profile/edit"
+            className="text-xs font-bold text-ink-brand hover:text-brand-hover flex items-center gap-0.5"
+          >
+            <span>Manage Skills</span>
+            <ChevronRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
 
-            <div className="pt-2">
-              <button
-                onClick={() => handleOpenModal('name')}
-                className="w-full py-2 px-3 rounded-lg border border-dashed border-edge hover:border-brand bg-surface-sunken text-[11px] font-bold text-ink-secondary hover:text-ink-brand transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+        {profile?.skills && profile.skills.length > 0 ? (
+          <div className="flex flex-wrap gap-2 pt-1">
+            {profile.skills.map((skill) => (
+              <span
+                key={skill}
+                className="px-3 py-1.5 bg-surface border border-edge text-ink rounded-lg text-xs font-semibold shadow-sm"
               >
-                <ShieldAlert className="w-3.5 h-3.5 text-ink-muted" />
-                <span>Incorrect record? Submit Official Change Request</span>
-              </button>
+                {skill}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-6 px-4 bg-surface-sunken rounded-xl border border-dashed border-edge">
+            <Sparkles className="w-6 h-6 text-ink-muted mx-auto mb-1.5" />
+            <div className="text-xs font-semibold text-ink-secondary">No technical skills added yet</div>
+            <p className="text-[11px] text-ink-muted mt-0.5 mb-3">
+              Highlight languages, frameworks, databases, and developer tools.
+            </p>
+            <Link to="/profile/edit" className="btn btn-primary text-xs">
+              <span>Add Skills</span>
+            </Link>
+          </div>
+        )}
+      </div>
+
+      {/* 4. FEATURED PROJECTS */}
+      <div className="surface p-6 rounded-2xl border border-edge shadow-card space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <FolderGit2 className="w-5 h-5 text-ink-brand" />
+            <div>
+              <h2 className="text-base font-bold text-ink font-heading">Featured Projects</h2>
+              <p className="text-xs text-ink-secondary">Live builds & repositories</p>
             </div>
           </div>
+          <Link
+            to="/portfolio"
+            className="text-xs font-bold text-ink-brand hover:text-brand-hover flex items-center gap-0.5"
+          >
+            <span>Manage ({projects.length})</span>
+            <ChevronRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
 
-          {/* DELIVERABLES STATUS: VIDEO & RESUME */}
-          <div className="surface p-6 space-y-4">
-            <h2 className="text-base font-bold text-ink font-heading">Portal Deliverables</h2>
-
-            {/* Video status item */}
-            <div className="surface-sunken p-3.5 rounded-lg border border-edge flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-status-bg-rejected text-status-rejected">
-                  <Video className="w-4 h-4" />
+        {projects.length === 0 ? (
+          <div className="text-center py-8 px-4 bg-surface-sunken rounded-xl border border-dashed border-edge">
+            <FolderGit2 className="w-8 h-8 text-ink-muted mx-auto mb-2" />
+            <div className="text-xs font-bold text-ink-secondary">No projects added yet</div>
+            <p className="text-[11px] text-ink-muted mt-0.5 mb-3">
+              Showcase software applications, AI models, hardware builds, or academic projects.
+            </p>
+            <Link to="/portfolio" className="btn btn-primary text-xs">
+              <span>Add Project</span>
+            </Link>
+          </div>
+        ) : (
+          <div className={`grid gap-4 ${projects.length === 1 ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2'}`}>
+            {projects.slice(0, 4).map((proj) => (
+              <div
+                key={proj.id}
+                className="surface p-4 rounded-xl border border-edge flex flex-col justify-between hover:border-edge-strong transition-colors bg-surface-sunken"
+              >
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className={getItemStatusBadgeClass(proj.status)}>
+                      {proj.status}
+                    </span>
+                  </div>
+                  <h4 className="text-xs font-bold text-ink font-heading line-clamp-1">{proj.title}</h4>
+                  <p className="text-[11px] text-ink-secondary line-clamp-2">{proj.description}</p>
                 </div>
-                <div>
-                  <h4 className="text-xs font-bold text-ink font-heading">Introduction Video</h4>
-                  <span className="text-[10px] text-ink-secondary">
-                    {profile?.submission?.status ? `Status: ${profile.submission.status}` : 'Not submitted'}
-                  </span>
+
+                <div className="pt-3 mt-2 border-t border-edge flex items-center justify-between text-xs">
+                  <div className="flex flex-wrap gap-1 max-w-[150px] overflow-hidden">
+                    {proj.techStack?.slice(0, 2).map((t) => (
+                      <span
+                        key={t}
+                        className="text-[9px] bg-surface border border-edge text-ink-secondary px-1.5 py-0.5 rounded"
+                      >
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+                  {proj.githubUrl && (
+                    <a
+                      href={proj.githubUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-ink-secondary hover:text-ink-brand"
+                      aria-label="View project on GitHub"
+                    >
+                      <Github className="w-3.5 h-3.5" />
+                    </a>
+                  )}
                 </div>
               </div>
-              <Link
-                to="/intro-video"
-                className="btn btn-secondary px-3 py-1.5 text-xs"
-              >
-                {profile?.submission?.videoUploaded ? 'View / Replace' : 'Upload'}
-              </Link>
-            </div>
+            ))}
+          </div>
+        )}
+      </div>
 
-            {/* Resume status item */}
-            <div className="surface-sunken p-3.5 rounded-lg border border-edge flex items-center justify-between">
+      {/* 5. HONORS & CERTIFICATIONS */}
+      <div className="surface p-6 rounded-2xl border border-edge shadow-card space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Award className="w-5 h-5 text-brand-soft-text" />
+            <div>
+              <h2 className="text-base font-bold text-ink font-heading">Honors & Certifications</h2>
+              <p className="text-xs text-ink-secondary">Verified credentials & awards</p>
+            </div>
+          </div>
+          <Link
+            to="/portfolio"
+            className="text-xs font-bold text-ink-brand hover:text-brand-hover flex items-center gap-0.5"
+          >
+            <span>Manage ({achievements.length + certificates.length})</span>
+            <ChevronRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+
+        {achievements.length === 0 && certificates.length === 0 ? (
+          <div className="text-center py-6 px-4 bg-surface-sunken rounded-xl border border-dashed border-edge">
+            <Award className="w-6 h-6 text-ink-muted mx-auto mb-1.5" />
+            <div className="text-xs font-semibold text-ink-secondary">No credentials uploaded yet</div>
+            <p className="text-[11px] text-ink-muted mt-0.5">
+              Upload competition awards, hackathon ranks, and industry certifications.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {achievements.slice(0, 3).map((ach) => (
+              <div
+                key={ach.id}
+                className="surface-sunken p-3 rounded-xl border border-edge flex items-center justify-between"
+              >
+                <div>
+                  <h4 className="text-xs font-bold text-ink font-heading">{ach.title}</h4>
+                  <p className="text-[11px] text-ink-secondary">{ach.organization || ach.category}</p>
+                </div>
+                <span className={getItemStatusBadgeClass(ach.status)}>
+                  {ach.status}
+                </span>
+              </div>
+            ))}
+            {certificates.slice(0, 2).map((cert) => (
+              <div
+                key={cert.id}
+                className="surface-sunken p-3 rounded-xl border border-edge flex items-center justify-between"
+              >
+                <div>
+                  <h4 className="text-xs font-bold text-ink font-heading">{cert.title}</h4>
+                  <p className="text-[11px] text-ink-secondary">{cert.issuer}</p>
+                </div>
+                <span className={getItemStatusBadgeClass(cert.status)}>
+                  {cert.status}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* 6. ACADEMIC INFORMATION, RESUME & OFFICIAL REQUESTS */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* OFFICIAL ACADEMIC INFORMATION */}
+        <div className="surface p-6 rounded-2xl border border-edge shadow-card space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <GraduationCap className="w-5 h-5 text-ink-brand" />
+              <h2 className="text-base font-bold text-ink font-heading">Academic Records</h2>
+            </div>
+            <button
+              onClick={() => handleOpenModal('name')}
+              className="text-xs font-bold text-status-rejected hover:underline cursor-pointer"
+            >
+              Request Change
+            </button>
+          </div>
+
+          <div className="space-y-3 divide-y divide-edge text-xs">
+            <div className="flex items-center justify-between pt-2">
+              <span className="text-ink-secondary font-medium">Roll Number</span>
+              <span className="font-semibold text-ink font-mono">{profile?.rollNo || '—'}</span>
+            </div>
+            <div className="flex items-center justify-between pt-2">
+              <span className="text-ink-secondary font-medium">Full Name</span>
+              <span className="font-bold text-ink">{profile?.name || '—'}</span>
+            </div>
+            <div className="flex items-center justify-between pt-2">
+              <span className="text-ink-secondary font-medium">Year & Section</span>
+              <span className="font-bold text-ink">
+                Year {profile?.year || '1'}, Section {profile?.section || 'A'}
+              </span>
+            </div>
+            <div className="flex items-center justify-between pt-2">
+              <span className="text-ink-secondary font-medium">Department</span>
+              <span className="font-bold text-ink">{profile?.branch || 'IT'}</span>
+            </div>
+            <div className="flex items-center justify-between pt-2">
+              <span className="text-ink-secondary font-medium">College Email</span>
+              <span className="text-ink-secondary truncate max-w-[180px]">
+                {profile?.email || '—'}
+              </span>
+            </div>
+            <div className="flex items-center justify-between pt-2">
+              <span className="text-ink-secondary font-medium">Institution</span>
+              <span className="font-bold text-ink">SASI Institute</span>
+            </div>
+          </div>
+        </div>
+
+        {/* DELIVERABLES & CHANGE REQUESTS */}
+        <div className="space-y-6">
+          <div className="surface p-6 rounded-2xl border border-edge shadow-card space-y-4">
+            <h2 className="text-base font-bold text-ink font-heading">Resume Document</h2>
+            <div className="surface-sunken p-3.5 rounded-xl border border-edge flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-brand-soft text-brand-soft-text">
                   <FileText className="w-4 h-4" />
@@ -644,9 +671,8 @@ export const ProfilePage: React.FC = () => {
             </div>
           </div>
 
-          {/* CHANGE REQUESTS AUDIT LOG */}
           {changeRequests.length > 0 && (
-            <div className="surface p-6 space-y-3">
+            <div className="surface p-6 rounded-2xl border border-edge shadow-card space-y-3">
               <h2 className="text-sm font-bold text-ink font-heading">Submitted Change Requests</h2>
               <div className="space-y-2">
                 {changeRequests.map((cr) => (
@@ -658,9 +684,7 @@ export const ProfilePage: React.FC = () => {
                       <span className="font-bold text-ink uppercase text-[10px]">
                         Field: {cr.fieldName}
                       </span>
-                      <span
-                         className={getItemStatusBadgeClass(cr.status)}>
-
+                      <span className={getItemStatusBadgeClass(cr.status)}>
                         {cr.status}
                       </span>
                     </div>
@@ -677,6 +701,7 @@ export const ProfilePage: React.FC = () => {
           )}
         </div>
       </div>
+    </div>
 
       {/* 3. MODAL DIALOG: REQUEST ACADEMIC DETAIL CHANGE */}
       {modalOpen &&
@@ -796,7 +821,7 @@ export const ProfilePage: React.FC = () => {
           </div>,
           document.body
         )}
-    </div>
+    </>
   );
 };
 
