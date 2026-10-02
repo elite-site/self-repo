@@ -8,8 +8,10 @@ import { ValidationService } from '../services/validation.service';
 import { driveService } from '../services/drive.service';
 import { ActivityService } from '../services/activity.service';
 import { resolveContentRange } from '../utils/rangeParser';
+import { TtlCache } from '../utils/ttlCache';
 
 const router = Router();
+const mediaDriveIdCache = new TtlCache<string>(300_000, 1000);
 
 const EVENT_ID = 'self-introduction-2026';
 const EVENT_NAME = 'Self Introduction';
@@ -392,37 +394,8 @@ router.get(
           : Buffer.from(record.thumbnail);
       }
 
-      // Lazy fallback generation if thumbnail is not yet stored but Drive file exists
-      if (!thumbnail && driveFileId) {
-        try {
-          const generated = await driveService.generateThumbnail(
-            driveFileId,
-            type as 'video' | 'resume' | 'certificate' | 'achievement',
-          );
-          if (generated) {
-            thumbnail = generated;
-            if (type === 'certificate') {
-              await prisma.certificate.update({ where: { id }, data: { thumbnail: generated } });
-            } else if (type === 'achievement') {
-              await prisma.achievement.update({ where: { id }, data: { thumbnail: generated } });
-            } else if (type === 'resume') {
-              await prisma.resume.update({ where: { id }, data: { thumbnail: generated } });
-            } else if (type === 'video' && record?.id) {
-              await prisma.introVideo.update({ where: { id: record.id }, data: { thumbnail: generated } });
-            }
-          }
-        } catch (genErr) {
-          console.warn(`[thumbnail] Lazy generation failed for ${type}/${id}:`, genErr);
-        }
-      }
-
       const versionKey = driveFileId || id;
       const etag = `"${versionKey}"`;
-
-      // Every thumbnail type revalidates. A re-upload replaces the Drive file and
-      // mints a new ETag, so the browser must come back for it — `immutable`
-      // made replaced resumes/certificates serve their original thumbnail for
-      // the full max-age, long after the file underneath had changed.
       const cacheControl = 'public, max-age=60, must-revalidate';
 
       if (req.headers['if-none-match'] === etag) {
@@ -430,6 +403,42 @@ router.get(
         res.setHeader('ETag', etag);
         res.status(304).end();
         return;
+      }
+
+      // If thumbnail is not pre-stored but Drive file exists:
+      // For certificate/achievement, avoid canvas/pdfjs errors by serving the file directly if it's an image, or falling back to SVG.
+      if (!thumbnail && driveFileId) {
+        if (type === 'certificate' || type === 'achievement') {
+          try {
+            const { stream, mimeType } = await driveService.streamDriveFile(driveFileId);
+            if (mimeType && mimeType.startsWith('image/')) {
+              res.setHeader('Content-Type', mimeType);
+              res.setHeader('Cache-Control', cacheControl);
+              res.setHeader('ETag', etag);
+              stream.pipe(res);
+              return;
+            }
+          } catch (streamErr) {
+            // Safe fallback to placeholder SVG below
+          }
+        } else {
+          try {
+            const generated = await driveService.generateThumbnail(
+              driveFileId,
+              type as 'video' | 'resume',
+            );
+            if (generated) {
+              thumbnail = generated;
+              if (type === 'resume') {
+                await prisma.resume.update({ where: { id }, data: { thumbnail: generated } }).catch(() => {});
+              } else if (type === 'video' && record?.id) {
+                await prisma.introVideo.update({ where: { id: record.id }, data: { thumbnail: generated } }).catch(() => {});
+              }
+            }
+          } catch (genErr) {
+            console.warn(`[thumbnail] Lazy generation failed for ${type}/${id}:`, genErr);
+          }
+        }
       }
 
       res.setHeader('Cache-Control', cacheControl);
@@ -445,9 +454,11 @@ router.get(
       }
     } catch (err: any) {
       console.warn(`[thumbnail] Error serving thumbnail ${req.params?.type}/${req.params?.id}:`, err?.message || err);
-      const svg = getThumbnailPlaceholderSvg(req.params?.type || 'document');
-      res.setHeader('Content-Type', 'image/svg+xml');
-      res.status(200).send(svg);
+      if (!res.headersSent) {
+        const svg = getThumbnailPlaceholderSvg(req.params?.type || 'document');
+        res.setHeader('Content-Type', 'image/svg+xml');
+        res.status(200).send(svg);
+      }
     }
   },
 );
@@ -461,8 +472,13 @@ router.get('/public/media/:type/:fileId', async (req: Request, res: Response): P
       return;
     }
 
-    let resolvedDriveId: string | null = null;
-    try {
+    const cacheKey = `${type}:${fileId}`;
+    let resolvedDriveId: string | null = mediaDriveIdCache.get(cacheKey) || null;
+    if (!resolvedDriveId && (fileId.startsWith('mock_') || fileId.startsWith('drive_'))) {
+      resolvedDriveId = fileId;
+      mediaDriveIdCache.set(cacheKey, fileId);
+    } else if (!resolvedDriveId) {
+      try {
       if (type === 'certificate') {
         const cert = await prisma.certificate.findUnique({ where: { id: fileId } });
         if (cert?.fileDriveId) resolvedDriveId = cert.fileDriveId;
@@ -501,6 +517,10 @@ router.get('/public/media/:type/:fileId', async (req: Request, res: Response): P
     } catch (lookupErr) {
       console.warn(`[public media] DB lookup error for ${type}/${fileId}:`, lookupErr);
     }
+    if (resolvedDriveId) {
+      mediaDriveIdCache.set(cacheKey, resolvedDriveId);
+    }
+  }
 
     const targetDriveFileId = resolvedDriveId || fileId;
     const etag = `"${targetDriveFileId}"`;
@@ -562,7 +582,7 @@ router.get('/public/media/:type/:fileId', async (req: Request, res: Response): P
 
     res.setHeader('Content-Type', mimeType);
     res.setHeader('Accept-Ranges', 'bytes');
-    res.setHeader('Cache-Control', 'private, max-age=3600');
+    res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
     res.setHeader('ETag', etag);
 
     // Allow PDF documents and media to be rendered inside portal iframes

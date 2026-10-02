@@ -261,19 +261,33 @@ const DashboardSkeleton: React.FC = () => (
   </div>
 );
 
+// Fast in-memory cache so navigating back to dashboard renders in 0ms without skeleton flicker
+let dashboardCache: {
+  profile: DashboardProfile | null;
+  resume: DashboardResume | DashboardResume[] | null;
+  projects: Project[];
+  achievements: Achievement[];
+  certificates: Certificate[];
+  events: Event[];
+  registrations: EventRegistration[];
+  votingCampaigns: VotingCampaign[];
+  notifications: Notification[];
+  timestamp: number;
+} | null = null;
+
 export const DashboardPage: React.FC = () => {
-  const [profile, setProfile] = useState<DashboardProfile | null>(null);
-  const [resume, setResume] = useState<DashboardResume | DashboardResume[] | null>(null);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [achievements, setAchievements] = useState<Achievement[]>([]);
-  const [certificates, setCertificates] = useState<Certificate[]>([]);
-  const [events, setEvents] = useState<Event[]>([]);
-  const [registrations, setRegistrations] = useState<EventRegistration[]>([]);
-  const [votingCampaigns, setVotingCampaigns] = useState<VotingCampaign[]>([]);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [profile, setProfile] = useState<DashboardProfile | null>(() => dashboardCache?.profile ?? null);
+  const [resume, setResume] = useState<DashboardResume | DashboardResume[] | null>(() => dashboardCache?.resume ?? null);
+  const [projects, setProjects] = useState<Project[]>(() => dashboardCache?.projects ?? []);
+  const [achievements, setAchievements] = useState<Achievement[]>(() => dashboardCache?.achievements ?? []);
+  const [certificates, setCertificates] = useState<Certificate[]>(() => dashboardCache?.certificates ?? []);
+  const [events, setEvents] = useState<Event[]>(() => dashboardCache?.events ?? []);
+  const [registrations, setRegistrations] = useState<EventRegistration[]>(() => dashboardCache?.registrations ?? []);
+  const [votingCampaigns, setVotingCampaigns] = useState<VotingCampaign[]>(() => dashboardCache?.votingCampaigns ?? []);
+  const [notifications, setNotifications] = useState<Notification[]>(() => dashboardCache?.notifications ?? []);
   const navigate = useNavigate();
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !dashboardCache);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [eventsError, setEventsError] = useState<string | null>(null);
   const [notifError, setNotifError] = useState<string | null>(null);
@@ -287,7 +301,7 @@ export const DashboardPage: React.FC = () => {
   const staggerItem = selectVariantsByName(shouldReduce, 'staggerFastItem');
 
   const loadData = async (isInitial = true) => {
-    if (isInitial && !profile) setLoading(true);
+    if (isInitial && !dashboardCache) setLoading(true);
     setProfileError(null);
 
     const [
@@ -312,24 +326,78 @@ export const DashboardPage: React.FC = () => {
       api.getNotifications(),
     ]);
 
-    if (pResult.status === 'fulfilled') setProfile(pResult.value);
-    else setProfileError('We could not load your profile right now.');
+    let loadedProfile = dashboardCache?.profile ?? null;
+    let loadedResume = dashboardCache?.resume ?? null;
+    let loadedProjects = dashboardCache?.projects ?? [];
+    let loadedAchievements = dashboardCache?.achievements ?? [];
+    let loadedCertificates = dashboardCache?.certificates ?? [];
+    let loadedEvents = dashboardCache?.events ?? [];
+    let loadedRegistrations = dashboardCache?.registrations ?? [];
+    let loadedVoting = dashboardCache?.votingCampaigns ?? [];
+    let loadedNotifs = dashboardCache?.notifications ?? [];
 
-    if (rResult.status === 'fulfilled') setResume(rResult.value);
-    if (projResult.status === 'fulfilled' && Array.isArray(projResult.value)) setProjects(projResult.value);
-    if (achResult.status === 'fulfilled' && Array.isArray(achResult.value)) setAchievements(achResult.value);
-    if (certResult.status === 'fulfilled' && Array.isArray(certResult.value)) setCertificates(certResult.value);
+    if (pResult.status === 'fulfilled') {
+      loadedProfile = pResult.value;
+      setProfile(pResult.value);
+    } else if (!dashboardCache) {
+      setProfileError('We could not load your profile right now.');
+    }
 
-    if (evResult.status === 'fulfilled' && Array.isArray(evResult.value)) setEvents(evResult.value);
-    else setEventsError('We could not load department events right now.');
+    if (rResult.status === 'fulfilled') {
+      loadedResume = rResult.value;
+      setResume(rResult.value);
+    }
+    if (projResult.status === 'fulfilled' && Array.isArray(projResult.value)) {
+      loadedProjects = projResult.value;
+      setProjects(projResult.value);
+    }
+    if (achResult.status === 'fulfilled' && Array.isArray(achResult.value)) {
+      loadedAchievements = achResult.value;
+      setAchievements(achResult.value);
+    }
+    if (certResult.status === 'fulfilled' && Array.isArray(certResult.value)) {
+      loadedCertificates = certResult.value;
+      setCertificates(certResult.value);
+    }
 
-    if (regResult.status === 'fulfilled' && Array.isArray(regResult.value)) setRegistrations(regResult.value);
+    if (evResult.status === 'fulfilled' && Array.isArray(evResult.value)) {
+      loadedEvents = evResult.value;
+      setEvents(evResult.value);
+    } else if (!dashboardCache) {
+      setEventsError('We could not load department events right now.');
+    }
 
-    if (vResult.status === 'fulfilled' && Array.isArray(vResult.value)) setVotingCampaigns(vResult.value);
-    else setVotingError('We could not load voting campaigns right now.');
+    if (regResult.status === 'fulfilled' && Array.isArray(regResult.value)) {
+      loadedRegistrations = regResult.value;
+      setRegistrations(regResult.value);
+    }
 
-    if (nResult.status === 'fulfilled' && Array.isArray(nResult.value?.items)) setNotifications(nResult.value.items);
-    else setNotifError('We could not load your recent activity right now.');
+    if (vResult.status === 'fulfilled' && Array.isArray(vResult.value)) {
+      loadedVoting = vResult.value;
+      setVotingCampaigns(vResult.value);
+    } else if (!dashboardCache) {
+      setVotingError('We could not load voting campaigns right now.');
+    }
+
+    if (nResult.status === 'fulfilled' && Array.isArray(nResult.value?.items)) {
+      loadedNotifs = nResult.value.items;
+      setNotifications(nResult.value.items);
+    } else if (!dashboardCache) {
+      setNotifError('We could not load your recent activity right now.');
+    }
+
+    dashboardCache = {
+      profile: loadedProfile,
+      resume: loadedResume,
+      projects: loadedProjects,
+      achievements: loadedAchievements,
+      certificates: loadedCertificates,
+      events: loadedEvents,
+      registrations: loadedRegistrations,
+      votingCampaigns: loadedVoting,
+      notifications: loadedNotifs,
+      timestamp: Date.now(),
+    };
 
     setLoading(false);
   };

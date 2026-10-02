@@ -103,6 +103,7 @@ export class DriveService {
   /** fileId -> expiry timestamp, for files confirmed NOT to be `anyone`-readable. */
   private negativePermissionCache = new Map<string, number>();
   private folderMemoryCache = new Map<string, string>();
+  private fileMetadataCache = new Map<string, { mimeType: string; size?: number; name?: string; cachedAt: number }>();
 
   constructor() {
     this.init();
@@ -371,13 +372,11 @@ export class DriveService {
         sendNotificationEmail: false,
       });
       this.viewerPermissionCache.add(fileOrFolderId);
-      // Deliberately not `rememberAnyoneReadable`. This method is also called
-      // for folders — on every folder creation, and again by
-      // `ensureAllFilesViewerAccess` when it sweeps every `driveFolderCache`
-      // row — and `isPubliclyReadable` never consults a folder id. Recording
-      // them here spent the whole capped budget on entries nothing reads, which
-      // evicted the real file entries and made every view re-issue a
-      // `permissions.list`. That check confirms a file on its own anyway.
+      this.drive.files.update({
+        fileId: fileOrFolderId,
+        requestBody: { copyRequiresWriterPermission: true },
+        supportsAllDrives: true,
+      }).catch(() => {});
       console.log(`[Drive] Public viewer access ('anyone') granted to: ${fileOrFolderId}`);
       return true;
     } catch (permErr: any) {
@@ -1010,7 +1009,7 @@ export class DriveService {
    * corrected by the async `setViewerPermission` that runs after upload.
    */
   public async isPubliclyReadable(fileId?: string | null): Promise<boolean> {
-    if (!fileId || this.isMock || !this.drive) return false;
+    if (!fileId || this.isMock || !this.drive || fileId.startsWith('mock_')) return false;
     const known = this.anyoneReadableCache.get(fileId);
     if (known !== undefined) {
       if (Date.now() < known) {
@@ -1097,7 +1096,7 @@ export class DriveService {
     relativePath?: string,
     rangeHeader?: string,
   ): Promise<DriveStreamResult> {
-    if (this.isMock || !this.drive) {
+    if (this.isMock || !this.drive || fileId.startsWith('mock_') || fileId.startsWith('drive_')) {
       const inspectMockFile = (metaFilePath: string): { actualFilePath: string; meta: any; size: number } | null => {
         try {
           const meta = JSON.parse(fs.readFileSync(metaFilePath, 'utf-8'));
@@ -1165,15 +1164,34 @@ export class DriveService {
       );
     }
 
-    // Google Drive stream
-    this.setViewerPermission(fileId).catch(() => {});
-    const metadata = await this.drive.files.get({
-      fileId,
-      supportsAllDrives: true,
-      fields: 'mimeType, size, name',
-    });
+    // Google Drive stream with metadata caching
+    let totalSize: number | undefined;
+    let mimeType = 'application/octet-stream';
+    const cachedMeta = this.fileMetadataCache.get(fileId);
 
-    const totalSize = metadata.data.size ? parseInt(metadata.data.size, 10) : undefined;
+    if (cachedMeta && (Date.now() - cachedMeta.cachedAt < 3600_000)) {
+      totalSize = cachedMeta.size;
+      mimeType = cachedMeta.mimeType;
+    } else {
+      if (!this.viewerPermissionCache.has(fileId)) {
+        this.setViewerPermission(fileId).catch(() => {});
+      }
+      const metadata = await this.drive.files.get({
+        fileId,
+        supportsAllDrives: true,
+        fields: 'mimeType, size, name',
+      });
+
+      totalSize = metadata.data.size ? parseInt(metadata.data.size, 10) : undefined;
+      mimeType = metadata.data.mimeType || 'application/octet-stream';
+      this.fileMetadataCache.set(fileId, {
+        size: totalSize,
+        mimeType,
+        name: metadata.data.name || undefined,
+        cachedAt: Date.now(),
+      });
+    }
+
     const requestOptions: any = { responseType: 'stream' };
 
     // A parsed range lets us both narrow the Drive request and report an exact
@@ -1205,7 +1223,7 @@ export class DriveService {
 
     return {
       stream: res.data as Readable,
-      mimeType: metadata.data.mimeType || 'application/octet-stream',
+      mimeType,
       size: totalSize,
       contentRange,
     };

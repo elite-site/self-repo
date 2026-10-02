@@ -14,8 +14,10 @@ import { ActivityService } from '../services/activity.service';
 import { ssoService } from '../services/sso.service';
 import { resolveContentRange } from '../utils/rangeParser';
 import { getMaxVideoSizeMb } from '../services/limits.service';
+import { TtlCache } from '../utils/ttlCache';
 
 const router = Router();
+const studentSubmissionVideoCache = new TtlCache<{ videoDriveId: string; driveFolderPath: string }>(120_000, 500);
 
 const EVENT_ID = 'self-introduction-2026';
 const EVENT_NAME = 'Self Introduction';
@@ -748,23 +750,42 @@ router.patch('/submission/video-visibility', requireStudentAuth, async (req: Req
 router.get('/submission/media/video', requireStudentAuth, async (req: Request, res: Response): Promise<void> => {
   try {
     const studentId = req.student!.studentId;
+    const rollNo = req.student?.rollNo;
 
-    // Minimal projection — only fetch the fields we actually need
-    const student = await prisma.student.findUnique({
-      where: { id: studentId },
-      select: { rollNo: true },
-    });
+    const cacheKey = rollNo || studentId;
+    let cached = studentSubmissionVideoCache.get(cacheKey);
+    let submission: { videoDriveId: string | null; driveFolderPath: string } | null = cached || null;
 
-    if (!student) {
-      res.status(404).json({ error: 'NOT_FOUND', message: 'Student account not found.' });
-      return;
+    if (!submission) {
+      if (rollNo) {
+        submission = await prisma.submission.findFirst({
+          where: { rollNo },
+          orderBy: { submittedAt: 'desc' },
+          select: { videoDriveId: true, driveFolderPath: true },
+        });
+      } else {
+        const student = await prisma.student.findUnique({
+          where: { id: studentId },
+          select: { rollNo: true },
+        });
+        if (!student) {
+          res.status(404).json({ error: 'NOT_FOUND', message: 'Student account not found.' });
+          return;
+        }
+        submission = await prisma.submission.findFirst({
+          where: { rollNo: student.rollNo },
+          orderBy: { submittedAt: 'desc' },
+          select: { videoDriveId: true, driveFolderPath: true },
+        });
+      }
+
+      if (submission?.videoDriveId) {
+        studentSubmissionVideoCache.set(cacheKey, {
+          videoDriveId: submission.videoDriveId,
+          driveFolderPath: submission.driveFolderPath,
+        });
+      }
     }
-
-    const submission = await prisma.submission.findFirst({
-      where: { rollNo: student.rollNo },
-      orderBy: { submittedAt: 'desc' },
-      select: { videoDriveId: true, driveFolderPath: true },
-    });
 
     if (!submission?.videoDriveId) {
       res.status(404).json({ error: 'MEDIA_NOT_FOUND', message: 'No video has been uploaded yet.' });
@@ -793,11 +814,11 @@ router.get('/submission/media/video', requireStudentAuth, async (req: Request, r
 
     res.setHeader('Content-Type', mimeType || 'video/mp4');
     res.setHeader('Accept-Ranges', 'bytes');
-    res.setHeader('Cache-Control', 'no-cache, private');
+    res.setHeader('Cache-Control', 'private, max-age=86400, stale-while-revalidate=604800');
     res.setHeader('ETag', etag);
 
     if (req.query.download === '1' || req.query.download === 'true') {
-      res.setHeader('Content-Disposition', `attachment; filename="self-introduction_${student.rollNo}.mp4"`);
+      res.setHeader('Content-Disposition', `attachment; filename="self-introduction_${rollNo || studentId}.mp4"`);
     } else {
       res.setHeader('Content-Disposition', 'inline');
     }
@@ -1116,14 +1137,17 @@ router.get('/resume', requireStudentAuth, async (req, res) => {
     res.json(resumes.map(r => {
       const { driveFileId: _d, ...rest } = r;
       const viewUrl = r.driveFileId ? `/api/public/media/resume/${r.id}` : null;
+      const previewUrl = driveService.getPreviewUrl(r.driveFileId);
       const thumbnailUrl = r.driveFileId
         ? `/api/public/media/thumbnail/resume/${r.id}?v=${encodeURIComponent(r.driveFileId)}`
         : null;
       return {
         ...rest,
         hasFile: Boolean(r.driveFileId),
-        viewUrl,
-        fileUrl: viewUrl,
+        viewUrl: previewUrl || viewUrl,
+        fileUrl: previewUrl || viewUrl,
+        previewUrl,
+        driveFileId: r.driveFileId || null,
         thumbnailUrl,
       };
     }));

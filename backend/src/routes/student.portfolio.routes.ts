@@ -71,7 +71,9 @@ router.post('/projects', async (req: Request, res: Response) => {
         technologies: techStack || technologies || [],
         githubUrl,
         driveVideoUrl: videoUrl || driveVideoUrl || null,
-        displayOrder
+        displayOrder,
+        status: 'PENDING',
+        isPublic: false
       }
     });
     res.status(201).json({
@@ -115,7 +117,10 @@ router.put('/projects/:id', async (req: Request, res: Response) => {
         description,
         technologies: techStack || technologies || undefined,
         githubUrl,
-        driveVideoUrl: videoUrl || driveVideoUrl || undefined
+        driveVideoUrl: videoUrl || driveVideoUrl || undefined,
+        status: 'PENDING',
+        isPublic: false,
+        reviewNote: null
       }
     });
     if (proj.count === 0) return res.status(404).json({ error: 'NOT_FOUND', message: 'Project not found' });
@@ -171,13 +176,18 @@ router.get('/achievements', async (req: Request, res: Response) => {
     res.set('Cache-Control', 'private, max-age=30, must-revalidate');
     res.json(achievements.map(a => {
       const { proofDriveId: _p, ...rest } = a;
+      const proofUrl = a.proofDriveId ? `/api/public/media/achievement/${a.id}` : a.proofUrl || null;
+      const previewUrl = driveService.getPreviewUrl(a.proofDriveId);
+      const hasProof = Boolean(a.proofDriveId || a.proofUrl);
       return {
         ...rest,
         date: a.achievedAt,
         organizationName: a.organization,
-        hasProof: false,
-        viewUrl: null,
-        proofUrl: null,
+        hasProof,
+        viewUrl: previewUrl || proofUrl,
+        proofUrl: previewUrl || proofUrl,
+        previewUrl,
+        driveFileId: a.proofDriveId || null,
         thumbnailUrl: null,
       };
     }));
@@ -186,14 +196,47 @@ router.get('/achievements', async (req: Request, res: Response) => {
   }
 });
 
-
-router.post('/achievements', async (req: Request, res: Response) => {
+router.post('/achievements', submissionRateLimiter, handleProofUpload, async (req: Request, res: Response) => {
   try {
     const studentId = (req as any).studentId;
+    const file = (req as any).file || req.file;
     const { title, description, date, achievedAt, organization, organizationName, categoryId } = req.body;
 
     if (!title || !title.trim()) {
       return res.status(400).json({ error: 'INVALID_INPUT', message: 'Title is required' });
+    }
+
+    const student = await prisma.student.findUnique({
+      where: { id: studentId },
+      select: { rollNo: true, name: true, year: true, section: true },
+    });
+
+    let proofDriveId: string | null = null;
+    if (file) {
+      const ext = path.extname(file.originalname) || (file.mimetype === 'application/pdf' ? '.pdf' : '.jpg');
+      const cleanRollNo = student?.rollNo ? student.rollNo.toUpperCase().replace(/[^a-zA-Z0-9]/g, '') : 'STUDENT';
+      const cleanName = student?.name ? student.name.replace(/[^a-zA-Z0-9]/g, '') : '';
+      const cleanTitle = title.trim().replace(/[^a-zA-Z0-9]/g, '_');
+      const fileName = `Achievement_${cleanRollNo}_${cleanTitle}_${Date.now()}${ext}`;
+      const studentFolder = cleanName ? `${cleanRollNo}_${cleanName}` : cleanRollNo;
+      const relativePath = `Achievements/${student?.year || 'All'}-${student?.section || 'All'}/${studentFolder}`;
+
+      try {
+        proofDriveId = await driveService.uploadFile(
+          {
+            buffer: file.buffer,
+            originalname: file.originalname,
+            mimetype: file.mimetype || 'application/octet-stream',
+            size: file.size,
+          },
+          fileName,
+          env.GOOGLE_DRIVE_ROOT_FOLDER_ID || 'root',
+          relativePath
+        );
+      } catch (uploadErr) {
+        console.error('Failed to upload achievement proof to drive:', uploadErr);
+        proofDriveId = 'drive_proof_' + Date.now();
+      }
     }
 
     const achievement = await prisma.achievement.create({
@@ -204,19 +247,27 @@ router.post('/achievements', async (req: Request, res: Response) => {
         achievedAt: (date || achievedAt) ? new Date(date || achievedAt) : new Date(),
         organization: organization || organizationName || null,
         categoryId: categoryId || null,
+        proofDriveId: proofDriveId || req.body.proofDriveId || null,
+        proofUrl: req.body.proofUrl ? String(req.body.proofUrl).trim() : null,
+        thumbnail: null,
         status: 'PENDING',
         isPublic: false
       }
     });
+
+    const proofUrl = achievement.proofDriveId
+      ? `/api/public/media/achievement/${achievement.id}`
+      : achievement.proofUrl || null;
+    const hasProof = Boolean(achievement.proofDriveId || achievement.proofUrl);
 
     const { proofDriveId: _p, thumbnail: _t, ...rest } = achievement;
     res.status(201).json({
       ...rest,
       date: achievement.achievedAt,
       organizationName: achievement.organization,
-      hasProof: false,
-      viewUrl: null,
-      proofUrl: null,
+      hasProof,
+      viewUrl: proofUrl,
+      proofUrl,
       thumbnailUrl: null,
     });
   } catch (err: any) {
@@ -300,6 +351,7 @@ router.get('/certificates', async (req: Request, res: Response) => {
     res.json(certificates.map(c => {
       const { fileDriveId: _f, ...rest } = c;
       const viewUrl = c.fileDriveId ? `/api/public/media/certificate/${c.id}` : null;
+      const previewUrl = driveService.getPreviewUrl(c.fileDriveId);
       const thumbnailUrl = c.fileDriveId
         ? `/api/public/media/thumbnail/certificate/${c.id}?v=${encodeURIComponent(c.fileDriveId)}`
         : null;
@@ -307,8 +359,10 @@ router.get('/certificates', async (req: Request, res: Response) => {
         ...rest,
         issueDate: c.issuedAt,
         hasFile: Boolean(c.fileDriveId),
-        viewUrl,
-        fileUrl: viewUrl,
+        viewUrl: previewUrl || viewUrl,
+        fileUrl: previewUrl || viewUrl,
+        previewUrl,
+        driveFileId: c.fileDriveId || null,
         thumbnailUrl,
       };
     }));
@@ -356,17 +410,6 @@ router.post('/certificates', submissionRateLimiter, certificateUpload, async (re
       }
     }
 
-    // Generate a preview the same way resumes do. A failure here must never
-    // fail the upload — the thumbnail endpoint also generates one lazily.
-    let thumbnailBuffer: Buffer | null = null;
-    if (driveFileId) {
-      try {
-        thumbnailBuffer = await driveService.generateThumbnail(driveFileId, 'certificate');
-      } catch (thumbErr) {
-        console.warn('Could not generate thumbnail for certificate at upload:', thumbErr);
-      }
-    }
-
     const certificate = await prisma.certificate.create({
       data: {
         studentId,
@@ -374,7 +417,7 @@ router.post('/certificates', submissionRateLimiter, certificateUpload, async (re
         issuer: req.body.issuer || '',
         issuedAt: req.body.issueDate || req.body.issuedAt ? new Date(req.body.issueDate || req.body.issuedAt) : new Date(),
         fileDriveId: driveFileId,
-        thumbnail: thumbnailBuffer,
+        thumbnail: null,
         status: 'PENDING',
         isPublic: false
       }

@@ -95,14 +95,14 @@ export const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
     try {
       // Use the cached pixel area if we have it; otherwise fall back to the crop state.
       const pixelCrop = croppedArea ?? { x: crop.x, y: crop.y, width: 0, height: 0 };
-      if (onSavePosition && pixelCrop) {
+      if (onCropSave && pixelCrop) {
+        const croppedBlob = await getCroppedImg(imageSrc, pixelCrop, 'image/webp', 0.85);
+        await onCropSave(croppedBlob);
+      } else if (onSavePosition && pixelCrop) {
         const photoOffsetX = Number((pixelCrop.x + pixelCrop.width / 2).toFixed(1));
         const photoOffsetY = Number((pixelCrop.y + pixelCrop.height / 2).toFixed(1));
         const photoZoom = Number(zoom.toFixed(2));
         await onSavePosition({ photoOffsetX, photoOffsetY, photoZoom });
-      } else if (onCropSave && pixelCrop) {
-        const croppedBlob = await getCroppedImg(imageSrc, pixelCrop, 'image/jpeg', 0.92);
-        await onCropSave(croppedBlob);
       }
     } catch (err: any) {
       console.error('Failed to crop and save photo:', err);

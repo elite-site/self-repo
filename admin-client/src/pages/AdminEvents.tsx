@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import {
   CalendarDays, Plus, Pencil, Copy, Archive, Eye, Users,
   AlertCircle, Loader2, CheckCircle, X, ChevronLeft, ChevronRight
@@ -484,6 +485,14 @@ export const AdminEvents: React.FC = () => {
                     <td className="px-4 py-3"><StatusBadge status={ev.status} /></td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1" role="group" aria-label={`Actions for ${ev.name}`}>
+                        <Link
+                          to={`/admin/event-registrations?eventId=${ev.id}`}
+                          title="Registrations"
+                          className="btn btn-ghost p-2 text-brand hover:bg-brand-soft"
+                          aria-label={`Registrations for ${ev.name}`}
+                        >
+                          <Users className="w-3.5 h-3.5" aria-hidden="true" />
+                        </Link>
                         <button
                           onClick={() => setEditing(ev)}
                           disabled={busyId === ev.id}

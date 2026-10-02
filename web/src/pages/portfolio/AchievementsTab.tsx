@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { api } from '../../services/api';
 import { Achievement } from '../../types';
-import { Plus, Trophy, Loader2, Trash2, Calendar, Pencil } from 'lucide-react';
+import { Plus, Trophy, Loader2, Trash2, Calendar, Pencil, FileText } from 'lucide-react';
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ui/ConfirmDialog';
 import { Modal } from '../../components/ui/Modal';
@@ -49,6 +49,8 @@ export const AchievementsTab: React.FC = () => {
   const [description, setDescription] = useState('');
   const [organization, setOrganization] = useState('');
   const [date, setDate] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [proofUrl, setProofUrl] = useState('');
 
   const firstInputRef = useRef<HTMLInputElement>(null);
 
@@ -75,6 +77,8 @@ export const AchievementsTab: React.FC = () => {
     setDescription('');
     setOrganization('');
     setDate(new Date().toISOString().split('T')[0]);
+    setSelectedFile(null);
+    setProofUrl('');
     setModalError(null);
     setTitleError(null);
     setModalOpen(true);
@@ -86,6 +90,8 @@ export const AchievementsTab: React.FC = () => {
     setDescription(a.description || '');
     setOrganization(a.organization || '');
     setDate(a.date ? new Date(a.date).toISOString().split('T')[0] : '');
+    setSelectedFile(null);
+    setProofUrl(a.proofUrl || '');
     setModalError(null);
     setTitleError(null);
     setModalOpen(true);
@@ -101,19 +107,26 @@ export const AchievementsTab: React.FC = () => {
     setSaving(true);
     setModalError(null);
 
-    const payload = {
-      title: title.trim(),
-      description: description.trim(),
-      organization: organization.trim(),
-      date: date || new Date().toISOString(),
-    };
-
     try {
       if (editingAchievement) {
+        const payload: any = {
+          title: title.trim(),
+          description: description.trim(),
+          organization: organization.trim(),
+          date: date || new Date().toISOString(),
+          proofUrl: proofUrl.trim() || undefined,
+        };
         await api.updateAchievement(editingAchievement.id, payload);
         showToast('Achievement updated.');
       } else {
-        await api.createAchievement(payload);
+        const formData = new FormData();
+        if (selectedFile) formData.append('file', selectedFile);
+        formData.append('title', title.trim());
+        formData.append('description', description.trim());
+        formData.append('organization', organization.trim());
+        formData.append('date', date || new Date().toISOString());
+        if (proofUrl.trim()) formData.append('proofUrl', proofUrl.trim());
+        await api.createAchievement(formData);
         showToast('Achievement added.');
       }
       setModalOpen(false);
@@ -211,6 +224,19 @@ export const AchievementsTab: React.FC = () => {
                     {a.date ? new Date(a.date).toLocaleDateString() : 'No date set'}
                   </span>
                 </div>
+                {(a.proofUrl || (a as any).viewUrl) && (
+                  <div className="mt-2.5">
+                    <a
+                      href={(a as any).viewUrl || a.proofUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 rounded-md border border-edge bg-surface px-2.5 py-1 text-label-sm font-medium text-ink hover:border-brand hover:text-brand"
+                    >
+                      <FileText size={14} aria-hidden="true" />
+                      <span>View certificate / proof</span>
+                    </a>
+                  </div>
+                )}
                 {a.status === 'CHANGES_REQUESTED' && (
                   <div className="mt-2 rounded-lg border border-status-changes bg-status-bg-changes px-3 py-2 text-body-sm text-status-changes">
                     <strong className="font-semibold">Faculty revision note: </strong>
@@ -321,6 +347,37 @@ export const AchievementsTab: React.FC = () => {
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
+                className="input"
+              />
+            </div>
+          </FormSection>
+
+          <FormSection title="Verification & proof">
+            <div>
+              <label htmlFor="achievement-file" className="label">
+                Certificate or proof document <span className="font-normal text-ink-muted">(optional)</span>
+              </label>
+              <input
+                id="achievement-file"
+                type="file"
+                accept=".pdf,image/png,image/jpeg"
+                onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                className="input"
+              />
+              <p className="mt-1 text-label-sm text-ink-muted">
+                Award letter, certificate, or score screenshot (PDF, PNG, JPG).
+              </p>
+            </div>
+            <div>
+              <label htmlFor="achievement-proof-url" className="label">
+                Credential or verification URL <span className="font-normal text-ink-muted">(optional)</span>
+              </label>
+              <input
+                id="achievement-proof-url"
+                type="url"
+                value={proofUrl}
+                onChange={(e) => setProofUrl(e.target.value)}
+                placeholder="https://..."
                 className="input"
               />
             </div>

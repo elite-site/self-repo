@@ -5,12 +5,24 @@ import { adminApi } from '../services/api';
 interface Announcement {
   id: string;
   title: string;
-  body: string;
-  audience: string;
+  body?: string;
+  message?: string;
+  audience?: string;
+  targetAll?: boolean;
+  targetYear?: string | number | null;
+  targetSection?: string | null;
   createdAt: string;
-  createdByName: string;
-  recipientCount: number;
+  createdByName?: string;
+  createdBy?: string;
+  recipientCount?: number;
 }
+
+const formatAudience = (a: Announcement): string => {
+  if (a.audience) return String(a.audience).replace(/_/g, ' ');
+  if (a.targetAll) return 'All Students';
+  if (a.targetYear) return `Year ${a.targetYear}${a.targetSection ? ` - ${a.targetSection}` : ''}`;
+  return 'All Students';
+};
 
 const ComposeDialog: React.FC<{ onClose: () => void; onPublished: () => void }> = ({ onClose, onPublished }) => {
   const [form, setForm] = useState({ title: '', body: '', audience: 'ALL', scheduledAt: '' });
@@ -98,8 +110,9 @@ export const Communications: React.FC = () => {
   const fetchAnnouncements = async () => {
     setLoading(true); setError(null);
     try {
-      const res = await adminApi.getAnnouncements?.() ?? { announcements: [] };
-      setAnnouncements(res.announcements ?? []);
+      const res = await adminApi.getAnnouncements?.();
+      const list = Array.isArray(res) ? res : (res?.announcements ?? []);
+      setAnnouncements(list);
     } catch { setError('Failed to load announcements.'); }
     finally { setLoading(false); }
   };
@@ -146,25 +159,23 @@ export const Communications: React.FC = () => {
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <h3 className="font-bold text-ink text-sm truncate">{a.title}</h3>
-                  <p className="text-xs text-ink-secondary mt-1 line-clamp-2 leading-relaxed">{a.body}</p>
+                  <p className="text-xs text-ink-secondary mt-1 line-clamp-2 leading-relaxed">{a.body || a.message || ''}</p>
                 </div>
                 <div className="text-right shrink-0">
-                  <div className="text-xs font-semibold text-ink-muted">{new Date(a.createdAt).toLocaleDateString()}</div>
-                  <div className="flex items-center gap-1 text-xs text-ink-muted mt-1 justify-end">
-                    <Users className="w-3 h-3" /> {a.recipientCount} recipients
-                  </div>
+                  <div className="text-xs font-semibold text-ink-muted">{a.createdAt ? new Date(a.createdAt).toLocaleDateString() : ''}</div>
+                  {a.recipientCount != null && (
+                    <div className="flex items-center gap-1 text-xs text-ink-muted mt-1 justify-end">
+                      <Users className="w-3 h-3" /> {a.recipientCount} recipients
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-4 mt-3 pt-3 border-t border-edge">
                 <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase text-ink-muted">
-                  <Clock className="w-3 h-3" /> {a.createdByName}
+                  <Clock className="w-3 h-3" /> {a.createdByName || a.createdBy || 'Admin'}
                 </span>
-                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                  a.audience === 'ALL'
-                    ? 'bg-status-bg-approved text-status-approved border-edge'
-                    : 'bg-surface-canvas text-ink-secondary border-edge'
-                }`}>
-                  {a.audience.replace(/_/g, ' ')}
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border bg-surface-canvas text-ink-secondary border-edge">
+                  {formatAudience(a)}
                 </span>
               </div>
             </div>
@@ -174,3 +185,5 @@ export const Communications: React.FC = () => {
     </div>
   );
 };
+
+export default Communications;

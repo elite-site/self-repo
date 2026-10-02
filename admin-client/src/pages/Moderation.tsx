@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useConfirm } from '../components/ui/ConfirmDialog';
 import {
   CheckCircle,
@@ -660,540 +661,596 @@ export const Moderation: React.FC = () => {
       )}
 
       {/* UNIFIED REVIEW DOSSIER (MODAL / OVERLAY) - Media ONLY loads when selectedItem is active */}
-      {selectedItem && (
-        <div
-          className="fixed inset-0 z-modal bg-scrim/90 backdrop-blur-xs animate-fade-in"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="review-modal-title"
-        >
-          <div className="h-full w-full flex flex-col bg-surface">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-edge bg-surface-sunken shrink-0">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-10 h-10 rounded-full bg-brand-soft text-brand flex items-center justify-center font-bold text-body-md border border-brand/20 shrink-0">
-                  {selectedItem.studentName?.charAt(0) || '?'}
+      {selectedItem &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto animate-fade-in"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="review-modal-title"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setSelectedItemId(null);
+            }}
+          >
+            <div className="w-full max-w-[1700px] bg-surface rounded-2xl shadow-2xl border border-edge flex flex-col overflow-hidden my-auto max-h-[95vh]">
+              {/* Modal Header */}
+              <div className="flex items-center justify-between px-5 py-4 border-b border-edge bg-surface-sunken shrink-0">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-full bg-brand-soft text-brand flex items-center justify-center font-bold text-body-md border border-brand/20 shrink-0">
+                    {selectedItem.studentName?.charAt(0) || '?'}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h2 id="review-modal-title" className="font-extrabold text-ink text-body-md truncate">
+                        {selectedItem.studentName}
+                      </h2>
+                      <ItemTypeBadge itemType={selectedItem.itemType} />
+                      <StatusBadge status={selectedItem.status} />
+                    </div>
+                    <div className="text-label-sm font-mono text-ink-muted">
+                      {selectedItem.studentRoll}
+                      {selectedItem.studentBranch && ` · ${selectedItem.studentBranch}`}
+                      {selectedItem.studentYear && ` · Year ${selectedItem.studentYear}`}
+                      {selectedItem.studentSection && `-${selectedItem.studentSection}`}
+                    </div>
+                  </div>
                 </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h2 id="review-modal-title" className="font-extrabold text-ink text-body-md truncate">
-                      {selectedItem.studentName}
-                    </h2>
-                    <ItemTypeBadge itemType={selectedItem.itemType} />
-                    <StatusBadge status={selectedItem.status} />
+
+                {/* Triage Navigation & Close */}
+                <div className="flex items-center gap-2 shrink-0">
+                  <div className="hidden sm:flex items-center gap-1 mr-2 text-label-sm font-bold text-ink-muted bg-surface px-2.5 py-1 rounded-md border border-edge">
+                    <span>{selectedIndex + 1}</span>
+                    <span>of</span>
+                    <span>{filteredItems.length}</span>
                   </div>
-                  <div className="text-label-sm font-mono text-ink-muted">
-                    {selectedItem.studentRoll}
-                    {selectedItem.studentBranch && ` · ${selectedItem.studentBranch}`}
-                    {selectedItem.studentYear && ` · Year ${selectedItem.studentYear}`}
-                    {selectedItem.studentSection && `-${selectedItem.studentSection}`}
-                  </div>
+                  <button
+                    onClick={() => selectedIndex > 0 && setSelectedItemId(filteredItems[selectedIndex - 1].id)}
+                    disabled={selectedIndex <= 0}
+                    className="btn btn-ghost p-2"
+                    aria-label="Previous submission"
+                    title="Previous (Left Arrow)"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => selectedIndex < filteredItems.length - 1 && setSelectedItemId(filteredItems[selectedIndex + 1].id)}
+                    disabled={selectedIndex >= filteredItems.length - 1}
+                    className="btn btn-ghost p-2"
+                    aria-label="Next submission"
+                    title="Next (Right Arrow)"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setSelectedItemId(null)}
+                    className="btn btn-ghost p-2 text-ink-muted hover:text-ink ml-1"
+                    aria-label="Close review"
+                    title="Close (Esc)"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
                 </div>
               </div>
 
-              {/* Triage Navigation & Close */}
-              <div className="flex items-center gap-2 shrink-0">
-                <div className="hidden sm:flex items-center gap-1 mr-2 text-label-sm font-bold text-ink-muted bg-surface px-2.5 py-1 rounded-md border border-edge">
-                  <span>{selectedIndex + 1}</span>
-                  <span>of</span>
-                  <span>{filteredItems.length}</span>
-                </div>
-                <button
-                  onClick={() => selectedIndex > 0 && setSelectedItemId(filteredItems[selectedIndex - 1].id)}
-                  disabled={selectedIndex <= 0}
-                  className="btn btn-ghost p-2"
-                  aria-label="Previous submission"
-                  title="Previous (Left Arrow)"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => selectedIndex < filteredItems.length - 1 && setSelectedItemId(filteredItems[selectedIndex + 1].id)}
-                  disabled={selectedIndex >= filteredItems.length - 1}
-                  className="btn btn-ghost p-2"
-                  aria-label="Next submission"
-                  title="Next (Right Arrow)"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => setSelectedItemId(null)}
-                  className="btn btn-ghost p-2 text-ink-muted hover:text-ink ml-1"
-                  aria-label="Close review"
-                  title="Close (Esc)"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-
-            {/* Modal Body: Two-Column Unified Layout */}
-            <div className="flex-1 min-h-0 overflow-y-auto">
-              <div className="h-full w-full max-w-[1800px] mx-auto p-4 sm:p-6 lg:p-8 grid grid-cols-1 lg:grid-cols-5 gap-6">
-              {/* LEFT COLUMN: Media / Artifact Evidence Viewer */}
-              <div className="lg:col-span-3 space-y-4">
-                {/* Media Action Strip */}
-                <div className="flex items-center justify-between pb-2 border-b border-edge">
-                  <span className="text-label-sm font-bold text-ink-muted uppercase tracking-wider">
-                    {selectedItem.itemType === 'video'
-                      ? 'Video Player'
-                      : selectedItem.itemType === 'resume'
-                      ? 'Resume Document'
-                      : selectedItem.itemType === 'certificate'
-                      ? 'Certificate Document'
-                      : selectedItem.itemType === 'project'
-                      ? 'Project Dossier'
-                      : 'Achievement Proof'}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    {getDriveWatchUrl(selectedItem) && (
-                      <a
-                        href={getDriveWatchUrl(selectedItem)!}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="btn btn-ghost text-label-sm py-1 px-2.5 inline-flex items-center gap-1.5"
-                      >
-                        <ExternalLink className="w-3.5 h-3.5 text-brand" />
-                        <span>Drive</span>
-                      </a>
-                    )}
-                    {selectedItem.fileUrl && (
-                      <a
-                        href={selectedItem.fileUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="btn btn-ghost text-label-sm py-1 px-2.5 inline-flex items-center gap-1.5"
-                      >
-                        <ExternalLink className="w-3.5 h-3.5 text-brand" />
-                        <span>Open Tab</span>
-                      </a>
-                    )}
-                    {selectedItem.fileUrl && (
-                      <a
-                        href={`${selectedItem.fileUrl}${selectedItem.fileUrl.includes('?') ? '&' : '?'}download=1`}
-                        className="btn btn-ghost text-label-sm py-1 px-2.5 inline-flex items-center gap-1.5"
-                      >
-                        <Download className="w-3.5 h-3.5 text-brand" />
-                        <span>Download</span>
-                      </a>
-                    )}
-                  </div>
-                </div>
-
-                {/* Media Container: Conditional per Artifact Type */}
-                <div className="surface-sunken rounded-xl p-3 border border-edge">
-                  {/* 1. INTRO VIDEO */}
-                  {selectedItem.itemType === 'video' && (
-                    <div className="space-y-3">
-                      <div className="bg-black rounded-lg overflow-hidden aspect-video flex items-center justify-center shadow-inner">
-                        {selectedItem.fileUrl ? (
-                          <video
-                            key={selectedItem.id}
-                            src={selectedItem.fileUrl}
-                            controls
-                            preload="metadata"
-                            playsInline
-                            className="w-full h-full object-contain"
-                          />
-                        ) : (
-                          <div className="text-center p-6 text-white/70">
-                            <Film className="w-12 h-12 mx-auto mb-2 text-white/40" />
-                            <p className="text-body-sm font-semibold">Video file not streamable</p>
-                          </div>
+              {/* Modal Body: 12-Column Responsive Layout */}
+              <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                  {/* Left evidence/media column */}
+                  <div className="lg:col-span-8 flex flex-col justify-center items-center bg-surface-sunken rounded-xl p-4 min-h-[400px]">
+                    {/* Media Action Strip */}
+                    <div className="w-full flex items-center justify-between pb-3 mb-4 border-b border-edge shrink-0">
+                      <span className="text-label-sm font-bold text-ink-muted uppercase tracking-wider">
+                        {selectedItem.itemType === 'video'
+                          ? 'Video Player'
+                          : selectedItem.itemType === 'resume'
+                          ? 'Resume Document'
+                          : selectedItem.itemType === 'certificate'
+                          ? 'Certificate Document'
+                          : selectedItem.itemType === 'project'
+                          ? 'Project Dossier'
+                          : 'Achievement Proof'}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        {getDriveWatchUrl(selectedItem) && (
+                          <a
+                            href={getDriveWatchUrl(selectedItem)!}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="btn btn-ghost text-label-sm py-1 px-2.5 inline-flex items-center gap-1.5"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5 text-brand" />
+                            <span>Drive</span>
+                          </a>
                         )}
-                      </div>
-                      <div className="text-label-sm text-ink-muted flex items-center justify-between px-1">
-                        <span>Submitted: {new Date(selectedItem.submittedAt).toLocaleString()}</span>
-                        {selectedItem.driveFileId && (
-                          <span className="font-mono text-[11px]">Drive ID: {selectedItem.driveFileId}</span>
+                        {selectedItem.fileUrl && (
+                          <a
+                            href={selectedItem.fileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="btn btn-ghost text-label-sm py-1 px-2.5 inline-flex items-center gap-1.5"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5 text-brand" />
+                            <span>Open Tab</span>
+                          </a>
+                        )}
+                        {selectedItem.fileUrl && (
+                          <a
+                            href={`${selectedItem.fileUrl}${selectedItem.fileUrl.includes('?') ? '&' : '?'}download=1`}
+                            className="btn btn-ghost text-label-sm py-1 px-2.5 inline-flex items-center gap-1.5"
+                          >
+                            <Download className="w-3.5 h-3.5 text-brand" />
+                            <span>Download</span>
+                          </a>
                         )}
                       </div>
                     </div>
-                  )}
 
-                  {/* 2. RESUME */}
-                  {selectedItem.itemType === 'resume' && (
-                    <div className="space-y-4">
-                      {selectedItem.fileUrl ? (
-                        <div className="w-full h-[460px] rounded-lg overflow-hidden border border-edge bg-white">
-                          <iframe
-                            src={selectedItem.fileUrl}
-                            title={selectedItem.title}
-                            className="w-full h-full"
-                          />
-                        </div>
-                      ) : (
-                        <div className="flex flex-col items-center justify-center p-12 text-center gap-3">
-                          <FileText className="w-16 h-16 text-brand" />
-                          <div className="font-bold text-ink">{selectedItem.title}</div>
-                          <p className="text-body-sm text-ink-muted">
-                            Resume document is ready for review.
-                          </p>
+                    {/* Media Container: Conditional per Artifact Type */}
+                    <div className="w-full flex-1 flex flex-col items-center justify-center">
+                      {/* 1. INTRO VIDEO */}
+                      {selectedItem.itemType === 'video' && (
+                        <div className="w-full flex flex-col items-center justify-center">
+                          {selectedItem.fileUrl ? (
+                            <video
+                              key={selectedItem.id}
+                              src={selectedItem.fileUrl}
+                              controls
+                              preload="metadata"
+                              playsInline
+                              className="max-h-[72vh] w-auto max-w-full mx-auto object-contain rounded-lg shadow-md"
+                            />
+                          ) : (
+                            <div className="text-center p-8 text-ink-muted">
+                              <Film className="w-12 h-12 mx-auto mb-2 opacity-40" />
+                              <p className="text-body-sm font-semibold">Video file not streamable</p>
+                            </div>
+                          )}
+                          <div className="w-full text-label-sm text-ink-muted flex items-center justify-between px-1 mt-3">
+                            <span>Submitted: {new Date(selectedItem.submittedAt).toLocaleString()}</span>
+                            {selectedItem.driveFileId && (
+                              <span className="font-mono text-[11px]">Drive ID: {selectedItem.driveFileId}</span>
+                            )}
+                          </div>
                         </div>
                       )}
-                      <div className="text-label-sm text-ink-muted flex items-center justify-between px-1">
-                        <span>Submitted: {new Date(selectedItem.submittedAt).toLocaleString()}</span>
-                        <span>{selectedItem.description || 'PDF Document'}</span>
-                      </div>
-                    </div>
-                  )}
 
-                  {/* 3. CERTIFICATE */}
-                  {selectedItem.itemType === 'certificate' && (
-                    <div className="space-y-3">
-                      <div className="min-h-[320px] max-h-[460px] rounded-lg overflow-hidden flex items-center justify-center bg-surface border border-edge p-2">
-                        {selectedItem.fileUrl || selectedItem.thumbnailUrl ? (
-                          <img
-                            src={selectedItem.fileUrl || selectedItem.thumbnailUrl || ''}
-                            alt={selectedItem.title}
-                            className="max-h-[440px] w-auto object-contain rounded"
-                          />
-                        ) : (
-                          <div className="text-center p-8">
-                            <Award className="w-16 h-16 mx-auto mb-2 text-brand" />
-                            <p className="font-bold text-ink">{selectedItem.title}</p>
+                      {/* 2. RESUME */}
+                      {selectedItem.itemType === 'resume' && (
+                        <div className="w-full flex-1 flex flex-col space-y-3">
+                          {selectedItem.fileUrl ? (
+                            <div className="w-full h-[65vh] min-h-[420px] rounded-lg overflow-hidden border border-edge bg-white">
+                              <iframe
+                                src={selectedItem.fileUrl}
+                                title={selectedItem.title}
+                                className="w-full h-full"
+                              />
+                            </div>
+                          ) : (
+                            <div className="flex flex-col items-center justify-center p-12 text-center gap-3 my-auto">
+                              <div className="w-16 h-16 rounded-full bg-brand-soft flex items-center justify-center text-brand border border-brand/20">
+                                <FileText className="w-8 h-8" />
+                              </div>
+                              <div className="font-bold text-ink">{selectedItem.title}</div>
+                              <p className="text-body-sm text-ink-muted">
+                                Resume document is ready for review.
+                              </p>
+                            </div>
+                          )}
+                          <div className="text-label-sm text-ink-muted flex items-center justify-between px-1">
+                            <span>Submitted: {new Date(selectedItem.submittedAt).toLocaleString()}</span>
+                            <span>{selectedItem.description || 'PDF Document'}</span>
                           </div>
-                        )}
-                      </div>
-                      <div className="p-3 surface rounded-lg border border-edge space-y-1">
-                        <div className="font-bold text-ink text-body-sm">{selectedItem.title}</div>
-                        {selectedItem.description && (
-                          <p className="text-body-sm text-ink-muted">{selectedItem.description}</p>
-                        )}
-                      </div>
-                    </div>
-                  )}
+                        </div>
+                      )}
 
-                  {/* 4. PROJECT */}
-                  {selectedItem.itemType === 'project' && (
-                    <div className="space-y-4 p-4 surface rounded-lg border border-edge">
-                      <div className="space-y-2">
-                        <h3 className="text-headline-sm font-bold text-ink">{selectedItem.title}</h3>
-                        {selectedItem.description && (
-                          <p className="text-body-sm text-ink leading-relaxed whitespace-pre-wrap">
-                            {selectedItem.description}
-                          </p>
-                        )}
-                      </div>
+                      {/* 3. CERTIFICATE */}
+                      {selectedItem.itemType === 'certificate' && (() => {
+                        const certUrl = selectedItem.fileUrl || selectedItem.thumbnailUrl;
+                        const isPdf = certUrl && (certUrl.toLowerCase().includes('.pdf') || certUrl.toLowerCase().includes('/pdf'));
+                        return (
+                          <div className="w-full flex-1 flex flex-col space-y-3">
+                            <div className="w-full flex-1 min-h-[320px] flex items-center justify-center">
+                              {certUrl ? (
+                                isPdf ? (
+                                  <div className="w-full h-[65vh] min-h-[400px] rounded-lg overflow-hidden border border-edge bg-white">
+                                    <iframe
+                                      src={certUrl}
+                                      title={selectedItem.title}
+                                      className="w-full h-full"
+                                    />
+                                  </div>
+                                ) : (
+                                  <img
+                                    src={certUrl}
+                                    alt={selectedItem.title}
+                                    className="max-h-[72vh] w-auto max-w-full mx-auto object-contain rounded-lg shadow-md"
+                                  />
+                                )
+                              ) : (
+                                <div className="flex flex-col items-center justify-center p-12 text-center gap-3 my-auto">
+                                  <div className="w-20 h-20 rounded-full bg-brand-soft flex items-center justify-center text-brand border border-brand/20">
+                                    <Award className="w-10 h-10" />
+                                  </div>
+                                  <p className="font-bold text-ink text-body-md">{selectedItem.title}</p>
+                                  <p className="text-body-sm text-ink-muted">No preview document attached</p>
+                                </div>
+                              )}
+                            </div>
+                            <div className="p-3 surface rounded-lg border border-edge space-y-1 w-full">
+                              <div className="font-bold text-ink text-body-sm">{selectedItem.title}</div>
+                              {selectedItem.description && (
+                                <p className="text-body-sm text-ink-muted">{selectedItem.description}</p>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })()}
 
-                      {selectedItem.technologies && selectedItem.technologies.length > 0 && (
-                        <div className="space-y-1.5">
-                          <span className="text-label-sm font-bold text-ink-muted uppercase">Tech Stack</span>
-                          <div className="flex flex-wrap gap-1.5">
-                            {selectedItem.technologies.map((tech, i) => (
-                              <span
-                                key={i}
-                                className="px-2.5 py-1 rounded-md text-label-sm font-medium bg-brand-soft text-brand border border-brand/20"
+                      {/* 4. PROJECT */}
+                      {selectedItem.itemType === 'project' && (
+                        <div className="w-full flex-1 flex flex-col justify-center space-y-4 p-5 surface rounded-xl border border-edge">
+                          <div className="space-y-2">
+                            <h3 className="text-headline-sm font-bold text-ink">{selectedItem.title}</h3>
+                            {selectedItem.description && (
+                              <p className="text-body-sm text-ink leading-relaxed whitespace-pre-wrap">
+                                {selectedItem.description}
+                              </p>
+                            )}
+                          </div>
+
+                          {selectedItem.technologies && selectedItem.technologies.length > 0 && (
+                            <div className="space-y-1.5">
+                              <span className="text-label-sm font-bold text-ink-muted uppercase">Tech Stack</span>
+                              <div className="flex flex-wrap gap-1.5">
+                                {selectedItem.technologies.map((tech, i) => (
+                                  <span
+                                    key={i}
+                                    className="px-2.5 py-1 rounded-md text-label-sm font-medium bg-brand-soft text-brand border border-brand/20"
+                                  >
+                                    {tech}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="flex flex-wrap items-center gap-3 pt-2">
+                            {selectedItem.githubUrl && (
+                              <a
+                                href={selectedItem.githubUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="btn btn-secondary text-body-sm inline-flex items-center gap-2"
                               >
-                                {tech}
-                              </span>
-                            ))}
+                                <FolderGit2 className="w-4 h-4 text-brand" />
+                                <span>GitHub Repository</span>
+                                <ExternalLink className="w-3.5 h-3.5" />
+                              </a>
+                            )}
+                            {selectedItem.driveVideoUrl && (
+                              <a
+                                href={selectedItem.driveVideoUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="btn btn-secondary text-body-sm inline-flex items-center gap-2"
+                              >
+                                <Film className="w-4 h-4 text-brand" />
+                                <span>Demo Video</span>
+                                <ExternalLink className="w-3.5 h-3.5" />
+                              </a>
+                            )}
                           </div>
                         </div>
                       )}
 
-                      <div className="flex flex-wrap items-center gap-3 pt-2">
-                        {selectedItem.githubUrl && (
-                          <a
-                            href={selectedItem.githubUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="btn btn-secondary text-body-sm inline-flex items-center gap-2"
-                          >
-                            <FolderGit2 className="w-4 h-4 text-brand" />
-                            <span>GitHub Repository</span>
-                            <ExternalLink className="w-3.5 h-3.5" />
-                          </a>
-                        )}
-                        {selectedItem.driveVideoUrl && (
-                          <a
-                            href={selectedItem.driveVideoUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="btn btn-secondary text-body-sm inline-flex items-center gap-2"
-                          >
-                            <Film className="w-4 h-4 text-brand" />
-                            <span>Demo Video</span>
-                            <ExternalLink className="w-3.5 h-3.5" />
-                          </a>
-                        )}
-                      </div>
-                    </div>
-                  )}
+                      {/* 5. ACHIEVEMENT */}
+                      {selectedItem.itemType === 'achievement' && (() => {
+                        const proofUrl = selectedItem.fileUrl || selectedItem.proofUrl;
+                        const isPdf = proofUrl && (proofUrl.toLowerCase().includes('.pdf') || proofUrl.toLowerCase().includes('/pdf'));
+                        return (
+                          <div className="w-full flex-1 flex flex-col space-y-4">
+                            <div className="w-full flex-1 min-h-[320px] flex items-center justify-center">
+                              {proofUrl ? (
+                                isPdf ? (
+                                  <div className="w-full h-[65vh] min-h-[400px] rounded-lg overflow-hidden border border-edge bg-white">
+                                    <iframe
+                                      src={proofUrl}
+                                      title={selectedItem.title}
+                                      className="w-full h-full"
+                                    />
+                                  </div>
+                                ) : (
+                                  <img
+                                    src={proofUrl}
+                                    alt={selectedItem.title}
+                                    className="max-h-[72vh] w-auto max-w-full mx-auto object-contain rounded-lg shadow-md"
+                                  />
+                                )
+                              ) : (
+                                <div className="flex flex-col items-center justify-center p-12 text-center gap-3 my-auto">
+                                  <div className="w-20 h-20 rounded-full bg-brand-soft flex items-center justify-center text-brand border border-brand/20">
+                                    <Trophy className="w-10 h-10" />
+                                  </div>
+                                  <p className="font-bold text-ink text-body-md">{selectedItem.title}</p>
+                                  <p className="text-body-sm text-ink-muted">No proof document attached</p>
+                                </div>
+                              )}
+                            </div>
 
-                  {/* 5. ACHIEVEMENT */}
-                  {selectedItem.itemType === 'achievement' && (
-                    <div className="space-y-4 p-4 surface rounded-lg border border-edge">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="badge badge-pending text-[11px] font-bold">
-                            {selectedItem.category || 'Achievement'}
-                          </span>
-                          {selectedItem.organization && (
-                            <span className="text-label-sm text-ink-muted">• {selectedItem.organization}</span>
+                            <div className="space-y-3 p-4 surface rounded-xl border border-edge w-full">
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="badge badge-pending text-[11px] font-bold">
+                                    {selectedItem.category || 'Achievement'}
+                                  </span>
+                                  {selectedItem.organization && (
+                                    <span className="text-label-sm text-ink-muted">• {selectedItem.organization}</span>
+                                  )}
+                                </div>
+                                <h3 className="text-headline-sm font-bold text-ink">{selectedItem.title}</h3>
+                              </div>
+
+                              {selectedItem.description && (
+                                <p className="text-body-sm text-ink leading-relaxed whitespace-pre-wrap">
+                                  {selectedItem.description}
+                                </p>
+                              )}
+
+                              {proofUrl && (
+                                <div className="pt-2 border-t border-edge">
+                                  <a
+                                    href={proofUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="btn btn-secondary text-body-sm inline-flex items-center gap-2"
+                                  >
+                                    <Award className="w-4 h-4 text-brand" />
+                                    <span>Open Proof in New Tab</span>
+                                    <ExternalLink className="w-3.5 h-3.5" />
+                                  </a>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  </div>
+
+                  {/* Right review & decision column: lg:col-span-4 flex flex-col p-6 overflow-y-auto max-h-[85vh] */}
+                  <div className="lg:col-span-4 flex flex-col p-6 overflow-y-auto max-h-[85vh] space-y-5 bg-surface rounded-xl border border-edge">
+                    <div className="space-y-4">
+                      <h3 className="text-label-md font-extrabold text-ink uppercase tracking-wider flex items-center justify-between">
+                        <span>Moderation Decision</span>
+                        <span className="text-[11px] text-ink-muted font-normal">One-Click Triage</span>
+                      </h3>
+
+                      {/* Decision Action Buttons */}
+                      <div className="grid grid-cols-2 gap-2" role="group" aria-label="Decision actions">
+                        <button
+                          type="button"
+                          onClick={() => setAction('approve')}
+                          className={`btn ${
+                            action === 'approve' ? 'btn-primary' : 'btn-secondary'
+                          } text-body-sm py-2.5 inline-flex items-center justify-center gap-2 cursor-pointer`}
+                          aria-pressed={action === 'approve'}
+                        >
+                          <CheckCircle className="w-4 h-4 text-emerald-500" />
+                          <span>Approve</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setAction('reject')}
+                          className={`btn ${
+                            action === 'reject' ? 'btn-danger' : 'btn-secondary'
+                          } text-body-sm py-2.5 inline-flex items-center justify-center gap-2 cursor-pointer`}
+                          aria-pressed={action === 'reject'}
+                        >
+                          <XCircle className="w-4 h-4 text-rose-500" />
+                          <span>Reject</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setAction('changes')}
+                          className={`btn ${
+                            action === 'changes' ? 'btn-primary' : 'btn-secondary'
+                          } text-body-sm py-2.5 inline-flex items-center justify-center gap-2 cursor-pointer`}
+                          aria-pressed={action === 'changes'}
+                        >
+                          <MessageSquare className="w-4 h-4 text-amber-500" />
+                          <span>Changes</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setAction('hide')}
+                          className={`btn ${
+                            action === 'hide' ? 'btn-secondary bg-surface-sunken' : 'btn-ghost'
+                          } text-body-sm py-2.5 inline-flex items-center justify-center gap-2 cursor-pointer`}
+                          aria-pressed={action === 'hide'}
+                        >
+                          <EyeOff className="w-4 h-4 text-ink-muted" />
+                          <span>Hide</span>
+                        </button>
+                      </div>
+
+                      {/* Reason Textarea (Required for Reject & Changes) */}
+                      {(action === 'reject' || action === 'changes') && (
+                        <div className="space-y-1.5 animate-fade-in">
+                          <label htmlFor="moderation-reason" className="label text-label-sm font-bold flex items-center justify-between">
+                            <span>Feedback / Instructions to Student</span>
+                            <span className="text-status-rejected">* Required</span>
+                          </label>
+                          <textarea
+                            id="moderation-reason"
+                            value={reason}
+                            onChange={(e) => setReason(e.target.value)}
+                            rows={3}
+                            placeholder={
+                              action === 'changes'
+                                ? 'Explain specifically what needs to be changed before re-uploading...'
+                                : 'State the specific reason for rejecting this submission...'
+                            }
+                            className="textarea text-body-sm w-full"
+                            aria-required="true"
+                            autoFocus
+                          />
+                          {!reason.trim() && (
+                            <p className="text-[12px] text-status-rejected font-medium">
+                              Please provide a note so the student knows what to do.
+                            </p>
                           )}
                         </div>
-                        <h3 className="text-headline-sm font-bold text-ink">{selectedItem.title}</h3>
-                      </div>
-
-                      {selectedItem.description && (
-                        <p className="text-body-sm text-ink leading-relaxed whitespace-pre-wrap">
-                          {selectedItem.description}
-                        </p>
                       )}
 
-                      {(selectedItem.fileUrl || selectedItem.proofUrl) && (
-                        <div className="pt-2 border-t border-edge">
-                          <a
-                            href={selectedItem.fileUrl || selectedItem.proofUrl || '#'}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="btn btn-secondary text-body-sm inline-flex items-center gap-2"
-                          >
-                            <Award className="w-4 h-4 text-brand" />
-                            <span>View Proof / Certificate</span>
-                            <ExternalLink className="w-3.5 h-3.5" />
-                          </a>
+                      {/* Approval Note (Optional, For Approve) */}
+                      {action === 'approve' && (
+                        <div className="space-y-1.5 animate-fade-in">
+                          <label htmlFor="moderation-approval-note" className="label text-label-sm font-bold flex items-center justify-between">
+                            <span>Approval Note</span>
+                            <span className="text-ink-muted font-normal">Optional</span>
+                          </label>
+                          <textarea
+                            id="moderation-approval-note"
+                            value={approvalNote}
+                            onChange={(e) => setApprovalNote(e.target.value)}
+                            rows={2}
+                            placeholder="Why this passed review (visible to the student as feedback)... "
+                            className="textarea text-body-sm w-full"
+                          />
                         </div>
                       )}
+
+                      {/* Publish on Profile Option (For Approve) */}
+                      {action === 'approve' && (
+                        <label className="flex items-start gap-2.5 p-3 rounded-lg border border-status-approved/30 bg-status-bg-approved cursor-pointer animate-fade-in">
+                          <input
+                            type="checkbox"
+                            checked={publishOnApprove}
+                            onChange={(e) => setPublishOnApprove(e.target.checked)}
+                            className="mt-0.5 w-4 h-4 rounded border-edge text-brand focus:ring-brand focus:ring-2 cursor-pointer"
+                          />
+                          <span className="text-label-sm text-status-approved leading-relaxed">
+                            <span className="font-bold">Publish to student's public profile.</span> Visitors can view this
+                            verified item on the public showcase.
+                          </span>
+                        </label>
+                      )}
+
+                      {/* Confirm Action Button */}
+                      {action && (
+                        <button
+                          type="button"
+                          onClick={handleDecision}
+                          disabled={submitting || ((action === 'reject' || action === 'changes') && !reason.trim())}
+                          className="btn btn-primary w-full py-2.5 text-body-sm font-bold shadow-xs cursor-pointer"
+                          aria-busy={submitting}
+                        >
+                          {submitting ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                              <span>Processing...</span>
+                            </>
+                          ) : (
+                            <span>
+                              Confirm {action === 'approve' ? 'Approval' : action === 'reject' ? 'Rejection' : action === 'changes' ? 'Change Request' : 'Hide'}
+                            </span>
+                          )}
+                        </button>
+                      )}
                     </div>
-                  )}
-                </div>
-              </div>
 
-              {/* RIGHT COLUMN: Fast Decision & Faculty Action Panel */}
-              <div className="lg:col-span-2 space-y-5">
-                <div className="surface p-5 rounded-xl border border-edge space-y-4">
-                  <h3 className="text-label-md font-extrabold text-ink uppercase tracking-wider flex items-center justify-between">
-                    <span>Moderation Decision</span>
-                    <span className="text-[11px] text-ink-muted font-normal">One-Click Triage</span>
-                  </h3>
-
-                  {/* Decision Action Buttons */}
-                  <div className="grid grid-cols-2 gap-2" role="group" aria-label="Decision actions">
-                    <button
-                      type="button"
-                      onClick={() => setAction('approve')}
-                      className={`btn ${
-                        action === 'approve' ? 'btn-primary' : 'btn-secondary'
-                      } text-body-sm py-2.5 inline-flex items-center justify-center gap-2 cursor-pointer`}
-                      aria-pressed={action === 'approve'}
-                    >
-                      <CheckCircle className="w-4 h-4 text-emerald-500" />
-                      <span>Approve</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setAction('reject')}
-                      className={`btn ${
-                        action === 'reject' ? 'btn-danger' : 'btn-secondary'
-                      } text-body-sm py-2.5 inline-flex items-center justify-center gap-2 cursor-pointer`}
-                      aria-pressed={action === 'reject'}
-                    >
-                      <XCircle className="w-4 h-4 text-rose-500" />
-                      <span>Reject</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setAction('changes')}
-                      className={`btn ${
-                        action === 'changes' ? 'btn-primary' : 'btn-secondary'
-                      } text-body-sm py-2.5 inline-flex items-center justify-center gap-2 cursor-pointer`}
-                      aria-pressed={action === 'changes'}
-                    >
-                      <MessageSquare className="w-4 h-4 text-amber-500" />
-                      <span>Changes</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setAction('hide')}
-                      className={`btn ${
-                        action === 'hide' ? 'btn-secondary bg-surface-sunken' : 'btn-ghost'
-                      } text-body-sm py-2.5 inline-flex items-center justify-center gap-2 cursor-pointer`}
-                      aria-pressed={action === 'hide'}
-                    >
-                      <EyeOff className="w-4 h-4 text-ink-muted" />
-                      <span>Hide</span>
-                    </button>
-                  </div>
-
-                  {/* Reason Textarea (Required for Reject & Changes) */}
-                  {(action === 'reject' || action === 'changes') && (
-                    <div className="space-y-1.5 animate-fade-in">
-                      <label htmlFor="moderation-reason" className="label text-label-sm font-bold flex items-center justify-between">
-                        <span>Feedback / Instructions to Student</span>
-                        <span className="text-status-rejected">* Required</span>
-                      </label>
-                      <textarea
-                        id="moderation-reason"
-                        value={reason}
-                        onChange={(e) => setReason(e.target.value)}
-                        rows={3}
-                        placeholder={
-                          action === 'changes'
-                            ? 'Explain specifically what needs to be changed before re-uploading...'
-                            : 'State the specific reason for rejecting this submission...'
-                        }
-                        className="textarea text-body-sm w-full"
-                        aria-required="true"
-                        autoFocus
-                      />
-                      {!reason.trim() && (
-                        <p className="text-[12px] text-status-rejected font-medium">
-                          Please provide a note so the student knows what to do.
+                    {/* Previous Note / Feedback (if available) */}
+                    {(selectedItem.reviewNote || selectedItem.changeRequestNote) && (
+                      <div className="surface-sunken p-4 rounded-xl border border-edge space-y-1">
+                        <span className="text-label-sm font-bold text-ink-secondary">Previous Feedback History:</span>
+                        <p className="text-body-sm text-ink-muted leading-relaxed">
+                          {selectedItem.changeRequestNote || selectedItem.reviewNote}
                         </p>
-                      )}
-                    </div>
-                  )}
+                      </div>
+                    )}
 
-                  {/* Approval Note (Optional, For Approve) */}
-                  {action === 'approve' && (
-                    <div className="space-y-1.5 animate-fade-in">
-                      <label htmlFor="moderation-approval-note" className="label text-label-sm font-bold flex items-center justify-between">
-                        <span>Approval Note</span>
-                        <span className="text-ink-muted font-normal">Optional</span>
-                      </label>
-                      <textarea
-                        id="moderation-approval-note"
-                        value={approvalNote}
-                        onChange={(e) => setApprovalNote(e.target.value)}
-                        rows={2}
-                        placeholder="Why this passed review (visible to the student as feedback)... "
-                        className="textarea text-body-sm w-full"
-                      />
-                    </div>
-                  )}
+                    {/* Post-Decision Controls: visibility, re-upload request, delete */}
+                    <div className="space-y-3 pt-3 border-t border-edge">
+                      <h3 className="text-label-md font-extrabold text-ink uppercase tracking-wider">
+                        Publication &amp; Files
+                      </h3>
 
-                  {/* Publish on Profile Option (For Approve) */}
-                  {action === 'approve' && (
-                    <label className="flex items-start gap-2.5 p-3 rounded-lg border border-status-approved/30 bg-status-bg-approved cursor-pointer animate-fade-in">
-                      <input
-                        type="checkbox"
-                        checked={publishOnApprove}
-                        onChange={(e) => setPublishOnApprove(e.target.checked)}
-                        className="mt-0.5 w-4 h-4 rounded border-edge text-brand focus:ring-brand focus:ring-2 cursor-pointer"
-                      />
-                      <span className="text-label-sm text-status-approved leading-relaxed">
-                        <span className="font-bold">Publish to student's public profile.</span> Visitors can view this
-                        verified item on the public showcase.
-                      </span>
-                    </label>
-                  )}
-
-                  {/* Confirm Action Button */}
-                  {action && (
-                    <button
-                      type="button"
-                      onClick={handleDecision}
-                      disabled={submitting || ((action === 'reject' || action === 'changes') && !reason.trim())}
-                      className="btn btn-primary w-full py-2.5 text-body-sm font-bold shadow-xs cursor-pointer"
-                      aria-busy={submitting}
-                    >
-                      {submitting ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                          <span>Processing...</span>
-                        </>
-                      ) : (
+                      {/* Publish / unpublish — only meaningful once APPROVED. */}
+                      <button
+                        type="button"
+                        onClick={handleToggleVisibility}
+                        disabled={visibilityBusy || selectedItem.status !== 'APPROVED'}
+                        title={
+                          selectedItem.status !== 'APPROVED'
+                            ? 'Only approved items can be published'
+                            : undefined
+                        }
+                        className="btn btn-secondary w-full py-2.5 text-body-sm font-bold inline-flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {visibilityBusy ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : selectedItem.isPublic ? (
+                          <EyeOff className="w-4 h-4 text-ink-muted" />
+                        ) : (
+                          <Eye className="w-4 h-4 text-brand" />
+                        )}
                         <span>
-                          Confirm {action === 'approve' ? 'Approval' : action === 'reject' ? 'Rejection' : action === 'changes' ? 'Change Request' : 'Hide'}
+                          {selectedItem.isPublic ? 'Unpublish from Public Page' : 'Publish to Public Page'}
                         </span>
-                      )}
-                    </button>
-                  )}
-                </div>
+                      </button>
 
-                {/* Previous Note / Feedback (if available) */}
-                {(selectedItem.reviewNote || selectedItem.changeRequestNote) && (
-                  <div className="surface-sunken p-4 rounded-xl border border-edge space-y-1">
-                    <span className="text-label-sm font-bold text-ink-secondary">Previous Feedback History:</span>
-                    <p className="text-body-sm text-ink-muted leading-relaxed">
-                      {selectedItem.changeRequestNote || selectedItem.reviewNote}
-                    </p>
-                  </div>
-                )}
+                      {/* Ask the student to upload a replacement. */}
+                      <button
+                        type="button"
+                        onClick={handleRequestChanges}
+                        disabled={actionBusy}
+                        className="btn btn-secondary w-full py-2.5 text-body-sm font-bold inline-flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                      >
+                        {actionBusy ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Upload className="w-4 h-4 text-amber-500" />
+                        )}
+                        <span>Request Re-upload</span>
+                      </button>
 
-                {/* Post-Decision Controls: visibility, re-upload request, delete */}
-                <div className="surface p-5 rounded-xl border border-edge space-y-3">
-                  <h3 className="text-label-md font-extrabold text-ink uppercase tracking-wider">
-                    Publication &amp; Files
-                  </h3>
+                      {/* Destructive: removes the file and asks for a replacement. */}
+                      <button
+                        type="button"
+                        onClick={handleDeleteItem}
+                        disabled={deleteBusy}
+                        className="btn btn-danger w-full py-2.5 text-body-sm font-bold inline-flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                      >
+                        {deleteBusy ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="w-4 h-4" />
+                        )}
+                        <span>Delete &amp; Ask for Replacement</span>
+                      </button>
+                    </div>
 
-                  {/* Publish / unpublish — only meaningful once APPROVED. */}
-                  <button
-                    type="button"
-                    onClick={handleToggleVisibility}
-                    disabled={visibilityBusy || selectedItem.status !== 'APPROVED'}
-                    title={
-                      selectedItem.status !== 'APPROVED'
-                        ? 'Only approved items can be published'
-                        : undefined
-                    }
-                    className="btn btn-secondary w-full py-2.5 text-body-sm font-bold inline-flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {visibilityBusy ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : selectedItem.isPublic ? (
-                      <EyeOff className="w-4 h-4 text-ink-muted" />
-                    ) : (
-                      <Eye className="w-4 h-4 text-brand" />
-                    )}
-                    <span>
-                      {selectedItem.isPublic ? 'Unpublish from Public Page' : 'Publish to Public Page'}
-                    </span>
-                  </button>
-
-                  {/* Ask the student to upload a replacement. */}
-                  <button
-                    type="button"
-                    onClick={handleRequestChanges}
-                    disabled={actionBusy}
-                    className="btn btn-secondary w-full py-2.5 text-body-sm font-bold inline-flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                  >
-                    {actionBusy ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Upload className="w-4 h-4 text-amber-500" />
-                    )}
-                    <span>Request Re-upload</span>
-                  </button>
-
-                  {/* Destructive: removes the file and asks for a replacement. */}
-                  <button
-                    type="button"
-                    onClick={handleDeleteItem}
-                    disabled={deleteBusy}
-                    className="btn btn-danger w-full py-2.5 text-body-sm font-bold inline-flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                  >
-                    {deleteBusy ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Trash2 className="w-4 h-4" />
-                    )}
-                    <span>Delete &amp; Ask for Replacement</span>
-                  </button>
-                </div>
-
-                {/* Keyboard Shortcuts Hint */}
-                <div className="p-3 surface rounded-xl border border-edge text-[11px] text-ink-muted space-y-1">
-                  <div className="font-bold uppercase tracking-wider text-ink-secondary">Hotkeys</div>
-                  <div className="flex flex-wrap gap-2">
-                    <span><kbd className="px-1.5 py-0.5 rounded bg-surface-sunken border border-edge font-mono font-bold">A</kbd> Approve</span>
-                    <span><kbd className="px-1.5 py-0.5 rounded bg-surface-sunken border border-edge font-mono font-bold">R</kbd> Reject</span>
-                    <span><kbd className="px-1.5 py-0.5 rounded bg-surface-sunken border border-edge font-mono font-bold">C</kbd> Changes</span>
-                    <span><kbd className="px-1.5 py-0.5 rounded bg-surface-sunken border border-edge font-mono font-bold">←/→</kbd> Navigate</span>
-                    <span><kbd className="px-1.5 py-0.5 rounded bg-surface-sunken border border-edge font-mono font-bold">Esc</kbd> Close</span>
+                    {/* Keyboard Shortcuts Hint */}
+                    <div className="p-3 surface-sunken rounded-xl border border-edge text-[11px] text-ink-muted space-y-1">
+                      <div className="font-bold uppercase tracking-wider text-ink-secondary">Hotkeys</div>
+                      <div className="flex flex-wrap gap-2">
+                        <span><kbd className="px-1.5 py-0.5 rounded bg-surface border border-edge font-mono font-bold">A</kbd> Approve</span>
+                        <span><kbd className="px-1.5 py-0.5 rounded bg-surface border border-edge font-mono font-bold">R</kbd> Reject</span>
+                        <span><kbd className="px-1.5 py-0.5 rounded bg-surface border border-edge font-mono font-bold">C</kbd> Changes</span>
+                        <span><kbd className="px-1.5 py-0.5 rounded bg-surface border border-edge font-mono font-bold">←/→</kbd> Navigate</span>
+                        <span><kbd className="px-1.5 py-0.5 rounded bg-surface border border-edge font-mono font-bold">Esc</kbd> Close</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
     </div>
   );
 };

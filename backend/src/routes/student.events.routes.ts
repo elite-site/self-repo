@@ -8,30 +8,33 @@ router.use(requireStudentAuth);
 
 // --- Events Routes (Mounted at /api/student/events) ---
 
+let cachedOpenEvents: { data: any[]; expiry: number } | null = null;
+
 router.get('/', async (req: Request, res: Response) => {
   try {
-    const studentId = (req as any).studentId || req.student?.studentId;
-    const [student, events] = await Promise.all([
-      prisma.student.findUnique({
-        where: { id: studentId },
-        select: { id: true, status: true, year: true, section: true }
-      }),
-      prisma.event.findMany({
-        where: { status: 'OPEN' },
-        orderBy: { createdAt: 'desc' },
-        take: 100
-      }),
-    ]);
-    if (!student) return res.status(404).json({ error: 'NOT_FOUND', message: 'Student not found' });
+    if (cachedOpenEvents && Date.now() < cachedOpenEvents.expiry) {
+      res.set('Cache-Control', 'private, max-age=30, must-revalidate');
+      return res.json(cachedOpenEvents.data);
+    }
 
-    res.set('Cache-Control', 'private, max-age=30, must-revalidate');
-    res.json(events.map(e => ({
+    const events = await prisma.event.findMany({
+      where: { status: 'OPEN' },
+      orderBy: { createdAt: 'desc' },
+      take: 100
+    });
+
+    const mapped = events.map(e => ({
       ...e,
       title: e.name,
       date: e.eventDate || e.createdAt,
       eligibility: `Year ${e.year || 'All'}`,
       deadline: e.registrationEnd || e.createdAt
-    })));
+    }));
+
+    cachedOpenEvents = { data: mapped, expiry: Date.now() + 15_000 };
+
+    res.set('Cache-Control', 'private, max-age=30, must-revalidate');
+    res.json(mapped);
   } catch (err: any) {
     res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
   }

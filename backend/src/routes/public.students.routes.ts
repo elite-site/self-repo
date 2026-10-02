@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
+import { driveService } from '../services/drive.service';
 import { TtlCache } from '../utils/ttlCache';
 
 const router = Router();
@@ -271,6 +272,8 @@ router.get('/:rollNo', async (req: Request, res: Response) => {
             thumbnailUrl: introVideo!.driveFileId
               ? `/api/public/media/thumbnail/video/${introVideo!.id}?v=${encodeURIComponent(introVideo!.driveFileId)}`
               : null,
+            driveFileId: introVideo!.driveFileId || null,
+            previewUrl: typeof driveService.getPreviewUrl === 'function' ? driveService.getPreviewUrl(introVideo!.driveFileId) : null,
           }
         : null,
       achievements: student.achievements.map((a: any) => {
@@ -278,6 +281,7 @@ router.get('/:rollNo', async (req: Request, res: Response) => {
         const viewUrl = a.proofDriveId
           ? `/api/public/media/achievement/${a.id}`
           : (a.proofUrl || null);
+        const previewUrl = driveService.getPreviewUrl(a.proofDriveId);
         const thumbnailUrl = a.proofDriveId
           ? `/api/public/media/thumbnail/achievement/${a.id}?v=${encodeURIComponent(a.proofDriveId)}`
           : null;
@@ -285,12 +289,15 @@ router.get('/:rollNo', async (req: Request, res: Response) => {
           ...rest,
           viewUrl,
           proofUrl: viewUrl,
+          previewUrl,
+          driveFileId: a.proofDriveId || null,
           thumbnailUrl,
         };
       }),
       certificates: student.certificates.map((c: any) => {
         const { fileDriveId: _f, ...rest } = c;
         const viewUrl = c.fileDriveId ? `/api/public/media/certificate/${c.id}` : null;
+        const previewUrl = driveService.getPreviewUrl(c.fileDriveId);
         const thumbnailUrl = c.fileDriveId
           ? `/api/public/media/thumbnail/certificate/${c.id}?v=${encodeURIComponent(c.fileDriveId)}`
           : null;
@@ -298,12 +305,15 @@ router.get('/:rollNo', async (req: Request, res: Response) => {
           ...rest,
           viewUrl,
           fileUrl: viewUrl,
+          previewUrl,
+          driveFileId: c.fileDriveId || null,
           thumbnailUrl,
         };
       }),
       resumes: student.resumes.map((r: any) => {
         const { driveFileId: _d, ...rest } = r;
         const viewUrl = r.driveFileId ? `/api/public/media/resume/${r.id}` : null;
+        const previewUrl = driveService.getPreviewUrl(r.driveFileId);
         const thumbnailUrl = r.driveFileId
           ? `/api/public/media/thumbnail/resume/${r.id}?v=${encodeURIComponent(r.driveFileId)}`
           : null;
@@ -311,6 +321,8 @@ router.get('/:rollNo', async (req: Request, res: Response) => {
           ...rest,
           viewUrl,
           fileUrl: viewUrl,
+          previewUrl,
+          driveFileId: r.driveFileId || null,
           thumbnailUrl,
         };
       }),

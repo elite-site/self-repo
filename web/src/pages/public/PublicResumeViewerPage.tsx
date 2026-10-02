@@ -28,8 +28,12 @@ export const PublicResumeViewerPage: React.FC<PublicResumeViewerProps> = ({ sess
           setStudentName(student.name || rollNo);
           if (student.resumes && student.resumes.length > 0) {
             const res = student.resumes[0];
-            const raw = res.viewUrl || (res.id ? `/api/public/media/resume/${res.id}` : res.fileUrl);
-            setResumeUrl(raw ? resolveMediaUrl(raw) : null);
+            const drivePreview = (res as any).previewUrl ||
+              ((res as any).driveFileId && !(res as any).driveFileId.startsWith('mock_')
+                ? `https://drive.google.com/file/d/${(res as any).driveFileId}/preview`
+                : null);
+            const raw = drivePreview || res.viewUrl || (res.id ? `/api/public/media/resume/${res.id}` : res.fileUrl);
+            setResumeUrl(raw ? (raw.startsWith('http') ? raw : resolveMediaUrl(raw)) : null);
           } else {
             setResumeUrl(null);
           }

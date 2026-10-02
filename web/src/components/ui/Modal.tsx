@@ -196,11 +196,9 @@ export const Modal: React.FC<ModalProps> = ({
                   // top only, sitting on the bottom edge (§8.2).
                   'fixed inset-x-0 bottom-0 z-modal flex w-full max-h-[85dvh] flex-col',
                   'rounded-t-2xl border-t border-edge bg-surface shadow-xl',
-                  // From `md`: the centred panel. Auto margins plus a
-                  // fit-content height centre the box on both axes without a
-                  // translate, which matters because Framer Motion owns
-                  // `transform` for the entrance and would overwrite one.
-                  'md:inset-0 md:my-auto md:h-fit md:max-h-[calc(100dvh-4rem)]',
+                  // From `md`: the centred panel. Auto margins on both axes
+                  // centre the box horizontally and vertically.
+                  'md:inset-0 md:m-auto md:h-fit md:max-h-[calc(100dvh-4rem)]',
                   'md:rounded-xl md:border',
                   PANEL_SIZES[size],
                   className,

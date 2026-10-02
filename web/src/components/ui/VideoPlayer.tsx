@@ -411,6 +411,8 @@ export const VideoPlayer = React.forwardRef<HTMLDivElement, VideoPlayerProps>(fu
         preload="metadata"
         playsInline
         controls={nativeControls}
+        controlsList="nodownload"
+        onContextMenu={(e) => e.preventDefault()}
         autoPlay={autoPlayMuted}
         muted={autoPlayMuted}
         loop={loop}

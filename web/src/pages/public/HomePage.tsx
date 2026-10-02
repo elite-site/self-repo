@@ -148,16 +148,27 @@ export const HomePage: React.FC<HomePageProps> = ({ session, onLogout }) => {
 
                 {featuredVideo ? (
                   <div className="pt-4">
-                    <video
-                      src={resolveMediaUrl(featuredVideo.streamUrl)}
-                      poster={featuredVideo.thumbnailUrl ? resolveMediaUrl(featuredVideo.thumbnailUrl) : undefined}
-                      controls
-                      preload="none"
-                      playsInline
-                      className="aspect-video w-full rounded-lg bg-surface-inverse object-contain"
-                    >
-                      Your browser does not support video playback.
-                    </video>
+                    {featuredVideo.driveFileId && !featuredVideo.driveFileId.startsWith('mock_') ? (
+                      <iframe
+                        src={`https://drive.google.com/file/d/${featuredVideo.driveFileId}/preview`}
+                        allow="autoplay; fullscreen"
+                        className="aspect-video w-full rounded-lg border-0 bg-surface-inverse"
+                        title={featuredVideo.name}
+                      />
+                    ) : (
+                      <video
+                        src={resolveMediaUrl(featuredVideo.streamUrl)}
+                        poster={featuredVideo.thumbnailUrl ? resolveMediaUrl(featuredVideo.thumbnailUrl) : undefined}
+                        controls
+                        controlsList="nodownload"
+                        onContextMenu={(e) => e.preventDefault()}
+                        preload="none"
+                        playsInline
+                        className="aspect-video w-full rounded-lg bg-surface-inverse object-contain"
+                      >
+                        Your browser does not support video playback.
+                      </video>
+                    )}
                     <div className="mt-3 flex items-center justify-between gap-3">
                       <div className="min-w-0">
                         <p className="truncate font-heading text-label-lg font-semibold text-ink">

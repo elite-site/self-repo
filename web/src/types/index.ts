@@ -45,6 +45,8 @@ export interface PublicIntroVideo {
   streamUrl: string;
   thumbnailUrl?: string | null;
   profileUrl: string;
+  driveFileId?: string | null;
+  previewUrl?: string | null;
 }
 
 export interface StudentProfile {

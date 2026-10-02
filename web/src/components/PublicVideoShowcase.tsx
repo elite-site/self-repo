@@ -128,21 +128,32 @@ export const PublicVideoShowcase: React.FC<Props> = ({
               className="surface overflow-hidden shadow-card hover:shadow-card-hover transition-shadow"
             >
               <div className="relative bg-surface-inverse aspect-video">
-                <video
-                  ref={(el) => {
-                    playerRefs.current[video.id] = el;
-                  }}
-                  src={resolveMediaUrl(video.streamUrl)}
-                  poster={video.thumbnailUrl ? resolveMediaUrl(video.thumbnailUrl) : undefined}
-                  controls
-                  preload="none"
-                  playsInline
-                  onPlay={() => handlePlay(video.id)}
-                  onPause={() => setActiveId((cur) => (cur === video.id ? null : cur))}
-                  className="w-full h-full object-contain"
-                >
-                  Your browser does not support video playback.
-                </video>
+                {video.driveFileId && !video.driveFileId.startsWith('mock_') ? (
+                  <iframe
+                    src={`https://drive.google.com/file/d/${video.driveFileId}/preview`}
+                    allow="autoplay; fullscreen"
+                    className="w-full h-full border-0"
+                    title={`${video.name}'s introduction video`}
+                  />
+                ) : (
+                  <video
+                    ref={(el) => {
+                      playerRefs.current[video.id] = el;
+                    }}
+                    src={resolveMediaUrl(video.streamUrl)}
+                    poster={video.thumbnailUrl ? resolveMediaUrl(video.thumbnailUrl) : undefined}
+                    controls
+                    controlsList="nodownload"
+                    onContextMenu={(e) => e.preventDefault()}
+                    preload="none"
+                    playsInline
+                    onPlay={() => handlePlay(video.id)}
+                    onPause={() => setActiveId((cur) => (cur === video.id ? null : cur))}
+                    className="w-full h-full object-contain"
+                  >
+                    Your browser does not support video playback.
+                  </video>
+                )}
               </div>
 
               <div className="p-4 flex items-center justify-between gap-3">

@@ -135,10 +135,15 @@ export const ResumePage: React.FC = () => {
 
   // The API returns a root-relative masked proxy path. It must be resolved against the API
   // origin before it goes into <iframe src>.
+  const drivePreview = (resumeData as any)?.previewUrl ||
+    ((resumeData as any)?.driveFileId && !(resumeData as any).driveFileId.startsWith('mock_')
+      ? `https://drive.google.com/file/d/${(resumeData as any).driveFileId}/preview`
+      : null);
   const rawUrl =
+    drivePreview ||
     resumeData?.viewUrl ||
     (resumeData?.id ? `/api/public/media/resume/${resumeData.id}` : resumeData?.fileUrl);
-  const fileUrl = rawUrl ? resolveMediaUrl(rawUrl) : null;
+  const fileUrl = rawUrl ? (rawUrl.startsWith('http') ? rawUrl : resolveMediaUrl(rawUrl)) : null;
   const embedUrl = fileUrl;
 
   // Helper to map status to badge class

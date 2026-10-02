@@ -27,6 +27,7 @@ const PhotoCropModal = lazy(() =>
   import('../components/PhotoCropModal').then((m) => ({ default: m.PhotoCropModal })),
 );
 import { getPhotoStyle } from '../utils/photoStyle';
+import { compressImageToWebP } from '../utils/cropImage';
 import { LeetCodeIcon, CodeChefIcon } from '../components/icons/PlatformIcons';
 import { useToast } from '../components/Toast';
 import { useReducedMotion } from '../hooks/useReducedMotion';
@@ -133,55 +134,44 @@ export const EditProfilePage: React.FC = () => {
     }
 
     setPhotoError(null);
-    setUploadingPhoto(true);
-
-    const formData = new FormData();
-    formData.append('photo', file);
-
-    try {
-      const res = await api.uploadProfilePhoto(formData);
-      if (res.photoUrl) {
-        setProfile((prev) => (prev ? { ...prev, photoUrl: res.photoUrl, photoOffsetX: 50, photoOffsetY: 50, photoZoom: 1 } : prev));
-        onPhotoChange?.(res.photoUrl);
-        setCropImageSrc(resolveMediaUrl(res.photoUrl));
-        setIsCropModalOpen(true);
-      } else {
-        setPhotoError('The photo was uploaded but no image URL was returned. Please try again.');
-        showToast('The photo was uploaded but no image URL was returned. Please try again.', 'error');
-      }
-    } catch (err: any) {
-      const notice = err.response?.data?.message || 'Failed to upload photo. Please try again.';
-      setPhotoError(notice);
-      showToast(notice, 'error');
-    } finally {
-      setUploadingPhoto(false);
-      e.target.value = '';
-    }
-  };
-
-  const handleRepositionPhoto = () => {
-    if (!profile?.photoUrl) return;
-    setPhotoError(null);
-    setCropImageSrc(resolveMediaUrl(profile.photoUrl));
+    const objectUrl = URL.createObjectURL(file);
+    setCropImageSrc(objectUrl);
     setIsCropModalOpen(true);
+    e.target.value = '';
   };
 
   const handleCloseCropModal = () => {
     setIsCropModalOpen(false);
+    if (cropImageSrc && cropImageSrc.startsWith('blob:')) {
+      URL.revokeObjectURL(cropImageSrc);
+    }
     setCropImageSrc(null);
   };
 
-  const handleSavePosition = async (pos: { photoOffsetX: number; photoOffsetY: number; photoZoom: number }) => {
+  const handleCropSave = async (croppedBlob: Blob) => {
+    setUploadingPhoto(true);
     setPhotoError(null);
     try {
-      await api.updateProfile(pos);
-      setProfile((prev) => (prev ? { ...prev, ...pos } : prev));
-      setIsCropModalOpen(false);
+      const webpFile = new File([croppedBlob], `photo_${Date.now()}.webp`, { type: 'image/webp' });
+      const formData = new FormData();
+      formData.append('photo', webpFile);
+
+      const res = await api.uploadProfilePhoto(formData);
+      if (res.photoUrl) {
+        setProfile((prev) => (prev ? { ...prev, photoUrl: res.photoUrl, photoOffsetX: 50, photoOffsetY: 50, photoZoom: 1 } : prev));
+        onPhotoChange?.(res.photoUrl);
+        showToast('Profile photo updated successfully', 'success');
+        handleCloseCropModal();
+      } else {
+        throw new Error('No photo URL was returned.');
+      }
     } catch (err: any) {
-      const errorMsg = err.response?.data?.message || err.message || 'Failed to save photo position.';
-      setPhotoError(errorMsg);
-      showToast(errorMsg, 'error');
-      throw new Error(errorMsg);
+      const notice = err.response?.data?.message || err.message || 'Failed to upload photo. Please try again.';
+      setPhotoError(notice);
+      showToast(notice, 'error');
+      throw err;
+    } finally {
+      setUploadingPhoto(false);
     }
   };
 
@@ -327,17 +317,6 @@ export const EditProfilePage: React.FC = () => {
                     alt={profile.name}
                     style={getPhotoStyle(profile)}
                   />
-                  {!uploadingPhoto && (
-                    <button
-                      type="button"
-                      onClick={handleRepositionPhoto}
-                      title="Reposition Photo"
-                      className="absolute inset-0 bg-scrim text-on-primary opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center gap-1 transition-opacity cursor-pointer text-[11px] font-bold min-h-[44px] min-w-[44px]"
-                    >
-                      <Crop className="w-4 h-4" />
-                      <span>Reposition</span>
-                    </button>
-                  )}
                 </div>
               ) : (
                 <div className="w-24 h-24 rounded-lg bg-brand text-on-primary flex items-center justify-center font-black text-2xl shadow-card font-heading">
@@ -376,17 +355,6 @@ export const EditProfilePage: React.FC = () => {
                   <Camera className="w-4 h-4" />
                   <span>{uploadingPhoto ? 'Uploading...' : profile?.photoUrl ? 'Change Photo' : 'Upload Photo'}</span>
                 </button>
-                {profile?.photoUrl && (
-                  <button
-                    type="button"
-                    onClick={handleRepositionPhoto}
-                    disabled={uploadingPhoto}
-                    className="btn btn-ghost min-h-[44px]"
-                  >
-                    <Crop className="w-4 h-4 text-brand" />
-                    <span>Reposition Photo</span>
-                  </button>
-                )}
               </div>
               <p className="text-label-sm text-ink-muted">
                 Recommended: Square image, max 5MB. Visible on public directory and resume card.
@@ -673,7 +641,7 @@ export const EditProfilePage: React.FC = () => {
             imageSrc={cropImageSrc}
             initialPosition={profile}
             onClose={handleCloseCropModal}
-            onSavePosition={handleSavePosition}
+            onCropSave={handleCropSave}
             isSaving={uploadingPhoto}
           />
         </Suspense>

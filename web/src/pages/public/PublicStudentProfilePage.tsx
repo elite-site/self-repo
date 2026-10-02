@@ -100,6 +100,8 @@ interface PublicResume {
 interface PublicIntroVideo {
   streamUrl?: string | null;
   thumbnailUrl?: string | null;
+  driveFileId?: string | null;
+  previewUrl?: string | null;
 }
 
 interface PublicStudent {
@@ -507,22 +509,33 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
           {/* ── 4. FEATURED VIDEO ────────────────────────────────────────── */}
           <PublicSection id="video" title="Introduction video" variants={reveal}>
             {introVideo?.streamUrl ? (
-              <div className="overflow-hidden rounded-xl border border-edge bg-surface-inverse">
-                <video
-                  src={resolveMediaUrl(introVideo.streamUrl)}
-                  poster={
-                    introVideo.thumbnailUrl
-                      ? resolveMediaUrl(introVideo.thumbnailUrl)
-                      : undefined
-                  }
-                  controls
-                  preload="none"
-                  playsInline
-                  aria-label={`${name}'s introduction video`}
-                  className="aspect-video w-full object-contain"
-                >
-                  Your browser does not support video playback.
-                </video>
+              <div className="overflow-hidden rounded-xl border border-edge bg-surface-inverse aspect-video">
+                {introVideo.driveFileId && !introVideo.driveFileId.startsWith('mock_') ? (
+                  <iframe
+                    src={`https://drive.google.com/file/d/${introVideo.driveFileId}/preview`}
+                    allow="autoplay; fullscreen"
+                    className="w-full h-full border-0 rounded-xl"
+                    title={`${name}'s introduction video`}
+                  />
+                ) : (
+                  <video
+                    src={resolveMediaUrl(introVideo.streamUrl)}
+                    poster={
+                      introVideo.thumbnailUrl
+                        ? resolveMediaUrl(introVideo.thumbnailUrl)
+                        : undefined
+                    }
+                    controls
+                    controlsList="nodownload"
+                    onContextMenu={(e) => e.preventDefault()}
+                    preload="none"
+                    playsInline
+                    aria-label={`${name}'s introduction video`}
+                    className="aspect-video w-full object-contain"
+                  >
+                    Your browser does not support video playback.
+                  </video>
+                )}
               </div>
             ) : (
               <Card>
@@ -619,26 +632,47 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
                 </Card>
               ) : (
                 <ul className="space-y-3">
-                  {achievements.map((achievement) => (
-                    <li key={achievement.id} className="surface p-5">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="font-heading text-label-lg font-semibold text-ink">
-                          {achievement.title}
-                        </h3>
-                        <Badge label="Verified" variant="success" />
-                      </div>
-                      {achievement.description && (
-                        <p className="mt-1 text-body-sm text-ink-secondary">
-                          {achievement.description}
-                        </p>
-                      )}
-                      <p className="mt-1 text-label-md text-ink-muted">
-                        {[achievement.organization, achievement.date ? formatDate(achievement.date) : null]
-                          .filter(Boolean)
-                          .join(' · ')}
-                      </p>
-                    </li>
-                  ))}
+                  {achievements.map((achievement) => {
+                    const href = (achievement as any).previewUrl ||
+                      ((achievement as any).driveFileId && !(achievement as any).driveFileId.startsWith('mock_')
+                        ? `https://drive.google.com/file/d/${(achievement as any).driveFileId}/preview`
+                        : null) ||
+                      (achievement as any).proofUrl ||
+                      (achievement as any).viewUrl;
+                    return (
+                      <li key={achievement.id} className="surface flex items-center justify-between gap-4 p-5">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="font-heading text-label-lg font-semibold text-ink">
+                              {achievement.title}
+                            </h3>
+                            <Badge label="Verified" variant="success" />
+                          </div>
+                          {achievement.description && (
+                            <p className="mt-1 text-body-sm text-ink-secondary">
+                              {achievement.description}
+                            </p>
+                          )}
+                          <p className="mt-1 text-label-md text-ink-muted">
+                            {[achievement.organization, achievement.date ? formatDate(achievement.date) : null]
+                              .filter(Boolean)
+                              .join(' · ')}
+                          </p>
+                        </div>
+                        {href && (
+                          <a
+                            href={href.startsWith('http') ? href : resolveMediaUrl(href)}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex shrink-0 items-center gap-1 text-label-lg font-semibold text-ink-brand hover:text-brand-hover"
+                          >
+                            <span>View Proof</span>
+                            <ExternalLink size={13} strokeWidth={2} aria-hidden="true" />
+                          </a>
+                        )}
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </PublicSection>
@@ -656,7 +690,12 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
               ) : (
                 <ul className="space-y-3">
                   {certificates.map((certificate) => {
-                    const href = certificate.viewUrl || certificate.fileUrl;
+                    const href = (certificate as any).previewUrl ||
+                      ((certificate as any).driveFileId && !(certificate as any).driveFileId.startsWith('mock_')
+                        ? `https://drive.google.com/file/d/${(certificate as any).driveFileId}/preview`
+                        : null) ||
+                      certificate.viewUrl ||
+                      certificate.fileUrl;
                     const meta = [
                       certificate.issuer,
                       certificate.issueDate ? formatDate(certificate.issueDate) : null,
@@ -676,7 +715,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
                         </div>
                         {href && (
                           <a
-                            href={resolveMediaUrl(href)}
+                            href={href.startsWith('http') ? href : resolveMediaUrl(href)}
                             target="_blank"
                             rel="noreferrer"
                             className="inline-flex shrink-0 items-center gap-1 text-label-lg font-semibold text-ink-brand hover:text-brand-hover"

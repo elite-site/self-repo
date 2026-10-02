@@ -32,6 +32,9 @@ function serializePublicVideo(video: {
   studentId: string;
   student: { name: string; rollNo: string; year: number; section: string };
 }) {
+  if (video.driveFileId) {
+    videoFileIdCache.set(video.id, video.driveFileId);
+  }
   return {
     id: video.id,
     name: video.student.name,
@@ -50,16 +53,13 @@ function serializePublicVideo(video: {
       ? `/api/public/media/thumbnail/video/${encodeURIComponent(video.id)}?v=${encodeURIComponent(video.driveFileId)}`
       : null,
     profileUrl: `/students/${encodeURIComponent(video.student.rollNo)}`,
+    driveFileId: video.driveFileId || null,
+    previewUrl: typeof driveService.getPreviewUrl === 'function' ? driveService.getPreviewUrl(video.driveFileId) : null,
   };
 }
 
-/**
- * The showcase list. Every visitor to the public page asks for this, so a burst
- * of traffic would otherwise be a burst of identical list+count queries. The TTL
- * collapses that to one query per window; the `Cache-Control` header below still
- * handles repeat visits from an individual browser.
- */
 const videoListCache = new TtlCache<{ items: unknown[]; total: number }>(30_000, 50);
+const videoFileIdCache = new TtlCache<string>(300_000, 500);
 
 /** Resets the showcase list cache. Exported so tests are not order-dependent. */
 export const clearVideoListCache = (): void => videoListCache.clear();
@@ -116,18 +116,23 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
 // files are `anyone`-readable by design, so the id is not a capability.
 router.get('/stream/:id', async (req: Request, res: Response): Promise<void> => {
   try {
-    const video = await prisma.introVideo.findFirst({
-      where: { ...PUBLIC_VIDEO_WHERE, id: req.params.id, driveFileId: { not: null } },
-      include: { student: { select: { rollNo: true } } },
-    });
+    let fileId = videoFileIdCache.get(req.params.id);
 
-    if (!video?.driveFileId) {
-      res.status(404).json({ error: 'NOT_FOUND', message: 'This video is not published.' });
-      return;
+    if (!fileId) {
+      const video = await prisma.introVideo.findFirst({
+        where: { ...PUBLIC_VIDEO_WHERE, id: req.params.id, driveFileId: { not: null } },
+        select: { id: true, driveFileId: true },
+      });
+
+      if (!video?.driveFileId) {
+        res.status(404).json({ error: 'NOT_FOUND', message: 'This video is not published.' });
+        return;
+      }
+      fileId = video.driveFileId;
+      videoFileIdCache.set(req.params.id, fileId);
     }
 
-    const fileId = video.driveFileId;
-    const etag = `"${video.id}"`;
+    const etag = `"${req.params.id}"`;
 
     if (req.headers['if-none-match'] === etag) {
       res.status(304).end();

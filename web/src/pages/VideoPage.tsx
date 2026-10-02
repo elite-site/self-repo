@@ -916,26 +916,36 @@ export const VideoPage: React.FC = () => {
               </div>
             ) : playbackUrl ? (
               <div className="bg-surface-inverse rounded-lg overflow-hidden aspect-video border border-edge-strong shadow-inner">
-                <video
-                  ref={videoRef}
-                  key={playbackUrl}
-                  src={playbackUrl}
-                  poster={video?.thumbnailUrl ? resolveMediaUrl(video.thumbnailUrl) : undefined}
-                  controls
-                  playsInline
-                  preload="metadata"
-                  // Sends the httpOnly session cookie when the API lives on a
-                  // different origin than the portal (local dev).
-                  crossOrigin="use-credentials"
-                  onError={handlePlaybackError}
-                  onPlay={() => setIsPlaying(true)}
-                  onPause={() => setIsPlaying(false)}
-                  onEnded={() => setIsPlaying(false)}
-                  className="w-full h-full object-contain"
-                >
-                  Your browser cannot play this video. Use the Download button to
-                  open it in a video player.
-                </video>
+                {!localPreviewUrl && (video?.driveFileId || (submission as any)?.videoDriveId) && !(video?.driveFileId || (submission as any)?.videoDriveId)?.startsWith('mock_') ? (
+                  <iframe
+                    src={`https://drive.google.com/file/d/${video?.driveFileId || (submission as any)?.videoDriveId}/preview`}
+                    allow="autoplay; fullscreen"
+                    className="w-full h-full border-0 rounded-lg aspect-video"
+                    title="Introduction video preview"
+                  />
+                ) : (
+                  <video
+                    ref={videoRef}
+                    key={playbackUrl}
+                    src={playbackUrl}
+                    poster={video?.thumbnailUrl ? resolveMediaUrl(video.thumbnailUrl) : undefined}
+                    controls
+                    controlsList="nodownload"
+                    onContextMenu={(e) => e.preventDefault()}
+                    playsInline
+                    preload="auto"
+                    // Sends the httpOnly session cookie when the API lives on a
+                    // different origin than the portal (local dev).
+                    crossOrigin="use-credentials"
+                    onError={handlePlaybackError}
+                    onPlay={() => setIsPlaying(true)}
+                    onPause={() => setIsPlaying(false)}
+                    onEnded={() => setIsPlaying(false)}
+                    className="w-full h-full object-contain"
+                  >
+                    Your browser cannot play this video.
+                  </video>
+                )}
                 {/* Quick controls: Play/Pause, Replay, ±10s seek, Download. */}
                 <div className="flex flex-wrap items-center gap-2 px-3 py-2 bg-surface-inverse border-t border-edge-strong">
                   <button
