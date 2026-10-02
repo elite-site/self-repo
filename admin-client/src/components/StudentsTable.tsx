@@ -3,7 +3,6 @@ import {
   Search,
   ChevronLeft,
   ChevronRight,
-  Users,
   RefreshCw,
   SlidersHorizontal,
   Eye,
@@ -13,7 +12,6 @@ import {
 } from 'lucide-react';
 import { StudentsResponse, Student } from '../types';
 import { adminApi } from '../services/api';
-import { BrandedLoading } from './BrandedLoading';
 
 interface StudentsTableProps {
   activeEventId: string;
@@ -86,34 +84,28 @@ export const StudentsTable: React.FC<StudentsTableProps> = ({
       {/* 1. HEADER & REFRESH */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-edge pb-5">
         <div>
-          <div className="text-[11px] font-mono font-bold tracking-widest text-ink-brand uppercase flex items-center gap-1.5">
-            <Users className="w-3.5 h-3.5" />
-            <span>Student Roster</span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-ink font-heading tracking-tight mt-1">
-            ALL STUDENTS
-          </h1>
-          <p className="text-xs text-ink-secondary mt-1 font-normal">
-            Full IT-Department roster imported from the Excel sheet, with upload status and responses.
+          <h1 className="font-heading text-headline-lg text-ink">All students</h1>
+          <p className="mt-1 text-body-md text-ink-secondary">
+            Roster imported from the department sheet, with introduction-video status and moderation response.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           <button
             onClick={loadStudents}
-            className="inline-flex items-center gap-2 px-3.5 py-2 btn btn-secondary self-start sm:self-auto"
+            className="btn btn-secondary self-start sm:self-auto"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-ink-brand' : ''}`} />
-            <span>Refresh Roster</span>
+            <RefreshCw size={15} strokeWidth={1.75} className={loading ? 'animate-spin' : ''} aria-hidden="true" />
+            <span>Refresh</span>
           </button>
 
           <button
             onClick={() => window.open(adminApi.getStudentsExportUrl(activeEventId), '_blank')}
-            className="inline-flex items-center gap-2 px-3.5 py-2 bg-status-approved hover:bg-status-approved/90 text-on-primary text-xs font-bold rounded-lg transition-colors shadow-xs cursor-pointer self-start sm:self-auto"
+            className="btn bg-status-solid-approved text-on-primary self-start sm:self-auto"
             title="Download the full student roster as an Excel (.xlsx) file"
           >
-            <FileSpreadsheet className="w-3.5 h-3.5" />
-            <span>Download All Students (Excel)</span>
+            <FileSpreadsheet size={15} strokeWidth={1.75} aria-hidden="true" />
+            <span>Export roster</span>
           </button>
         </div>
       </div>
@@ -173,21 +165,35 @@ export const StudentsTable: React.FC<StudentsTableProps> = ({
       {/* 3. ROSTER TABLE */}
       <div className="surface overflow-hidden">
         {loading ? (
-          <div className="p-12">
-            <BrandedLoading fullScreen={false} message="Loading Student Roster..." />
-          </div>
+          <>
+            <span className="sr-only" role="status">
+              Loading the student roster
+            </span>
+            <div className="space-y-3 p-4" aria-busy="true">
+              {[0, 1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="flex items-center gap-4">
+                  <div className="skeleton h-4 w-40" />
+                  <div className="skeleton h-4 w-24" />
+                  <div className="skeleton h-4 w-20" />
+                  <div className="skeleton h-4 flex-1" />
+                </div>
+              ))}
+            </div>
+          </>
         ) : !data || data.data.length === 0 ? (
-          <div className="p-16 text-center space-y-2">
-            <p className="text-sm font-semibold text-ink font-heading">No students found</p>
-            <p className="text-xs text-ink-secondary">
-              Try adjusting your search query or filters.
+          <div className="space-y-1 p-16 text-center">
+            <p className="font-heading text-headline-sm text-ink">No students match these filters</p>
+            <p className="text-body-sm text-ink-secondary">
+              Try a different name, section, year or upload status.
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs" role="grid" aria-label="Students">
+          <div className="max-h-[70vh] overflow-auto">
+            {/* A plain table, not `role="grid"`: a grid is a promise of
+                arrow-key cell navigation, which this does not implement. */}
+            <table className="w-full border-collapse text-left text-body-sm" aria-label="Students">
               <thead>
-                <tr className="bg-surface-inset border-b border-edge text-[11px] font-bold text-ink-secondary uppercase tracking-wider">
+                <tr className="sticky top-0 z-raised border-b border-edge bg-surface-inset text-label-sm uppercase tracking-wider text-ink-secondary">
                   <th className="py-3.5 px-5" scope="col">Student</th>
                   <th className="py-3.5 px-4" scope="col">Roll Number</th>
                   <th className="py-3.5 px-4" scope="col">Year & Section</th>
@@ -207,16 +213,25 @@ export const StudentsTable: React.FC<StudentsTableProps> = ({
                     <tr
                       key={student.id}
                       onClick={() => handleView(student)}
-                      className="hover:bg-surface-canvas transition-colors cursor-pointer group"
+                      className="cursor-pointer transition-colors duration-fast hover:bg-surface-sunken"
                     >
-                      <td className="py-3.5 px-5">
-                        <div className="font-bold text-ink group-hover:text-ink-brand transition-colors">
+                      {/* The name is a real button so the row is reachable by
+                          keyboard; the row click stays as a pointer shortcut. */}
+                      <th scope="row" className="px-5 py-3.5 text-left font-normal">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleView(student);
+                          }}
+                          className="cursor-pointer text-left font-heading text-label-lg font-semibold text-ink hover:text-ink-brand"
+                        >
                           {student.name}
-                        </div>
-                        <div className="text-[11px] text-ink-secondary mt-0.5">
-                          {studentYearLabel(student.year)} Year • Section {student.section} • {student.branch}
-                        </div>
-                      </td>
+                        </button>
+                        <span className="mt-0.5 block text-label-md text-ink-secondary">
+                          {studentYearLabel(student.year)} year · Section {student.section} · {student.branch}
+                        </span>
+                      </th>
 
                       <td className="py-3.5 px-4 font-semibold text-ink-secondary">
                         {student.rollNo}
@@ -241,30 +256,22 @@ export const StudentsTable: React.FC<StudentsTableProps> = ({
 
                       <td className="py-3.5 px-4">
                         {reviewed ? (
-                          <span className="badge badge-approved">
-                            <span className="w-2 h-2 rounded-full bg-status-approved inline-block" />
-                            <span className="text-[11px] font-bold tracking-wide uppercase">Responded</span>
-                          </span>
+                          <span className="badge badge-approved">Responded</span>
                         ) : student.submission ? (
-                          <span className="badge badge-pending">
-                            <span className="w-2 h-2 rounded-full bg-status-pending inline-block" />
-                            Pending review
-                          </span>
+                          <span className="badge badge-pending">Pending review</span>
                         ) : (
-                          <span className="inline-flex items-center gap-1.5 text-ink-muted text-[11px] font-medium">
-                            <span className="w-2 h-2 rounded-full bg-surface-inset inline-block" />
-                            Awaiting upload
-                          </span>
+                          <span className="badge badge-draft">No video</span>
                         )}
                       </td>
 
                       <td className="py-3.5 px-5 text-right">
                         <button
                           onClick={(e) => { e.stopPropagation(); handleView(student); }}
-                          className="btn btn-secondary"
+                          className="btn btn-secondary px-2.5"
+                          aria-label={`View ${student.name}`}
                         >
-                          <Eye className="w-3.5 h-3.5" />
-                          <span>View Profile</span>
+                          <Eye size={15} strokeWidth={1.75} aria-hidden="true" />
+                          <span>View</span>
                         </button>
                       </td>
                     </tr>
@@ -299,7 +306,7 @@ export const StudentsTable: React.FC<StudentsTableProps> = ({
               </button>
               <button
                 disabled={page >= data.pagination.totalPages}
-                onClick={() => setPage((p) => p + 1)}
+                onClick={() => setPage((p) => Math.min(data.pagination.totalPages, p + 1))}
                 className="btn btn-secondary p-1.5"
               >
                 <ChevronRight className="w-4 h-4" />

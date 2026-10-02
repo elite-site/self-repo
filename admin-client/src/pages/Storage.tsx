@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { adminApi } from '../services/api';
 import { StorageStatsResponse } from '../types';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 import {
   HardDrive,
   Cloud,
@@ -18,6 +19,7 @@ import {
 } from 'lucide-react';
 
 export const Storage: React.FC = () => {
+  const confirm = useConfirm();
   const [stats, setStats] = useState<StorageStatsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -46,9 +48,12 @@ export const Storage: React.FC = () => {
   }, []);
 
   const handleClearCache = async () => {
-    if (!window.confirm('Are you sure you want to purge the Google Drive folder cache? Folders will be re-resolved automatically upon next request.')) {
-      return;
-    }
+    const confirmed = await confirm({
+      title: 'Purge the Drive folder cache?',
+      description: 'Folders are re-resolved automatically on the next request, so this only costs one extra Drive lookup per folder.',
+      confirmLabel: 'Purge cache',
+    });
+    if (!confirmed) return;
     setClearingCache(true);
     setCacheMessage(null);
     try {

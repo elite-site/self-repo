@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { api } from '../services/api';
 import { Announcement } from '../types';
-import { BrandedLoading } from '../components/BrandedLoading';
+import { SkeletonPage } from '../components/ui/Skeleton';
 
 export const AnnouncementDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -44,11 +44,7 @@ export const AnnouncementDetailPage: React.FC = () => {
   }, [id]);
 
   if (loading) {
-    return (
-      <div className="py-24">
-        <BrandedLoading fullScreen={false} message="Loading Announcement..." />
-      </div>
-    );
+    return <SkeletonPage label="Loading announcement" cards={1} rows={5} />;
   }
 
   if (error || !announcement) {

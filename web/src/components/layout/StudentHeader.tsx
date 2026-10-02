@@ -155,12 +155,12 @@ export const StudentHeader: React.FC<StudentHeaderProps> = ({ session, onLogout 
               <div className="flex items-center gap-1.5">
                 <span className="font-heading text-sm font-extrabold tracking-tight text-brand">ELITE</span>
                 <span className="font-heading text-sm font-bold tracking-tight text-ink">PORTAL</span>
-                <span className="hidden lg:inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-brand-soft text-brand-soft-text">
-                  <Sparkles className="w-2.5 h-2.5" /> Dept of IT
-                </span>
               </div>
-              <p className="text-[11px] text-ink-muted font-medium hidden sm:block">
-                Sasi Institute of Technology & Engineering
+              {/* The SASI logo immediately to the left already says the
+                  institution; spelling it out again made the bar read as two
+                  competing brand blocks. */}
+              <p className="text-label-md text-ink-muted hidden sm:block">
+                Dept of Information Technology
               </p>
             </div>
           </Link>
@@ -187,7 +187,7 @@ export const StudentHeader: React.FC<StudentHeaderProps> = ({ session, onLogout 
             >
               <Bell strokeWidth={1.75} className="w-5 h-5" />
               {unreadCount > 0 && (
-                <span className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-brand text-on-primary text-[9px] font-extrabold flex items-center justify-center animate-pulse">
+                <span className="absolute top-1 right-1 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-brand px-1 text-[10px] font-bold text-on-primary">
                   {unreadCount > 9 ? '9+' : unreadCount}
                 </span>
               )}

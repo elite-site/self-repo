@@ -4,6 +4,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { api } from '../services/api';
 import { useSession } from '../context/SessionContext';
 import { useToast } from '../components/Toast';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 import { Event, EventRegistration } from '../types';
 import {
   Calendar,
@@ -18,12 +19,13 @@ import {
   Trash2,
   Plus
 } from 'lucide-react';
-import { BrandedLoading } from '../components/BrandedLoading';
+import { SkeletonPage } from '../components/ui/Skeleton';
 
 export const EventDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { session } = useSession();
   const { showToast } = useToast();
+  const confirm = useConfirm();
   const navigate = useNavigate();
   const [event, setEvent] = useState<any | null>(null);
   const [registration, setRegistration] = useState<EventRegistration | null>(null);
@@ -120,7 +122,13 @@ export const EventDetailPage: React.FC = () => {
 
   const handleCancelRegistration = async () => {
     if (!registration) return;
-    if (!window.confirm('Are you sure you want to cancel your registration for this event?')) return;
+    const confirmed = await confirm({
+      title: 'Cancel your registration?',
+      description: 'You will lose your place for this event. You can register again while places remain.',
+      confirmLabel: 'Cancel registration',
+      tone: 'danger',
+    });
+    if (!confirmed) return;
     setCancelling(true);
 
     try {
@@ -162,11 +170,7 @@ export const EventDetailPage: React.FC = () => {
   const formatDate = (date?: string) => (date ? new Date(date).toLocaleDateString() : 'To be announced');
 
   if (loading) {
-    return (
-      <div className="py-24" role="status" aria-live="polite">
-        <BrandedLoading fullScreen={false} message="Loading Event Details..." />
-      </div>
-    );
+    return <SkeletonPage label="Loading event details" cards={1} rows={4} />;
   }
 
   if (error || !event) {

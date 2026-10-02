@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { NavLink, Link  } from 'react-router-dom';
+import React, { useEffect, useRef, useState } from 'react';
+import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard,
   User,
@@ -15,7 +15,7 @@ import {
   Vote,
   Globe,
   ChevronRight,
-  LogOut
+  LogOut,
 } from 'lucide-react';
 
 const primaryNavItems = [
@@ -41,11 +41,37 @@ interface MobileBottomNavProps {
 
 export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ onLogout }) => {
   const [sheetOpen, setSheetOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const sheetRef = useRef<HTMLDivElement>(null);
+
+  // Escape closes the sheet, focus lands inside it on open and returns to the
+  // button that opened it on close, and the page behind stops scrolling. Without
+  // the lock a swipe on the sheet scrolled the dashboard underneath it.
+  useEffect(() => {
+    if (!sheetOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    sheetRef.current?.focus();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setSheetOpen(false);
+    };
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', handleKeyDown);
+      triggerRef.current?.focus();
+    };
+  }, [sheetOpen]);
 
   return (
     <>
       {/* 1. FIXED BOTTOM NAVIGATION BAR */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-sticky bg-surface border-t border-edge shadow-drawer px-1 py-1 safe-area-pb">
+      <nav
+        aria-label="Primary"
+        className="safe-area-pb fixed bottom-0 left-0 right-0 z-sticky border-t border-edge bg-surface px-1 py-1 shadow-drawer md:hidden"
+      >
         <div className="flex items-center justify-around">
           {primaryNavItems.map((item) => (
             <NavLink
@@ -53,14 +79,19 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ onLogout }) =>
               to={item.path}
               onClick={() => setSheetOpen(false)}
               className={({ isActive }) =>
-                `flex flex-col items-center justify-center py-2 px-3 rounded-lg text-[10px] font-semibold transition-colors min-h-[44px] min-w-[44px] ${
+                `flex min-h-[44px] min-w-[44px] flex-col items-center justify-center rounded-lg px-3 py-2 text-label-sm transition-colors ${
                   isActive ? 'text-brand' : 'text-ink-muted hover:text-ink'
                 }`
               }
             >
               {({ isActive }) => (
                 <>
-                  <item.icon className={`w-5 h-5 mb-0.5 ${isActive ? 'text-brand' : 'text-ink-muted'}`} />
+                  <item.icon
+                    size={20}
+                    strokeWidth={1.75}
+                    className={`mb-0.5 ${isActive ? 'text-brand' : 'text-ink-muted'}`}
+                    aria-hidden="true"
+                  />
                   <span>{item.name}</span>
                 </>
               )}
@@ -69,13 +100,21 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ onLogout }) =>
 
           {/* MORE / SECONDARY MENU BUTTON */}
           <button
-            onClick={() => setSheetOpen(!sheetOpen)}
-            className={`flex flex-col items-center justify-center py-2 px-3 rounded-lg text-[10px] font-semibold transition-colors cursor-pointer min-h-[44px] min-w-[44px] ${
+            ref={triggerRef}
+            type="button"
+            onClick={() => setSheetOpen((open) => !open)}
+            aria-expanded={sheetOpen}
+            aria-haspopup="dialog"
+            className={`flex min-h-[44px] min-w-[44px] cursor-pointer flex-col items-center justify-center rounded-lg px-3 py-2 text-label-sm transition-colors ${
               sheetOpen ? 'text-brand' : 'text-ink-muted hover:text-ink'
             }`}
-            aria-label="More Menu"
           >
-            <Menu className={`w-5 h-5 mb-0.5 ${sheetOpen ? 'text-brand' : 'text-ink-muted'}`} />
+            <Menu
+              size={20}
+              strokeWidth={1.75}
+              className={`mb-0.5 ${sheetOpen ? 'text-brand' : 'text-ink-muted'}`}
+              aria-hidden="true"
+            />
             <span>More</span>
           </button>
         </div>
@@ -83,73 +122,93 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ onLogout }) =>
 
       {/* 2. SECONDARY ITEMS MOBILE BOTTOM SHEET */}
       {sheetOpen && (
-        <div className="md:hidden fixed inset-0 z-modal flex flex-col justify-end">
-          {/* Backdrop */}
+        <div className="fixed inset-0 z-modal flex flex-col justify-end md:hidden">
+          {/* Backdrop. Reads the theme's scrim token: the old `bg-on-primary/50`
+              was white at 50% in both themes, which blanked the page behind. */}
           <div
-            className="fixed inset-0 bg-on-primary/50 backdrop-blur-xs transition-opacity"
+            className="fixed inset-0 bg-scrim"
             onClick={() => setSheetOpen(false)}
+            aria-hidden="true"
           />
 
-          {/* Sheet Drawer */}
-          <div className="relative bg-surface rounded-t-xl shadow-drawer border-t border-edge max-h-[85dvh] overflow-y-auto p-5 pb-[calc(1.25rem+var(--safe-area-bottom))] space-y-4 animate-slide-in-up text-left">
-            {/* Sheet Handle & Header */}
-            <div className="flex items-center justify-between pb-3 border-b border-edge">
-              <div className="flex items-center gap-2">
-                <span className="w-1.5 h-4 bg-brand rounded-full" />
-                <h3 className="text-sm font-black text-ink uppercase tracking-wider">
-                  More Services
-                </h3>
-              </div>
+          <div
+            ref={sheetRef}
+            tabIndex={-1}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="mobile-more-heading"
+            className="relative max-h-[85dvh] space-y-4 overflow-y-auto rounded-t-xl border-t border-edge bg-surface p-5 pb-[calc(1.25rem+var(--safe-area-bottom))] shadow-drawer animate-slide-in-up focus:outline-none"
+          >
+            <div className="flex items-center justify-between border-b border-edge pb-3">
+              <h2
+                id="mobile-more-heading"
+                className="font-heading text-headline-sm uppercase tracking-wider text-ink"
+              >
+                More
+              </h2>
               <button
+                type="button"
                 onClick={() => setSheetOpen(false)}
-                className="p-1.5 rounded-full text-ink-muted hover:text-ink hover:bg-surface-sunken transition-colors cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center"
+                className="flex min-h-[44px] min-w-[44px] cursor-pointer items-center justify-center rounded-lg text-ink-muted transition-colors hover:bg-surface-sunken hover:text-ink"
                 aria-label="Close menu"
               >
-                <X className="w-5 h-5" />
+                <X size={20} strokeWidth={1.75} aria-hidden="true" />
               </button>
             </div>
 
-            {/* Secondary Navigation List */}
-            <div className="space-y-1.5">
+            <ul className="space-y-1.5">
               {secondaryNavItems.map((item) => (
-                <NavLink
-                  key={item.path}
-                  to={item.path}
-                  onClick={() => setSheetOpen(false)}
-                  className={({ isActive }) =>`flex
-                     items-center justify-between p-3 rounded-xl transition-colors min-h-[44px] ${
-                      isActive
-                        ? 'bg-brand-soft text-brand font-bold border border-brand-soft'
-                        : 'bg-surface-sunken hover:bg-surface-sunken/80 text-ink font-semibold'
-                    }`
-                  }
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-xl bg-surface-raised shadow-xs text-ink-secondary">
-                      <item.icon className="w-4 h-4 text-brand" />
-                    </div>
-                    <div>
-                      <div className="text-xs font-bold text-ink">{item.name}</div>
-                      <div className="text-[10px] text-ink-muted font-normal">{item.desc}</div>
-                    </div>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-ink-muted" />
-                </NavLink>
+                <li key={item.path}>
+                  <NavLink
+                    to={item.path}
+                    onClick={() => setSheetOpen(false)}
+                    className={({ isActive }) =>
+                      `flex min-h-[44px] items-center justify-between rounded-lg px-3 py-2.5 transition-colors ${
+                        isActive
+                          ? 'border border-brand-soft bg-brand-soft font-semibold text-brand'
+                          : 'font-semibold text-ink hover:bg-surface-sunken'
+                      }`
+                    }
+                  >
+                    <span className="flex items-center gap-3">
+                      <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-edge bg-surface">
+                        <item.icon
+                          size={16}
+                          strokeWidth={1.75}
+                          className="text-brand"
+                          aria-hidden="true"
+                        />
+                      </span>
+                      <span>
+                        <span className="block text-label-lg text-ink">{item.name}</span>
+                        <span className="block text-body-sm font-normal text-ink-muted">
+                          {item.desc}
+                        </span>
+                      </span>
+                    </span>
+                    <ChevronRight
+                      size={16}
+                      strokeWidth={1.75}
+                      className="shrink-0 text-ink-muted"
+                      aria-hidden="true"
+                    />
+                  </NavLink>
+                </li>
               ))}
-            </div>
+            </ul>
 
-            {/* Sign Out Option */}
             {onLogout && (
-              <div className="pt-2 border-t border-edge">
+              <div className="border-t border-edge pt-2">
                 <button
+                  type="button"
                   onClick={() => {
                     setSheetOpen(false);
                     onLogout();
                   }}
-                  className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-brand-soft hover:bg-brand-soft/80 text-brand text-xs font-bold transition-colors cursor-pointer min-h-[44px]"
+                  className="flex min-h-[44px] w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-brand-soft px-4 py-3 text-label-lg font-semibold text-brand transition-colors hover:bg-brand-soft/80"
                 >
-                  <LogOut className="w-4 h-4" />
-                  <span>Sign Out of Portal</span>
+                  <LogOut size={16} strokeWidth={1.75} aria-hidden="true" />
+                  <span>Sign out</span>
                 </button>
               </div>
             )}
@@ -159,3 +218,5 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ onLogout }) =>
     </>
   );
 };
+
+export default MobileBottomNav;

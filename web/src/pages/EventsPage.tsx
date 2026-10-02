@@ -2,8 +2,20 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../services/api';
 import { Event, EventRegistration } from '../types';
-import { Calendar, Search, Clock, CheckCircle2, ChevronRight, AlertCircle } from 'lucide-react';
-import { BrandedLoading } from '../components/BrandedLoading';
+import { CalendarX2, Search, Clock, CheckCircle2, ChevronRight } from 'lucide-react';
+import { EmptyState } from '../components/ui/EmptyState';
+import { ErrorState } from '../components/ui/ErrorState';
+
+const eventDateParts = (value?: string | null) => {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return {
+    month: date.toLocaleDateString(undefined, { month: 'short' }).toUpperCase(),
+    day: date.toLocaleDateString(undefined, { day: '2-digit' }),
+    full: date.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'long' }),
+  };
+};
 
 export const EventsPage: React.FC = () => {
   const [events, setEvents] = useState<Event[]>([]);
@@ -24,7 +36,7 @@ export const EventsPage: React.FC = () => {
       if (Array.isArray(evData)) setEvents(evData);
       if (Array.isArray(regData)) setRegistrations(regData);
     } catch {
-      if (events.length === 0) setError('Could not load department events. Please retry.');
+      setError('We could not load department events right now.');
     } finally {
       setLoading(false);
     }
@@ -50,156 +62,164 @@ export const EventsPage: React.FC = () => {
       if (!match) return false;
     }
 
-    if (activeTab === 'Registered') {
-      return registeredEventIds.has(e.id);
-    }
-    if (activeTab === 'Open') {
-      return !registeredEventIds.has(e.id);
-    }
+    if (activeTab === 'Registered') return registeredEventIds.has(e.id);
+    if (activeTab === 'Open') return !registeredEventIds.has(e.id);
     return true;
   });
 
-  const formatDate = (date?: string) => (date ? new Date(date).toLocaleDateString() : 'To be announced');
-
-  if (loading) {
-    return (
-      <div className="py-20" role="status" aria-live="polite">
-        <BrandedLoading fullScreen={false} message="Loading Events..." />
-      </div>
-    );
-  }
+  const formatDate = (date?: string) =>
+    date ? new Date(date).toLocaleDateString() : 'To be announced';
 
   return (
-    <div className="space-y-6 text-left page-enter" role="main">
-      {/* HEADER */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-6">
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-headline-md font-black text-ink font-heading">Department Events</h1>
-          <p className="text-body-sm text-ink-muted">
-            Competitions, technical symposiums, hackathons, and guest seminars
+          <h1 className="font-heading text-headline-lg-mobile text-ink sm:text-headline-lg">Events</h1>
+          <p className="mt-1 text-body-md text-ink-secondary">
+            Competitions, symposiums, hackathons and guest sessions.
           </p>
         </div>
 
-        {/* TABS */}
-        <div className="flex bg-surface-sunken border border-edge p-1 rounded-lg shrink-0" role="tablist" aria-label="Event filter">
+        <div
+          role="tablist"
+          aria-label="Filter events"
+          className="flex shrink-0 gap-1 rounded-lg border border-edge bg-surface-sunken p-1"
+        >
           {(['All', 'Open', 'Registered'] as const).map((tab) => (
             <button
               key={tab}
-              onClick={() => setActiveTab(tab)}
+              type="button"
               role="tab"
               aria-selected={activeTab === tab}
-              className={`px-4 py-1.5 text-label-sm font-bold rounded-md transition-colors cursor-pointer ${
+              onClick={() => setActiveTab(tab)}
+              className={`cursor-pointer rounded-md px-3 py-1.5 text-label-md transition-colors duration-fast ${
                 activeTab === tab
-                  ? 'bg-surface shadow-card text-ink-brand'
+                  ? 'bg-surface font-semibold text-ink shadow-card'
                   : 'text-ink-secondary hover:text-ink'
               }`}
             >
-              {tab === 'Registered' ? `My Registrations (${registeredEventIds.size})` : tab}
+              {tab === 'Registered' ? `Registered (${registeredEventIds.size})` : tab}
             </button>
           ))}
         </div>
-      </div>
+      </header>
 
-      {/* ERROR BANNER */}
-      {error && (
-        <div className="p-4 bg-status-bg-rejected border border-edge-strong rounded-lg text-status-rejected text-body-sm flex items-center justify-between" role="alert">
-          <div className="flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0" aria-hidden="true" />
-            <span>{error}</span>
-          </div>
-          <button onClick={() => loadEventsData(true)} className="font-bold underline cursor-pointer">
-            Retry
-          </button>
-        </div>
-      )}
-
-      {/* SEARCH BAR */}
       <div className="relative max-w-md">
-        <label htmlFor="event-search" className="sr-only">Search events</label>
-        <Search className="w-4 h-4 absolute left-3.5 top-3 text-ink-muted" aria-hidden="true" />
+        <label htmlFor="event-search" className="sr-only">
+          Search events
+        </label>
+        <Search
+          size={16}
+          strokeWidth={1.75}
+          className="pointer-events-none absolute left-4 top-3 text-ink-muted"
+          aria-hidden="true"
+        />
         <input
           id="event-search"
-          type="search"
-          placeholder="Search by event title, keyword, or type..."
+          type="text"
+          placeholder="Search by title or keyword"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="input pl-10"
+          className="input pl-11"
         />
       </div>
 
-      {/* EVENTS GRID */}
-      {filteredEvents.length === 0 ? (
-        <div className="surface text-center py-16 px-4" role="status">
-          <Calendar className="w-12 h-12 text-ink-muted mx-auto mb-3" aria-hidden="true" />
-          <h3 className="text-body-md font-bold text-ink font-heading">No events found</h3>
-          <p className="text-body-sm text-ink-muted mt-1 max-w-xs mx-auto">
-            {activeTab === 'Registered'
-              ? 'You have not registered for any events yet. Check out Open events to join.'
-              : 'There are currently no events matching your criteria.'}
-          </p>
+      {error && <ErrorState message={error} onRetry={() => loadEventsData(true)} />}
+
+      {loading ? (
+        <div aria-busy="true">
+          <span className="sr-only" role="status">
+            Loading events
+          </span>
+          <ul className="divide-y divide-edge">
+            {[0, 1, 2, 3].map((i) => (
+              <li key={i} className="flex items-center gap-4 py-4">
+                <div className="skeleton h-14 w-14 shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <div className="skeleton h-4 w-1/3" />
+                  <div className="skeleton h-3 w-2/3" />
+                </div>
+              </li>
+            ))}
+          </ul>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" role="list" aria-label="Events">
+      ) : filteredEvents.length === 0 && !error ? (
+        <EmptyState
+          icon={CalendarX2}
+          title={activeTab === 'Registered' ? 'You have not registered for anything yet' : 'No events found'}
+          description={
+            activeTab === 'Registered'
+              ? 'Browse the Open tab to see what is coming up and register.'
+              : 'Nothing matches that search right now. Try a shorter term or clear the filter.'
+          }
+          action={
+            activeTab === 'Registered' ? (
+              <button type="button" onClick={() => setActiveTab('Open')} className="btn btn-secondary">
+                Show open events
+              </button>
+            ) : undefined
+          }
+        />
+      ) : filteredEvents.length > 0 ? (
+        <ul className="divide-y divide-edge">
           {filteredEvents.map((e) => {
             const isRegistered = registeredEventIds.has(e.id);
+            const date = eventDateParts(e.date);
             return (
-              <Link
-                to={`/events/${e.id}`}
-                key={e.id}
-                className="surface overflow-hidden hover:border-brand-hover hover:shadow-card-hover transition-colors group flex flex-col justify-between text-left"
-                role="listitem"
-              >
-                <div className="h-32 bg-surface-inverse p-5 flex flex-col justify-between relative">
-                  <div className="flex justify-between items-start gap-2">
-                    <span className="badge badge-brand text-label-xs uppercase tracking-wide">
-                      {e.type || 'General'}
+              <li key={e.id}>
+                <Link
+                  to={`/events/${e.id}`}
+                  className="-mx-2 flex items-center gap-4 rounded-lg px-2 py-4 transition-colors duration-fast hover:bg-surface-sunken"
+                >
+                  <span className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-lg border border-edge bg-surface-inset">
+                    <span className="font-heading text-label-sm tracking-wide text-brand">
+                      {date?.month ?? 'TBA'}
                     </span>
-                    {isRegistered ? (
-                      <span className="badge badge-approved flex items-center gap-1">
-                        <CheckCircle2 className="w-3 h-3" aria-hidden="true" />
-                        Registered
-                      </span>
-                    ) : (
-                      <span className="badge badge-pending">Open</span>
-                    )}
-                  </div>
-                  <h3 className="text-body-lg font-extrabold text-ink-inverse font-heading leading-snug line-clamp-1 group-hover:text-brand-soft transition-colors">
-                    {e.title}
-                  </h3>
-                </div>
+                    <span className="font-heading text-headline-sm leading-none text-ink">
+                      {date?.day ?? '--'}
+                    </span>
+                  </span>
 
-                <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
-                  <div className="space-y-2">
-                    <p className="text-body-sm text-ink-secondary line-clamp-2 leading-relaxed">
+                  <span className="min-w-0 flex-1">
+                    <span className="flex flex-wrap items-center gap-2">
+                      <span className="truncate font-heading text-headline-sm text-ink">{e.title}</span>
+                      {isRegistered ? (
+                        <span className="badge badge-approved">
+                          <CheckCircle2 size={12} strokeWidth={2.5} aria-hidden="true" />
+                          Registered
+                        </span>
+                      ) : (
+                        <span className="badge badge-draft">
+                          <Clock size={12} strokeWidth={2.5} aria-hidden="true" />
+                          Not registered
+                        </span>
+                      )}
+                    </span>
+                    <span className="mt-0.5 line-clamp-2 block text-body-sm text-ink-secondary">
                       {e.description || 'Department competition or workshop.'}
-                    </p>
-                    <div className="space-y-1 pt-1 text-body-sm text-ink-secondary">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="w-3.5 h-3.5 text-ink-muted shrink-0" aria-hidden="true" />
-                        <span>Date: {formatDate(e.date)}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Clock className="w-3.5 h-3.5 text-ink-muted shrink-0" aria-hidden="true" />
-                        <span>Deadline: {formatDate(e.deadline)}</span>
-                      </div>
-                    </div>
-                  </div>
+                    </span>
+                    <span className="mt-1 block truncate text-label-md text-ink-muted">
+                      {[
+                        e.type || 'General',
+                        date?.full,
+                        `Deadline ${formatDate(e.deadline)}`,
+                        e.eligibility || 'All IT students',
+                      ].join(' · ')}
+                    </span>
+                  </span>
 
-                  <div className="pt-3 border-t border-edge flex items-center justify-between text-body-sm">
-                    <span className="text-label-sm font-semibold text-ink-secondary">
-                      Eligibility: {e.eligibility || 'All IT Students'}
-                    </span>
-                    <span className="font-bold text-ink-brand group-hover:translate-x-0.5 transition-transform flex items-center gap-0.5">
-                      <span>{isRegistered ? 'View Status' : 'Details'}</span>
-                      <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
-                    </span>
-                  </div>
-                </div>
-              </Link>
+                  <ChevronRight
+                    size={16}
+                    strokeWidth={1.75}
+                    className="shrink-0 text-ink-muted"
+                    aria-hidden="true"
+                  />
+                </Link>
+              </li>
             );
           })}
-        </div>
-      )}
+        </ul>
+      ) : null}
     </div>
   );
 };

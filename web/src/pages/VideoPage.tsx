@@ -3,6 +3,8 @@ import { api, resolveMediaUrl, UploadProgressInfo } from '../services/api';
 import { StudentIntroVideo, StudentSubmission } from '../types';
 import { useSession } from '../context/SessionContext';
 import { useToast } from '../components/Toast';
+import { useConfirm } from '../components/ui/ConfirmDialog';
+import { ProgressSteps } from '../components/ui/ProgressSteps';
 import {
   UploadCloud,
   AlertCircle,
@@ -27,7 +29,7 @@ import {
   Pause,
   Trash2
 } from 'lucide-react';
-import { BrandedLoading } from '../components/BrandedLoading';
+import { SkeletonPage } from '../components/ui/Skeleton';
 
 /**
  * Fallback only, for an older backend that does not report the configured
@@ -55,6 +57,7 @@ interface VideoMeta {
 export const VideoPage: React.FC = () => {
   const { session } = useSession();
   const { showToast } = useToast();
+  const confirm = useConfirm();
   const [submission, setSubmission] = useState<StudentSubmission | null>(null);
   const [video, setVideo] = useState<StudentIntroVideo | null>(null);
   const [maxVideoSizeMb, setMaxVideoSizeMb] = useState<number>(DEFAULT_MAX_VIDEO_MB);
@@ -271,9 +274,13 @@ export const VideoPage: React.FC = () => {
 
   /** Withdraw the submitted take. The server deletes the file and both rows. */
   const handleDelete = async () => {
-    if (!window.confirm('Delete your submitted introduction video? This cannot be undone.')) {
-      return;
-    }
+    const confirmed = await confirm({
+      title: 'Delete your introduction video?',
+      description: 'The video file and its submission record will be removed. This cannot be undone.',
+      confirmLabel: 'Delete video',
+      tone: 'danger',
+    });
+    if (!confirmed) return;
     setDeleting(true);
     setError(null);
     try {
@@ -544,11 +551,7 @@ export const VideoPage: React.FC = () => {
   };
 
   if (loading) {
-    return (
-      <div className="py-24">
-        <BrandedLoading fullScreen={false} message="Loading Video Submission..." />
-      </div>
-    );
+    return <SkeletonPage label="Loading video submission" cards={2} rows={2} />;
   }
 
   const formatSubmittedAt = (iso: string | null | undefined): string => {
@@ -600,13 +603,32 @@ export const VideoPage: React.FC = () => {
     }
   };
 
-  if (loading && !submission && !video) {
-    return (
-      <div className="py-24">
-        <BrandedLoading fullScreen={false} message="Loading Introduction Video..." />
-      </div>
-    );
-  }
+  /**
+   * Where the student's video sits in the moderation flow, derived from the two
+   * status fields the API already returns so the stepper can never disagree with
+   * the badge next to it.
+   */
+  const lifecycleSteps = [
+    {
+      label: 'Uploaded',
+      detail: submission?.submittedAt ? formatSubmittedAt(submission.submittedAt) : 'MP4 or WebM',
+    },
+    { label: 'Under review', detail: 'Faculty moderation' },
+    { label: 'Approved', detail: 'Faculty sign-off' },
+    { label: 'Published', detail: 'Visible on your profile' },
+  ];
+
+  const videoStatus = video?.status || submission?.status || 'DRAFT';
+  const lifecycle: { current: number; tone: 'brand' | 'changes' | 'rejected' } = (() => {
+    if (video?.changeRequestedAt || videoStatus === 'CHANGES_REQUESTED') {
+      return { current: 0, tone: 'changes' };
+    }
+    if (videoStatus === 'REJECTED') return { current: 0, tone: 'rejected' };
+    if (video?.isPublic) return { current: lifecycleSteps.length, tone: 'brand' };
+    if (videoStatus === 'APPROVED') return { current: 3, tone: 'brand' };
+    if (videoStatus === 'SUBMITTED' || videoStatus === 'PENDING') return { current: 1, tone: 'brand' };
+    return { current: 0, tone: 'brand' };
+  })();
 
   return (
     <div className="space-y-6 text-left page-enter">
@@ -623,6 +645,22 @@ export const VideoPage: React.FC = () => {
             {getStatusBadge(video?.status || submission.status)}
           </div>
         )}
+      </div>
+
+      {/* LIFECYCLE. The whole path is always on screen, so "what happens next"
+          never has to be read out of a status badge. */}
+      <div className="surface p-5 sm:p-6">
+        <h2 className="font-heading text-headline-sm text-ink">Video status</h2>
+        <p className="mt-0.5 text-body-sm text-ink-secondary">
+          {lifecycle.current >= lifecycleSteps.length
+            ? 'Your approved introduction video is published.'
+            : lifecycle.current === 0 && submission?.videoUploaded
+              ? 'Faculty asked for a new take. Uploading replaces the current video.'
+              : 'Your video moves through these steps after each upload.'}
+        </p>
+        <div className="mt-5">
+          <ProgressSteps steps={lifecycleSteps} current={lifecycle.current} tone={lifecycle.tone} label="Video status" />
+        </div>
       </div>
 
       {error && (

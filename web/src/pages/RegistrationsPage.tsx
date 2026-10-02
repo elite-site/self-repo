@@ -3,11 +3,13 @@ import { Link } from 'react-router-dom';
 import { api } from '../services/api';
 import { EventRegistration } from '../types';
 import { Loader2, CalendarX2, AlertCircle, Trash2, ExternalLink } from 'lucide-react';
-import { BrandedLoading } from '../components/BrandedLoading';
+import { SkeletonListPage } from '../components/ui/Skeleton';
 import { useToast } from '../components/Toast';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 
 export const RegistrationsPage: React.FC = () => {
   const { showToast } = useToast();
+  const confirm = useConfirm();
   const [regs, setRegs] = useState<EventRegistration[]>([]);
   const [loading, setLoading] = useState(true);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
@@ -31,7 +33,13 @@ export const RegistrationsPage: React.FC = () => {
   }, []);
 
   const handleCancel = async (id: string) => {
-    if (!window.confirm('Are you sure you want to cancel this event registration?')) return;
+    const confirmed = await confirm({
+      title: 'Cancel this registration?',
+      description: 'You will lose your place for this event. You can register again while places remain.',
+      confirmLabel: 'Cancel registration',
+      tone: 'danger',
+    });
+    if (!confirmed) return;
     setCancellingId(id);
     // Optimistic status update
     setRegs((prev) =>
@@ -64,11 +72,7 @@ export const RegistrationsPage: React.FC = () => {
   };
 
   if (loading) {
-    return (
-      <div className="py-20" role="status" aria-live="polite">
-        <BrandedLoading fullScreen={false} message="Loading Registrations..." />
-      </div>
-    );
+    return <SkeletonListPage label="Loading registrations" rows={4} />;
   }
 
   return (

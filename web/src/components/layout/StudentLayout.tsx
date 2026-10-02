@@ -30,7 +30,10 @@ export const StudentLayout: React.FC<StudentLayoutProps> = ({ session, onLogout,
           vh-based minimum leaves the bottom of the page under the browser UI. */}
       <div className="flex-1 flex overflow-hidden w-full min-h-[calc(100dvh-var(--header,4rem))]">
         <StudentSidebar />
-        <main className="flex-1 overflow-y-auto bg-surface-canvas p-6 sm:p-8 pb-24 md:pb-8 pt-header">
+        {/* No top padding: the header sits in normal flow directly above this
+            region, so the old `pt-header` was 4rem of dead space at the top of
+            every portal page. */}
+        <main className="flex-1 overflow-y-auto bg-surface-canvas p-6 sm:p-8 pb-24 md:pb-8">
           <div className="w-full max-w-canvas mx-auto">
             {/* Every portal page is a lazy chunk, so navigating between them
                 suspends. This boundary is deliberately *inside* the layout: the

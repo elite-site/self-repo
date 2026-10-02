@@ -8,12 +8,10 @@ import {
   CheckCircle2,
   AlertCircle,
   ArrowRight,
-  Trophy,
-  Clapperboard
+  Clapperboard,
 } from 'lucide-react';
 import { AdminStats } from '../types';
 import { AdminTab } from './Sidebar';
-import { BrandedLoading } from './BrandedLoading';
 
 interface StatsDashboardProps {
   stats: AdminStats | null;
@@ -21,11 +19,41 @@ interface StatsDashboardProps {
   onNavigateTab?: (tab: AdminTab) => void;
 }
 
-const ratingColors: Record<string, { dot: string; text: string; bg: string; label: string }> = {
-  GOOD: { dot: 'bg-status-approved', text: 'text-status-approved', bg: 'bg-status-bg-approved', label: 'Good' },
-  AVERAGE: { dot: 'bg-status-pending', text: 'text-status-pending', bg: 'bg-status-bg-pending', label: 'Average' },
-  POOR: { dot: 'bg-status-rejected', text: 'text-status-rejected', bg: 'bg-status-bg-rejected', label: 'Poor' },
+const RATING_META: Record<string, { dot: string; text: string; label: string }> = {
+  GOOD: { dot: 'bg-status-approved', text: 'text-status-approved', label: 'Good' },
+  AVERAGE: { dot: 'bg-status-pending', text: 'text-status-pending', label: 'Average' },
+  POOR: { dot: 'bg-status-rejected', text: 'text-status-rejected', label: 'Poor' },
 };
+
+/**
+ * A number we do not have renders as a dash, never as a plausible placeholder.
+ *
+ * This page used to fall back to `120` students, `84` profiles, `65` builds and
+ * `3` events whenever the stats object had not loaded. Those are indistinguishable
+ * from real figures on a dashboard, which makes an outage look like a quiet day.
+ */
+const metric = (value: number | null | undefined) => (typeof value === 'number' ? value : '—');
+
+const DashboardSkeleton: React.FC = () => (
+  <div className="space-y-6" aria-busy="true">
+    <span className="sr-only" role="status">
+      Loading portal statistics
+    </span>
+    <div className="space-y-2">
+      <div className="skeleton h-8 w-72" />
+      <div className="skeleton h-4 w-96" />
+    </div>
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {[0, 1, 2, 3].map((i) => (
+        <div key={i} className="skeleton h-28" />
+      ))}
+    </div>
+    <div className="grid gap-4 lg:grid-cols-12">
+      <div className="skeleton h-72 lg:col-span-7" />
+      <div className="skeleton h-72 lg:col-span-5" />
+    </div>
+  </div>
+);
 
 export const StatsDashboard: React.FC<StatsDashboardProps> = ({
   stats,
@@ -33,7 +61,7 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
   onNavigateTab,
 }) => {
   if (loading || !stats) {
-    return <BrandedLoading fullScreen={false} message="Loading ELITE Portal Statistics" />;
+    return <DashboardSkeleton />;
   }
 
   const portal = stats.portal;
@@ -41,339 +69,254 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
   const rated = stats.totalRated;
   const ratedPct = submitted > 0 ? Math.round((rated / submitted) * 100) : 0;
   const maxSectionSubmitted = Math.max(1, ...stats.bySection.map((s) => s.submitted));
+  const pendingModeration = portal?.pendingModeration ?? 0;
+  const hasRatings = Boolean(stats.byRating.GOOD || stats.byRating.AVERAGE || stats.byRating.POOR);
+
+  const kpis = [
+    {
+      label: 'Enrolled students',
+      value: metric(portal?.totalStudents),
+      hint: `${metric(portal?.totalProfiles)} active profiles`,
+      icon: Users,
+      tab: 'students' as AdminTab,
+    },
+    {
+      label: 'Portfolio items',
+      value: portal
+        ? portal.totalProjects + portal.totalAchievements + portal.totalCertificates
+        : '—',
+      hint: portal ? `${portal.totalProjects} builds · ${portal.totalAchievements} awards` : '—',
+      icon: Briefcase,
+      tab: 'moderation' as AdminTab,
+    },
+    {
+      label: 'Events',
+      value: metric(portal?.totalEvents),
+      hint: `${metric(portal?.totalRegistrations)} registrations`,
+      icon: CalendarDays,
+      tab: 'events' as AdminTab,
+    },
+    {
+      label: 'Voting campaigns',
+      value: metric(portal?.totalCampaigns),
+      hint: `${metric(portal?.totalVotes)} ballots cast`,
+      icon: Vote,
+      tab: 'voting' as AdminTab,
+    },
+  ];
+
+  const shortcuts: { label: string; description: string; tab: AdminTab }[] = [
+    {
+      label: 'Moderation queue',
+      description: 'Review pending projects, achievements and certificates',
+      tab: 'moderation',
+    },
+    {
+      label: 'Video submissions',
+      description: 'Play clips, rate them and write feedback',
+      tab: 'submissions',
+    },
+    {
+      label: 'Student roster',
+      description: 'Search and manage department student records',
+      tab: 'students',
+    },
+    {
+      label: 'Events',
+      description: 'Create competitions, hackathons and workshops',
+      tab: 'events',
+    },
+    {
+      label: 'Elections',
+      description: 'Configure ballots and track votes cast',
+      tab: 'voting',
+    },
+  ];
 
   return (
-    <div className="space-y-6 text-left transition-colors">
-      {/* 1. WELCOME & IDENTITY BANNER */}
-      <div className="bg-surface border border-edge rounded-lg p-6 sm:p-8 shadow-card flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-        <div className="space-y-2">
-          <div className="text-[11px] font-mono font-bold tracking-widest text-accent uppercase flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
-            <span>ELITE ADMIN PORTAL · DEPT OF INFORMATION TECHNOLOGY</span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-ink font-heading tracking-tight">
-            OPERATIONS & PORTAL DASHBOARD
+    <div className="space-y-6">
+      {/* 1. OVERVIEW. The page says what it is, then gets out of the way. */}
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="font-heading text-headline-lg-mobile text-ink sm:text-headline-lg">
+            Operations dashboard
           </h1>
-          <p className="text-xs sm:text-sm text-ink-secondary max-w-2xl font-normal leading-relaxed">
-            Unified institutional management for student rosters, verified portfolios, event registrations, department voting, and faculty moderation.
+          <p className="mt-1 text-body-md text-ink-secondary">
+            Student roster, moderated portfolios, registrations and department voting in one place.
           </p>
         </div>
 
-        {portal && portal.pendingModeration > 0 && onNavigateTab && (
+        {pendingModeration > 0 && onNavigateTab && (
           <button
+            type="button"
             onClick={() => onNavigateTab('moderation')}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-accent hover:bg-status-solid-rejected text-on-primary text-xs font-bold transition-colors cursor-pointer shadow-xs shrink-0 self-start sm:self-center"
+            className="btn btn-primary shrink-0 self-start"
           >
-            <AlertCircle className="w-4 h-4" />
-            <span>{portal.pendingModeration} items awaiting review</span>
-            <ArrowRight className="w-3.5 h-3.5" />
+            <AlertCircle size={16} strokeWidth={2} aria-hidden="true" />
+            <span>
+              {pendingModeration} awaiting review
+            </span>
+            <ArrowRight size={15} strokeWidth={2} aria-hidden="true" />
           </button>
         )}
+      </header>
+
+      {/* 2. KPIs. Four numbers, each a door into the list it counts. */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {kpis.map((kpi) => (
+          <button
+            key={kpi.label}
+            type="button"
+            onClick={() => onNavigateTab?.(kpi.tab)}
+            className="surface cursor-pointer p-5 text-left transition-colors duration-fast hover:border-edge-strong hover:bg-surface-inset"
+          >
+            <span className="flex items-center justify-between gap-2 text-label-md text-ink-muted">
+              <span className="uppercase tracking-wide">{kpi.label}</span>
+              <kpi.icon size={16} strokeWidth={1.75} className="shrink-0 text-brand" aria-hidden="true" />
+            </span>
+            <span className="mt-2 block font-heading text-headline-xl tabular-nums text-ink">
+              {kpi.value}
+            </span>
+            <span className="mt-1 flex items-center gap-1.5 text-label-md text-ink-secondary">
+              <CheckCircle2 size={13} strokeWidth={2} className="shrink-0" aria-hidden="true" />
+              <span className="truncate">{kpi.hint}</span>
+            </span>
+          </button>
+        ))}
       </div>
 
-      {/* 2. PROGRESS / COMPLETION MODULE */}
-      <div className="bg-surface border border-edge rounded-lg p-5 sm:p-6 shadow-card">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-brand-soft text-brand flex items-center justify-center">
-              <Clapperboard className="w-4 h-4" />
-            </div>
-            <div>
-              <h2 className="text-xs font-bold uppercase tracking-wider text-ink font-heading">
-                Video Evaluation & Moderation Progress
-              </h2>
-              <span className="text-[11px] text-ink-secondary">
-                {rated} of {submitted} uploaded self-introduction videos evaluated
+      <div className="grid items-start gap-4 lg:grid-cols-12">
+        {/* 3. CAMPAIGN AND MODERATION PROGRESS */}
+        <section className="surface p-5 sm:p-6 lg:col-span-7" aria-labelledby="campaign-heading">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="flex items-start gap-2.5">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-soft text-brand-soft-text">
+                <Clapperboard size={17} strokeWidth={1.75} aria-hidden="true" />
               </span>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-ink-secondary">Coverage</span>
-            <span className="text-lg font-black text-brand font-heading">
-              {ratedPct}%
-            </span>
-          </div>
-        </div>
-
-        {/* Determinate progress bar in primary indigo */}
-        <div className="w-full h-2 bg-brand-soft rounded-full overflow-hidden">
-          <div
-            className="h-full bg-brand rounded-full transition-colors duration-slower"
-            style={{ width: `${Math.min(100, Math.max(submitted > 0 ? 4 : 0, ratedPct))}%` }}
-          />
-        </div>
-      </div>
-
-      {/* 3. GRID OF STATUS KPI CARDS */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* TOTAL ENROLLED STUDENTS */}
-        <div
-          onClick={() => onNavigateTab && onNavigateTab('students')}
-          className="bg-surface border border-edge rounded-lg p-5 hover:border-edge-strong/50 transition-colors shadow-card cursor-pointer group"
-        >
-          <div className="flex items-center justify-between text-ink-secondary text-[11px] uppercase font-bold tracking-wider mb-2">
-            <span>Enrolled Students</span>
-            <Users className="w-4 h-4 text-brand" />
-          </div>
-          <div className="text-3xl font-black text-ink font-heading tracking-tight">
-            {portal ? portal.totalStudents : 120}
-          </div>
-          <div className="text-[11px] text-ink-secondary mt-2 font-medium flex items-center gap-1.5">
-            <CheckCircle2 className="w-3.5 h-3.5 text-status-approved" />
-            <span>{portal ? portal.totalProfiles : 84} active profiles</span>
-          </div>
-        </div>
-
-        {/* PORTFOLIO ARTIFACTS */}
-        <div
-          onClick={() => onNavigateTab && onNavigateTab('moderation')}
-          className="bg-surface border border-edge rounded-lg p-5 hover:border-edge-strong/50 transition-colors shadow-card cursor-pointer group"
-        >
-          <div className="flex items-center justify-between text-ink-secondary text-[11px] uppercase font-bold tracking-wider mb-2">
-            <span>Portfolio Builds</span>
-            <Briefcase className="w-4 h-4 text-status-review" />
-          </div>
-          <div className="text-3xl font-black text-ink font-heading tracking-tight">
-            {portal
-              ? portal.totalProjects + portal.totalAchievements + portal.totalCertificates
-              : 65}
-          </div>
-          <div className="text-[11px] text-ink-secondary mt-2 font-medium flex items-center gap-1.5">
-            <Trophy className="w-3.5 h-3.5 text-status-pending" />
-            <span>
-              {portal ? `${portal.totalProjects} builds · ${portal.totalAchievements} awards` : 'Builds & honors'}
-            </span>
-          </div>
-        </div>
-
-        {/* EVENTS & REGISTRATIONS */}
-        <div
-          onClick={() => onNavigateTab && onNavigateTab('events')}
-          className="bg-surface border border-edge rounded-lg p-5 hover:border-edge-strong/50 transition-colors shadow-card cursor-pointer group"
-        >
-          <div className="flex items-center justify-between text-ink-secondary text-[11px] uppercase font-bold tracking-wider mb-2">
-            <span>Events & Contests</span>
-            <CalendarDays className="w-4 h-4 text-status-approved" />
-          </div>
-          <div className="text-3xl font-black text-ink font-heading tracking-tight">
-            {portal ? portal.totalEvents : 3}
-          </div>
-          <div className="text-[11px] text-ink-secondary mt-2 font-medium flex items-center gap-1.5">
-            <Layers className="w-3.5 h-3.5 text-brand" />
-            <span>{portal ? `${portal.totalRegistrations} participants` : 'Student registrations'}</span>
-          </div>
-        </div>
-
-        {/* VOTING ELECTIONS */}
-        <div
-          onClick={() => onNavigateTab && onNavigateTab('voting')}
-          className="bg-surface border border-edge rounded-lg p-5 hover:border-edge-strong/50 transition-colors shadow-card cursor-pointer group"
-        >
-          <div className="flex items-center justify-between text-ink-secondary text-[11px] uppercase font-bold tracking-wider mb-2">
-            <span>Department Voting</span>
-            <Vote className="w-4 h-4 text-accent" />
-          </div>
-          <div className="text-3xl font-black text-ink font-heading tracking-tight">
-            {portal ? portal.totalCampaigns : 1}
-          </div>
-          <div className="text-[11px] text-ink-secondary mt-2 font-medium flex items-center gap-1.5">
-            <CheckCircle2 className="w-3.5 h-3.5 text-status-approved" />
-            <span>{portal ? `${portal.totalVotes} ballots cast` : 'Elections live'}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* 4. MODERATION & QUICK WORKFLOW SHORTCUTS */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* LEFT: INTRO VIDEO & CORE STATS (7 COLS) */}
-        <div className="lg:col-span-7 space-y-6">
-          {/* VIDEO SUBMISSIONS CARD */}
-          <div className="bg-surface border border-edge rounded-lg p-6 shadow-card space-y-5">
-            <div className="flex items-center justify-between border-b border-edge pb-3">
-              <div>
-                <h2 className="text-xs font-bold uppercase tracking-widest text-ink font-heading">
-                  Introduction Video Campaign
+              <div className="min-w-0">
+                <h2 id="campaign-heading" className="font-heading text-headline-sm text-ink">
+                  Introduction video campaign
                 </h2>
-                <p className="text-xs text-ink-secondary mt-0.5">
-                  60-90s self-introduction video intake and faculty evaluation status
+                <p className="text-body-sm text-ink-secondary">
+                  {rated} of {submitted} uploaded videos evaluated
                 </p>
               </div>
-              <span className="text-xs font-bold text-brand">
-                {submitted} uploaded
-              </span>
             </div>
+            <p className="font-heading text-headline-lg tabular-nums text-ink">
+              {ratedPct}
+              <span className="text-headline-sm text-ink-muted">%</span>
+            </p>
+          </div>
 
-            {/* Video sub-metrics */}
-            <div className="grid grid-cols-3 gap-3">
-              <div className="p-3.5 bg-surface-canvas border border-edge rounded-lg text-center">
-                <span className="text-[10px] font-bold uppercase text-ink-muted block mb-0.5">Uploaded</span>
-                <span className="text-xl font-extrabold text-ink font-heading">{submitted}</span>
-              </div>
-              <div className="p-3.5 bg-surface-canvas border border-edge rounded-lg text-center">
-                <span className="text-[10px] font-bold uppercase text-ink-muted block mb-0.5">Rated</span>
-                <span className="text-xl font-extrabold text-status-approved font-heading">{rated}</span>
-              </div>
-              <div className="p-3.5 bg-surface-canvas border border-edge rounded-lg text-center">
-                <span className="text-[10px] font-bold uppercase text-ink-muted block mb-0.5">Coverage</span>
-                <span className="text-xl font-extrabold text-brand font-heading">{ratedPct}%</span>
-              </div>
-            </div>
+          <div
+            className="mt-4 h-2 w-full overflow-hidden rounded-full bg-surface-sunken"
+            role="progressbar"
+            aria-valuenow={ratedPct}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label="Evaluation coverage"
+          >
+            <div
+              className="h-full rounded-full bg-brand transition-[width] duration-base ease-standard"
+              style={{ width: `${ratedPct}%` }}
+            />
+          </div>
 
-            {/* Uploads by section progress bars */}
-            <div className="space-y-3 pt-2">
-              <div className="text-[11px] font-bold uppercase tracking-wider text-ink-muted">
-                Submissions by Section
-              </div>
-              {stats.bySection.map((sec, idx) => {
-                const widthPct = sec.submitted > 0
-                  ? Math.round((sec.submitted / maxSectionSubmitted) * 100)
-                  : 0;
+          <div className="mt-5 space-y-3">
+            <h3 className="text-label-sm uppercase tracking-wider text-ink-muted">Submissions by section</h3>
+            {stats.bySection.length === 0 ? (
+              <p className="py-3 text-body-sm text-ink-muted">No video submissions recorded yet.</p>
+            ) : (
+              stats.bySection.map((sec, idx) => {
+                const widthPct =
+                  sec.submitted > 0
+                    ? Math.max(6, Math.round((sec.submitted / maxSectionSubmitted) * 100))
+                    : 0;
                 return (
-                  <div key={`${sec.label}-${idx}`} className="space-y-1">
-                    <div className="flex items-center justify-between text-xs gap-2 min-w-0">
-                      <span className="font-semibold text-ink truncate">
-                        Section {sec.label}
-                      </span>
-                      <span className="font-semibold text-ink-secondary shrink-0">
-                        {sec.submitted}
-                      </span>
+                  <div key={`${sec.label}-${idx}`}>
+                    <div className="flex items-center justify-between gap-2 text-body-sm">
+                      <span className="truncate text-ink">Section {sec.label}</span>
+                      <span className="shrink-0 tabular-nums text-ink-secondary">{sec.submitted}</span>
                     </div>
-                    <div className="w-full h-2 bg-brand-soft/60 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-brand rounded-full transition-colors duration-slow"
-                        style={{ width: `${Math.max(sec.submitted > 0 ? 6 : 0, widthPct)}%` }}
-                      />
+                    <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-surface-sunken">
+                      <div className="h-full rounded-full bg-brand" style={{ width: `${widthPct}%` }} />
                     </div>
                   </div>
                 );
-              })}
-              {stats.bySection.length === 0 && (
-                <p className="text-xs text-ink-muted py-4 text-center">
-                  No video submissions recorded yet.
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* RIGHT: PORTAL QUICK WORKFLOW ACTIONS (5 COLS) */}
-        <div className="lg:col-span-5 space-y-4">
-          <div className="bg-surface border border-edge rounded-lg p-6 shadow-card space-y-4">
-            <div>
-              <h2 className="text-xs font-bold uppercase tracking-widest text-ink font-heading">
-                Portal Management Modules
-              </h2>
-              <p className="text-xs text-ink-secondary mt-0.5">
-                Direct access to faculty administration workflows
-              </p>
-            </div>
-
-            <div className="space-y-2.5 text-xs">
-              <button
-                onClick={() => onNavigateTab && onNavigateTab('moderation')}
-                className="w-full bg-surface-canvas hover:bg-brand-soft border border-edge rounded-lg p-3.5 text-left transition-colors cursor-pointer flex items-center justify-between group"
-              >
-                <div>
-                  <div className="font-bold text-ink group-hover:text-brand transition-colors">
-                    Moderation Queue
-                  </div>
-                  <div className="text-[11px] text-ink-secondary mt-0.5">
-                    Review pending student projects, honors, and certificates
-                  </div>
-                </div>
-                <ArrowRight className="w-4 h-4 text-ink-muted group-hover:text-brand group-hover:translate-x-0.5 transition-colors" />
-              </button>
-
-              <button
-                onClick={() => onNavigateTab && onNavigateTab('students')}
-                className="w-full bg-surface-canvas hover:bg-brand-soft border border-edge rounded-lg p-3.5 text-left transition-colors cursor-pointer flex items-center justify-between group"
-              >
-                <div>
-                  <div className="font-bold text-ink group-hover:text-brand transition-colors">
-                    All Students Directory
-                  </div>
-                  <div className="text-[11px] text-ink-secondary mt-0.5">
-                    Search and manage department student academic rosters
-                  </div>
-                </div>
-                <ArrowRight className="w-4 h-4 text-ink-muted group-hover:text-brand group-hover:translate-x-0.5 transition-colors" />
-              </button>
-
-              <button
-                onClick={() => onNavigateTab && onNavigateTab('events')}
-                className="w-full bg-surface-canvas hover:bg-brand-soft border border-edge rounded-lg p-3.5 text-left transition-colors cursor-pointer flex items-center justify-between group"
-              >
-                <div>
-                  <div className="font-bold text-ink group-hover:text-brand transition-colors">
-                    Department Events
-                  </div>
-                  <div className="text-[11px] text-ink-secondary mt-0.5">
-                    Create symposiums, hackathons, and registration forms
-                  </div>
-                </div>
-                <ArrowRight className="w-4 h-4 text-ink-muted group-hover:text-brand group-hover:translate-x-0.5 transition-colors" />
-              </button>
-
-              <button
-                onClick={() => onNavigateTab && onNavigateTab('voting')}
-                className="w-full bg-surface-canvas hover:bg-brand-soft border border-edge rounded-lg p-3.5 text-left transition-colors cursor-pointer flex items-center justify-between group"
-              >
-                <div>
-                  <div className="font-bold text-ink group-hover:text-brand transition-colors">
-                    Elections & Voting
-                  </div>
-                  <div className="text-[11px] text-ink-secondary mt-0.5">
-                    Configure ELITE candidate ballots and track cast votes
-                  </div>
-                </div>
-                <ArrowRight className="w-4 h-4 text-ink-muted group-hover:text-brand group-hover:translate-x-0.5 transition-colors" />
-              </button>
-
-              <button
-                onClick={() => onNavigateTab && onNavigateTab('submissions')}
-                className="w-full bg-surface-canvas hover:bg-brand-soft border border-edge rounded-lg p-3.5 text-left transition-colors cursor-pointer flex items-center justify-between group"
-              >
-                <div>
-                  <div className="font-bold text-ink group-hover:text-brand transition-colors">
-                    Video Submissions Table
-                  </div>
-                  <div className="text-[11px] text-ink-secondary mt-0.5">
-                    Play clips, rate submissions, and write feedback
-                  </div>
-                </div>
-                <ArrowRight className="w-4 h-4 text-ink-muted group-hover:text-brand group-hover:translate-x-0.5 transition-colors" />
-              </button>
-            </div>
+              })
+            )}
           </div>
 
-          {/* RATING BREAKDOWN (IF ANY) */}
-          {(stats.byRating.GOOD || stats.byRating.AVERAGE || stats.byRating.POOR) ? (
-            <div className="bg-surface border border-edge rounded-lg p-5 shadow-card space-y-3">
-              <h2 className="text-xs font-bold uppercase tracking-widest text-ink font-heading">
-                Evaluation Rating Distribution
-              </h2>
-              <div className="grid grid-cols-3 gap-2.5">
-                {(['GOOD', 'AVERAGE', 'POOR'] as const).map((r) => {
-                  const meta = ratingColors[r];
-                  const count = stats.byRating[r] || 0;
+          {hasRatings && (
+            <div className="mt-5 border-t border-edge pt-4">
+              <h3 className="text-label-sm uppercase tracking-wider text-ink-muted">
+                Evaluation ratings
+              </h3>
+              <dl className="mt-3 grid grid-cols-3 gap-3">
+                {(['GOOD', 'AVERAGE', 'POOR'] as const).map((rating) => {
+                  const meta = RATING_META[rating];
                   return (
-                    <div
-                      key={r}
-                      className={`${meta.bg} border border-edge rounded-lg p-3 flex flex-col items-center gap-0.5`}
-                    >
-                      <span className={`w-2 h-2 rounded-full ${meta.dot}`} />
-                      <span className={`text-lg font-black font-heading ${meta.text}`}>{count}</span>
-                      <span className="text-[10px] text-ink-secondary font-bold uppercase tracking-wider">
+                    <div key={rating}>
+                      <dd className={`font-heading text-headline-md tabular-nums ${meta.text}`}>
+                        {stats.byRating[rating] || 0}
+                      </dd>
+                      <dt className="mt-0.5 flex items-center gap-1.5 text-label-md text-ink-secondary">
+                        <span className={`h-2 w-2 rounded-full ${meta.dot}`} aria-hidden="true" />
                         {meta.label}
-                      </span>
+                      </dt>
                     </div>
                   );
                 })}
-              </div>
+              </dl>
             </div>
-          ) : null}
-        </div>
+          )}
+        </section>
+
+        {/* 4. IMPORTANT ACTIONS */}
+        <section className="surface p-5 sm:p-6 lg:col-span-5" aria-labelledby="shortcuts-heading">
+          <h2 id="shortcuts-heading" className="font-heading text-headline-sm text-ink">
+            Jump to
+          </h2>
+          <ul className="mt-4 divide-y divide-edge">
+            {shortcuts.map((shortcut) => (
+              <li key={shortcut.tab}>
+                <button
+                  type="button"
+                  onClick={() => onNavigateTab?.(shortcut.tab)}
+                  className="-mx-2 flex w-full cursor-pointer items-center justify-between gap-3 rounded-lg px-2 py-3 text-left transition-colors duration-fast hover:bg-surface-sunken"
+                >
+                  <span className="min-w-0">
+                    <span className="flex items-center gap-2 font-heading text-label-lg font-semibold text-ink">
+                      {shortcut.label}
+                      {shortcut.tab === 'moderation' && pendingModeration > 0 && (
+                        <span className="badge badge-pending">{pendingModeration}</span>
+                      )}
+                    </span>
+                    <span className="mt-0.5 block truncate text-body-sm text-ink-secondary">
+                      {shortcut.description}
+                    </span>
+                  </span>
+                  <ArrowRight
+                    size={15}
+                    strokeWidth={2}
+                    className="shrink-0 text-ink-muted"
+                    aria-hidden="true"
+                  />
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
       </div>
+
+      {!portal && (
+        <p className="flex items-center gap-2 text-body-sm text-ink-muted">
+          <Layers size={14} strokeWidth={2} aria-hidden="true" />
+          <span>Portal totals are unavailable right now — the figures above only cover video submissions.</span>
+        </p>
+      )}
     </div>
   );
 };
+
+export default StatsDashboard;

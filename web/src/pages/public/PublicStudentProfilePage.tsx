@@ -8,33 +8,68 @@ import {
   Linkedin,
   Globe,
   FileText,
-  Award,
-  Briefcase,
   ShieldCheck,
   ExternalLink,
   CheckCircle2,
   Video as VideoIcon,
-  Sparkles
+  Trophy,
+  FolderGit2,
 } from 'lucide-react';
 import { Navbar } from '../../components/Navbar';
 import { Footer } from '../../components/Footer';
-import { BrandedLoading } from '../../components/BrandedLoading';
 import { getPhotoStyle } from '../../utils/photoStyle';
 import { LeetCodeIcon, CodeChefIcon } from '../../components/icons/PlatformIcons';
+import { EmptyState } from '../../components/ui/EmptyState';
 
 interface PublicProfileProps {
   session?: StudentSession | null;
   onLogout?: () => void;
 }
 
+const SECTIONS = [
+  { id: 'about', label: 'About' },
+  { id: 'projects', label: 'Projects' },
+  { id: 'achievements', label: 'Achievements' },
+  { id: 'certificates', label: 'Certificates' },
+  { id: 'video', label: 'Video' },
+] as const;
+
+type SectionId = (typeof SECTIONS)[number]['id'];
+
+/** A link opened off-site, rendered as a labelled icon button. */
+const SocialLink: React.FC<{
+  href: string;
+  label: string;
+  children: React.ReactNode;
+  tone?: string;
+}> = ({ href, label, children, tone = 'text-ink-secondary' }) => (
+  <a
+    href={href}
+    target="_blank"
+    rel="noreferrer"
+    title={label}
+    aria-label={label}
+    className={`flex h-10 w-10 items-center justify-center rounded-lg border border-edge bg-surface transition-colors duration-fast hover:border-edge-strong hover:bg-surface-sunken ${tone}`}
+  >
+    {children}
+  </a>
+);
+
+/**
+ * A student's public profile, built as a portfolio page rather than a dump of
+ * every record at once: one header, five sections, and each section empty-stated
+ * on its own so a half-filled profile still reads as intentional.
+ */
 export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session, onLogout }) => {
   const { rollNo } = useParams<{ rollNo: string }>();
   const [student, setStudent] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
+  const [section, setSection] = useState<SectionId>('about');
 
   useEffect(() => {
     setImageError(false);
+    setSection('about');
   }, [rollNo]);
 
   useEffect(() => {
@@ -47,41 +82,51 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
       .finally(() => setLoading(false));
   }, [rollNo]);
 
+  const shell = (content: React.ReactNode) => (
+    <div className="flex min-h-[100dvh] flex-col bg-surface-canvas text-ink">
+      <Navbar session={session} onLogout={onLogout} />
+      <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-8 sm:px-10">{content}</main>
+      <Footer />
+    </div>
+  );
+
   if (loading) {
-    return (
-      <div className="min-h-[100dvh] bg-surface-canvas flex flex-col justify-between">
-        <Navbar session={session} onLogout={onLogout} />
-        <div className="flex-1 flex items-center justify-center py-32">
-          <BrandedLoading fullScreen={false} message="Loading Student Profile..." />
+    return shell(
+      <div className="space-y-6" aria-busy="true">
+        <span className="sr-only" role="status">
+          Loading student profile
+        </span>
+        <div className="skeleton h-4 w-40" />
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
+          <div className="skeleton h-24 w-24 shrink-0 rounded-full" />
+          <div className="flex-1 space-y-3">
+            <div className="skeleton h-7 w-56" />
+            <div className="skeleton h-4 w-72" />
+            <div className="skeleton h-10 w-64" />
+          </div>
         </div>
-        <Footer />
-      </div>
+        <div className="skeleton h-10 w-full" />
+        <div className="space-y-3">
+          <div className="skeleton h-4 w-full" />
+          <div className="skeleton h-4 w-5/6" />
+          <div className="skeleton h-4 w-2/3" />
+        </div>
+      </div>,
     );
   }
 
   if (!student) {
-    return (
-      <div className="min-h-[100dvh] bg-surface-canvas flex flex-col justify-between">
-        <Navbar session={session} onLogout={onLogout} />
-        <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
-          <div className="w-16 h-16 rounded-lg bg-brand-soft text-brand-soft-text flex items-center justify-center mb-4">
-            <ShieldCheck className="w-8 h-8" aria-hidden="true" />
-          </div>
-          <h1 className="text-headline-md font-bold text-ink mb-2 font-heading">
-            Student Not Found
-          </h1>
-          <p className="text-body-sm text-ink-secondary mb-6 max-w-md">
-            The profile you are looking for does not exist in our department roster.
-          </p>
-          <Link
-            to="/"
-            className="btn btn-primary"
-          >
-            Back to Home
+    return shell(
+      <EmptyState
+        icon={ShieldCheck}
+        title="Student not found"
+        description="That roll number is not on the department roster, or the profile is no longer public."
+        action={
+          <Link to="/students" className="btn btn-primary">
+            Back to the directory
           </Link>
-        </div>
-        <Footer />
-      </div>
+        }
+      />,
     );
   }
 
@@ -93,10 +138,10 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
   const resumes = student.resumes || [];
   const hasResume = resumes.length > 0;
   const introVideo = student.introVideo || null;
+  const bio = profile.biography || profile.bio || '';
 
   const hasNoData =
-    !profile.biography &&
-    !profile.bio &&
+    !bio &&
     skillsList.length === 0 &&
     projects.length === 0 &&
     achievements.length === 0 &&
@@ -110,354 +155,341 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = ({ session
     .map((w: string) => w[0]?.toUpperCase())
     .join('');
 
-  return (
-    <div className="min-h-[100dvh] bg-surface-canvas flex flex-col text-ink">
-      <Navbar session={session} onLogout={onLogout} />
+  const photo = profile.viewUrl || profile.photoUrl;
 
-      {/* TOP HEADER */}
-      <div className="bg-surface border-b border-edge py-6">
-        <div className="max-w-6xl mx-auto px-6 sm:px-10">
-          <Link
-            to="/students"
-            className="inline-flex items-center gap-2 text-ink-secondary hover:text-brand text-label-sm font-semibold uppercase tracking-wider transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4 text-brand" aria-hidden="true" />
-            <span>Back to Student Directory</span>
-          </Link>
-        </div>
-      </div>
+  const handleTabKeyDown = (event: React.KeyboardEvent, index: number) => {
+    let next = index;
+    if (event.key === 'ArrowRight') next = (index + 1) % SECTIONS.length;
+    else if (event.key === 'ArrowLeft') next = (index - 1 + SECTIONS.length) % SECTIONS.length;
+    else if (event.key === 'Home') next = 0;
+    else if (event.key === 'End') next = SECTIONS.length - 1;
+    else return;
 
-      {/* MAIN PROFILE CARD */}
-      <main className="flex-1 max-w-6xl mx-auto px-6 sm:px-10 py-8 w-full pb-20 space-y-8">
-        <div className="surface p-6 sm:p-8 space-y-6">
-          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 sm:gap-8">
-            {/* Avatar */}
-            <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-lg bg-brand-soft text-brand-soft-text flex items-center justify-center font-bold text-3xl shadow-xs overflow-hidden shrink-0 border border-edge">
-              {(profile.viewUrl || profile.photoUrl) && !imageError ? (
-                <img
-                  src={resolveMediaUrl(profile.viewUrl || profile.photoUrl)}
-                  alt={student.name}
-                  style={getPhotoStyle(profile)}
-                  onError={() => setImageError(true)}
-                />
-              ) : (
-                initials || 'IT'
-              )}
-            </div>
+    event.preventDefault();
+    setSection(SECTIONS[next].id);
+    document.getElementById(`profile-tab-${SECTIONS[next].id}`)?.focus();
+  };
 
-            {/* Student Info */}
-            <div className="flex-1 text-center sm:text-left space-y-2">
-              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2.5">
-                <h1 className="text-headline-md font-extrabold text-ink font-heading tracking-tight">
-                  {student.name}
-                </h1>
-                <span className="text-label-sm font-semibold text-ink-secondary bg-surface-sunken px-2.5 py-1 rounded-md border border-edge">
-                  {student.rollNo}
-                </span>
-              </div>
+  return shell(
+    <>
+      <Link
+        to="/students"
+        className="inline-flex items-center gap-1.5 text-label-lg font-semibold text-ink-secondary transition-colors hover:text-ink"
+      >
+        <ArrowLeft size={15} strokeWidth={2} aria-hidden="true" />
+        <span>Back to students</span>
+      </Link>
 
-              <div className="text-label-sm sm:text-body-sm font-semibold text-ink-secondary flex flex-wrap items-center justify-center sm:justify-start gap-2">
-                <span className="text-brand font-bold">
-                  Year {student.year || 1} · Section {student.section || 'A'}
-                </span>
-                <span>·</span>
-                <span>Department of Information Technology</span>
-                <span>·</span>
-                <span className="text-ink-muted">SASI</span>
-              </div>
+      {/* HEADER: flat on the canvas, the way a portfolio page opens. */}
+      <header className="mt-6 flex flex-col gap-6 sm:flex-row sm:items-start">
+        <span className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-full border border-edge bg-brand-soft font-heading text-headline-lg font-bold text-brand-soft-text">
+          {photo && !imageError ? (
+            <img
+              src={resolveMediaUrl(photo)}
+              alt=""
+              style={getPhotoStyle(profile)}
+              onError={() => setImageError(true)}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            initials || 'IT'
+          )}
+        </span>
 
-              {/* Professional Links */}
-              <div className="flex flex-wrap justify-center sm:justify-start gap-2 pt-2">
-                {profile.githubUrl && (
-                  <a
-                    href={profile.githubUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="p-2 rounded-lg bg-surface-sunken hover:bg-brand-soft border border-edge text-ink transition-colors"
-                    title="GitHub Profile"
-                    aria-label="GitHub Profile"
-                  >
-                    <Github className="w-4 h-4" aria-hidden="true" />
-                  </a>
-                )}
-                {profile.linkedinUrl && (
-                  <a
-                    href={profile.linkedinUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="p-2 rounded-lg bg-brand-soft hover:bg-brand-soft/80 border border-brand-soft text-brand-soft-text transition-colors"
-                    title="LinkedIn Profile"
-                    aria-label="LinkedIn Profile"
-                  >
-                    <Linkedin className="w-4 h-4" aria-hidden="true" />
-                  </a>
-                )}
-                {profile.leetcodeUrl && (
-                  <a
-                    href={profile.leetcodeUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="p-2 rounded-lg bg-surface-sunken hover:bg-amber-500/10 border border-edge hover:border-amber-500/30 text-amber-500 transition-colors"
-                    title="LeetCode Profile"
-                    aria-label="LeetCode Profile"
-                  >
-                    <LeetCodeIcon className="w-4 h-4" />
-                  </a>
-                )}
-                {profile.codechefUrl && (
-                  <a
-                    href={profile.codechefUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="p-2 rounded-lg bg-surface-sunken hover:bg-amber-700/10 border border-edge hover:border-amber-700/30 text-amber-700 transition-colors"
-                    title="CodeChef Profile"
-                    aria-label="CodeChef Profile"
-                  >
-                    <CodeChefIcon className="w-4 h-4" />
-                  </a>
-                )}
-                {profile.portfolioUrl && (
-                  <a
-                    href={profile.portfolioUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="p-2 rounded-lg bg-status-bg-approved hover:bg-status-bg-approved/80 border border-status-bg-approved text-status-approved transition-colors"
-                    title="Personal Portfolio Website"
-                    aria-label="Personal Portfolio Website"
-                  >
-                    <Globe className="w-4 h-4" aria-hidden="true" />
-                  </a>
-                )}
-              </div>
-            </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="font-heading text-headline-lg-mobile text-ink sm:text-headline-lg">
+              {student.name}
+            </h1>
+            {student.status === 'GRADUATED' && <span className="badge badge-draft">Alumni</span>}
+          </div>
 
-            {/* Resume Button */}
+          <p className="mt-1 text-body-md text-ink-secondary">
+            {student.rollNo} · Year {student.year || 1} · Section {student.section || 'A'} ·
+            Information Technology
+          </p>
+
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            {profile.githubUrl && (
+              <SocialLink href={profile.githubUrl} label="GitHub profile">
+                <Github size={17} strokeWidth={1.75} aria-hidden="true" />
+              </SocialLink>
+            )}
+            {profile.linkedinUrl && (
+              <SocialLink href={profile.linkedinUrl} label="LinkedIn profile">
+                <Linkedin size={17} strokeWidth={1.75} aria-hidden="true" />
+              </SocialLink>
+            )}
+            {profile.leetcodeUrl && (
+              <SocialLink href={profile.leetcodeUrl} label="LeetCode profile" tone="text-award-gold">
+                <LeetCodeIcon className="h-4 w-4" />
+              </SocialLink>
+            )}
+            {profile.codechefUrl && (
+              <SocialLink href={profile.codechefUrl} label="CodeChef profile" tone="text-award-bronze">
+                <CodeChefIcon className="h-4 w-4" />
+              </SocialLink>
+            )}
+            {profile.portfolioUrl && (
+              <SocialLink href={profile.portfolioUrl} label="Personal website" tone="text-ink-brand">
+                <Globe size={17} strokeWidth={1.75} aria-hidden="true" />
+              </SocialLink>
+            )}
+
             {hasResume && (
-              <div className="shrink-0 pt-2 sm:pt-0">
-                <Link
-                  to={`/students/${student.rollNo}/resume`}
-                  className="btn btn-primary"
-                >
-                  <FileText className="w-4 h-4" aria-hidden="true" />
-                  <span>View Resume</span>
-                </Link>
-              </div>
+              <Link to={`/students/${student.rollNo}/resume`} className="btn btn-primary ml-1">
+                <FileText size={15} strokeWidth={1.75} aria-hidden="true" />
+                <span>Resume</span>
+              </Link>
             )}
           </div>
-
-          {/* Published introduction video */}
-          {introVideo?.streamUrl && (
-            <div className="pt-6 border-t border-edge">
-              <h3 className="text-label-sm font-bold uppercase tracking-wider text-ink-secondary mb-3 flex items-center gap-2 font-heading">
-                <VideoIcon className="w-3.5 h-3.5 text-brand" aria-hidden="true" />
-                <span>Introduction Video</span>
-              </h3>
-              <div className="bg-surface-inverse rounded-lg overflow-hidden aspect-video max-w-3xl">
-                <video
-                  src={resolveMediaUrl(introVideo.streamUrl)}
-                  poster={introVideo.thumbnailUrl ? resolveMediaUrl(introVideo.thumbnailUrl) : undefined}
-                  controls
-                  preload="none"
-                  playsInline
-                  className="w-full h-full object-contain"
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Biography */}
-          {(profile.biography || profile.bio) && (
-            <div className="pt-6 border-t border-edge">
-              <h3 className="text-label-sm font-bold uppercase tracking-wider text-ink-secondary mb-2 font-heading">
-                Biography
-              </h3>
-              <p className="text-body-sm text-ink-secondary leading-relaxed max-w-4xl">
-                {profile.biography || profile.bio}
-              </p>
-            </div>
-          )}
-
-          {/* EMPTY PROFILE STATE */}
-          {hasNoData && (
-            <div className="pt-8 border-t border-edge flex flex-col items-center justify-center text-center py-8 sm:py-12 px-4">
-              <div className="w-14 h-14 rounded-lg bg-brand-soft text-brand-soft-text flex items-center justify-center mb-3">
-                <Sparkles className="w-6 h-6 text-brand" aria-hidden="true" />
-              </div>
-              <h3 className="text-body-md sm:text-headline-sm font-bold text-ink font-heading mb-1">
-                This student hasn't updated their profile yet.
-              </h3>
-              <p className="text-label-sm sm:text-body-sm text-ink-secondary max-w-md leading-relaxed">
-                This official student profile is linked to the department roster. When {student.name?.split(' ')[0] || 'the student'} updates their bio, technical skills, projects, or achievements, they will appear here.
-              </p>
-            </div>
-          )}
         </div>
+      </header>
 
-        {/* DETAILS GRID */}
-        {!hasNoData && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-          {/* LEFT: SKILLS */}
-          <div className="lg:col-span-1 space-y-6">
-            <div className="surface p-6 space-y-4">
-              <h3 className="text-body-sm font-bold text-ink font-heading flex items-center gap-2 uppercase tracking-wide">
-                <span>Technical Skills</span>
-              </h3>
-              {skillsList.length === 0 ? (
-                <p className="text-label-sm text-ink-muted italic">No skills listed yet.</p>
-              ) : (
-                <div className="flex flex-wrap gap-2">
-                  {skillsList.map((sk: any, idx: number) => {
-                    const name = sk.skill?.name || sk.name || sk;
-                    return (
-                      <span
-                        key={idx}
-                        className="px-3 py-1 bg-brand-soft border border-brand-soft text-brand-soft-text rounded-md text-label-sm font-semibold"
-                      >
-                        {name}
-                      </span>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+      {hasNoData ? (
+        <div className="mt-8">
+          <EmptyState
+            icon={ShieldCheck}
+            title="This profile is still being written"
+            description={`${student.name?.split(' ')[0] || 'This student'} is on the department roster. The bio, skills, projects and achievements appear here once they publish them.`}
+          />
+        </div>
+      ) : (
+        <>
+          {/* SECTION NAVIGATION */}
+          <div
+            role="tablist"
+            aria-label="Profile sections"
+            className="mt-8 flex gap-6 overflow-x-auto border-b border-edge"
+          >
+            {SECTIONS.map((item, index) => (
+              <button
+                key={item.id}
+                id={`profile-tab-${item.id}`}
+                type="button"
+                role="tab"
+                aria-selected={section === item.id}
+                aria-controls={`profile-panel-${item.id}`}
+                tabIndex={section === item.id ? 0 : -1}
+                onClick={() => setSection(item.id)}
+                onKeyDown={(e) => handleTabKeyDown(e, index)}
+                className={`-mb-px shrink-0 cursor-pointer whitespace-nowrap border-b-2 pb-3 pt-1 text-label-lg transition-colors duration-fast ${
+                  section === item.id
+                    ? 'border-brand font-semibold text-ink'
+                    : 'border-transparent text-ink-secondary hover:border-edge-strong hover:text-ink'
+                }`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
 
-            {/* CERTIFICATES */}
-            {certificates.length > 0 && (
-              <div className="surface p-6 space-y-4">
-                <h3 className="text-body-sm font-bold text-ink font-heading flex items-center gap-2 uppercase tracking-wide">
-                  <ShieldCheck className="w-4 h-4 text-brand" aria-hidden="true" />
-                  <span>Verified Certificates</span>
-                </h3>
-                <div className="space-y-3">
-                  {certificates.map((c: any) => (
-                    <div
-                      key={c.id}
-                      className="p-3 bg-surface-sunken rounded-lg border border-edge flex items-center justify-between text-label-sm gap-3"
-                    >
-                      <div className="space-y-0.5 min-w-0 flex-1">
-                        <div className="font-bold text-ink truncate">{c.title}</div>
-                        <div className="text-[11px] text-ink-muted truncate">{c.issuer}</div>
-                        {c.issueDate && (
-                          <div className="text-[11px] text-ink-muted">
-                            {new Date(c.issueDate).toLocaleDateString()}
-                          </div>
-                        )}
-                      </div>
-                      {(c.viewUrl || c.fileUrl) && (
-                        <a
-                          href={resolveMediaUrl(c.viewUrl || c.fileUrl)}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1 text-[11px] font-bold text-brand hover:underline shrink-0 ml-2"
-                        >
-                          <span>View</span>
-                          <ExternalLink className="w-3 h-3" aria-hidden="true" />
-                        </a>
-                      )}
-                    </div>
-                  ))}
+          <div
+            role="tabpanel"
+            id={`profile-panel-${section}`}
+            aria-labelledby={`profile-tab-${section}`}
+            className="pt-6"
+          >
+            {section === 'about' && (
+              <div className="space-y-8">
+                {bio ? (
+                  <p className="max-w-prose text-body-lg text-ink-secondary">{bio}</p>
+                ) : (
+                  <p className="text-body-md text-ink-muted">No biography yet.</p>
+                )}
+
+                <div>
+                  <h2 className="font-heading text-headline-sm text-ink">Skills</h2>
+                  {skillsList.length === 0 ? (
+                    <p className="mt-2 text-body-sm text-ink-muted">No skills listed yet.</p>
+                  ) : (
+                    <ul className="mt-3 flex flex-wrap gap-2">
+                      {skillsList.map((sk: any, idx: number) => {
+                        const name = sk.skill?.name || sk.name || sk;
+                        return (
+                          <li
+                            key={idx}
+                            className="rounded-lg border border-edge bg-surface-inset px-3 py-1 text-label-lg text-ink-secondary"
+                          >
+                            {name}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
                 </div>
               </div>
             )}
-          </div>
 
-          {/* RIGHT: PROJECTS & ACHIEVEMENTS */}
-          <div className="lg:col-span-2 space-y-8">
-            {/* PROJECTS */}
-            <div className="surface p-6 sm:p-8 space-y-5">
-              <h3 className="text-body-md font-bold text-ink font-heading flex items-center gap-2 uppercase tracking-wide">
-                <Briefcase className="w-4 h-4 text-brand" aria-hidden="true" />
-                <span>Featured Projects ({projects.length})</span>
-              </h3>
-
-              {projects.length === 0 ? (
-                <p className="text-label-sm text-ink-muted italic py-4">No projects showcased yet.</p>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {projects.map((p: any) => (
-                    <div
-                      key={p.id}
-                      className="p-5 rounded-lg border border-edge bg-surface-sunken flex flex-col justify-between space-y-3"
-                    >
-                      <div className="space-y-2 min-w-0">
-                        <h4 className="font-bold text-body-sm text-ink font-heading truncate">{p.title}</h4>
-                        <p className="text-label-sm text-ink-secondary line-clamp-3 leading-relaxed">
-                          {p.description}
-                        </p>
-                        {p.techStack && p.techStack.length > 0 && (
-                          <div className="flex flex-wrap gap-1 pt-1">
-                            {p.techStack.map((t: string) => (
-                              <span
-                                key={t}
-                                className="text-[10px] bg-surface border border-edge px-2 py-0.5 rounded text-ink-secondary"
+            {section === 'projects' && (
+              <>
+                {projects.length === 0 ? (
+                  <EmptyState
+                    bare
+                    icon={FolderGit2}
+                    title="No projects yet"
+                    description="Projects this student publishes appear here as portfolio entries."
+                  />
+                ) : (
+                  <ul className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    {projects.map((p: any) => (
+                      <li key={p.id} className="surface flex flex-col p-5">
+                        <h2 className="font-heading text-headline-sm text-ink">{p.title}</h2>
+                        {p.description && (
+                          <p className="mt-2 line-clamp-4 flex-1 text-body-sm text-ink-secondary">
+                            {p.description}
+                          </p>
+                        )}
+                        {p.techStack?.length > 0 && (
+                          <ul className="mt-3 flex flex-wrap gap-1.5">
+                            {p.techStack.map((tech: string) => (
+                              <li
+                                key={tech}
+                                className="rounded border border-edge bg-surface-inset px-2 py-0.5 text-label-md text-ink-secondary"
                               >
-                                {t}
-                              </span>
+                                {tech}
+                              </li>
                             ))}
+                          </ul>
+                        )}
+                        {(p.githubUrl || p.videoUrl) && (
+                          <div className="mt-4 flex flex-wrap gap-4 border-t border-edge pt-3">
+                            {p.githubUrl && (
+                              <a
+                                href={p.githubUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center gap-1.5 text-label-lg font-semibold text-ink-brand hover:text-brand-hover"
+                              >
+                                <Github size={14} strokeWidth={2} aria-hidden="true" />
+                                <span>Source</span>
+                              </a>
+                            )}
+                            {p.videoUrl && (
+                              <a
+                                href={p.videoUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center gap-1.5 text-label-lg font-semibold text-ink-brand hover:text-brand-hover"
+                              >
+                                <ExternalLink size={14} strokeWidth={2} aria-hidden="true" />
+                                <span>Live demo</span>
+                              </a>
+                            )}
                           </div>
                         )}
-                      </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </>
+            )}
 
-                      {p.githubUrl && (
-                        <div className="pt-2 border-t border-edge">
-                          <a
-                            href={p.githubUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex items-center gap-1.5 text-label-sm font-semibold text-brand hover:underline"
-                          >
-                            <Github className="w-3.5 h-3.5" aria-hidden="true" />
-                            <span>View Source</span>
-                          </a>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* ACHIEVEMENTS */}
-            {achievements.length > 0 && (
-              <div className="surface p-6 sm:p-8 space-y-5">
-                <h3 className="text-body-md font-bold text-ink font-heading flex items-center gap-2 uppercase tracking-wide">
-                  <Award className="w-4 h-4 text-status-pending" aria-hidden="true" />
-                  <span>Endorsed Achievements</span>
-                </h3>
-
-                <div className="space-y-3">
-                  {achievements.map((a: any) => (
-                    <div
-                      key={a.id}
-                      className="p-4 rounded-lg border border-edge bg-surface-sunken"
-                    >
-                      <div className="space-y-1 text-label-sm">
-                        <div className="font-bold text-ink text-body-sm font-heading">{a.title}</div>
-                        {a.description && (
-                          <p className="text-ink-secondary">{a.description}</p>
-                        )}
-                        <div className="text-[11px] text-ink-muted pt-1 flex items-center gap-2 flex-wrap">
-                          {a.organization && <span>{a.organization}</span>}
-                          {a.organization && a.date && <span>·</span>}
-                          {a.date && <span>{new Date(a.date).toLocaleDateString()}</span>}
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-status-bg-approved text-status-approved border border-status-bg-approved text-[10px] font-bold ml-auto">
-                            <CheckCircle2 className="w-3 h-3" aria-hidden="true" />
+            {section === 'achievements' && (
+              <>
+                {achievements.length === 0 ? (
+                  <EmptyState
+                    bare
+                    icon={Trophy}
+                    title="No achievements yet"
+                    description="Faculty-endorsed achievements appear here."
+                  />
+                ) : (
+                  <ul className="divide-y divide-edge">
+                    {achievements.map((a: any) => (
+                      <li key={a.id} className="py-4">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h2 className="font-heading text-label-lg font-semibold text-ink">{a.title}</h2>
+                          <span className="badge badge-approved">
+                            <CheckCircle2 size={12} strokeWidth={2.5} aria-hidden="true" />
                             Verified
                           </span>
                         </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+                        {a.description && (
+                          <p className="mt-1 text-body-sm text-ink-secondary">{a.description}</p>
+                        )}
+                        <p className="mt-1 text-label-md text-ink-muted">
+                          {[a.organization, a.date ? new Date(a.date).toLocaleDateString() : null]
+                            .filter(Boolean)
+                            .join(' · ')}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </>
+            )}
+
+            {section === 'certificates' && (
+              <>
+                {certificates.length === 0 ? (
+                  <EmptyState
+                    bare
+                    icon={ShieldCheck}
+                    title="No certificates yet"
+                    description="Certificates this student has made public appear here."
+                  />
+                ) : (
+                  <ul className="divide-y divide-edge">
+                    {certificates.map((c: any) => (
+                      <li key={c.id} className="flex items-center justify-between gap-4 py-4">
+                        <div className="min-w-0">
+                          <h2 className="truncate font-heading text-label-lg font-semibold text-ink">
+                            {c.title}
+                          </h2>
+                          <p className="mt-0.5 truncate text-body-sm text-ink-muted">
+                            {[c.issuer, c.issueDate ? new Date(c.issueDate).toLocaleDateString() : null]
+                              .filter(Boolean)
+                              .join(' · ')}
+                          </p>
+                        </div>
+                        {(c.viewUrl || c.fileUrl) && (
+                          <a
+                            href={resolveMediaUrl(c.viewUrl || c.fileUrl)}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex shrink-0 items-center gap-1 text-label-lg font-semibold text-ink-brand hover:text-brand-hover"
+                          >
+                            <span>View</span>
+                            <ExternalLink size={13} strokeWidth={2} aria-hidden="true" />
+                          </a>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </>
+            )}
+
+            {section === 'video' && (
+              <>
+                {introVideo?.streamUrl ? (
+                  <div className="max-w-3xl">
+                    <video
+                      src={resolveMediaUrl(introVideo.streamUrl)}
+                      poster={introVideo.thumbnailUrl ? resolveMediaUrl(introVideo.thumbnailUrl) : undefined}
+                      controls
+                      preload="none"
+                      playsInline
+                      className="aspect-video w-full rounded-lg border border-edge bg-surface-inverse object-contain"
+                    >
+                      Your browser does not support video playback.
+                    </video>
+                  </div>
+                ) : (
+                  <EmptyState
+                    bare
+                    icon={VideoIcon}
+                    title="No introduction video yet"
+                    description="A recording appears here once the department approves it and the student publishes it."
+                  />
+                )}
+              </>
             )}
           </div>
-        </div>
-        )}
-      </main>
-
-      <Footer />
-    </div>
+        </>
+      )}
+    </>,
   );
 };
 

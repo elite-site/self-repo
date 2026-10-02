@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { Submission, SubmissionsResponse, SubmissionRating } from '../types';
 import { adminApi } from '../services/api';
-import { BrandedLoading } from './BrandedLoading';
+import { useConfirm } from './ui/ConfirmDialog';
 
 interface SubmissionsTableProps {
   activeEventId: string;
@@ -45,9 +45,11 @@ export const SubmissionsTable: React.FC<SubmissionsTableProps> = ({
   onSelectSubmission,
   onRefreshStats,
 }) => {
+  const confirm = useConfirm();
   const [data, setData] = useState<SubmissionsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [tagFilter, setTagFilter] = useState('');
@@ -88,10 +90,16 @@ export const SubmissionsTable: React.FC<SubmissionsTableProps> = ({
 
   const handleRowDelete = async (e: React.MouseEvent, sub: Submission) => {
     e.stopPropagation();
-    const confirmText = `Delete submission for ${sub.name} (${sub.rollNo})?\n\nThis will purge all associated files and remove the record permanently.`;
-    if (!window.confirm(confirmText)) return;
+    const confirmed = await confirm({
+      title: 'Delete this submission?',
+      description: `The submission for ${sub.name} (${sub.rollNo}) and all of its uploaded files will be permanently removed. This cannot be undone.`,
+      confirmLabel: 'Delete submission',
+      tone: 'danger',
+    });
+    if (!confirmed) return;
 
     setDeletingId(sub.id);
+    setError(null);
     try {
       const res = await adminApi.deleteSubmission(sub.id);
       if (res.success) {
@@ -99,7 +107,9 @@ export const SubmissionsTable: React.FC<SubmissionsTableProps> = ({
         loadSubmissions();
       }
     } catch (err: any) {
-      alert(`Failed to delete submission: ${err.message || 'Unknown error'}`);
+      setError(
+        err?.response?.data?.message || err?.message || 'Failed to delete the submission. Please try again.'
+      );
     } finally {
       setDeletingId(null);
     }
@@ -110,23 +120,15 @@ export const SubmissionsTable: React.FC<SubmissionsTableProps> = ({
       {/* 1. HEADER & REFRESH */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-edge pb-5">
         <div>
-          <div className="text-[11px] font-mono font-bold tracking-widest text-ink-brand uppercase">
-            Review & Rate Introductions
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-ink font-heading tracking-tight mt-1">
-            Videos Submitted
-          </h1>
-          <p className="text-xs text-ink-secondary mt-1 font-normal">
-            Watch each clip, mark it, and send the student a response.
+          <h1 className="font-heading text-headline-lg text-ink">Video submissions</h1>
+          <p className="mt-1 text-body-md text-ink-secondary">
+            Watch each introduction, rate it, and send the student a response.
           </p>
         </div>
 
-        <button
-          onClick={loadSubmissions}
-          className="inline-flex items-center gap-2 px-3.5 py-2 btn btn-secondary self-start sm:self-auto"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-ink-brand' : ''}`} />
-          <span>Refresh List</span>
+        <button onClick={loadSubmissions} className="btn btn-secondary self-start sm:self-auto">
+          <RefreshCw size={15} strokeWidth={1.75} className={loading ? 'animate-spin' : ''} aria-hidden="true" />
+          <span>Refresh</span>
         </button>
       </div>
 
@@ -212,24 +214,50 @@ export const SubmissionsTable: React.FC<SubmissionsTableProps> = ({
         </div>
       </div>
 
+      {error && (
+        <div
+          role="alert"
+          className="flex items-start justify-between gap-3 rounded-lg border border-status-rejected/30 bg-status-bg-rejected px-4 py-3 text-status-rejected"
+        >
+          <p className="text-body-sm">{error}</p>
+          <button type="button" onClick={() => setError(null)} className="btn btn-secondary shrink-0">
+            Dismiss
+          </button>
+        </div>
+      )}
+
       {/* 3. SUBMISSIONS TABLE */}
       <div className="surface overflow-hidden">
         {loading ? (
-          <div className="p-12">
-            <BrandedLoading fullScreen={false} message="Loading Submissions..." />
-          </div>
+          <>
+            <span className="sr-only" role="status">
+              Loading submissions
+            </span>
+            <div className="space-y-3 p-4" aria-busy="true">
+              {[0, 1, 2, 3, 4].map((i) => (
+                <div key={i} className="flex items-center gap-4">
+                  <div className="skeleton h-9 w-9" />
+                  <div className="skeleton h-4 w-40" />
+                  <div className="skeleton h-4 w-24" />
+                  <div className="skeleton h-4 flex-1" />
+                </div>
+              ))}
+            </div>
+          </>
         ) : !data || data.data.length === 0 ? (
-          <div className="p-16 text-center space-y-2">
-            <p className="text-sm font-semibold text-ink font-heading">No submissions found</p>
-            <p className="text-xs text-ink-secondary">
-              Try adjusting your search query or filters.
+          <div className="space-y-1 p-16 text-center">
+            <p className="font-heading text-headline-sm text-ink">No submissions match these filters</p>
+            <p className="text-body-sm text-ink-secondary">
+              Try a different name, section, year or rating.
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs" role="grid" aria-label="Submissions">
+          <div className="max-h-[70vh] overflow-auto">
+            {/* A plain table, not `role="grid"`: a grid promises arrow-key cell
+                navigation, which this does not implement. */}
+            <table className="w-full border-collapse text-left text-body-sm" aria-label="Video submissions">
               <thead>
-                <tr className="bg-surface-inset border-b border-edge text-[11px] font-bold text-ink-secondary uppercase tracking-wider">
+                <tr className="sticky top-0 z-raised border-b border-edge bg-surface-inset text-label-sm uppercase tracking-wider text-ink-secondary">
                   <th className="py-3.5 px-5" scope="col">Student</th>
                   <th className="py-3.5 px-4" scope="col">Roll Number</th>
                   <th className="py-3.5 px-4" scope="col">Section & Year</th>
@@ -246,12 +274,12 @@ export const SubmissionsTable: React.FC<SubmissionsTableProps> = ({
                     <tr
                       key={sub.id}
                       onClick={() => onSelectSubmission(sub)}
-                      className="hover:bg-surface-canvas transition-colors cursor-pointer group"
+                      className="cursor-pointer transition-colors duration-fast hover:bg-surface-sunken"
                     >
                       {/* Name & Email */}
-                      <td className="py-3.5 px-5">
+                      <th scope="row" className="px-5 py-3.5 text-left font-normal">
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-lg bg-brand-soft text-brand-soft-text flex items-center justify-center text-xs font-extrabold font-heading shrink-0">
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-soft font-heading text-label-md font-bold text-brand-soft-text">
                             {sub.name
                               .split(' ')
                               .filter(Boolean)
@@ -260,15 +288,25 @@ export const SubmissionsTable: React.FC<SubmissionsTableProps> = ({
                               .join('') || '?'}
                           </div>
                           <div className="min-w-0">
-                            <div className="font-bold text-ink group-hover:text-ink-brand transition-colors truncate">
+                            {/* The name is a real button so the row is
+                                reachable by keyboard; the row click stays for
+                                the mouse. */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onSelectSubmission(sub);
+                              }}
+                              className="block max-w-full cursor-pointer truncate text-left font-heading text-label-lg font-semibold text-ink hover:text-ink-brand"
+                            >
                               {sub.name}
-                            </div>
-                            <div className="text-[11px] text-ink-secondary mt-0.5 truncate">
+                            </button>
+                            <div className="mt-0.5 truncate text-label-md text-ink-secondary">
                               {sub.email}
                             </div>
                           </div>
                         </div>
-                      </td>
+                      </th>
 
                       {/* Roll Number */}
                       <td className="py-3.5 px-4 font-semibold text-ink-secondary">
@@ -285,45 +323,32 @@ export const SubmissionsTable: React.FC<SubmissionsTableProps> = ({
                       {/* Video Presence */}
                       <td className="py-3.5 px-4 text-center">
                         {sub.videoDriveId ? (
-                          <span className="inline-flex items-center gap-1.5 text-status-approved text-[11px] font-bold">
-                            <span className="w-2 h-2 rounded-full bg-status-approved inline-block" />
-                            UPLOADED
-                          </span>
+                          <span className="badge badge-approved">Uploaded</span>
                         ) : (
-                          <span className="inline-flex items-center gap-1.5 text-ink-muted text-[11px] font-semibold">
-                            <span className="w-2 h-2 rounded-full bg-surface-inset inline-block" />
-                            REMOVED
-                          </span>
+                          <span className="badge badge-draft">No file</span>
                         )}
                       </td>
 
                       {/* Rating badge */}
                       <td className="py-3.5 px-4">
                         {meta ? (
-                          <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border ${meta.badge} ${meta.text}`}>
-                            <span className={`w-2 h-2 rounded-full ${meta.dot} inline-block`} />
-                            <span className="text-[11px] font-bold tracking-wide uppercase">{meta.label}</span>
-                          </div>
+                          <span
+                            className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-label-md font-semibold ${meta.badge} ${meta.text}`}
+                          >
+                            <span className={`h-2 w-2 rounded-full ${meta.dot}`} aria-hidden="true" />
+                            {meta.label}
+                          </span>
                         ) : (
-                          <div className="inline-flex items-center gap-1.5 text-ink-muted font-medium text-[11px] tracking-wide">
-                            <span className="w-2 h-2 rounded-full bg-surface-inset inline-block" />
-                            <span>NOT RATED</span>
-                          </div>
+                          <span className="badge badge-draft">Not rated</span>
                         )}
                       </td>
 
                       {/* Admin response badge */}
                       <td className="py-3.5 px-4">
                         {sub.reviewedAt && (sub.reviewText || (sub.reviewPros?.length ?? 0) > 0 || (sub.reviewCons?.length ?? 0) > 0) ? (
-                          <span className="badge badge-approved">
-                            <span className="w-2 h-2 rounded-full bg-status-approved inline-block" />
-                            <span className="text-[11px] font-bold tracking-wide uppercase">Responded</span>
-                          </span>
+                          <span className="badge badge-approved">Responded</span>
                         ) : (
-                          <span className="badge badge-pending">
-                            <span className="w-2 h-2 rounded-full bg-status-pending inline-block" />
-                            <span>Pending</span>
-                          </span>
+                          <span className="badge badge-pending">Pending</span>
                         )}
                       </td>
 
@@ -335,19 +360,26 @@ export const SubmissionsTable: React.FC<SubmissionsTableProps> = ({
                               e.stopPropagation();
                               onSelectSubmission(sub);
                             }}
-                            className="btn btn-secondary"
+                            className="btn btn-secondary px-2.5"
+                            aria-label={`Review the submission from ${sub.name}`}
                           >
-                            <Eye className="w-3.5 h-3.5" />
+                            <Eye size={15} strokeWidth={1.75} aria-hidden="true" />
                             <span>Review</span>
                           </button>
 
                           <button
                             disabled={deletingId === sub.id}
                             onClick={(e) => handleRowDelete(e, sub)}
-                            title="Delete Submission & Files"
-                            className="btn btn-ghost text-status-rejected hover:bg-status-bg-rejected hover:text-status-rejected border border-status-bg-rejected disabled:opacity-50"
+                            title="Delete submission and its files"
+                            aria-label={`Delete the submission from ${sub.name}`}
+                            className="btn btn-ghost px-2 text-status-rejected hover:bg-status-bg-rejected"
                           >
-                            <Trash2 className={`w-3.5 h-3.5 ${deletingId === sub.id ? 'animate-spin' : ''}`} />
+                            <Trash2
+                              size={15}
+                              strokeWidth={1.75}
+                              className={deletingId === sub.id ? 'animate-spin' : ''}
+                              aria-hidden="true"
+                            />
                           </button>
                         </div>
                       </td>
@@ -377,7 +409,7 @@ export const SubmissionsTable: React.FC<SubmissionsTableProps> = ({
               </button>
               <button
                 disabled={page >= data.pagination.totalPages}
-                onClick={() => setPage((p) => p + 1)}
+                onClick={() => setPage((p) => Math.min(data.pagination.totalPages, p + 1))}
                 className="btn btn-secondary p-1.5"
               >
                 <ChevronRight className="w-4 h-4" />

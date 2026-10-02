@@ -2,11 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { api } from '../services/api';
 import { Users, Loader2, Plus, UserPlus, Check, X, AlertCircle, Mail, Trash2 } from 'lucide-react';
-import { BrandedLoading } from '../components/BrandedLoading';
+import { SkeletonListPage } from '../components/ui/Skeleton';
 import { useToast } from '../components/Toast';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 
 export const TeamsPage: React.FC = () => {
   const { showToast } = useToast();
+  const confirm = useConfirm();
   const [teams, setTeams] = useState<any[]>([]);
   const [invitations, setInvitations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,9 +59,13 @@ export const TeamsPage: React.FC = () => {
 
   const handleRemoveTeam = async (team: any) => {
     const name = team?.name || 'this team';
-    if (!window.confirm(`Remove the team "${name}"? All members and pending invitations will be removed. This cannot be undone.`)) {
-      return;
-    }
+    const confirmed = await confirm({
+      title: `Remove ${name}?`,
+      description: 'All members and pending invitations will be removed. This cannot be undone.',
+      confirmLabel: 'Remove team',
+      tone: 'danger',
+    });
+    if (!confirmed) return;
     setRemovingTeamId(team.id);
     setTeamError(null);
     try {
@@ -137,11 +143,7 @@ export const TeamsPage: React.FC = () => {
   };
 
   if (loading) {
-    return (
-      <div className="py-20" role="status" aria-live="polite">
-        <BrandedLoading fullScreen={false} message="Loading Teams & Invitations..." />
-      </div>
-    );
+    return <SkeletonListPage label="Loading teams and invitations" rows={4} />;
   }
 
   return (

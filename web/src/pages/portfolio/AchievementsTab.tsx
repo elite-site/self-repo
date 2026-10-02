@@ -1,31 +1,56 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { createPortal } from 'react-dom';
+import React, { useEffect, useRef, useState } from 'react';
 import { api } from '../../services/api';
 import { Achievement } from '../../types';
-import { Plus, Trophy, Loader2, AlertCircle, Trash2, X, Calendar, Pencil } from 'lucide-react';
-import { BrandedLoading } from '../../components/BrandedLoading';
+import { Plus, Trophy, Loader2, Trash2, Calendar, Pencil } from 'lucide-react';
 import { useToast } from '../../components/Toast';
+import { useConfirm } from '../../components/ui/ConfirmDialog';
+import { Dialog } from '../../components/ui/Dialog';
+import { EmptyState } from '../../components/ui/EmptyState';
+import { ErrorState } from '../../components/ui/ErrorState';
+
+const statusBadge = (status: string) => {
+  switch (status) {
+    case 'APPROVED':
+      return <span className="badge badge-approved">Approved</span>;
+    case 'CHANGES_REQUESTED':
+      return <span className="badge badge-changes">Revision requested</span>;
+    case 'REJECTED':
+      return <span className="badge badge-rejected">Rejected</span>;
+    case 'PENDING':
+      return <span className="badge badge-pending">Pending review</span>;
+    case 'DRAFT':
+      return <span className="badge badge-draft">Draft</span>;
+    default:
+      return <span className="badge badge-draft">{status}</span>;
+  }
+};
+
+const FormSection: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
+  <fieldset className="space-y-3">
+    <legend className="text-label-sm uppercase tracking-wider text-ink-muted">{title}</legend>
+    {children}
+  </fieldset>
+);
 
 export const AchievementsTab: React.FC = () => {
   const { showToast } = useToast();
+  const confirm = useConfirm();
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Modal State
   const [modalOpen, setModalOpen] = useState(false);
   const [editingAchievement, setEditingAchievement] = useState<Achievement | null>(null);
   const [saving, setSaving] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
+  const [titleError, setTitleError] = useState<string | null>(null);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [organization, setOrganization] = useState('');
   const [date, setDate] = useState('');
 
-  const modalTitleRef = useRef<HTMLHeadingElement>(null);
   const firstInputRef = useRef<HTMLInputElement>(null);
-  const lastFocusedElement = useRef<HTMLElement | null>(null);
 
   const loadAchievements = async () => {
     setLoading(true);
@@ -34,7 +59,7 @@ export const AchievementsTab: React.FC = () => {
       const data = await api.getAchievements();
       if (Array.isArray(data)) setAchievements(data);
     } catch {
-      setError('Could not load achievements.');
+      setError('We could not load your achievements. Check your connection and try again.');
     } finally {
       setLoading(false);
     }
@@ -44,17 +69,6 @@ export const AchievementsTab: React.FC = () => {
     loadAchievements();
   }, []);
 
-  // Focus management for modal
-  useEffect(() => {
-    if (modalOpen) {
-      lastFocusedElement.current = document.activeElement as HTMLElement;
-      // Focus the first input after modal renders
-      setTimeout(() => firstInputRef.current?.focus(), 0);
-    } else if (lastFocusedElement.current) {
-      lastFocusedElement.current.focus();
-    }
-  }, [modalOpen]);
-
   const handleOpenCreateModal = () => {
     setEditingAchievement(null);
     setTitle('');
@@ -62,6 +76,7 @@ export const AchievementsTab: React.FC = () => {
     setOrganization('');
     setDate(new Date().toISOString().split('T')[0]);
     setModalError(null);
+    setTitleError(null);
     setModalOpen(true);
   };
 
@@ -72,12 +87,17 @@ export const AchievementsTab: React.FC = () => {
     setOrganization(a.organization || '');
     setDate(a.date ? new Date(a.date).toISOString().split('T')[0] : '');
     setModalError(null);
+    setTitleError(null);
     setModalOpen(true);
   };
 
   const handleSaveAchievement = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim()) return;
+    if (!title.trim()) {
+      setTitleError('Give this achievement a title.');
+      return;
+    }
+
     setSaving(true);
     setModalError(null);
 
@@ -91,263 +111,232 @@ export const AchievementsTab: React.FC = () => {
     try {
       if (editingAchievement) {
         await api.updateAchievement(editingAchievement.id, payload);
+        showToast('Achievement updated.');
       } else {
         await api.createAchievement(payload);
+        showToast('Achievement added.');
       }
       setModalOpen(false);
       loadAchievements();
     } catch (err: any) {
-      setModalError(err.response?.data?.message || 'Failed to save achievement.');
+      setModalError(
+        err.response?.data?.message || 'We could not save this achievement. Your changes are still here — try again.'
+      );
     } finally {
       setSaving(false);
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm('Delete this achievement?')) return;
+  const handleDelete = async (achievement: Achievement) => {
+    const confirmed = await confirm({
+      title: 'Delete this achievement?',
+      description: `“${achievement.title}” will be removed from your portfolio. This cannot be undone.`,
+      confirmLabel: 'Delete achievement',
+      tone: 'danger',
+    });
+    if (!confirmed) return;
+
     try {
-      await api.deleteAchievement(id);
+      await api.deleteAchievement(achievement.id);
       showToast('Achievement deleted.');
       loadAchievements();
     } catch {
-      showToast('Failed to delete achievement.', 'error');
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="py-16 animate-fade-in">
-        <BrandedLoading fullScreen={false} message="Loading Achievements..." />
-      </div>
-    );
-  }
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'APPROVED':
-        return <span className="badge badge-approved">Approved</span>;
-      case 'CHANGES_REQUESTED':
-        return <span className="badge badge-changes">Revision Requested</span>;
-      case 'REJECTED':
-        return <span className="badge badge-rejected">Rejected</span>;
-      case 'PENDING':
-        return <span className="badge badge-pending">Pending Review</span>;
-      case 'DRAFT':
-        return <span className="badge badge-draft">Draft</span>;
-      default:
-        return <span className="badge badge-draft">{status}</span>;
+      showToast('We could not delete that achievement. Try again.', 'error');
     }
   };
 
   return (
-    <div className="space-y-6 text-left page-enter" role="main">
-      {/* HEADER */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-body-lg font-bold text-ink font-heading">Honors & Achievements</h2>
-          <p className="text-body-sm text-ink-secondary">Record hackathon awards, academic distinctions, and competitions</p>
+          <h2 className="font-heading text-headline-sm text-ink">
+            Achievements{' '}
+            <span className="font-sans text-body-sm font-normal text-ink-muted">{achievements.length}</span>
+          </h2>
+          <p className="mt-0.5 text-body-sm text-ink-secondary">
+            Hackathon results, competition ranks and academic distinctions.
+          </p>
         </div>
-        <button
-          onClick={handleOpenCreateModal}
-          className="btn btn-primary"
-          aria-label="Add new achievement"
-        >
-          <Plus className="w-4 h-4" aria-hidden="true" />
-          <span>Add Achievement</span>
+        <button type="button" onClick={handleOpenCreateModal} className="btn btn-primary shrink-0">
+          <Plus size={16} strokeWidth={2} aria-hidden="true" />
+          <span>Add achievement</span>
         </button>
       </div>
 
-      {error && (
-        <div className="surface-sunken border border-status-rejected bg-status-bg-rejected text-status-rejected text-body-sm flex items-center gap-2 animate-fade-in" role="alert">
-          <AlertCircle className="w-4 h-4 shrink-0" aria-hidden="true" />
-          <span>{error}</span>
-        </div>
-      )}
+      {error && <ErrorState message={error} onRetry={loadAchievements} />}
 
-      {/* ACHIEVEMENTS LIST */}
-      {achievements.length === 0 ? (
-        <div className="surface text-center py-16 px-4 animate-fade-in">
-          <div className="w-12 h-12 rounded-full bg-brand-soft flex items-center justify-center mx-auto mb-4">
-            <Trophy className="w-6 h-6 text-brand" aria-hidden="true" />
-          </div>
-          <h3 className="text-body-lg font-bold text-ink font-heading">No achievements recorded yet</h3>
-          <p className="text-body-sm text-ink-secondary mt-1 max-w-sm mx-auto mb-4">
-            Add contest wins, hackathon certificates, coding competition ranks, or academic honors.
-          </p>
-          <button
-            onClick={handleOpenCreateModal}
-            className="btn btn-primary"
-          >
-            <Plus className="w-3.5 h-3.5" aria-hidden="true" />
-            <span>Add Achievement</span>
-          </button>
-        </div>
-      ) : (
-        <div className="space-y-3 animate-fade-in">
+      {loading ? (
+        <>
+          <span className="sr-only" role="status">
+            Loading your achievements
+          </span>
+          <ul className="surface divide-y divide-edge" aria-busy="true">
+            {[0, 1, 2].map((i) => (
+              <li key={i} className="space-y-2 p-4">
+                <div className="skeleton h-4 w-1/3" />
+                <div className="skeleton h-4 w-2/3" />
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : achievements.length === 0 && !error ? (
+        <EmptyState
+          icon={Trophy}
+          title="No achievements recorded yet"
+          description="Add contest wins, hackathon results, coding ranks or academic honours so they appear on your public profile."
+          action={
+            <button type="button" onClick={handleOpenCreateModal} className="btn btn-primary">
+              <Plus size={16} strokeWidth={2} aria-hidden="true" />
+              <span>Add achievement</span>
+            </button>
+          }
+        />
+      ) : achievements.length > 0 ? (
+        <ul className="surface divide-y divide-edge">
           {achievements.map((a) => (
-      <div
-              key={a.id}
-              className="surface p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
-            >
-              <div className="flex items-start sm:items-center gap-4 flex-1 min-w-0">
-                <div className="space-y-1 flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="font-bold text-body-sm text-ink font-heading">{a.title}</h3>
-                    {getStatusBadge(a.status || 'PENDING')}
-                  </div>
-                  {a.description && (
-                    <p className="text-body-sm text-ink-secondary">{a.description}</p>
-                  )}
-                  {a.status === 'CHANGES_REQUESTED' && (
-                    <div className="p-2.5 bg-status-bg-changes border border-status-changes rounded-lg text-body-sm text-status-changes my-1.5">
-                      <strong className="font-bold">Faculty Revision Note: </strong>
-                      <span>{a.reviewNote || 'The admin requested changes on this achievement. Click the edit icon to update and re-submit.'}</span>
-                    </div>
-                  )}
-                  <div className="flex flex-wrap items-center gap-3 text-label-sm text-ink-muted pt-1">
-                    {a.organization && <span>{a.organization}</span>}
-                    {a.organization && a.date && <span aria-hidden="true">·</span>}
-                    <span className="flex items-center gap-1">
-                      <Calendar className="w-3 h-3" aria-hidden="true" />
-                      {a.date ? new Date(a.date).toLocaleDateString() : 'To be announced'}
+            <li key={a.id} className="flex flex-col gap-4 p-4 sm:flex-row sm:items-start sm:gap-5">
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="font-heading text-label-lg font-semibold text-ink">{a.title}</h3>
+                  {statusBadge(a.status || 'PENDING')}
+                </div>
+                {a.description && (
+                  <p className="mt-1 text-body-sm text-ink-secondary">{a.description}</p>
+                )}
+                <div className="mt-1.5 flex flex-wrap items-center gap-3 text-label-md text-ink-muted">
+                  {a.organization && <span>{a.organization}</span>}
+                  {a.organization && a.date && <span aria-hidden="true">·</span>}
+                  <span className="flex items-center gap-1">
+                    <Calendar size={12} strokeWidth={2} aria-hidden="true" />
+                    {a.date ? new Date(a.date).toLocaleDateString() : 'No date set'}
+                  </span>
+                </div>
+                {a.status === 'CHANGES_REQUESTED' && (
+                  <div className="mt-2 rounded-lg border border-status-changes bg-status-bg-changes px-3 py-2 text-body-sm text-status-changes">
+                    <strong className="font-semibold">Faculty revision note: </strong>
+                    <span>
+                      {a.reviewNote ||
+                        'Changes were requested on this achievement. Edit it to update and re-submit.'}
                     </span>
                   </div>
-                </div>
+                )}
               </div>
 
-              <div className="flex items-center gap-1 self-end sm:self-center">
-                <button
-                  onClick={() => handleOpenEditModal(a)}
-                  className="btn btn-ghost p-2"
-                  aria-label={`Edit ${a.title}`}
-                >
-                  <Pencil className="w-4 h-4" aria-hidden="true" />
-                </button>
-                <button
-                  onClick={() => handleDelete(a.id)}
-                  className="btn btn-ghost p-2 text-status-rejected hover:bg-status-bg-rejected"
-                  aria-label={`Delete ${a.title}`}
-                >
-                  <Trash2 className="w-4 h-4" aria-hidden="true" />
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* ADD / EDIT ACHIEVEMENT MODAL */}
-      {modalOpen && createPortal(
-        <div
-          className="fixed inset-0 z-modal flex items-center justify-center p-4 sm:p-6 bg-scrim backdrop-blur-xs animate-fade-in overflow-y-auto"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="achievement-modal-title"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setModalOpen(false);
-          }}
-        >
-          <div
-            className="surface max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 shadow-modal animate-scale-in text-left my-auto"
-            ref={modalTitleRef}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between pb-3 border-b border-edge sticky -top-6 bg-surface pt-0 -mt-1 z-10">
-              <h3 id="achievement-modal-title" className="text-body-lg font-bold text-ink font-heading">
-                {editingAchievement ? 'Edit Honor or Achievement' : 'Add Honor or Achievement'}
-              </h3>
-              <button
-                type="button"
-                onClick={() => setModalOpen(false)}
-                className="btn btn-ghost p-1"
-                aria-label="Close modal"
-              >
-                <X className="w-5 h-5" aria-hidden="true" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveAchievement} className="space-y-4 pt-4">
-              {modalError && (
-                <div className="surface-sunken border border-status-rejected bg-status-bg-rejected text-status-rejected text-body-sm flex items-center gap-2" role="alert">
-                  <AlertCircle className="w-4 h-4 shrink-0" aria-hidden="true" />
-                  <span>{modalError}</span>
-                </div>
-              )}
-
-              <div>
-                <label htmlFor="achievement-title" className="label">Achievement Title <span className="text-status-rejected" aria-hidden="true">*</span></label>
-                <input
-                  id="achievement-title"
-                  ref={firstInputRef}
-                  type="text"
-                  required
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g. 1st Place - Smart India Hackathon"
-                  className="input"
-                  aria-required="true"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="achievement-description" className="label">Description</label>
-                <textarea
-                  id="achievement-description"
-                  rows={3}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Details about the award, your contribution, or rank..."
-                  className="textarea"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label htmlFor="achievement-organization" className="label">Awarding Organization</label>
-                  <input
-                    id="achievement-organization"
-                    type="text"
-                    value={organization}
-                    onChange={(e) => setOrganization(e.target.value)}
-                    placeholder="e.g. Ministry of Education"
-                    className="input"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="achievement-date" className="label">Date Received</label>
-                  <input
-                    id="achievement-date"
-                    type="date"
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                    className="input"
-                  />
-                </div>
-              </div>
-
-              <div className="pt-2 flex items-center justify-end gap-3 border-t border-edge mt-4">
+              <div className="flex shrink-0 items-center gap-1 self-start">
                 <button
                   type="button"
-                  onClick={() => setModalOpen(false)}
-                  className="btn btn-secondary"
+                  onClick={() => handleOpenEditModal(a)}
+                  className="btn btn-ghost px-2"
+                  aria-label={`Edit ${a.title}`}
                 >
-                  Cancel
+                  <Pencil size={16} strokeWidth={1.75} aria-hidden="true" />
                 </button>
                 <button
-                  type="submit"
-                  disabled={saving || !title.trim()}
-                  className="btn btn-primary"
-                  aria-busy={saving}
+                  type="button"
+                  onClick={() => handleDelete(a)}
+                  className="btn btn-ghost px-2 text-ink-muted hover:text-status-rejected"
+                  aria-label={`Delete ${a.title}`}
                 >
-                  {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" /> : <Plus className="w-3.5 h-3.5" aria-hidden="true" />}
-                  <span>{editingAchievement ? 'Update Achievement' : 'Save Achievement'}</span>
+                  <Trash2 size={16} strokeWidth={1.75} aria-hidden="true" />
                 </button>
               </div>
-            </form>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+
+      <Dialog
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        title={editingAchievement ? 'Edit achievement' : 'Add achievement'}
+        description="Only the title is required."
+        initialFocusRef={firstInputRef}
+      >
+        <form onSubmit={handleSaveAchievement} className="space-y-5" noValidate>
+          {modalError && <ErrorState bare message={modalError} />}
+
+          <FormSection title="The achievement">
+            <div>
+              <label htmlFor="achievement-title" className="label">
+                Title <span className="text-status-rejected">*</span>
+              </label>
+              <input
+                id="achievement-title"
+                ref={firstInputRef}
+                type="text"
+                value={title}
+                onChange={(e) => {
+                  setTitle(e.target.value);
+                  setTitleError(null);
+                }}
+                placeholder="1st place — Smart India Hackathon"
+                className="input"
+                aria-required="true"
+                aria-invalid={Boolean(titleError)}
+                aria-describedby={titleError ? 'achievement-title-error' : undefined}
+              />
+              {titleError && (
+                <p id="achievement-title-error" className="error-text" role="alert">
+                  {titleError}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor="achievement-description" className="label">
+                Description
+              </label>
+              <textarea
+                id="achievement-description"
+                rows={3}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="The award, your contribution, and the result."
+                className="textarea"
+              />
+            </div>
+          </FormSection>
+
+          <FormSection title="When and where">
+            <div>
+              <label htmlFor="achievement-organization" className="label">
+                Awarding organisation
+              </label>
+              <input
+                id="achievement-organization"
+                type="text"
+                value={organization}
+                onChange={(e) => setOrganization(e.target.value)}
+                placeholder="Ministry of Education"
+                className="input"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="achievement-date" className="label">
+                Date received
+              </label>
+              <input
+                id="achievement-date"
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="input"
+              />
+            </div>
+          </FormSection>
+
+          <div className="flex flex-wrap justify-end gap-3 border-t border-edge pt-4">
+            <button type="button" onClick={() => setModalOpen(false)} className="btn btn-secondary">
+              Cancel
+            </button>
+            <button type="submit" disabled={saving} className="btn btn-primary" aria-busy={saving}>
+              {saving && <Loader2 size={14} className="animate-spin" aria-hidden="true" />}
+              <span>{saving ? 'Saving…' : editingAchievement ? 'Save changes' : 'Save achievement'}</span>
+            </button>
           </div>
-        </div>,
-        document.body
-      )}
+        </form>
+      </Dialog>
     </div>
   );
 };

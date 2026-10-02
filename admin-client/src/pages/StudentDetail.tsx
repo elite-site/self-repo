@@ -86,6 +86,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
   const [deleteReason, setDeleteReason] = useState('');
 
   const [actionLoading, setActionLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<'overview' | 'portfolio' | 'media'>('overview');
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -162,9 +163,23 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] gap-3">
-        <Loader2 className="w-8 h-8 animate-spin text-ink-brand" />
-        <p className="text-xs font-semibold text-ink-muted">Loading student profile...</p>
+      <div className="space-y-6" aria-busy="true">
+        <span className="sr-only" role="status">Loading student profile</span>
+        <div className="skeleton h-9 w-56" />
+        <div className="bg-surface border border-edge rounded-2xl p-6 space-y-4">
+          <div className="flex items-center gap-4">
+            <div className="skeleton h-16 w-16 rounded-2xl" />
+            <div className="space-y-2">
+              <div className="skeleton h-6 w-48" />
+              <div className="skeleton h-4 w-64" />
+            </div>
+          </div>
+          <div className="skeleton h-12 w-full" />
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="skeleton h-56 w-full rounded-2xl" />
+          <div className="skeleton h-56 w-full rounded-2xl" />
+        </div>
       </div>
     );
   }
@@ -407,6 +422,37 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
         )}
       </div>
 
+      {/* Section tabs */}
+      <div className="flex items-center gap-1 border-b border-edge overflow-x-auto" role="tablist" aria-label="Student record sections">
+        {([
+          { id: 'overview', label: 'Overview' },
+          { id: 'portfolio', label: 'Portfolio' },
+          { id: 'media', label: 'Media' },
+        ] as const).map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`px-4 py-2.5 -mb-px whitespace-nowrap border-b-2 text-xs font-bold transition-colors cursor-pointer ${
+              activeTab === tab.id
+                ? 'border-brand text-brand'
+                : 'border-transparent text-ink-muted hover:text-ink'
+            }`}
+          >
+            {tab.label}
+            {tab.id === 'overview' && pendingChanges.length > 0 && (
+              <span className="ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-status-bg-changes text-status-changes text-[10px] font-bold">
+                {pendingChanges.length}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'overview' && (
+        <div className="space-y-6">
       {/* Pending Revisions Banner (if any item was flagged with CHANGES_REQUESTED) */}
       {pendingChanges.length > 0 && (
         <div className="p-4 bg-status-bg-changes/80 border border-edge rounded-2xl flex items-start gap-3">
@@ -426,7 +472,26 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
         </div>
       )}
 
+          {/* At a glance */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            {[
+              { label: 'Projects', value: String(projects.length) },
+              { label: 'Achievements', value: String(achievements.length) },
+              { label: 'Certificates', value: String(certificates.length) },
+              { label: 'Intro Video', value: introVideo ? introVideo.status.replace(/_/g, ' ') : 'Not uploaded' },
+              { label: 'Resume', value: resume ? resume.status.replace(/_/g, ' ') : 'Not uploaded' },
+            ].map((stat) => (
+              <div key={stat.label} className="bg-surface border border-edge rounded-2xl p-4">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-ink-muted">{stat.label}</p>
+                <p className="text-sm font-black text-ink mt-1 capitalize">{stat.value}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Main Grid: Video & Resume */}
+      {activeTab === 'media' && (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* 1. INTRODUCTION VIDEO CARD */}
         <div className="bg-surface border border-edge rounded-2xl p-5 shadow-xs flex flex-col justify-between">
@@ -644,8 +709,11 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
           )}
         </div>
       </div>
+      )}
 
       {/* 3. ACHIEVEMENTS SECTION */}
+      {activeTab === 'portfolio' && (
+        <>
       <div className="bg-surface border border-edge rounded-2xl p-5 shadow-xs">
         <div className="flex items-center justify-between pb-3 border-b border-edge mb-4">
           <div className="flex items-center gap-2">
@@ -957,6 +1025,9 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
           </div>
         )}
       </div>
+
+        </>
+      )}
 
       {/* ── MODAL: REQUEST CHANGES ── */}
       {requestModal && (

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
+import { useConfirm } from './ui/ConfirmDialog';
 import {
   X,
   Film,
@@ -18,6 +19,7 @@ import {
   EyeOff,
   RefreshCw,
   Loader2,
+  AlertCircle,
 } from 'lucide-react';
 import { IntroVideoState, Submission, SubmissionRating } from '../types';
 import { adminApi } from '../services/api';
@@ -99,6 +101,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
   const [requestReason, setRequestReason] = useState('');
   const [togglingPublic, setTogglingPublic] = useState(false);
   const [videoNotice, setVideoNotice] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [reviewText, setReviewText] = useState(submission?.reviewText || '');
   const [reviewPros, setReviewPros] = useState<string[]>(submission?.reviewPros || []);
   const [reviewCons, setReviewCons] = useState<string[]>(submission?.reviewCons || []);
@@ -207,6 +210,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
 
   const handleRate = async (value: SubmissionRating | null) => {
     setUpdating(true);
+    setActionError(null);
     try {
       const res = await adminApi.updateRating(submission.id, value);
       if (res.success) {
@@ -214,17 +218,25 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
         onUpdated(res.submission);
       }
     } catch (err) {
-      alert('Failed to update rating.');
+      setActionError('Failed to update rating.');
     } finally {
       setUpdating(false);
     }
   };
 
+  const confirm = useConfirm();
+
   const handleDeleteVideo = async () => {
-    const confirmText = `Delete the introduction video for ${submission.name} (${submission.rollNo})?\n\nThe student will be able to upload a replacement video.`;
-    if (!window.confirm(confirmText)) return;
+    const confirmed = await confirm({
+      title: 'Delete this introduction video?',
+      description: `The video for ${submission.name} (${submission.rollNo}) and its file will be permanently removed. The student will then be able to upload a replacement.`,
+      confirmLabel: 'Delete video',
+      tone: 'danger',
+    });
+    if (!confirmed) return;
 
     setDeletingVideo(true);
+    setActionError(null);
     try {
       const res = await adminApi.deleteVideo(submission.id);
       if (res.success) {
@@ -232,17 +244,23 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
         onUpdated(res.submission);
       }
     } catch (err: any) {
-      alert(`Failed to delete video: ${err.message || 'Unknown error'}`);
+      setActionError(`Failed to delete video: ${err.message || 'Unknown error'}`);
     } finally {
       setDeletingVideo(false);
     }
   };
 
   const handleDelete = async () => {
-    const confirmText = `Are you sure you want to permanently delete submission for ${submission.name} (${submission.rollNo})?\n\nThis will remove the entry from the database AND delete all associated files.`;
-    if (!window.confirm(confirmText)) return;
+    const confirmed = await confirm({
+      title: 'Delete this submission?',
+      description: `The submission for ${submission.name} (${submission.rollNo}) will be removed from the database and all of its files deleted. This cannot be undone.`,
+      confirmLabel: 'Delete submission',
+      tone: 'danger',
+    });
+    if (!confirmed) return;
 
     setDeleting(true);
+    setActionError(null);
     try {
       const res = await adminApi.deleteSubmission(submission.id);
       if (res.success) {
@@ -252,7 +270,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
         onClose();
       }
     } catch (err: any) {
-      alert(`Failed to delete submission: ${err.message || 'Unknown error'}`);
+      setActionError(`Failed to delete submission: ${err.message || 'Unknown error'}`);
     } finally {
       setDeleting(false);
     }
@@ -274,6 +292,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
 
   const handleSubmitReview = async (clear: boolean) => {
     setSendingReview(true);
+    setActionError(null);
     try {
       const res = await adminApi.updateReview(submission.id, {
         reviewText: clear ? '' : reviewText,
@@ -293,7 +312,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
         onUpdated(res.submission);
       }
     } catch (err: any) {
-      alert(`Failed to send response: ${err.message || 'Unknown error'}`);
+      setActionError(`Failed to send response: ${err.message || 'Unknown error'}`);
     } finally {
       setSendingReview(false);
     }
@@ -364,6 +383,17 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
 
           {/* 2. SCROLLABLE MODAL BODY */}
           <div id="modal-body" className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 md:p-8 space-y-6">
+            {actionError && (
+              <div className="flex items-center justify-between gap-3 p-3.5 bg-status-bg-rejected border border-edge-strong rounded-xl text-status-rejected text-xs" role="alert">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{actionError}</span>
+                </div>
+                <button onClick={() => setActionError(null)} className="font-bold underline cursor-pointer shrink-0">
+                  Dismiss
+                </button>
+              </div>
+            )}
             {/* STUDENT IDENTITY CARD */}
             <div className="surface p-4 sm:p-5">
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 text-xs items-start">

@@ -80,6 +80,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                 type="text"
                 placeholder="ADMIN"
                 autoCapitalize="none"
+                autoComplete="username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
@@ -98,6 +99,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                 id="password"
                 type="password"
                 placeholder="••••••••••••"
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -109,16 +111,21 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           <button
             type="submit"
             disabled={loading}
-            className="btn btn-primary w-full mt-2 py-3 px-4 text-xs uppercase tracking-wider flex items-center justify-center gap-2"
+            className="btn btn-primary mt-2 w-full px-4 py-3"
+            aria-busy={loading}
           >
+            {/* The label stays put while loading. Replacing it with a bare
+                spinner left the button with no accessible name at exactly the
+                moment a screen-reader user is waiting on it. */}
             {loading ? (
-              <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" aria-label="Signing in" />
+              <span
+                className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"
+                aria-hidden="true"
+              />
             ) : (
-              <>
-                <span>Sign In to Workspace</span>
-                <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
-              </>
+              <ArrowRight size={15} strokeWidth={2} aria-hidden="true" />
             )}
+            <span>{loading ? 'Signing in…' : 'Sign in'}</span>
           </button>
         </form>
 

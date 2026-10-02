@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 import {
   CheckCircle,
   XCircle,
@@ -100,6 +101,7 @@ const ItemTypeBadge: React.FC<{ itemType: string }> = ({ itemType }) => {
 };
 
 export const Moderation: React.FC = () => {
+  const confirm = useConfirm();
   const [items, setItems] = useState<UnifiedModerationItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -357,14 +359,13 @@ export const Moderation: React.FC = () => {
   /** Destructive: remove the item and drop it out of the queue. */
   const handleDeleteItem = async () => {
     if (!selectedItem) return;
-    if (
-      !window.confirm(
-        `Delete this ${readableTypeOf(selectedItem).toLowerCase()} for ${selectedItem.studentName}?\n\n` +
-          'The file is removed permanently and the student is asked to upload a replacement.',
-      )
-    ) {
-      return;
-    }
+    const confirmed = await confirm({
+      title: `Delete this ${readableTypeOf(selectedItem).toLowerCase()}?`,
+      description: `The ${readableTypeOf(selectedItem).toLowerCase()} for ${selectedItem.studentName} will be permanently removed and the student will be asked to upload a replacement.`,
+      confirmLabel: 'Delete',
+      tone: 'danger',
+    });
+    if (!confirmed) return;
 
     setDeleteBusy(true);
     try {

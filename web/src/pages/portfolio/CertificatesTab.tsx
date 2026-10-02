@@ -1,31 +1,54 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { createPortal } from 'react-dom';
+import React, { useEffect, useRef, useState } from 'react';
 import { api, resolveMediaUrl } from '../../services/api';
 import { Certificate } from '../../types';
-import { UploadCloud, Loader2, FileText, AlertCircle, Trash2, X, ExternalLink, Globe, EyeOff } from 'lucide-react';
-import { BrandedLoading } from '../../components/BrandedLoading';
+import { UploadCloud, Loader2, FileText, Trash2, ExternalLink, Globe, EyeOff } from 'lucide-react';
 import { useToast } from '../../components/Toast';
+import { useConfirm } from '../../components/ui/ConfirmDialog';
+import { Dialog } from '../../components/ui/Dialog';
+import { EmptyState } from '../../components/ui/EmptyState';
+import { ErrorState } from '../../components/ui/ErrorState';
+
+const statusBadge = (status: string) => {
+  switch (status) {
+    case 'APPROVED':
+      return <span className="badge badge-approved">Approved</span>;
+    case 'CHANGES_REQUESTED':
+      return <span className="badge badge-changes">Revision requested</span>;
+    case 'REJECTED':
+      return <span className="badge badge-rejected">Rejected</span>;
+    case 'PENDING':
+      return <span className="badge badge-pending">Pending review</span>;
+    default:
+      return <span className="badge badge-draft">{status}</span>;
+  }
+};
+
+const FormSection: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
+  <fieldset className="space-y-3">
+    <legend className="text-label-sm uppercase tracking-wider text-ink-muted">{title}</legend>
+    {children}
+  </fieldset>
+);
 
 export const CertificatesTab: React.FC = () => {
   const { showToast } = useToast();
+  const confirm = useConfirm();
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Modal State
   const [modalOpen, setModalOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
+  const [titleError, setTitleError] = useState<string | null>(null);
 
   const [title, setTitle] = useState('');
   const [issuer, setIssuer] = useState('');
   const [issueDate, setIssueDate] = useState('');
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
-  const modalTitleRef = useRef<HTMLHeadingElement>(null);
   const firstInputRef = useRef<HTMLInputElement>(null);
-  const lastFocusedElement = useRef<HTMLElement | null>(null);
 
   const loadCertificates = async () => {
     setLoading(true);
@@ -34,8 +57,7 @@ export const CertificatesTab: React.FC = () => {
       const data = await api.getCertificates();
       if (Array.isArray(data)) setCertificates(data);
     } catch {
-      setError('Could not load certificates.');
-      showToast('Could not load certificates.', 'error');
+      setError('We could not load your certificates. Check your connection and try again.');
     } finally {
       setLoading(false);
     }
@@ -45,30 +67,20 @@ export const CertificatesTab: React.FC = () => {
     loadCertificates();
   }, []);
 
-  // Focus management for modal
-  useEffect(() => {
-    if (modalOpen) {
-      lastFocusedElement.current = document.activeElement as HTMLElement;
-      setTimeout(() => firstInputRef.current?.focus(), 0);
-    } else if (lastFocusedElement.current) {
-      lastFocusedElement.current.focus();
-    }
-  }, [modalOpen]);
-
   const handleOpenModal = () => {
     setTitle('');
     setIssuer('');
     setIssueDate(new Date().toISOString().split('T')[0]);
     setSelectedFile(null);
     setModalError(null);
+    setTitleError(null);
     setModalOpen(true);
   };
 
   const handleUploadCertificate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) {
-      setModalError('Please provide a certificate title.');
-      showToast('Please provide a certificate title.', 'error');
+      setTitleError('Give this certificate a name.');
       return;
     }
     setUploading(true);
@@ -86,26 +98,31 @@ export const CertificatesTab: React.FC = () => {
       showToast(`${title.trim()} added.`);
       loadCertificates();
     } catch (err: any) {
-      const notice = err.response?.data?.message || 'Failed to upload certificate.';
+      const notice =
+        err.response?.data?.message || 'We could not upload this certificate. Your details are still here — try again.';
       setModalError(notice);
-      showToast(notice, 'error');
     } finally {
       setUploading(false);
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm('Delete this certificate?')) return;
+  const handleDelete = async (certificate: Certificate) => {
+    const confirmed = await confirm({
+      title: 'Delete this certificate?',
+      description: `“${certificate.title}” will be removed from your portfolio. This cannot be undone.`,
+      confirmLabel: 'Delete certificate',
+      tone: 'danger',
+    });
+    if (!confirmed) return;
+
     try {
-      await api.deleteCertificate(id);
+      await api.deleteCertificate(certificate.id);
       showToast('Certificate deleted.');
       loadCertificates();
     } catch {
-      showToast('Failed to delete certificate.', 'error');
+      showToast('We could not delete that certificate. Try again.', 'error');
     }
   };
-
-  const [togglingId, setTogglingId] = useState<string | null>(null);
 
   const handleTogglePublic = async (id: string, newIsPublic: boolean) => {
     // Optimistic UI update
@@ -121,131 +138,116 @@ export const CertificatesTab: React.FC = () => {
       setCertificates((prev) =>
         prev.map((c) => (c.id === id ? { ...c, isPublic: !newIsPublic } : c))
       );
-      const notice = err.response?.data?.message || 'Failed to update certificate visibility.';
+      const notice = err.response?.data?.message || 'We could not update the visibility of that certificate.';
       showToast(notice, 'error');
     } finally {
       setTogglingId(null);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="py-16 animate-fade-in">
-        <BrandedLoading fullScreen={false} message="Loading Certificates..." />
-      </div>
-    );
-  }
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'APPROVED':
-        return <span className="badge badge-approved">Approved</span>;
-      case 'CHANGES_REQUESTED':
-        return <span className="badge badge-changes">Revision Requested</span>;
-      case 'REJECTED':
-        return <span className="badge badge-rejected">Rejected</span>;
-      case 'PENDING':
-        return <span className="badge badge-pending">Pending Review</span>;
-      default:
-        return <span className="badge badge-draft">{status}</span>;
-    }
-  };
-
   return (
-    <div className="space-y-6 text-left page-enter" role="main">
-      {/* HEADER */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-body-lg font-bold text-ink font-heading">Verified Credentials & Licenses</h2>
-          <p className="text-body-sm text-ink-secondary">Official certificates from Coursera, NPTEL, AWS, Google, and department workshops</p>
+          <h2 className="font-heading text-headline-sm text-ink">
+            Certificates{' '}
+            <span className="font-sans text-body-sm font-normal text-ink-muted">{certificates.length}</span>
+          </h2>
+          <p className="mt-0.5 text-body-sm text-ink-secondary">
+            Course completions, professional licences and workshop credentials.
+          </p>
         </div>
-        <button
-          onClick={handleOpenModal}
-          className="btn btn-primary"
-          aria-label="Upload new certificate"
-        >
-          <UploadCloud className="w-4 h-4" aria-hidden="true" />
-          <span>Upload Certificate</span>
+        <button type="button" onClick={handleOpenModal} className="btn btn-primary shrink-0">
+          <UploadCloud size={16} strokeWidth={2} aria-hidden="true" />
+          <span>Upload certificate</span>
         </button>
       </div>
 
-      {error && (
-        <div className="surface-sunken border border-status-rejected bg-status-bg-rejected text-status-rejected text-body-sm flex items-center gap-2 animate-fade-in" role="alert">
-          <AlertCircle className="w-4 h-4 shrink-0" aria-hidden="true" />
-          <span>{error}</span>
-        </div>
-      )}
+      {error && <ErrorState message={error} onRetry={loadCertificates} />}
 
-      {/* GRID */}
-      {certificates.length === 0 ? (
-        <div className="surface text-center py-16 px-4 animate-fade-in">
-          <div className="w-12 h-12 rounded-full bg-brand-soft flex items-center justify-center mx-auto mb-4">
-            <FileText className="w-6 h-6 text-brand" aria-hidden="true" />
+      {loading ? (
+        <div aria-busy="true">
+          <span className="sr-only" role="status">
+            Loading your certificates
+          </span>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="surface space-y-3 p-4">
+                <div className="skeleton h-28 w-full" />
+                <div className="skeleton h-4 w-2/3" />
+                <div className="skeleton h-4 w-1/3" />
+              </div>
+            ))}
           </div>
-          <h3 className="text-body-lg font-bold text-ink font-heading">No certificates uploaded yet</h3>
-          <p className="text-body-sm text-ink-secondary mt-1 max-w-sm mx-auto mb-4">
-            Add course completion certificates, professional licenses, and exam scorecards. You can attach a PDF or image, or just save the title and issuer.
-          </p>
-          <button
-            onClick={handleOpenModal}
-            className="btn btn-primary"
-          >
-            <UploadCloud className="w-3.5 h-3.5" aria-hidden="true" />
-            <span>Upload Certificate</span>
-          </button>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-fade-in">
+      ) : certificates.length === 0 && !error ? (
+        <EmptyState
+          icon={FileText}
+          title="No certificates uploaded yet"
+          description="Add course completions, professional licences and exam scorecards. A PDF or image is optional — a title and issuer are enough to start."
+          action={
+            <button type="button" onClick={handleOpenModal} className="btn btn-primary">
+              <UploadCloud size={16} strokeWidth={2} aria-hidden="true" />
+              <span>Upload certificate</span>
+            </button>
+          }
+        />
+      ) : certificates.length > 0 ? (
+        <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {certificates.map((c) => (
-            <div
-              key={c.id}
-              className="surface p-4 flex flex-col justify-between group"
-            >
-              <div className="space-y-3">
-                <div className="flex items-center justify-between gap-2">
-                  {getStatusBadge(c.status || 'PENDING')}
-                </div>
-
-                {c.thumbnailUrl ? (
-                  <a
-                    href={resolveMediaUrl(c.viewUrl || c.fileUrl)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="block w-full h-32 rounded-lg bg-surface-sunken overflow-hidden border border-edge shadow-sm"
+            <li key={c.id} className="surface flex flex-col p-4">
+              <div className="flex items-start justify-between gap-2">
+                {statusBadge(c.status || 'PENDING')}
+                <div className="flex items-center gap-0.5">
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(c)}
+                    className="btn btn-ghost px-1.5 py-1 text-ink-muted hover:text-status-rejected"
+                    aria-label={`Delete ${c.title}`}
                   >
-                    <img
-                      src={resolveMediaUrl(c.thumbnailUrl)}
-                      alt={`${c.title} preview`}
-                      loading="lazy"
-                      decoding="async"
-                      className="w-full h-full object-cover"
-                    />
-                  </a>
-                ) : null}
-
-                <div>
-                  <h3 className="font-bold text-body-sm text-ink font-heading line-clamp-1" title={c.title}>
-                    {c.title}
-                  </h3>
-                  <p className="text-label-sm text-ink-secondary mt-0.5">{c.issuer || 'Issuing Body'}</p>
-                  {c.status === 'CHANGES_REQUESTED' && (
-                    <div className="p-2 bg-status-bg-changes border border-status-changes rounded-lg text-label-sm text-status-changes mt-2">
-                      <strong className="font-bold">Faculty Revision Note: </strong>
-                      <span>{c.reviewNote || 'The admin requested changes on this certificate.'}</span>
-                    </div>
-                  )}
+                    <Trash2 size={15} strokeWidth={1.75} aria-hidden="true" />
+                  </button>
                 </div>
               </div>
 
-              {/* PUBLIC VISIBILITY TOGGLE */}
-              <div className="pt-2.5 mt-2.5 border-t border-edge flex items-center justify-between">
-                <div className="flex items-center gap-1.5 min-w-0">
+              {c.thumbnailUrl && (
+                <a
+                  href={resolveMediaUrl(c.viewUrl || c.fileUrl)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-3 block h-28 w-full overflow-hidden rounded-lg border border-edge bg-surface-sunken"
+                >
+                  <img
+                    src={resolveMediaUrl(c.thumbnailUrl)}
+                    alt={`Preview of ${c.title}`}
+                    loading="lazy"
+                    decoding="async"
+                    className="h-full w-full object-cover"
+                  />
+                </a>
+              )}
+
+              <div className="mt-3 min-w-0 flex-1">
+                <h3 className="font-heading text-label-lg font-semibold text-ink" title={c.title}>
+                  {c.title}
+                </h3>
+                <p className="mt-0.5 text-body-sm text-ink-muted">{c.issuer || 'Issuing body'}</p>
+                {c.status === 'CHANGES_REQUESTED' && (
+                  <p className="mt-2 rounded-lg border border-status-changes bg-status-bg-changes px-3 py-2 text-body-sm text-status-changes">
+                    <strong className="font-semibold">Faculty revision note: </strong>
+                    <span>{c.reviewNote || 'Changes were requested on this certificate.'}</span>
+                  </p>
+                )}
+              </div>
+
+              <div className="mt-3 flex items-center justify-between gap-3 border-t border-edge pt-3">
+                <div className="flex min-w-0 items-center gap-1.5">
                   {c.isPublic ? (
-                    <Globe className="w-3.5 h-3.5 text-status-approved shrink-0" aria-hidden="true" />
+                    <Globe size={14} strokeWidth={2} className="shrink-0 text-status-approved" aria-hidden="true" />
                   ) : (
-                    <EyeOff className="w-3.5 h-3.5 text-ink-muted shrink-0" aria-hidden="true" />
+                    <EyeOff size={14} strokeWidth={2} className="shrink-0 text-ink-muted" aria-hidden="true" />
                   )}
-                  <span className="text-label-sm font-medium text-ink-secondary truncate">
+                  <span className="truncate text-label-md text-ink-secondary">
                     {c.isPublic ? 'Public on profile' : 'Hidden from profile'}
                   </span>
                 </div>
@@ -262,12 +264,12 @@ export const CertificatesTab: React.FC = () => {
                       : 'Requires faculty approval to display publicly'
                   }
                   aria-pressed={c.isPublic}
-                  className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent focus:outline-hidden disabled:opacity-40 disabled:cursor-not-allowed transition-colors duration-base ease-standard ${
+                  className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-base ease-standard disabled:cursor-not-allowed disabled:opacity-40 ${
                     c.isPublic ? 'bg-status-approved' : 'bg-edge'
                   }`}
                 >
                   <span
-                    className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-surface shadow-sm ring-0 transition-transform duration-base ease-standard ${
+                    className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-surface ring-0 transition-transform duration-base ease-standard ${
                       c.isPublic ? 'translate-x-4' : 'translate-x-0'
                     }`}
                     aria-hidden="true"
@@ -275,146 +277,121 @@ export const CertificatesTab: React.FC = () => {
                 </button>
               </div>
 
-              <div className="pt-3 mt-3 border-t border-edge flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2">
-                  {(c.viewUrl || c.fileUrl) ? (
-                    <a
-                      href={resolveMediaUrl(c.viewUrl || c.fileUrl)}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-1 text-label-sm font-bold text-brand hover:underline"
-                    >
-                      <span>View File</span>
-                      <ExternalLink className="w-3 h-3" aria-hidden="true" />
-                    </a>
-                  ) : (
-                    <span className="text-label-sm text-ink-muted">Verified Record</span>
-                  )}
-                </div>
-
-                <button
-                  onClick={() => handleDelete(c.id)}
-                  className="btn btn-ghost p-1 text-ink-muted hover:text-status-rejected"
-                  aria-label={`Delete ${c.title}`}
-                >
-                  <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
-                </button>
+              <div className="mt-2">
+                {c.viewUrl || c.fileUrl ? (
+                  <a
+                    href={resolveMediaUrl(c.viewUrl || c.fileUrl)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-label-md font-semibold text-ink-brand hover:text-brand-hover"
+                  >
+                    <span>View file</span>
+                    <ExternalLink size={12} strokeWidth={2} aria-hidden="true" />
+                  </a>
+                ) : (
+                  <span className="text-label-md text-ink-muted">Verified record</span>
+                )}
               </div>
-            </div>
+            </li>
           ))}
-        </div>
-      )}
+        </ul>
+      ) : null}
 
-      {/* UPLOAD MODAL */}
-      {modalOpen && createPortal(
-        <div
-          className="fixed inset-0 z-modal flex items-center justify-center p-4 sm:p-6 bg-scrim backdrop-blur-xs animate-fade-in overflow-y-auto"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="certificate-modal-title"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setModalOpen(false);
-          }}
-        >
-          <div
-            className="surface max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 shadow-modal animate-scale-in text-left my-auto"
-            ref={modalTitleRef}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between pb-3 border-b border-edge sticky -top-6 bg-surface pt-0 -mt-1 z-10">
-              <h3 id="certificate-modal-title" className="text-body-lg font-bold text-ink font-heading">Upload Verified Certificate</h3>
-              <button
-                type="button"
-                onClick={() => setModalOpen(false)}
-                className="btn btn-ghost p-1"
-                aria-label="Close modal"
-              >
-                <X className="w-5 h-5" aria-hidden="true" />
-              </button>
+      <Dialog
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        title="Upload certificate"
+        description="A title is required. The file and issuer are optional."
+        initialFocusRef={firstInputRef}
+      >
+        <form onSubmit={handleUploadCertificate} className="space-y-5" noValidate>
+          {modalError && <ErrorState bare message={modalError} />}
+
+          <FormSection title="Certificate">
+            <div>
+              <label htmlFor="certificate-title" className="label">
+                Certificate name <span className="text-status-rejected">*</span>
+              </label>
+              <input
+                id="certificate-title"
+                ref={firstInputRef}
+                type="text"
+                value={title}
+                onChange={(e) => {
+                  setTitle(e.target.value);
+                  setTitleError(null);
+                }}
+                placeholder="AWS Certified Cloud Practitioner"
+                className="input"
+                aria-required="true"
+                aria-invalid={Boolean(titleError)}
+                aria-describedby={titleError ? 'certificate-title-error' : undefined}
+              />
+              {titleError && (
+                <p id="certificate-title-error" className="error-text" role="alert">
+                  {titleError}
+                </p>
+              )}
             </div>
 
-            <form onSubmit={handleUploadCertificate} className="space-y-4 pt-4">
-              {modalError && (
-                <div className="surface-sunken border border-status-rejected bg-status-bg-rejected text-status-rejected text-body-sm flex items-center gap-2" role="alert">
-                  <AlertCircle className="w-4 h-4 shrink-0" aria-hidden="true" />
-                  <span>{modalError}</span>
-                </div>
-              )}
+            <div>
+              <label htmlFor="certificate-issuer" className="label">
+                Issuing authority
+              </label>
+              <input
+                id="certificate-issuer"
+                type="text"
+                value={issuer}
+                onChange={(e) => setIssuer(e.target.value)}
+                placeholder="Amazon Web Services"
+                className="input"
+              />
+            </div>
 
-              <div>
-                <label htmlFor="certificate-title" className="label">Certificate Name <span className="text-status-rejected" aria-hidden="true">*</span></label>
-                <input
-                  id="certificate-title"
-                  ref={firstInputRef}
-                  type="text"
-                  required
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g. AWS Certified Cloud Practitioner"
-                  className="input"
-                  aria-required="true"
-                />
-              </div>
+            <div>
+              <label htmlFor="certificate-date" className="label">
+                Issue date
+              </label>
+              <input
+                id="certificate-date"
+                type="date"
+                value={issueDate}
+                onChange={(e) => setIssueDate(e.target.value)}
+                className="input"
+              />
+            </div>
+          </FormSection>
 
-              <div>
-                <label htmlFor="certificate-issuer" className="label">Issuing Authority / Platform</label>
-                <input
-                  id="certificate-issuer"
-                  type="text"
-                  value={issuer}
-                  onChange={(e) => setIssuer(e.target.value)}
-                  placeholder="e.g. Amazon Web Services / Coursera"
-                  className="input"
-                />
-              </div>
+          <FormSection title="Document">
+            <div>
+              <label htmlFor="certificate-file" className="label">
+                PDF or image <span className="text-ink-muted">(optional)</span>
+              </label>
+              <input
+                id="certificate-file"
+                type="file"
+                accept=".pdf,image/jpeg,image/png,image/webp"
+                onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                className="w-full cursor-pointer text-label-sm text-ink-secondary file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-brand-soft file:px-3 file:py-2 file:text-label-md file:font-semibold file:text-brand"
+                aria-describedby="certificate-file-hint"
+              />
+              <p id="certificate-file-hint" className="hint">
+                Accepted formats: PDF, JPEG, PNG or WebP.
+              </p>
+            </div>
+          </FormSection>
 
-              <div>
-                <label htmlFor="certificate-date" className="label">Issue Date</label>
-                <input
-                  id="certificate-date"
-                  type="date"
-                  value={issueDate}
-                  onChange={(e) => setIssueDate(e.target.value)}
-                  className="input"
-                />
-              </div>
-
-              <div>
-                <label className="label">
-                  Upload Document (PDF or Image) <span className="text-ink-muted text-[11px]">(optional)</span>
-                </label>
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  accept=".pdf,image/jpeg,image/png,image/webp"
-                  onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-                  className="w-full text-label-sm text-ink-secondary file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-brand-soft file:text-brand hover:file:bg-brand-soft/80 cursor-pointer"
-                />
-              </div>
-
-              <div className="pt-2 flex items-center justify-end gap-3 border-t border-edge mt-4">
-                <button
-                  type="button"
-                  onClick={() => setModalOpen(false)}
-                  className="btn btn-secondary"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={uploading || !title.trim()}
-                  className="btn btn-primary"
-                  aria-busy={uploading}
-                >
-                  {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" /> : <UploadCloud className="w-3.5 h-3.5" aria-hidden="true" />}
-                  <span>{uploading ? 'Uploading...' : 'Save Certificate'}</span>
-                </button>
-              </div>
-            </form>
+          <div className="flex flex-wrap justify-end gap-3 border-t border-edge pt-4">
+            <button type="button" onClick={() => setModalOpen(false)} className="btn btn-secondary">
+              Cancel
+            </button>
+            <button type="submit" disabled={uploading} className="btn btn-primary" aria-busy={uploading}>
+              {uploading && <Loader2 size={14} className="animate-spin" aria-hidden="true" />}
+              <span>{uploading ? 'Uploading…' : 'Save certificate'}</span>
+            </button>
           </div>
-        </div>,
-        document.body
-      )}
+        </form>
+      </Dialog>
     </div>
   );
 };

@@ -10,11 +10,13 @@ import {
   RotateCcw,
   Trash2
 } from 'lucide-react';
-import { BrandedLoading } from '../components/BrandedLoading';
+import { SkeletonPage } from '../components/ui/Skeleton';
 import { useToast } from '../components/Toast';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 
 export const ResumePage: React.FC = () => {
   const { showToast } = useToast();
+  const confirm = useConfirm();
   const [resumeData, setResumeData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -25,9 +27,13 @@ export const ResumePage: React.FC = () => {
 
   /** Withdraw the submitted resume. The server deletes the file and DB row. */
   const handleDelete = async () => {
-    if (!window.confirm('Delete your submitted resume? This cannot be undone.')) {
-      return;
-    }
+    const confirmed = await confirm({
+      title: 'Delete your resume?',
+      description: 'Your uploaded resume will be removed from your profile. This cannot be undone.',
+      confirmLabel: 'Delete resume',
+      tone: 'danger',
+    });
+    if (!confirmed) return;
     setDeleting(true);
     setError(null);
     try {
@@ -115,11 +121,7 @@ export const ResumePage: React.FC = () => {
   };
 
   if (loading) {
-    return (
-      <div className="py-24">
-        <BrandedLoading fullScreen={false} message="Loading Resume..." />
-      </div>
-    );
+    return <SkeletonPage label="Loading resume" cards={2} rows={3} />;
   }
 
   const hasValidFile = Boolean(

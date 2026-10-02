@@ -4,6 +4,7 @@ import { StudentSession } from './types';
 import { PublicThemeProvider, StudentThemeProvider } from './context/ThemeContext';
 import { SessionProvider, useSession } from './context/SessionContext';
 import { ToastProvider } from './components/Toast';
+import { ConfirmProvider } from './components/ui/ConfirmDialog';
 import { hasStoredToken } from './utils/sessionBootstrap';
 
 // Public Pages (isolated chunk for public visitors)
@@ -240,9 +241,11 @@ export const App: React.FC = () => {
   return (
     <BrowserRouter>
       <ToastProvider>
-        <SessionProvider>
-          <AuthWrapper />
-        </SessionProvider>
+        <ConfirmProvider>
+          <SessionProvider>
+            <AuthWrapper />
+          </SessionProvider>
+        </ConfirmProvider>
       </ToastProvider>
     </BrowserRouter>
   );

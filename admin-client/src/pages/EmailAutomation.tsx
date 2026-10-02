@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { adminApi } from '../services/api';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 import { EmailAutomationItem, EmailTemplateItem } from '../types';
 import {
   Mail,
@@ -17,6 +18,7 @@ import {
 } from 'lucide-react';
 
 export const EmailAutomation: React.FC = () => {
+  const confirm = useConfirm();
   const [automations, setAutomations] = useState<EmailAutomationItem[]>([]);
   const [templates, setTemplates] = useState<EmailTemplateItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -79,9 +81,12 @@ export const EmailAutomation: React.FC = () => {
   };
 
   const handleRunNow = async (id: string, name: string) => {
-    if (!window.confirm(`Execute email automation "${name}" now for eligible cohort members?`)) {
-      return;
-    }
+    const confirmed = await confirm({
+      title: `Run “${name}” now?`,
+      description: 'This queues the automation immediately and sends real email to every eligible cohort member.',
+      confirmLabel: 'Run now',
+    });
+    if (!confirmed) return;
     setRunningId(id);
     setActionSuccess(null);
     try {

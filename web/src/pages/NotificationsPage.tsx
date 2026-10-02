@@ -16,7 +16,7 @@ import {
   Video,
   ChevronRight
 } from 'lucide-react';
-import { BrandedLoading } from '../components/BrandedLoading';
+import { SkeletonListPage } from '../components/ui/Skeleton';
 import { useToast } from '../components/Toast';
 
 export const NotificationsPage: React.FC = () => {
@@ -111,11 +111,7 @@ export const NotificationsPage: React.FC = () => {
   });
 
   if (loading) {
-    return (
-      <div className="py-20 animate-fade-in">
-        <BrandedLoading fullScreen={false} message="Loading Notifications..." />
-      </div>
-    );
+    return <SkeletonListPage label="Loading notifications" rows={5} />;
   }
 
   const getTypeIcon = (type: string) => {

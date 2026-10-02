@@ -33,6 +33,28 @@ const ramps = Object.fromEntries(
   ),
 );
 
+/**
+ * Elevation, namespaced under `shadow-`.
+ *
+ * `shadow` used to be spread into the same map as `radius`, `motion` and
+ * `layer`. A flat namespace let three keys silently overwrite each other:
+ * `shadow.focus` replaced the `focus` *colour* token, and `shadow.raised` and
+ * `shadow.modal` replaced two layer steps. The visible cost was twofold:
+ *
+ *   - `:focus-visible` computed `outline: 2px solid 0 0 0 3px rgba(...)`, an
+ *     invalid declaration the browser drops, so the app had no focus ring.
+ *   - `shared/tailwind-preset.mjs` reads `--shadow-card`, `--shadow-modal` and
+ *     friends. The generator never emitted those names, so every shadow
+ *     utility and every `box-shadow: var(--shadow-*)` rendered as none.
+ *
+ * The names below are the ones the preset already reads, so this file and the
+ * preset agree on one spelling. Nothing else in the repo references the
+ * unprefixed names (they were only ever written, never consumed).
+ */
+const shadowVars = Object.fromEntries(
+  Object.entries(shadow).map(([k, v]) => [`shadow-${k}`, v]),
+);
+
 function block(selector, map, indent = '  ') {
   const body = Object.entries(map)
     .map(([k, v]) => `${indent}--${kebab(k)}: ${v};`)
@@ -65,7 +87,8 @@ const css = `/**
 ${block(':root', ramps)}
 ${block(':root', light)}
 ${block(`[data-theme='dark'],\n.dark`, dark)}
-${block(':root', { ...radius, ...motion, ...layer, ...shadow })}
+${block(':root', { ...radius, ...motion, ...layer })}
+${block(':root', shadowVars)}
 ${block(':root', {
   'font-sans': font.sans,
   'font-heading': font.heading,

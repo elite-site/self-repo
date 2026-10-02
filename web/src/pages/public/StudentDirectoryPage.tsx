@@ -2,11 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { api, resolveMediaUrl } from '../../services/api';
 import { StudentSession } from '../../types';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Search, Filter, Users, ArrowRight, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, SlidersHorizontal, Users, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { Navbar } from '../../components/Navbar';
 import { Footer } from '../../components/Footer';
-import { BrandedLoading } from '../../components/BrandedLoading';
 import { getPhotoStyle } from '../../utils/photoStyle';
+import { Dialog } from '../../components/ui/Dialog';
+import { EmptyState } from '../../components/ui/EmptyState';
+import { ErrorState } from '../../components/ui/ErrorState';
 
 interface StudentDirectoryProps {
   session?: StudentSession | null;
@@ -21,12 +23,121 @@ const STATUS_FILTERS = [
   { value: 'GRADUATED', label: 'Alumni' },
 ] as const;
 
+interface FilterControlsProps {
+  /** Desktop and mobile render the same controls, so their ids have to differ. */
+  idPrefix: string;
+  yearFilter: string;
+  setYearFilter: (value: string) => void;
+  sectionFilter: string;
+  setSectionFilter: (value: string) => void;
+  skillFilter: string;
+  setSkillFilter: (value: string) => void;
+  statusFilter: StatusFilter;
+  setStatusFilter: (value: StatusFilter) => void;
+  availableSkills: Array<{ id: string; name: string }>;
+}
+
+const FilterControls: React.FC<FilterControlsProps> = ({
+  idPrefix,
+  yearFilter,
+  setYearFilter,
+  sectionFilter,
+  setSectionFilter,
+  skillFilter,
+  setSkillFilter,
+  statusFilter,
+  setStatusFilter,
+  availableSkills,
+}) => (
+  <>
+    <div>
+      <span className="label">Status</span>
+      <div className="flex gap-1.5" role="group" aria-label="Student status">
+        {STATUS_FILTERS.map((option) => {
+          const active = statusFilter === option.value;
+          return (
+            <button
+              key={option.value}
+              type="button"
+              aria-pressed={active}
+              onClick={() => setStatusFilter(option.value)}
+              className={`min-h-9 flex-1 cursor-pointer rounded-lg border px-3 text-label-md transition-colors duration-fast ${
+                active
+                  ? 'border-brand bg-brand font-semibold text-on-primary'
+                  : 'border-edge bg-surface text-ink-secondary hover:bg-surface-sunken'
+              }`}
+            >
+              {option.label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+
+    <div>
+      <label htmlFor={`${idPrefix}-year`} className="label">
+        Academic year
+      </label>
+      <select
+        id={`${idPrefix}-year`}
+        value={yearFilter}
+        onChange={(e) => setYearFilter(e.target.value)}
+        className="select"
+      >
+        <option value="ALL">All years</option>
+        <option value="1">1st year</option>
+        <option value="2">2nd year</option>
+        <option value="3">3rd year</option>
+        <option value="4">4th year</option>
+      </select>
+    </div>
+
+    <div>
+      <label htmlFor={`${idPrefix}-section`} className="label">
+        Class section
+      </label>
+      <select
+        id={`${idPrefix}-section`}
+        value={sectionFilter}
+        onChange={(e) => setSectionFilter(e.target.value)}
+        className="select"
+      >
+        <option value="ALL">All sections</option>
+        <option value="A">Section A</option>
+        <option value="B">Section B</option>
+        <option value="C">Section C</option>
+      </select>
+    </div>
+
+    <div>
+      <label htmlFor={`${idPrefix}-skill`} className="label">
+        Skill
+      </label>
+      <select
+        id={`${idPrefix}-skill`}
+        value={skillFilter}
+        onChange={(e) => setSkillFilter(e.target.value)}
+        className="select"
+      >
+        <option value="">All technical skills</option>
+        {availableSkills.map((sk) => (
+          <option key={sk.id} value={sk.name}>
+            {sk.name}
+          </option>
+        ))}
+      </select>
+    </div>
+  </>
+);
+
 export const StudentDirectoryPage: React.FC<StudentDirectoryProps> = ({ session, onLogout }) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialSearch = searchParams.get('search') || '';
 
   const [students, setStudents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [search, setSearch] = useState(initialSearch);
   const [debouncedSearch, setDebouncedSearch] = useState(initialSearch);
   const [yearFilter, setYearFilter] = useState('ALL');
@@ -37,6 +148,7 @@ export const StudentDirectoryPage: React.FC<StudentDirectoryProps> = ({ session,
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const limit = 24;
 
   // Debounce search input to avoid hitting backend on every keystroke
@@ -58,29 +170,32 @@ export const StudentDirectoryPage: React.FC<StudentDirectoryProps> = ({ session,
     }
   }, [searchParams]);
 
-  // Load real skills from Skill table
+  // Load real skills from the Skill table
   useEffect(() => {
-    api.getPublicSkills()
+    api
+      .getPublicSkills()
       .then((skills) => {
         if (Array.isArray(skills)) setAvailableSkills(skills);
       })
       .catch(() => {});
   }, []);
 
-  // Fetch paginated students whenever search or filters or page changes
+  // Fetch paginated students whenever search, filters or page change
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
+    setFailed(false);
 
-    api.getPublicStudents({
-      search: debouncedSearch.trim() || undefined,
-      year: yearFilter === 'ALL' ? undefined : yearFilter,
-      section: sectionFilter === 'ALL' ? undefined : sectionFilter,
-      skillName: skillFilter || undefined,
-      status: statusFilter === 'ALL' ? undefined : statusFilter,
-      page,
-      limit,
-    })
+    api
+      .getPublicStudents({
+        search: debouncedSearch.trim() || undefined,
+        year: yearFilter === 'ALL' ? undefined : yearFilter,
+        section: sectionFilter === 'ALL' ? undefined : sectionFilter,
+        skillName: skillFilter || undefined,
+        status: statusFilter === 'ALL' ? undefined : statusFilter,
+        page,
+        limit,
+      })
       .then((data) => {
         if (cancelled) return;
         if (data && Array.isArray(data.students)) {
@@ -98,6 +213,7 @@ export const StudentDirectoryPage: React.FC<StudentDirectoryProps> = ({ session,
         setStudents([]);
         setTotal(0);
         setTotalPages(1);
+        setFailed(true);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -106,7 +222,7 @@ export const StudentDirectoryPage: React.FC<StudentDirectoryProps> = ({ session,
     return () => {
       cancelled = true;
     };
-  }, [debouncedSearch, yearFilter, sectionFilter, skillFilter, statusFilter, page]);
+  }, [debouncedSearch, yearFilter, sectionFilter, skillFilter, statusFilter, page, reloadKey]);
 
   const resetFilters = () => {
     setSearch('');
@@ -123,336 +239,321 @@ export const StudentDirectoryPage: React.FC<StudentDirectoryProps> = ({ session,
     }
   };
 
-  const hasActiveFilters = search || yearFilter !== 'ALL' || sectionFilter !== 'ALL' || skillFilter || statusFilter !== 'ALL';
+  // Every filter resets the page. Changing the year while on page 4 used to keep
+  // the page number, which returned an empty list for a filter with one page.
+  const handleYearChange = (value: string) => {
+    setYearFilter(value);
+    setPage(1);
+  };
+  const handleSectionChange = (value: string) => {
+    setSectionFilter(value);
+    setPage(1);
+  };
+  const handleSkillChange = (value: string) => {
+    setSkillFilter(value);
+    setPage(1);
+  };
+  const handleStatusChange = (value: StatusFilter) => {
+    setStatusFilter(value);
+    setPage(1);
+  };
 
-  // Live region for screen readers - announces result count
+  const clearSearch = () => {
+    setSearch('');
+    setDebouncedSearch('');
+    setPage(1);
+    if (searchParams.get('search')) {
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete('search');
+      setSearchParams(nextParams, { replace: true });
+    }
+  };
+
+  const activeFilterCount = [
+    yearFilter !== 'ALL',
+    sectionFilter !== 'ALL',
+    Boolean(skillFilter),
+    statusFilter !== 'ALL',
+  ].filter(Boolean).length;
+  const hasActiveFilters = Boolean(search) || activeFilterCount > 0;
+
   const resultCountText = loading
-    ? 'Loading...'
-    : students.length === 0
-      ? 'No students found'
-      : `Showing ${students.length} of ${total} students`;
+    ? 'Loading students'
+    : failed
+      ? 'Could not load students'
+      : students.length === 0
+        ? 'No students found'
+        : `Showing ${students.length} of ${total} students`;
+
+  const filterProps = {
+    yearFilter,
+    setYearFilter: handleYearChange,
+    sectionFilter,
+    setSectionFilter: handleSectionChange,
+    skillFilter,
+    setSkillFilter: handleSkillChange,
+    statusFilter,
+    setStatusFilter: handleStatusChange,
+    availableSkills,
+  };
 
   return (
-    <div className="min-h-[100dvh] bg-surface-canvas text-ink flex flex-col">
+    <div className="flex min-h-[100dvh] flex-col bg-surface-canvas text-ink">
       <Navbar session={session} onLogout={onLogout} />
 
-      {/* HEADER BANNER */}
-      <div className="bg-surface border-b border-edge py-12 sm:py-14">
-        <div className="max-w-canvas mx-auto px-6 sm:px-10 text-center space-y-3">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-soft text-brand-soft-text border border-brand-soft text-xs font-mono font-bold tracking-widest uppercase" aria-label="Verified directory badge">
-            <Users className="w-3.5 h-3.5" aria-hidden="true" />
-            <span>VERIFIED IT DIRECTORY</span>
-          </div>
-          <h1 className="text-headline-xl font-extrabold tracking-tight font-heading text-ink">
-            Student Directory
-          </h1>
-          <p className="text-body-sm text-ink-secondary max-w-2xl mx-auto leading-relaxed">
-            Discover verified students, technical projects, engineering portfolios, and department credentials.
+      <main className="mx-auto w-full max-w-canvas flex-1 px-6 py-8 sm:px-10 sm:py-10">
+        <header className="mb-6">
+          <h1 className="font-heading text-headline-lg-mobile text-ink sm:text-headline-lg">Students</h1>
+          <p className="mt-1 text-body-md text-ink-secondary">
+            Explore the people building the department.
           </p>
-        </div>
-      </div>
+        </header>
 
-      {/* MAIN CONTAINER */}
-      <main className="flex-1 max-w-canvas mx-auto px-6 sm:px-10 py-10 w-full">
-        <div className="flex flex-col lg:flex-row gap-8 items-start">
-          {/* LEFT SIDEBAR: FILTERS */}
-          <aside className="w-full lg:w-72 shrink-0 space-y-5">
-            <div className="surface p-6 space-y-5">
-              <div className="flex items-center justify-between border-b border-edge pb-3">
-                <h3 className="font-bold text-body-sm text-ink font-heading flex items-center gap-2">
-                  <Filter className="w-4 h-4 text-ink-brand" aria-hidden="true" />
-                  <span>Filter Directory</span>
-                </h3>
-                {hasActiveFilters && (
-                  <button
-                    onClick={resetFilters}
-                    className="text-label-sm text-brand hover:underline font-semibold cursor-pointer"
-                  >
-                    Reset
-                  </button>
-                )}
-              </div>
+        {/* SEARCH + FILTERS */}
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+          <div className="relative flex-1">
+            <label htmlFor="directory-search-main" className="sr-only">
+              Search students
+            </label>
+            <Search
+              size={16}
+              strokeWidth={1.75}
+              className="pointer-events-none absolute left-4 top-3 text-ink-muted"
+              aria-hidden="true"
+            />
+            <input
+              id="directory-search-main"
+              type="text"
+              placeholder="Search by name, roll number or skill"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="input pl-11"
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={clearSearch}
+                className="absolute right-3 top-2.5 flex h-6 w-6 cursor-pointer items-center justify-center rounded text-ink-muted hover:text-ink"
+                aria-label="Clear search"
+              >
+                <X size={14} strokeWidth={2} aria-hidden="true" />
+              </button>
+            )}
+          </div>
 
-              <div>
-                <div className="text-[11px] font-bold text-ink-muted uppercase tracking-wider mb-1.5">
-                  Student Status
-                </div>
-                <div className="grid grid-cols-3 gap-1.5" role="group" aria-label="Student status">
-                  {STATUS_FILTERS.map((option) => {
-                    const isActive = statusFilter === option.value;
-                    return (
-                      <button
-                        key={option.value}
-                        type="button"
-                        aria-pressed={isActive}
-                        onClick={() => setStatusFilter(option.value)}
-                        className={`min-h-10 px-2 py-2 rounded-lg border text-[11px] font-bold transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-focus focus:ring-offset-2 ${
-                          isActive
-                            ? 'bg-brand text-on-primary border-brand'
-                            : 'bg-surface-sunken text-ink-secondary border-edge hover:bg-brand-soft'
-                        }`}
-                      >
-                        {option.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Year Filter */}
-              <div>
-                <label htmlFor="year-filter" className="label text-[11px] uppercase tracking-wider">
-                  Academic Year
-                </label>
-                <select
-                  id="year-filter"
-                  value={yearFilter}
-                  onChange={(e) => setYearFilter(e.target.value)}
-                  className="input"
-                >
-                  <option value="ALL">All Years</option>
-                  <option value="1">1st Year</option>
-                  <option value="2">2nd Year</option>
-                  <option value="3">3rd Year</option>
-                  <option value="4">4th Year</option>
-                </select>
-              </div>
-
-              {/* Section Filter */}
-              <div>
-                <label htmlFor="section-filter" className="label text-[11px] uppercase tracking-wider">
-                  Class Section
-                </label>
-                <select
-                  id="section-filter"
-                  value={sectionFilter}
-                  onChange={(e) => {
-                    setSectionFilter(e.target.value);
-                    setPage(1);
-                  }}
-                  className="input cursor-pointer"
-                >
-                  <option value="ALL">All Sections</option>
-                  <option value="A">Section A</option>
-                  <option value="B">Section B</option>
-                  <option value="C">Section C</option>
-                </select>
-              </div>
-
-              {/* Skill Filter */}
-              <div>
-                <label htmlFor="skill-filter" className="label text-[11px] uppercase tracking-wider">
-                  Filter by Skill
-                </label>
-                <select
-                  id="skill-filter"
-                  value={skillFilter}
-                  onChange={(e) => {
-                    setSkillFilter(e.target.value);
-                    setPage(1);
-                  }}
-                  className="input cursor-pointer"
-                >
-                  <option value="">All Technical Skills</option>
-                  {availableSkills.map((sk) => (
-                    <option key={sk.id} value={sk.name}>
-                      {sk.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </aside>
-
-          {/* RIGHT: SEARCH & STUDENT CARDS */}
-          <div className="flex-1 w-full space-y-6">
-            {/* Search Bar */}
-            <div className="relative">
-              <label htmlFor="directory-search-main" className="sr-only">Search students</label>
-              <Search className="w-4 h-4 absolute left-4 top-3.5 text-ink-muted pointer-events-none" aria-hidden="true" />
-              <input
-                id="directory-search-main"
-                type="text"
-                placeholder="Search by student name, roll number, or skill (e.g. React, Python)..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="input pl-11"
-              />
-              {search && (
-                <button
-                  onClick={() => {
-                    setSearch('');
-                    setDebouncedSearch('');
-                    if (searchParams.get('search')) {
-                      const nextParams = new URLSearchParams(searchParams);
-                      nextParams.delete('search');
-                      setSearchParams(nextParams, { replace: true });
-                    }
-                  }}
-                  className="absolute right-3.5 top-3 text-ink-muted hover:text-ink-secondary cursor-pointer"
-                  aria-label="Clear search"
-                >
-                  <X className="w-4 h-4" aria-hidden="true" />
-                </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setFiltersOpen(true)}
+              className="btn btn-secondary lg:hidden"
+              aria-haspopup="dialog"
+            >
+              <SlidersHorizontal size={16} strokeWidth={1.75} aria-hidden="true" />
+              <span>Filters</span>
+              {activeFilterCount > 0 && (
+                <span className="badge badge-brand ml-0.5">{activeFilterCount}</span>
               )}
-            </div>
+            </button>
 
-            {/* LIVE REGION for screen readers */}
-            <div aria-live="polite" aria-atomic="true" className="sr-only">
-              {resultCountText}
-            </div>
+            {hasActiveFilters && (
+              <button type="button" onClick={resetFilters} className="btn btn-ghost">
+                Clear all
+              </button>
+            )}
+          </div>
+        </div>
 
-            {/* RESULTS */}
-            {loading ? (
-              <div className="py-16">
-                <BrandedLoading fullScreen={false} message="Loading Student Directory..." />
-              </div>
-            ) : students.length === 0 ? (
-              <div className="text-center py-20 px-6 surface space-y-3">
-                <div className="w-12 h-12 rounded-lg bg-brand-soft text-brand-soft-text flex items-center justify-center mx-auto">
-                  <Users className="w-6 h-6" aria-hidden="true" />
-                </div>
-                <h3 className="font-bold text-body-md text-ink font-heading">
-                  {search || hasActiveFilters
-                    ? 'No students match your search criteria.'
-                    : 'No public student profiles yet.'}
-                </h3>
-                <p className="text-label-sm text-ink-secondary max-w-sm mx-auto leading-relaxed">
-                  {search || hasActiveFilters
-                    ? 'Try searching with a different skill, name, or roll number.'
-                    : 'As students update their portfolios, they will appear in this directory.'}
-                </p>
-                {hasActiveFilters && (
-                  <button
-                    onClick={resetFilters}
-                    className="btn btn-primary"
-                  >
-                    Clear All Filters
-                  </button>
-                )}
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {students.map((s: any) => {
-                  const photoUrl = s.profile?.photoUrl || s.photoUrl
-                    ? resolveMediaUrl(s.profile?.photoUrl || s.photoUrl!)
-                    : null;
-                  const skillsList = s.profile?.skills || s.skills || [];
-                  const initials = (s.name || '')
-                    .split(' ')
-                    .filter(Boolean)
-                    .slice(0, 2)
-                    .map((w: string) => w[0]?.toUpperCase())
-                    .join('');
+        {/* Desktop keeps the controls inline: four controls in one row is a
+            toolbar, not the two-column wall of dropdowns this page used to be. */}
+        <div className="mt-4 hidden items-end gap-3 lg:flex [&>*]:w-44">
+          <FilterControls idPrefix="desktop" {...filterProps} />
+        </div>
 
-                  return (
+        <div aria-live="polite" aria-atomic="true" className="sr-only">
+          {resultCountText}
+        </div>
+
+        <p className="mb-4 mt-6 text-body-sm text-ink-secondary">
+          {loading ? 'Searching…' : `${total} ${total === 1 ? 'student' : 'students'}`}
+          {hasActiveFilters && !loading ? ' matching your filters' : ''}
+        </p>
+
+        {loading ? (
+          <div aria-busy="true">
+            <span className="sr-only" role="status">
+              Loading students
+            </span>
+            <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {[0, 1, 2, 3, 4, 5].map((i) => (
+                <li key={i} className="surface flex items-start gap-4 p-4">
+                  <div className="skeleton h-14 w-14 shrink-0 rounded-full" />
+                  <div className="flex-1 space-y-2">
+                    <div className="skeleton h-4 w-2/3" />
+                    <div className="skeleton h-3 w-1/2" />
+                    <div className="skeleton h-3 w-3/4" />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : failed ? (
+          <ErrorState
+            title="We could not load the directory"
+            message="Something went wrong while loading student profiles."
+            onRetry={() => setReloadKey((key) => key + 1)}
+          />
+        ) : students.length === 0 ? (
+          <EmptyState
+            icon={Users}
+            title={hasActiveFilters ? 'No students match these filters' : 'No public profiles yet'}
+            description={
+              hasActiveFilters
+                ? 'Try a different skill, year or section, or clear the filters to see everyone.'
+                : 'As students publish their portfolios they will appear in this directory.'
+            }
+            action={
+              hasActiveFilters ? (
+                <button type="button" onClick={resetFilters} className="btn btn-primary">
+                  Clear all filters
+                </button>
+              ) : undefined
+            }
+          />
+        ) : (
+          <>
+            <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {students.map((s: any) => {
+                const rawPhoto = s.profile?.photoUrl || s.photoUrl;
+                const photoUrl = rawPhoto ? resolveMediaUrl(rawPhoto) : null;
+                const skillsList = s.profile?.skills || s.skills || [];
+                const initials = (s.name || '')
+                  .split(' ')
+                  .filter(Boolean)
+                  .slice(0, 2)
+                  .map((w: string) => w[0]?.toUpperCase())
+                  .join('');
+
+                return (
+                  <li key={s.id || s.rollNo}>
                     <Link
                       to={`/students/${s.rollNo}`}
-                      key={s.id || s.rollNo}
-                      className="surface p-6 hover:shadow-card-hover hover:border-brand/40 transition-colors group flex flex-col justify-between"
+                      className="surface group flex h-full items-start gap-4 p-4 transition-colors duration-fast hover:border-edge-strong hover:bg-surface-inset"
                     >
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <div className="w-14 h-14 rounded-lg bg-brand-soft text-brand-soft-text flex items-center justify-center font-bold text-base shadow-xs group-hover:bg-brand group-hover:text-on-primary transition-colors overflow-hidden relative">
-                            <span aria-hidden="true">{initials || 'IT'}</span>
-                            {photoUrl && (
-                              <img
-                                src={photoUrl}
-                                alt=""
-                                loading="lazy"
-                                decoding="async"
-                                className="absolute inset-0 w-full h-full"
-                                style={{ ...getPhotoStyle(s.profile), objectFit: 'cover' }}
-                                onError={(e) => {
-                                  (e.currentTarget as HTMLElement).style.display = 'none';
-                                }}
-                              />
-                            )}
-                          </div>
-                          <span className="text-[11px] font-semibold bg-surface-sunken text-ink-secondary px-2.5 py-1 rounded-full border border-edge">
-                            Year {s.year || 1} · Sec {s.section || 'A'}
-                          </span>
-                        </div>
+                      <span className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full border border-edge bg-brand-soft font-heading text-headline-sm font-bold text-brand-soft-text">
+                        <span aria-hidden="true">{initials || 'IT'}</span>
+                        {photoUrl && (
+                          <img
+                            src={photoUrl}
+                            alt=""
+                            loading="lazy"
+                            decoding="async"
+                            className="absolute inset-0 h-full w-full"
+                            style={{ ...getPhotoStyle(s.profile), objectFit: 'cover' }}
+                            onError={(e) => {
+                              (e.currentTarget as HTMLElement).style.display = 'none';
+                            }}
+                          />
+                        )}
+                      </span>
 
-                        <div className="min-w-0">
-                          <h3 className="font-bold text-body-md text-ink font-heading group-hover:text-brand transition-colors truncate">
+                      <span className="min-w-0 flex-1">
+                        <span className="flex items-center gap-2">
+                          <span className="truncate font-heading text-label-lg font-semibold text-ink">
                             {s.name}
-                          </h3>
-                          <div className="text-label-sm text-ink-muted mt-0.5 truncate">
-                            {s.rollNo}
-                          </div>
-                        </div>
+                          </span>
+                          {s.status === 'GRADUATED' && <span className="badge badge-draft">Alumni</span>}
+                        </span>
+                        <span className="mt-0.5 block truncate text-body-sm text-ink-muted">
+                          {s.rollNo} · Year {s.year || 1} · Section {s.section || 'A'}
+                        </span>
 
                         {skillsList.length > 0 && (
-                          <div className="flex flex-wrap gap-1.5 pt-1">
+                          <span className="mt-2 flex flex-wrap gap-1.5">
                             {skillsList.slice(0, 3).map((sk: any, idx: number) => {
                               const skillName = sk.skill?.name || sk.name || sk;
                               return (
                                 <span
                                   key={idx}
-                                  className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-brand-soft text-brand-soft-text"
+                                  className="rounded border border-edge bg-surface-inset px-2 py-0.5 text-label-md text-ink-secondary"
                                 >
                                   {skillName}
                                 </span>
                               );
                             })}
                             {skillsList.length > 3 && (
-                              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-surface-sunken text-ink-muted">
+                              <span className="px-1 py-0.5 text-label-md text-ink-muted">
                                 +{skillsList.length - 3}
                               </span>
                             )}
-                          </div>
+                          </span>
                         )}
-                      </div>
-
-                      <div className="pt-4 mt-4 border-t border-edge flex items-center justify-between text-label-sm font-bold text-brand group-hover:translate-x-0.5 transition-transform">
-                        <span>View Profile</span>
-                        <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
-                      </div>
-                    </Link>
-                  );
-                })}
-
-                {/* PAGINATION CONTROLS */}
-                {total > 0 && (
-                  <div className="col-span-full flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t border-edge mt-2">
-                    <div className="text-label-sm text-ink-secondary" aria-live="polite">
-                      Showing <span className="font-bold text-ink">{(page - 1) * limit + 1}</span> to{' '}
-                      <span className="font-bold text-ink">{Math.min(page * limit, total)}</span> of{' '}
-                      <span className="font-bold text-ink">{total}</span> students
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setPage((p) => Math.max(1, p - 1))}
-                        disabled={page <= 1 || loading}
-                        className="btn btn-secondary text-label-sm"
-                        aria-label="Previous page"
-                      >
-                        <ChevronLeft className="w-3.5 h-3.5" aria-hidden="true" />
-                        <span>Previous</span>
-                      </button>
-                      <span className="text-label-sm font-medium text-ink-secondary px-2" aria-current="page">
-                        Page {page} of {totalPages}
                       </span>
-                      <button
-                        type="button"
-                        onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                        disabled={page >= totalPages || loading}
-                        className="btn btn-secondary text-label-sm"
-                        aria-label="Next page"
-                      >
-                        <span>Next</span>
-                        <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
-                      </button>
-                    </div>
-                  </div>
-                )}
+
+                      <ChevronRight
+                        size={16}
+                        strokeWidth={1.75}
+                        className="mt-1 shrink-0 text-ink-muted transition-transform duration-fast group-hover:translate-x-0.5"
+                        aria-hidden="true"
+                      />
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+
+            {total > 0 && (
+              <div className="mt-8 flex flex-col items-center justify-between gap-4 border-t border-edge pt-6 sm:flex-row">
+                <p className="text-body-sm text-ink-secondary">
+                  Showing{' '}
+                  <span className="font-semibold text-ink">{(page - 1) * limit + 1}</span> to{' '}
+                  <span className="font-semibold text-ink">{Math.min(page * limit, total)}</span> of{' '}
+                  <span className="font-semibold text-ink">{total}</span> students
+                </p>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page <= 1 || loading}
+                    className="btn btn-secondary"
+                    aria-label="Previous page"
+                  >
+                    <ChevronLeft size={15} strokeWidth={2} aria-hidden="true" />
+                    <span>Previous</span>
+                  </button>
+                  <span className="px-2 text-body-sm text-ink-secondary">
+                    Page {page} of {totalPages}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={page >= totalPages || loading}
+                    className="btn btn-secondary"
+                    aria-label="Next page"
+                  >
+                    <span>Next</span>
+                    <ChevronRight size={15} strokeWidth={2} aria-hidden="true" />
+                  </button>
+                </div>
               </div>
             )}
+          </>
+        )}
+      </main>
+
+      {/* MOBILE FILTER SHEET */}
+      <Dialog open={filtersOpen} onClose={() => setFiltersOpen(false)} title="Filters" size="sm">
+        <div className="space-y-4">
+          <FilterControls idPrefix="mobile" {...filterProps} />
+          <div className="flex flex-wrap justify-end gap-3 border-t border-edge pt-4">
+            <button type="button" onClick={resetFilters} className="btn btn-secondary">
+              Clear all
+            </button>
+            <button type="button" onClick={() => setFiltersOpen(false)} className="btn btn-primary">
+              Show results
+            </button>
           </div>
         </div>
-      </main>
+      </Dialog>
 
       <Footer />
     </div>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 import {
   Layers,
   Users,
@@ -30,6 +31,8 @@ import {
 } from '../types';
 
 export const EventRegistrations: React.FC = () => {
+  const confirm = useConfirm();
+
   // Navigation / View State
   const [activeView, setActiveView] = useState<'table' | 'teams'>('table');
 
@@ -38,6 +41,7 @@ export const EventRegistrations: React.FC = () => {
   const [totalRegistrations, setTotalRegistrations] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   // Teams state
   const [teams, setTeams] = useState<RegistrationTeam[]>([]);
@@ -186,6 +190,7 @@ export const EventRegistrations: React.FC = () => {
   // Update registration status
   const handleUpdateStatus = async (id: string, newStatus: RegistrationStatus) => {
     setStatusUpdateLoading(true);
+    setActionError(null);
     try {
       const res = await adminApi.updateRegistrationStatus(id, newStatus, statusNote.trim() || undefined);
       if (res.success && res.registration) {
@@ -201,7 +206,7 @@ export const EventRegistrations: React.FC = () => {
         setStatusNote('');
       }
     } catch (err: any) {
-      alert(err?.response?.data?.message || 'Failed to update registration status.');
+      setActionError(err?.response?.data?.message || 'Failed to update registration status.');
     } finally {
       setStatusUpdateLoading(false);
     }
@@ -209,23 +214,31 @@ export const EventRegistrations: React.FC = () => {
 
   // Delete registration
   const handleDeleteRegistration = async (id: string) => {
-    if (!window.confirm('Are you sure you want to permanently delete this registration?')) return;
+    const confirmed = await confirm({
+      title: 'Delete this registration?',
+      description: 'The registration will be permanently removed from this event. This cannot be undone.',
+      confirmLabel: 'Delete registration',
+      tone: 'danger',
+    });
+    if (!confirmed) return;
     try {
+      setActionError(null);
       await adminApi.deleteRegistration(id);
       setSelectedRegistration(null);
       fetchRegistrations();
     } catch (err: any) {
-      alert(err?.response?.data?.message || 'Failed to delete registration.');
+      setActionError(err?.response?.data?.message || 'Failed to delete registration.');
     }
   };
 
   // Update team status
   const handleUpdateTeamStatus = async (teamId: string, newStatus: TeamStatus) => {
     try {
+      setActionError(null);
       await adminApi.updateTeamStatus(teamId, newStatus);
       fetchTeams();
     } catch (err: any) {
-      alert(err?.response?.data?.message || 'Failed to update team status.');
+      setActionError(err?.response?.data?.message || 'Failed to update team status.');
     }
   };
 
@@ -233,6 +246,7 @@ export const EventRegistrations: React.FC = () => {
   const handleConfirmRemoveMember = async () => {
     if (!memberToRemove) return;
     setRemovingMember(true);
+    setActionError(null);
     try {
       await adminApi.removeTeamMember(
         memberToRemove.teamId,
@@ -244,7 +258,7 @@ export const EventRegistrations: React.FC = () => {
       fetchTeams();
       if (activeView === 'table') fetchRegistrations();
     } catch (err: any) {
-      alert(err?.response?.data?.message || 'Failed to remove member.');
+      setActionError(err?.response?.data?.message || 'Failed to remove member.');
     } finally {
       setRemovingMember(false);
     }
@@ -436,6 +450,18 @@ export const EventRegistrations: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {actionError && (
+        <div className="flex items-center justify-between gap-3 p-3.5 bg-status-bg-rejected border border-edge-strong rounded-xl text-status-rejected text-xs" role="alert">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{actionError}</span>
+          </div>
+          <button onClick={() => setActionError(null)} className="font-bold underline cursor-pointer shrink-0">
+            Dismiss
+          </button>
+        </div>
+      )}
 
       {/* 2. STATS OVERVIEW CARDS */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">

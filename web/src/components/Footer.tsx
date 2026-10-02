@@ -1,25 +1,53 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { ShieldCheck } from 'lucide-react';
 
-export const Footer: React.FC = () => {
-  return (
-    <footer className="bg-surface-inverse text-ink-inverse py-10 px-6 sm:px-10 border-t border-edge-inverse text-center">
-      <div className="max-w-4xl mx-auto space-y-4">
-        <div className="flex items-center justify-center gap-2">
-          <span className="text-base font-black tracking-tight text-brand">ELITE</span>
-          <span className="text-base font-bold tracking-tight text-ink-inverse">STUDENT PORTAL</span>
+/**
+ * The public footer.
+ *
+ * It used to sit on `surface-inverse` while reading the light theme's muted
+ * text tokens, which put #6B7688 grey on navy, and its separator pill used
+ * `border-border`, a class that generates nothing. Sitting on the normal
+ * surface keeps every label on a pair the contrast table actually checks.
+ */
+export const Footer: React.FC = () => (
+  <footer className="mt-auto border-t border-edge bg-surface">
+    <div className="mx-auto max-w-canvas px-6 py-10 sm:px-10">
+      <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="font-heading text-label-lg font-extrabold tracking-tight text-brand">ELITE</span>
+            <span className="font-heading text-label-lg font-semibold text-ink">Student Portal</span>
+          </div>
+          <p className="mt-2 max-w-prose text-body-sm text-ink-secondary">
+            Department of Information Technology · SASI Institute of Technology and Engineering
+          </p>
         </div>
-        <p className="text-xs text-ink-muted">
-          Department of Information Technology · SASI Institute of Technology & Engineering (Autonomous)
+
+        <nav aria-label="Footer" className="flex flex-wrap gap-x-6 gap-y-2">
+          <Link to="/students" className="text-label-lg text-ink-secondary hover:text-ink">
+            Students
+          </Link>
+          <Link to="/events" className="text-label-lg text-ink-secondary hover:text-ink">
+            Events
+          </Link>
+          <Link to="/#guidelines" className="text-label-lg text-ink-secondary hover:text-ink">
+            Guidelines
+          </Link>
+        </nav>
+      </div>
+
+      <div className="mt-8 flex flex-col gap-2 border-t border-edge pt-6 sm:flex-row sm:items-center sm:justify-between">
+        <p className="flex items-center gap-1.5 text-label-md text-ink-muted">
+          <ShieldCheck size={14} strokeWidth={2} className="text-status-approved" aria-hidden="true" />
+          <span>Official institutional portal</span>
         </p>
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-surface-sunken border border-border text-ink-secondary text-xs font-mono">
-          <ShieldCheck className="w-3.5 h-3.5 text-status-approved" />
-          <span>Official Institutional Portal</span>
-        </div>
-        <p className="text-[11px] text-ink-muted font-mono pt-2">
+        <p className="text-label-md text-ink-muted">
           © {new Date().getFullYear()} SASI IT. Authorized student and institutional access only.
         </p>
       </div>
-    </footer>
-  );
-};
+    </div>
+  </footer>
+);
+
+export default Footer;

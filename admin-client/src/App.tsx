@@ -17,6 +17,7 @@ import { AdminStats, AdminUser } from './types';
 import { adminApi } from './services/api';
 import { useTheme } from './context/ThemeContext';
 import { BrandedLoading } from './components/BrandedLoading';
+import { ConfirmProvider } from './components/ui/ConfirmDialog';
 
 // Lazy Loaded Pages
 const Moderation = React.lazy(() => import('./pages/Moderation').then((m) => ({ default: m.Moderation })));
@@ -344,5 +345,12 @@ const router = createBrowserRouter([
 ]);
 
 export const App: React.FC = () => {
-  return <RouterProvider router={router} />;
+  // Wraps the router, not the other way round, so every route — including the
+  // lazy-loaded pages — can call `useConfirm()`. Mounting it inside the router
+  // would leave the login route without it.
+  return (
+    <ConfirmProvider>
+      <RouterProvider router={router} />
+    </ConfirmProvider>
+  );
 };

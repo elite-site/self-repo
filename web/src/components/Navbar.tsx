@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, LogOut, ChevronDown, ArrowRight, LayoutDashboard, User, Users } from 'lucide-react';
+import { Menu, X, LogOut, ChevronDown, ArrowRight, LayoutDashboard, Search } from 'lucide-react';
 import { StudentSession } from '../types';
 import { api, resolveMediaUrl } from '../services/api';
 import { getPhotoStyle } from '../utils/photoStyle';
@@ -10,11 +10,26 @@ interface NavbarProps {
   onLogout?: () => void;
 }
 
+/**
+ * The public header. Three links, one search entry point and one sign-in
+ * action — the old bar carried a second brand block (the SASI logo repeated
+ * the institution name next to "ELITE STUDENT PORTAL") and a single nav item,
+ * so the two thirds of it that mattered were pushed to the edges.
+ */
 export const Navbar: React.FC<NavbarProps> = ({ session, onLogout }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const chipRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
+
+  const isActive = (path: string) =>
+    path === '/' ? location.pathname === '/' : location.pathname.startsWith(path);
+
+  const navLinks = [
+    { label: 'Students', to: '/students' },
+    { label: 'Events', to: '/events' },
+    { label: 'Guidelines', to: '/#guidelines' },
+  ];
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -27,7 +42,7 @@ export const Navbar: React.FC<NavbarProps> = ({ session, onLogout }) => {
   }, []);
 
   // Navigating with the drawer open left it hanging over the new page, and the
-  // page behind it kept scrolling under the student's finger.
+  // page behind it kept scrolling under the visitor's finger.
   useEffect(() => {
     setMobileMenuOpen(false);
     setProfileOpen(false);
@@ -37,8 +52,15 @@ export const Navbar: React.FC<NavbarProps> = ({ session, onLogout }) => {
     if (!mobileMenuOpen) return;
     const previous = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMobileMenuOpen(false);
+    };
+    document.addEventListener('keydown', handleKeyDown);
+
     return () => {
       document.body.style.overflow = previous;
+      document.removeEventListener('keydown', handleKeyDown);
     };
   }, [mobileMenuOpen]);
 
@@ -62,119 +84,115 @@ export const Navbar: React.FC<NavbarProps> = ({ session, onLogout }) => {
   };
 
   return (
-    <nav className="w-full bg-surface/95 backdrop-blur-md border-b border-edge sticky top-0 z-sticky shadow-card">
-      <div className="max-w-canvas mx-auto px-4 sm:px-8 flex items-center justify-between h-16 sm:h-18">
-        {/* LEFT: BRANDING & LOGOS */}
-        <Link to="/" className="flex items-center gap-3 sm:gap-4 group">
-          <div className="h-10 flex items-center gap-2">
-            <picture className="flex items-center">
-              <source srcSet="/elite-logo.webp" type="image/webp" />
-              <img
-                src="/elite-logo.png"
-                alt="ELITE"
-                width="36"
-                height="36"
-                decoding="async"
-                className="h-9 w-auto object-contain transition-transform group-hover:scale-105"
-                onError={(e) => {
-                  (e.target as HTMLElement).style.display = 'none';
-                }}
-              />
-            </picture>
-            <picture className="hidden sm:flex items-center">
-              <source srcSet="/sasi-logo.webp" type="image/webp" />
-              <img
-                src="/sasi-logo.png"
-                alt="SASI"
-                width="180"
-                height="32"
-                decoding="async"
-                className="h-8 w-auto object-contain opacity-90"
-                onError={(e) => {
-                  (e.target as HTMLElement).style.display = 'none';
-                }}
-              />
-            </picture>
-          </div>
-          <div className="border-l border-edge pl-3 text-left">
-            <div className="flex items-center gap-1.5 font-heading">
-              <span className="text-base font-extrabold tracking-tight text-brand">ELITE</span>
-              <span className="text-base font-bold tracking-tight text-ink">STUDENT PORTAL</span>
-            </div>
-            <div className="text-[10px] text-ink-muted font-medium tracking-wide hidden sm:block">
-              Dept of Information Technology · SASI
-            </div>
-          </div>
+    <header className="sticky top-0 z-sticky w-full border-b border-edge bg-surface/95 backdrop-blur-md">
+      <div className="mx-auto flex h-16 max-w-canvas items-center gap-3 px-4 sm:px-8">
+        <Link to="/" className="flex shrink-0 items-center gap-2.5" aria-label="ELITE home">
+          <picture className="flex items-center">
+            <source srcSet="/elite-logo.webp" type="image/webp" />
+            <img
+              src="/elite-logo.png"
+              alt=""
+              width="32"
+              height="32"
+              decoding="async"
+              className="h-8 w-auto object-contain"
+              onError={(e) => {
+                (e.target as HTMLElement).style.display = 'none';
+              }}
+            />
+          </picture>
+          <span className="font-heading text-label-lg font-extrabold tracking-tight text-brand">
+            ELITE
+          </span>
         </Link>
 
-        {/* CENTER / DESKTOP NAV LINKS */}
-        <div className="hidden md:flex items-center gap-6 text-xs font-semibold text-ink-secondary">
+        <nav className="ml-2 hidden items-center gap-1 md:flex" aria-label="Public sections">
+          {navLinks.map((link) => (
+            <Link
+              key={link.to}
+              to={link.to}
+              aria-current={isActive(link.to) ? 'page' : undefined}
+              className={`rounded-lg px-3 py-2 text-label-lg transition-colors duration-fast ${
+                isActive(link.to)
+                  ? 'bg-surface-sunken font-semibold text-ink'
+                  : 'text-ink-secondary hover:bg-surface-sunken hover:text-ink'
+              }`}
+            >
+              {link.label}
+            </Link>
+          ))}
+        </nav>
+
+        <div className="ml-auto flex items-center gap-1.5">
           <Link
             to="/students"
-            className={`transition-colors hover:text-brand flex items-center gap-1.5 ${
-              location.pathname.startsWith('/students') ? 'text-brand font-bold' : ''
-            }`}
+            className="flex h-10 w-10 items-center justify-center rounded-lg text-ink-secondary transition-colors duration-fast hover:bg-surface-sunken hover:text-ink"
+            aria-label="Search students"
           >
-            <Users className="w-3.5 h-3.5" />
-            <span>Student Directory</span>
+            <Search size={18} strokeWidth={1.75} aria-hidden="true" />
           </Link>
-        </div>
 
-        {/* RIGHT: AUTH CTA / PROFILE CHIP */}
-        <div className="hidden md:flex items-center gap-4">
           {session ? (
-            <div className="flex items-center gap-3">
-              <Link
-                to="/dashboard"
-                className="btn btn-primary text-xs gap-2"
-              >
-                <LayoutDashboard className="w-3.5 h-3.5" />
-                <span>Go to Dashboard</span>
-                <ArrowRight className="w-3.5 h-3.5" />
+            <div className="hidden items-center gap-2 md:flex">
+              <Link to="/dashboard" className="btn btn-primary">
+                <LayoutDashboard size={15} strokeWidth={1.75} aria-hidden="true" />
+                <span>Dashboard</span>
               </Link>
 
               <div className="relative" ref={chipRef}>
                 <button
-                  onClick={() => setProfileOpen(!profileOpen)}
-                  className="flex items-center gap-2 p-1.5 rounded-full bg-surface-sunken hover:bg-surface-sunken/80 text-ink transition-colors cursor-pointer border border-edge"
-                  aria-label="Profile menu"
+                  type="button"
+                  onClick={() => setProfileOpen((open) => !open)}
+                  className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-edge p-1 transition-colors duration-fast hover:bg-surface-sunken"
+                  aria-label="Your account"
+                  aria-expanded={profileOpen}
                 >
                   {session.student.photoUrl ? (
-                    <span className="w-7 h-7 rounded-full overflow-hidden border border-edge flex items-center justify-center shrink-0 bg-surface">
+                    <span className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full border border-edge bg-surface">
                       <img
                         src={resolveMediaUrl(session.student.photoUrl)}
-                        alt={session.student.name}
+                        alt=""
                         style={getPhotoStyle(session.student)}
-                        className="w-full h-full object-cover"
+                        className="h-full w-full object-cover"
                       />
                     </span>
                   ) : (
-                    <span className="w-7 h-7 rounded-full bg-brand-soft text-brand-soft-text border border-brand-soft flex items-center justify-center text-xs font-extrabold font-heading">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-soft font-heading text-label-md font-bold text-brand-soft-text">
                       {initials}
                     </span>
                   )}
-                  <ChevronDown className="w-3.5 h-3.5 text-ink-muted mr-1" />
+                  <ChevronDown size={14} strokeWidth={2} className="mr-1 text-ink-muted" aria-hidden="true" />
                 </button>
 
                 {profileOpen && (
-                  <div className="absolute right-0 mt-2 w-56 bg-surface rounded-lg shadow-modal border border-edge py-2 z-50 text-left animate-scale-in">
-                    <div className="px-4 py-2 border-b border-edge">
-                      <div className="text-xs font-bold text-ink font-heading truncate">{session.student.name}</div>
-                      <div className="text-[10px] text-ink-muted">{session.student.rollNo}</div>
+                  <div className="absolute right-0 z-50 mt-2 w-56 rounded-lg border border-edge bg-surface py-1.5 shadow-modal animate-scale-in">
+                    <div className="border-b border-edge px-4 py-2">
+                      <p className="truncate font-heading text-label-lg font-semibold text-ink">
+                        {session.student.name}
+                      </p>
+                      <p className="text-label-md text-ink-muted">{session.student.rollNo}</p>
                     </div>
+                    <Link
+                      to="/dashboard"
+                      onClick={() => setProfileOpen(false)}
+                      className="block px-4 py-2 text-label-lg text-ink-secondary hover:bg-surface-sunken hover:text-ink"
+                    >
+                      Go to dashboard
+                    </Link>
                     <Link
                       to="/profile"
                       onClick={() => setProfileOpen(false)}
-                      className="block px-4 py-2 text-xs font-medium text-ink-secondary hover:bg-surface-sunken hover:text-brand"
+                      className="block px-4 py-2 text-label-lg text-ink-secondary hover:bg-surface-sunken hover:text-ink"
                     >
-                      My Profile
+                      My profile
                     </Link>
                     <button
+                      type="button"
                       onClick={handleLogout}
-                      className="w-full flex items-center gap-2 px-4 py-2 text-xs font-bold text-status-rejected hover:bg-status-bg-rejected text-left cursor-pointer border-t border-edge mt-1"
+                      className="mt-1 flex w-full cursor-pointer items-center gap-2 border-t border-edge px-4 py-2 text-label-lg font-semibold text-status-rejected hover:bg-status-bg-rejected"
                     >
-                      <LogOut className="w-3.5 h-3.5" />
-                      <span>Sign Out</span>
+                      <LogOut size={15} strokeWidth={1.75} aria-hidden="true" />
+                      <span>Sign out</span>
                     </button>
                   </div>
                 )}
@@ -182,111 +200,99 @@ export const Navbar: React.FC<NavbarProps> = ({ session, onLogout }) => {
             </div>
           ) : (
             <button
+              type="button"
               onClick={handleSignIn}
-              className="btn btn-primary text-xs"
+              className="btn btn-primary hidden md:inline-flex"
             >
               <span>Student Sign In</span>
-              <ArrowRight className="w-3.5 h-3.5" />
             </button>
           )}
-        </div>
 
-        {/* MOBILE MENU TOGGLE */}
-        <div className="flex md:hidden items-center gap-2">
-          {session && (
-            <Link
-              to="/dashboard"
-              className="btn btn-primary px-2.5 py-1 text-xs"
-            >
-              Dashboard
-            </Link>
-          )}
           <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-2 text-ink-secondary hover:text-ink hover:bg-surface-sunken rounded-lg transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
-            aria-label="Toggle menu"
+            type="button"
+            onClick={() => setMobileMenuOpen((open) => !open)}
+            className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg text-ink-secondary transition-colors duration-fast hover:bg-surface-sunken hover:text-ink md:hidden"
+            aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
             aria-expanded={mobileMenuOpen}
           >
-            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            {mobileMenuOpen ? <X size={22} strokeWidth={1.75} /> : <Menu size={22} strokeWidth={1.75} />}
           </button>
         </div>
       </div>
 
-      {/* MOBILE DROPDOWN */}
       {mobileMenuOpen && (
-        <div className="md:hidden bg-surface border-t border-edge px-6 py-4 space-y-3 text-xs font-semibold text-left shadow-drawer animate-slide-in-up">
+        <div className="space-y-1 border-t border-edge bg-surface px-4 py-4 md:hidden">
           {session && (
-            <div className="flex items-center gap-3 py-2 border-b border-edge pb-3">
+            <div className="mb-3 flex items-center gap-3 border-b border-edge pb-3">
               {session.student.photoUrl ? (
-                <span className="w-8 h-8 rounded-full overflow-hidden border border-edge flex items-center justify-center shrink-0 bg-surface">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-edge bg-surface">
                   <img
                     src={resolveMediaUrl(session.student.photoUrl)}
-                    alt={session.student.name}
+                    alt=""
                     style={getPhotoStyle(session.student)}
-                    className="w-full h-full object-cover"
+                    className="h-full w-full object-cover"
                   />
                 </span>
               ) : (
-                <span className="w-8 h-8 rounded-full bg-brand-soft text-brand-soft-text border border-brand-soft flex items-center justify-center text-xs font-extrabold font-heading shrink-0">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-soft font-heading text-label-md font-bold text-brand-soft-text">
                   {initials}
                 </span>
               )}
               <div className="min-w-0">
-                <div className="truncate text-ink font-bold font-heading">{session.student.name}</div>
-                <div className="text-ink-muted normal-case text-[10px]">{session.student.rollNo}</div>
+                <p className="truncate font-heading text-label-lg font-semibold text-ink">
+                  {session.student.name}
+                </p>
+                <p className="text-label-md text-ink-muted">{session.student.rollNo}</p>
               </div>
             </div>
           )}
 
-          <Link
-            to="/students"
-            onClick={() => setMobileMenuOpen(false)}
-            className="w-full flex items-center gap-3 py-2 text-ink-secondary hover:text-brand min-h-[44px]"
-          >
-            <Users className="w-4 h-4 text-brand" />
-            <span>Student Directory</span>
-          </Link>
+          {navLinks.map((link) => (
+            <Link
+              key={link.to}
+              to={link.to}
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex min-h-[44px] items-center rounded-lg px-3 text-label-lg text-ink-secondary hover:bg-surface-sunken hover:text-ink"
+            >
+              {link.label}
+            </Link>
+          ))}
 
           {session ? (
             <>
               <Link
                 to="/dashboard"
                 onClick={() => setMobileMenuOpen(false)}
-                className="w-full flex items-center gap-3 py-2 text-ink-secondary hover:text-brand min-h-[44px]"
+                className="flex min-h-[44px] items-center rounded-lg px-3 text-label-lg text-ink-secondary hover:bg-surface-sunken hover:text-ink"
               >
-                <LayoutDashboard className="w-4 h-4 text-brand" />
-                <span>Dashboard</span>
-              </Link>
-              <Link
-                to="/profile"
-                onClick={() => setMobileMenuOpen(false)}
-                className="w-full flex items-center gap-3 py-2 text-ink-secondary hover:text-brand min-h-[44px]"
-              >
-                <User className="w-4 h-4 text-brand" />
-                <span>My Profile</span>
+                Dashboard
               </Link>
               <button
+                type="button"
                 onClick={handleLogout}
-                className="w-full flex items-center gap-3 py-2 text-left text-status-rejected hover:text-status-rejected cursor-pointer border-t border-edge pt-3 min-h-[44px]"
+                className="flex min-h-[44px] w-full cursor-pointer items-center gap-2 rounded-lg px-3 text-left text-label-lg font-semibold text-status-rejected"
               >
-                <LogOut className="w-4 h-4" />
-                <span>Sign Out</span>
+                <LogOut size={16} strokeWidth={1.75} aria-hidden="true" />
+                <span>Sign out</span>
               </button>
             </>
           ) : (
             <button
+              type="button"
               onClick={() => {
                 setMobileMenuOpen(false);
                 handleSignIn();
               }}
-              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg btn btn-primary min-h-[44px]"
+              className="btn btn-primary mt-2 w-full"
             >
               <span>Student Sign In</span>
-              <ArrowRight className="w-4 h-4" />
+              <ArrowRight size={15} strokeWidth={2} aria-hidden="true" />
             </button>
           )}
         </div>
       )}
-    </nav>
+    </header>
   );
 };
+
+export default Navbar;

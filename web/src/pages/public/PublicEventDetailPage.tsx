@@ -5,7 +5,7 @@ import { api } from '../../services/api';
 import { StudentSession } from '../../types';
 import { Navbar } from '../../components/Navbar';
 import { Footer } from '../../components/Footer';
-import { BrandedLoading } from '../../components/BrandedLoading';
+import { SkeletonPage } from '../../components/ui/Skeleton';
 
 interface PublicEventDetailPageProps {
   session?: StudentSession | null;
@@ -80,11 +80,7 @@ export const PublicEventDetailPage: React.FC<PublicEventDetailPageProps> = ({ se
 
   const renderBody = () => {
     if (loading) {
-      return (
-        <div className="py-16">
-          <BrandedLoading fullScreen={false} message="Loading event..." />
-        </div>
-      );
+      return <SkeletonPage label="Loading event" cards={1} rows={3} />;
     }
 
     if (error || !event) {

@@ -136,8 +136,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab, onLogo
         {/* NAV GROUPS */}
         <nav className="flex-1 p-2.5 space-y-1 overflow-y-auto" aria-label="Admin navigation">
           {navGroups.map((group) => {
-            const isOpen = !collapsed[group.label];
             const hasActive = group.items.some((i) => i.id === activeTab);
+            // The group holding the current page can never be collapsed, so the
+            // sidebar always shows where the admin is rather than hiding the page
+            // they are looking at behind a closed disclosure.
+            const isOpen = hasActive || !collapsed[group.label];
             return (
               <div key={group.label} className="mb-2">
                 <button
@@ -192,9 +195,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab, onLogo
             <LogOut strokeWidth={1.75} className="w-3.5 h-3.5" aria-hidden="true" />
             <span>Logout</span>
           </button>
-          <div className="text-[10px] text-ink-muted text-center font-mono mt-2">
-            ELITE Admin v2.0
-          </div>
         </div>
       </div>
     </aside>

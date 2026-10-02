@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { adminApi } from '../services/api';
 import { EventItem, EventPayload } from '../types';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 
 const StatusBadge = ({ status }: { status: string }) => {
   const map: Record<string, { label: string; cls: string }> = {
@@ -319,6 +320,7 @@ const EventDetail: React.FC<{ event: EventItem; onClose: () => void }> = ({ even
 );
 
 export const AdminEvents: React.FC = () => {
+  const confirm = useConfirm();
   const [events, setEvents] = useState<EventItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -372,7 +374,12 @@ export const AdminEvents: React.FC = () => {
   };
 
   const handleArchive = async (ev: EventItem) => {
-    if (!window.confirm(`Archive "${ev.name}"? Students will no longer be able to register.`)) return;
+    const confirmed = await confirm({
+      title: `Archive “${ev.name}”?`,
+      description: 'Students will no longer be able to register for this event. Existing registrations are kept.',
+      confirmLabel: 'Archive event',
+    });
+    if (!confirmed) return;
     setBusyId(ev.id);
     try {
       await adminApi.setEventStatus(ev.id, 'ARCHIVED');

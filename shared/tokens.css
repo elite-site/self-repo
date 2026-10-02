@@ -166,16 +166,20 @@
   --ease-exit: cubic-bezier(0.4, 0, 1, 1);
   --ease-press: cubic-bezier(0.25, 0.46, 0.45, 0.94);
   --base: 0;
-  --raised: 0 8px 20px -6px rgba(4, 16, 48, 0.12);
+  --raised: 10;
   --sticky: 20;
   --overlay: 30;
-  --modal: 0 24px 48px -12px rgba(4, 16, 48, 0.28);
+  --modal: 40;
   --toast: 50;
   --skip-link: 60;
-  --card: 0 1px 2px 0 rgba(4, 16, 48, 0.04), 0 1px 3px 0 rgba(4, 16, 48, 0.03);
-  --card-hover: 0 4px 8px -2px rgba(4, 16, 48, 0.08), 0 2px 4px -2px rgba(4, 16, 48, 0.04);
-  --drawer: -12px 0 32px -8px rgba(4, 16, 48, 0.16);
-  --focus: 0 0 0 3px rgba(206, 17, 25, 0.35);
+}
+:root {
+  --shadow-card: 0 1px 2px 0 rgba(4, 16, 48, 0.04), 0 1px 3px 0 rgba(4, 16, 48, 0.03);
+  --shadow-card-hover: 0 4px 8px -2px rgba(4, 16, 48, 0.08), 0 2px 4px -2px rgba(4, 16, 48, 0.04);
+  --shadow-raised: 0 8px 20px -6px rgba(4, 16, 48, 0.12);
+  --shadow-drawer: -12px 0 32px -8px rgba(4, 16, 48, 0.16);
+  --shadow-modal: 0 24px 48px -12px rgba(4, 16, 48, 0.28);
+  --shadow-focus: 0 0 0 3px rgba(206, 17, 25, 0.35);
 }
 :root {
   --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;

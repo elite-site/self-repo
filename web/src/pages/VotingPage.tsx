@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useParams } from 'react-router-dom';
 import { api, resolveMediaUrl } from '../services/api';
 import { Vote, Loader2, Clock, CheckCircle2, AlertCircle, ShieldCheck, X } from 'lucide-react';
-import { BrandedLoading } from '../components/BrandedLoading';
+import { SkeletonPage } from '../components/ui/Skeleton';
 
 export const VotingPage: React.FC = () => {
   // `/voting/:campaignId` is a real route and `getNotificationDestination` emits it,
@@ -83,11 +83,7 @@ export const VotingPage: React.FC = () => {
   const formatDate = (date?: string) => (date ? new Date(date).toLocaleDateString() : 'To be announced');
 
   if (loading) {
-    return (
-      <div className="py-20" role="status" aria-live="polite">
-        <BrandedLoading fullScreen={false} message="Loading Elections & Ballots..." />
-      </div>
-    );
+    return <SkeletonPage label="Loading elections and ballots" cards={2} rows={2} />;
   }
 
   return (

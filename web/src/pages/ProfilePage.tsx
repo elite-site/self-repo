@@ -24,7 +24,7 @@ import {
 import { api, resolveMediaUrl } from '../services/api';
 import { StudentProfile, Project, Certificate, Achievement } from '../types';
 import { getPhotoStyle } from '../utils/photoStyle';
-import { BrandedLoading } from '../components/BrandedLoading';
+import { SkeletonPage } from '../components/ui/Skeleton';
 import { createPortal } from 'react-dom';
 import { LeetCodeIcon, CodeChefIcon } from '../components/icons/PlatformIcons';
 
@@ -133,11 +133,7 @@ export const ProfilePage: React.FC = () => {
   };
 
   if (loading && !profile) {
-    return (
-      <div className="py-24">
-        <BrandedLoading fullScreen={false} message="Loading Student Profile..." />
-      </div>
-    );
+    return <SkeletonPage label="Loading student profile" cards={2} rows={3} />;
   }
 
   // Helper to map status to badge class

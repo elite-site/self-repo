@@ -1,22 +1,80 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { createPortal } from 'react-dom';
+import React, { useEffect, useRef, useState } from 'react';
 import { api } from '../../services/api';
 import { Project } from '../../types';
-import { Plus, Github, ExternalLink, Loader2, AlertCircle, Trash2, X, FolderGit2, Pencil } from 'lucide-react';
-import { BrandedLoading } from '../../components/BrandedLoading';
+import { Plus, Github, ExternalLink, Loader2, Trash2, FolderGit2, Pencil } from 'lucide-react';
 import { useToast } from '../../components/Toast';
+import { useConfirm } from '../../components/ui/ConfirmDialog';
+import { Dialog } from '../../components/ui/Dialog';
+import { EmptyState } from '../../components/ui/EmptyState';
+import { ErrorState } from '../../components/ui/ErrorState';
+
+/** The portal caps a portfolio at five projects; mirrored in the header count. */
+const MAX_PROJECTS = 5;
+
+interface FieldErrors {
+  title?: string;
+  description?: string;
+  githubUrl?: string;
+  videoUrl?: string;
+}
+
+const isHttpUrl = (value: string) => {
+  try {
+    const url = new URL(value.trim());
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch {
+    return false;
+  }
+};
+
+const statusBadge = (status: string) => {
+  switch (status) {
+    case 'APPROVED':
+      return <span className="badge badge-approved">Approved</span>;
+    case 'REJECTED':
+      return <span className="badge badge-rejected">Rejected</span>;
+    case 'PENDING':
+      return <span className="badge badge-pending">Pending review</span>;
+    default:
+      return <span className="badge badge-draft">{status}</span>;
+  }
+};
+
+/** Two letters standing in for a thumbnail, which the project model has no field for. */
+const monogram = (title: string) =>
+  title
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word[0]?.toUpperCase())
+    .join('') || 'PR';
+
+const FormSection: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
+  <fieldset className="space-y-3">
+    <legend className="text-label-sm uppercase tracking-wider text-ink-muted">{title}</legend>
+    {children}
+  </fieldset>
+);
+
+const FieldError: React.FC<{ id: string; message?: string }> = ({ id, message }) =>
+  message ? (
+    <p id={id} className="error-text" role="alert">
+      {message}
+    </p>
+  ) : null;
 
 export const ProjectsTab: React.FC = () => {
   const { showToast } = useToast();
+  const confirm = useConfirm();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Modal State
   const [modalOpen, setModalOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [saving, setSaving] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -24,9 +82,7 @@ export const ProjectsTab: React.FC = () => {
   const [githubUrl, setGithubUrl] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
 
-  const modalTitleRef = useRef<HTMLHeadingElement>(null);
   const firstInputRef = useRef<HTMLInputElement>(null);
-  const lastFocusedElement = useRef<HTMLElement | null>(null);
 
   const loadProjects = async () => {
     setLoading(true);
@@ -35,7 +91,7 @@ export const ProjectsTab: React.FC = () => {
       const data = await api.getProjects();
       if (Array.isArray(data)) setProjects(data);
     } catch {
-      setError('Could not load projects. Please refresh.');
+      setError('We could not load your projects. Check your connection and try again.');
     } finally {
       setLoading(false);
     }
@@ -45,16 +101,6 @@ export const ProjectsTab: React.FC = () => {
     loadProjects();
   }, []);
 
-  // Focus management for modal
-  useEffect(() => {
-    if (modalOpen) {
-      lastFocusedElement.current = document.activeElement as HTMLElement;
-      setTimeout(() => firstInputRef.current?.focus(), 0);
-    } else if (lastFocusedElement.current) {
-      lastFocusedElement.current.focus();
-    }
-  }, [modalOpen]);
-
   const handleOpenCreateModal = () => {
     setEditingProject(null);
     setTitle('');
@@ -63,6 +109,7 @@ export const ProjectsTab: React.FC = () => {
     setGithubUrl('');
     setVideoUrl('');
     setModalError(null);
+    setFieldErrors({});
     setModalOpen(true);
   };
 
@@ -74,12 +121,25 @@ export const ProjectsTab: React.FC = () => {
     setGithubUrl(p.githubUrl || '');
     setVideoUrl(p.videoUrl || '');
     setModalError(null);
+    setFieldErrors({});
     setModalOpen(true);
+  };
+
+  const validate = (): FieldErrors => {
+    const next: FieldErrors = {};
+    if (!title.trim()) next.title = 'A project needs a name.';
+    if (!description.trim()) next.description = 'Add a short description so this reads as a portfolio entry.';
+    if (githubUrl.trim() && !isHttpUrl(githubUrl)) next.githubUrl = 'Enter a full link starting with https://';
+    if (videoUrl.trim() && !isHttpUrl(videoUrl)) next.videoUrl = 'Enter a full link starting with https://';
+    return next;
   };
 
   const handleSaveProject = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !description.trim()) return;
+    const problems = validate();
+    setFieldErrors(problems);
+    if (Object.keys(problems).length > 0) return;
+
     setSaving(true);
     setModalError(null);
 
@@ -99,298 +159,309 @@ export const ProjectsTab: React.FC = () => {
     try {
       if (editingProject) {
         await api.updateProject(editingProject.id, payload);
+        showToast('Project updated.');
       } else {
         await api.createProject(payload);
+        showToast('Project added.');
       }
       setModalOpen(false);
       loadProjects();
     } catch (err: any) {
-      setModalError(err.response?.data?.message || 'Failed to save project.');
+      setModalError(
+        err.response?.data?.message || 'We could not save this project. Your changes are still here — try again.'
+      );
     } finally {
       setSaving(false);
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm('Are you sure you want to remove this project?')) return;
+  const handleDelete = async (project: Project) => {
+    const confirmed = await confirm({
+      title: 'Delete this project?',
+      description: `“${project.title}” will be removed from your portfolio. This cannot be undone.`,
+      confirmLabel: 'Delete project',
+      tone: 'danger',
+    });
+    if (!confirmed) return;
+
     try {
-      await api.deleteProject(id);
+      await api.deleteProject(project.id);
       showToast('Project removed.');
       loadProjects();
     } catch {
-      showToast('Failed to delete project.', 'error');
+      showToast('We could not delete that project. Try again.', 'error');
     }
   };
 
-  if (loading) {
-    return (
-      <div className="py-16 animate-fade-in">
-        <BrandedLoading fullScreen={false} message="Loading Projects..." />
-      </div>
-    );
-  }
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'APPROVED':
-        return <span className="badge badge-approved">Approved</span>;
-      case 'REJECTED':
-        return <span className="badge badge-rejected">Rejected</span>;
-      case 'PENDING':
-        return <span className="badge badge-pending">Pending Review</span>;
-      default:
-        return <span className="badge badge-draft">{status}</span>;
-    }
-  };
+  const atLimit = projects.length >= MAX_PROJECTS;
 
   return (
-    <div className="space-y-6 text-left page-enter" role="main">
-      {/* SECTION HEADER */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-body-lg font-bold text-ink font-heading">Project Portfolio ({projects.length}/5)</h2>
-          <p className="text-body-sm text-ink-secondary">Showcase technical builds, full-stack applications, and research code</p>
+          <h2 className="font-heading text-headline-sm text-ink">
+            Projects{' '}
+            <span className="font-sans text-body-sm font-normal text-ink-muted">
+              {projects.length} of {MAX_PROJECTS}
+            </span>
+          </h2>
+          <p className="mt-0.5 text-body-sm text-ink-secondary">
+            What you built, what you built it with, and where to see it.
+          </p>
         </div>
         <button
+          type="button"
           onClick={handleOpenCreateModal}
-          disabled={projects.length >= 5}
-          className="btn btn-primary disabled:opacity-40"
-          aria-label={projects.length >= 5 ? 'Maximum of 5 projects reached' : 'Add new project'}
+          disabled={atLimit}
+          className="btn btn-primary shrink-0"
+          aria-label={atLimit ? `Maximum of ${MAX_PROJECTS} projects reached` : 'Add project'}
         >
-          <Plus className="w-4 h-4" aria-hidden="true" />
-          <span>Add Project</span>
+          <Plus size={16} strokeWidth={2} aria-hidden="true" />
+          <span>Add project</span>
         </button>
       </div>
 
-      {error && (
-        <div className="surface-sunken border border-status-rejected bg-status-bg-rejected text-status-rejected text-body-sm flex items-center gap-2 animate-fade-in" role="alert">
-          <AlertCircle className="w-4 h-4 shrink-0" aria-hidden="true" />
-          <span>{error}</span>
-        </div>
-      )}
+      {error && <ErrorState message={error} onRetry={loadProjects} />}
 
-      {/* PROJECTS GRID */}
-      {projects.length === 0 ? (
-        <div className="surface text-center py-16 px-4 animate-fade-in">
-          <div className="w-12 h-12 rounded-full bg-brand-soft flex items-center justify-center mx-auto mb-4">
-            <FolderGit2 className="w-6 h-6 text-brand" aria-hidden="true" />
-          </div>
-          <h3 className="text-body-lg font-bold text-ink font-heading">No projects added yet</h3>
-          <p className="text-body-sm text-ink-secondary mt-1 max-w-sm mx-auto mb-4">
-            Upload your technical projects with GitHub links and tech stack tags to build your recruitment profile.
-          </p>
-          <button
-            onClick={handleOpenCreateModal}
-            disabled={projects.length >= 5}
-            className="btn btn-primary"
-          >
-            <Plus className="w-3.5 h-3.5" aria-hidden="true" />
-            <span>Add Your First Project</span>
-          </button>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 animate-fade-in">
+      {loading ? (
+        <>
+          <span className="sr-only" role="status">
+            Loading your projects
+          </span>
+          <ul className="surface divide-y divide-edge" aria-busy="true">
+            {[0, 1, 2].map((i) => (
+              <li key={i} className="flex items-center gap-5 p-4">
+                <div className="skeleton h-12 w-12 shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <div className="skeleton h-4 w-1/3" />
+                  <div className="skeleton h-4 w-2/3" />
+                </div>
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : projects.length === 0 && !error ? (
+        <EmptyState
+          icon={FolderGit2}
+          title="Your portfolio is empty"
+          description="Showcase your work by adding your first project — what it does, the stack you used, and a link to the repository."
+          action={
+            <button type="button" onClick={handleOpenCreateModal} className="btn btn-primary">
+              <Plus size={16} strokeWidth={2} aria-hidden="true" />
+              <span>Add project</span>
+            </button>
+          }
+        />
+      ) : projects.length > 0 ? (
+        <ul className="surface divide-y divide-edge">
           {projects.map((p) => (
-            <div
+            <li
               key={p.id}
-              className="surface p-5 flex flex-col justify-between group"
+              className="flex flex-col gap-4 p-4 sm:flex-row sm:items-start sm:gap-5"
             >
-              <div className="space-y-3">
-                <div className="flex items-start justify-between gap-2">
-                  <h3 className="font-bold text-body-sm text-ink font-heading line-clamp-1">{p.title}</h3>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    {getStatusBadge(p.status)}
-                    <button
-                      onClick={() => handleOpenEditModal(p)}
-                      className="btn btn-ghost p-1"
-                      aria-label={`Edit ${p.title}`}
-                    >
-                      <Pencil className="w-3.5 h-3.5" aria-hidden="true" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(p.id)}
-                      className="btn btn-ghost p-1 text-ink-muted hover:text-status-rejected"
-                      aria-label={`Delete ${p.title}`}
-                    >
-                      <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
-                    </button>
-                  </div>
-                </div>
+              <span
+                aria-hidden="true"
+                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-brand-soft font-heading text-label-lg font-bold text-brand-soft-text"
+              >
+                {monogram(p.title)}
+              </span>
 
-                <p className="text-body-sm text-ink-secondary line-clamp-2 leading-relaxed">{p.description}</p>
-
-                {/* Tech stack badges */}
-                <div className="flex flex-wrap gap-1 pt-1">
-                  {p.techStack?.map((t) => (
-                    <span
-                      key={t}
-                      className="badge badge-brand text-[10px]"
-                    >
-                      {t}
-                    </span>
-                  ))}
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="font-heading text-label-lg font-semibold text-ink">{p.title}</h3>
+                  {statusBadge(p.status)}
                 </div>
+                <p className="mt-1 line-clamp-2 text-body-sm text-ink-secondary">{p.description}</p>
+                {p.techStack && p.techStack.length > 0 && (
+                  <ul className="mt-2 flex flex-wrap gap-1.5">
+                    {p.techStack.map((tech) => (
+                      <li
+                        key={tech}
+                        className="rounded border border-edge bg-surface-inset px-2 py-0.5 text-label-md text-ink-secondary"
+                      >
+                        {tech}
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
 
-              <div className="pt-4 mt-4 border-t border-edge flex items-center justify-between text-label-sm">
-                {p.githubUrl ? (
+              <div className="flex shrink-0 items-center gap-1 self-start">
+                {p.githubUrl && (
                   <a
                     href={p.githubUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex items-center gap-1.5 text-ink-secondary hover:text-brand font-semibold"
+                    className="btn btn-ghost px-2"
+                    aria-label={`Open the ${p.title} repository`}
                   >
-                    <Github className="w-3.5 h-3.5" aria-hidden="true" />
-                    <span>Repository</span>
+                    <Github size={16} strokeWidth={1.75} aria-hidden="true" />
                   </a>
-                ) : (
-                  <span className="text-ink-muted">No repo link</span>
                 )}
-
                 {p.videoUrl && (
                   <a
                     href={p.videoUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex items-center gap-1 text-brand hover:underline font-semibold"
+                    className="btn btn-ghost px-2"
+                    aria-label={`Open the ${p.title} live demo`}
                   >
-                    <span>Demo</span>
-                    <ExternalLink className="w-3 h-3" aria-hidden="true" />
+                    <ExternalLink size={16} strokeWidth={1.75} aria-hidden="true" />
                   </a>
                 )}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* ADD / EDIT PROJECT MODAL */}
-      {modalOpen && createPortal(
-        <div
-          className="fixed inset-0 z-modal flex items-center justify-center p-4 sm:p-6 bg-scrim backdrop-blur-xs animate-fade-in overflow-y-auto"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="project-modal-title"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setModalOpen(false);
-          }}
-        >
-          <div
-            className="surface max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 shadow-modal animate-scale-in text-left my-auto"
-            ref={modalTitleRef}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between pb-3 border-b border-edge sticky -top-6 bg-surface pt-0 -mt-1 z-10">
-              <h3 id="project-modal-title" className="text-body-lg font-bold text-ink font-heading">
-                {editingProject ? 'Edit Technical Project' : 'Add New Technical Project'}
-              </h3>
-              <button
-                type="button"
-                onClick={() => setModalOpen(false)}
-                className="btn btn-ghost p-1"
-                aria-label="Close modal"
-              >
-                <X className="w-5 h-5" aria-hidden="true" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveProject} className="space-y-4 pt-4">
-              {modalError && (
-                <div className="surface-sunken border border-status-rejected bg-status-bg-rejected text-status-rejected text-body-sm flex items-center gap-2" role="alert">
-                  <AlertCircle className="w-4 h-4 shrink-0" aria-hidden="true" />
-                  <span>{modalError}</span>
-                </div>
-              )}
-
-              <div>
-                <label htmlFor="project-title" className="label">Project Title <span className="text-status-rejected" aria-hidden="true">*</span></label>
-                <input
-                  id="project-title"
-                  ref={firstInputRef}
-                  type="text"
-                  required
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g. Distributed Task Queue"
-                  className="input"
-                  aria-required="true"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="project-description" className="label">Description <span className="text-status-rejected" aria-hidden="true">*</span></label>
-                <textarea
-                  id="project-description"
-                  required
-                  rows={3}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Describe the system architecture, problems solved, and outcomes..."
-                  className="textarea"
-                  aria-required="true"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="project-techstack" className="label">Technologies / Tech Stack (comma separated)</label>
-                <input
-                  id="project-techstack"
-                  type="text"
-                  value={techStackInput}
-                  onChange={(e) => setTechStackInput(e.target.value)}
-                  placeholder="e.g. React, Node.js, Redis, Docker"
-                  className="input"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label htmlFor="project-github" className="label">GitHub Repo URL</label>
-                  <input
-                    id="project-github"
-                    type="url"
-                    value={githubUrl}
-                    onChange={(e) => setGithubUrl(e.target.value)}
-                    placeholder="https://github.com/..."
-                    className="input"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="project-video" className="label">Live Demo / Video URL</label>
-                  <input
-                    id="project-video"
-                    type="url"
-                    value={videoUrl}
-                    onChange={(e) => setVideoUrl(e.target.value)}
-                    placeholder="https://..."
-                    className="input"
-                  />
-                </div>
-              </div>
-
-              <div className="pt-2 flex items-center justify-end gap-3 border-t border-edge mt-4">
                 <button
                   type="button"
-                  onClick={() => setModalOpen(false)}
-                  className="btn btn-secondary"
+                  onClick={() => handleOpenEditModal(p)}
+                  className="btn btn-ghost px-2"
+                  aria-label={`Edit ${p.title}`}
                 >
-                  Cancel
+                  <Pencil size={16} strokeWidth={1.75} aria-hidden="true" />
                 </button>
                 <button
-                  type="submit"
-                  disabled={saving || !title.trim() || !description.trim()}
-                  className="btn btn-primary"
-                  aria-busy={saving}
+                  type="button"
+                  onClick={() => handleDelete(p)}
+                  className="btn btn-ghost px-2 text-ink-muted hover:text-status-rejected"
+                  aria-label={`Delete ${p.title}`}
                 >
-                  {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" /> : <Plus className="w-3.5 h-3.5" aria-hidden="true" />}
-                  <span>{editingProject ? 'Update Project' : 'Save Project'}</span>
+                  <Trash2 size={16} strokeWidth={1.75} aria-hidden="true" />
                 </button>
               </div>
-            </form>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+
+      <Dialog
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        title={editingProject ? 'Edit project' : 'Add project'}
+        description="Only the name and description are required."
+        initialFocusRef={firstInputRef}
+      >
+        <form onSubmit={handleSaveProject} className="space-y-5" noValidate>
+          {modalError && <ErrorState bare message={modalError} />}
+
+          <FormSection title="Basic information">
+            <div>
+              <label htmlFor="project-title" className="label">
+                Project name <span className="text-status-rejected">*</span>
+              </label>
+              <input
+                id="project-title"
+                ref={firstInputRef}
+                type="text"
+                value={title}
+                onChange={(e) => {
+                  setTitle(e.target.value);
+                  setFieldErrors((prev) => ({ ...prev, title: undefined }));
+                }}
+                placeholder="Distributed task queue"
+                className="input"
+                aria-required="true"
+                aria-invalid={Boolean(fieldErrors.title)}
+                aria-describedby={fieldErrors.title ? 'project-title-error' : undefined}
+              />
+              <FieldError id="project-title-error" message={fieldErrors.title} />
+            </div>
+
+            <div>
+              <label htmlFor="project-description" className="label">
+                Description <span className="text-status-rejected">*</span>
+              </label>
+              <textarea
+                id="project-description"
+                rows={3}
+                value={description}
+                onChange={(e) => {
+                  setDescription(e.target.value);
+                  setFieldErrors((prev) => ({ ...prev, description: undefined }));
+                }}
+                placeholder="What it does, what you built, and what you learned."
+                className="textarea"
+                aria-required="true"
+                aria-invalid={Boolean(fieldErrors.description)}
+                aria-describedby={fieldErrors.description ? 'project-description-error' : 'project-description-hint'}
+              />
+              <p id="project-description-hint" className="hint">
+                Two or three sentences is plenty.
+              </p>
+              <FieldError id="project-description-error" message={fieldErrors.description} />
+            </div>
+          </FormSection>
+
+          <FormSection title="Project details">
+            <div>
+              <label htmlFor="project-techstack" className="label">
+                Technologies
+              </label>
+              <input
+                id="project-techstack"
+                type="text"
+                value={techStackInput}
+                onChange={(e) => setTechStackInput(e.target.value)}
+                placeholder="React, Node.js, Postgres"
+                className="input"
+                aria-describedby="project-techstack-hint"
+              />
+              <p id="project-techstack-hint" className="hint">
+                Separate each technology with a comma.
+              </p>
+            </div>
+          </FormSection>
+
+          <FormSection title="Links">
+            <div>
+              <label htmlFor="project-github" className="label">
+                GitHub repository
+              </label>
+              <input
+                id="project-github"
+                type="url"
+                value={githubUrl}
+                onChange={(e) => {
+                  setGithubUrl(e.target.value);
+                  setFieldErrors((prev) => ({ ...prev, githubUrl: undefined }));
+                }}
+                placeholder="https://github.com/you/project"
+                className="input"
+                aria-invalid={Boolean(fieldErrors.githubUrl)}
+                aria-describedby={fieldErrors.githubUrl ? 'project-github-error' : undefined}
+              />
+              <FieldError id="project-github-error" message={fieldErrors.githubUrl} />
+            </div>
+
+            <div>
+              <label htmlFor="project-video" className="label">
+                Live demo or video
+              </label>
+              <input
+                id="project-video"
+                type="url"
+                value={videoUrl}
+                onChange={(e) => {
+                  setVideoUrl(e.target.value);
+                  setFieldErrors((prev) => ({ ...prev, videoUrl: undefined }));
+                }}
+                placeholder="https://project.yoursite.com"
+                className="input"
+                aria-invalid={Boolean(fieldErrors.videoUrl)}
+                aria-describedby={fieldErrors.videoUrl ? 'project-video-error' : undefined}
+              />
+              <FieldError id="project-video-error" message={fieldErrors.videoUrl} />
+            </div>
+          </FormSection>
+
+          <div className="flex flex-wrap justify-end gap-3 border-t border-edge pt-4">
+            <button type="button" onClick={() => setModalOpen(false)} className="btn btn-secondary">
+              Cancel
+            </button>
+            <button type="submit" disabled={saving} className="btn btn-primary" aria-busy={saving}>
+              {saving && <Loader2 size={14} className="animate-spin" aria-hidden="true" />}
+              <span>{saving ? 'Saving…' : editingProject ? 'Save changes' : 'Save project'}</span>
+            </button>
           </div>
-        </div>,
-        document.body
-      )}
+        </form>
+      </Dialog>
     </div>
   );
 };

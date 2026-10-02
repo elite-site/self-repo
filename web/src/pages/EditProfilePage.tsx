@@ -16,7 +16,7 @@ import {
   ShieldAlert,
   Crop
 } from 'lucide-react';
-import { BrandedLoading } from '../components/BrandedLoading';
+import { SkeletonPage } from '../components/ui/Skeleton';
 import { api, resolveMediaUrl } from '../services/api';
 import { normalizeSocialLink, type SocialLinkKind } from '../utils/socialLinks';
 import type { StudentOutletContext } from '../components/layout/StudentLayout';
@@ -267,11 +267,7 @@ export const EditProfilePage: React.FC = () => {
   };
 
   if (loading) {
-    return (
-      <div className="py-24">
-        <BrandedLoading fullScreen={false} message="Loading Student Profile..." />
-      </div>
-    );
+    return <SkeletonPage label="Loading student profile" cards={2} rows={3} />;
   }
 
   return (

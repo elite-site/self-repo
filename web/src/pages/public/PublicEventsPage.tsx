@@ -1,12 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Calendar, Clock, CheckCircle2, AlertCircle, ArrowRight, Search } from 'lucide-react';
+import { Clock, CheckCircle2, ChevronRight, Search, CalendarX2 } from 'lucide-react';
 import { api } from '../../services/api';
 import { Event } from '../../types';
 import { StudentSession } from '../../types';
 import { Navbar } from '../../components/Navbar';
 import { Footer } from '../../components/Footer';
-import { BrandedLoading } from '../../components/BrandedLoading';
+import { EmptyState } from '../../components/ui/EmptyState';
+import { ErrorState } from '../../components/ui/ErrorState';
 
 interface PublicEventsPageProps {
   session?: StudentSession | null;
@@ -14,6 +15,17 @@ interface PublicEventsPageProps {
 }
 
 const OPEN_STATUSES = new Set(['OPEN']);
+
+const eventDateParts = (value?: string | null) => {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return {
+    month: date.toLocaleDateString(undefined, { month: 'short' }).toUpperCase(),
+    day: date.toLocaleDateString(undefined, { day: '2-digit' }),
+    full: date.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' }),
+  };
+};
 
 /**
  * Read-only view of department events for visitors who are not signed in.
@@ -29,174 +41,175 @@ export const PublicEventsPage: React.FC<PublicEventsPageProps> = ({ session, onL
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
 
-  useEffect(() => {
-    let mounted = true;
-
+  const loadEvents = () => {
+    setLoading(true);
+    setError(null);
     api
       .getPublicEvents()
       .then((data) => {
-        if (mounted && Array.isArray(data)) setEvents(data);
+        if (Array.isArray(data)) setEvents(data);
       })
-      .catch((err) => {
-        console.error('Failed to load public events:', err);
-        if (mounted) setError('Could not load department events. Please retry.');
-      })
-      .finally(() => {
-        if (mounted) setLoading(false);
-      });
+      .catch(() => setError('We could not load department events right now.'))
+      .finally(() => setLoading(false));
+  };
 
-    return () => {
-      mounted = false;
-    };
+  useEffect(() => {
+    loadEvents();
   }, []);
 
   const visibleEvents = useMemo(() => {
     const term = search.trim().toLowerCase();
-    if (!term) return events;
-    return events.filter(
-      (evt) =>
-        evt.title?.toLowerCase().includes(term) ||
-        evt.description?.toLowerCase().includes(term) ||
-        evt.eligibility?.toLowerCase().includes(term),
-    );
-  }, [events, search]);
+    const matched = term
+      ? events.filter(
+          (evt) =>
+            evt.title?.toLowerCase().includes(term) ||
+            evt.description?.toLowerCase().includes(term) ||
+            evt.eligibility?.toLowerCase().includes(term),
+        )
+      : events;
 
-  const formatDate = (value?: string | null) => {
-    if (!value) return 'To be announced';
-    const d = new Date(value);
-    if (Number.isNaN(d.getTime())) return 'To be announced';
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  };
+    // Soonest first: an events page is read from the top.
+    return [...matched].sort((a, b) => {
+      const left = a.date ? new Date(a.date).getTime() : Number.POSITIVE_INFINITY;
+      const right = b.date ? new Date(b.date).getTime() : Number.POSITIVE_INFINITY;
+      return left - right;
+    });
+  }, [events, search]);
 
   const handleSignIn = () => {
     window.location.href = api.getOAuthAuthorizeUrl();
   };
 
   return (
-    <div className="min-h-[100dvh] bg-surface-canvas text-ink flex flex-col justify-between">
+    <div className="flex min-h-[100dvh] flex-col bg-surface-canvas text-ink">
       <Navbar session={session} onLogout={onLogout} />
 
-      <main className="flex-1 px-4 sm:px-6 py-12 sm:py-16">
-        <div className="max-w-6xl mx-auto space-y-8">
-          <div className="max-w-2xl space-y-3">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-brand-soft border border-brand-soft text-brand-soft-text text-xs font-bold uppercase tracking-wider" aria-label="Department events badge">
-              <Calendar className="w-3.5 h-3.5" aria-hidden="true" />
-              <span>Department Events</span>
-            </div>
-            <h1 className="text-headline-xl font-extrabold text-ink font-heading tracking-tight">
-              Upcoming Activities
-            </h1>
-            <p className="text-body-sm text-ink-secondary leading-relaxed">
-              Technical competitions, hackathons and workshops run by the Department of Information
-              Technology. Sign in with your college account to register.
+      <main className="mx-auto w-full max-w-canvas flex-1 px-6 py-8 sm:px-10 sm:py-10">
+        <header className="mb-6">
+          <h1 className="font-heading text-headline-lg-mobile text-ink sm:text-headline-lg">Events</h1>
+          <p className="mt-1 text-body-md text-ink-secondary">
+            Discover and take part in upcoming department events.
+          </p>
+        </header>
+
+        <div className="relative max-w-md">
+          <label htmlFor="event-search" className="sr-only">
+            Search events
+          </label>
+          <Search
+            size={16}
+            strokeWidth={1.75}
+            className="pointer-events-none absolute left-4 top-3 text-ink-muted"
+            aria-hidden="true"
+          />
+          <input
+            id="event-search"
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search events"
+            className="input pl-11"
+          />
+        </div>
+
+        {!session && (
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-edge bg-surface px-4 py-3">
+            <p className="text-body-sm text-ink-secondary">
+              Sign in with your college account to register for any event.
             </p>
+            <button type="button" onClick={handleSignIn} className="btn btn-primary shrink-0">
+              Student Sign In
+            </button>
           </div>
+        )}
 
-          <div className="relative max-w-sm">
-            <label htmlFor="event-search" className="sr-only">Search events</label>
-            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none" aria-hidden="true" />
-            <input
-              id="event-search"
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search events"
-              className="input pl-10"
-            />
-          </div>
-
+        <div className="mt-6">
           {loading ? (
-            <BrandedLoading fullScreen={false} message="Loading events..." />
+            <div aria-busy="true">
+              <span className="sr-only" role="status">
+                Loading events
+              </span>
+              <ul className="divide-y divide-edge">
+                {[0, 1, 2, 3].map((i) => (
+                  <li key={i} className="flex items-center gap-4 py-4">
+                    <div className="skeleton h-12 w-12 shrink-0" />
+                    <div className="flex-1 space-y-2">
+                      <div className="skeleton h-4 w-1/3" />
+                      <div className="skeleton h-3 w-2/3" />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
           ) : error ? (
-            <div className="p-6 surface border border-status-rejected/20 rounded-lg text-status-rejected text-body-sm" role="alert">
-              {error}
-            </div>
+            <ErrorState message={error} onRetry={loadEvents} />
           ) : visibleEvents.length === 0 ? (
-            <div className="surface p-10 sm:p-14 text-center max-w-xl mx-auto space-y-3">
-              <AlertCircle className="w-10 h-10 text-ink-muted mx-auto" aria-hidden="true" />
-              <h2 className="text-body-md font-bold text-ink font-heading">
-                {search ? 'No events match your search.' : 'No upcoming events.'}
-              </h2>
-              <p className="text-label-sm text-ink-secondary leading-relaxed">
-                Check back soon for new department activities, technical competitions, and workshops.
-              </p>
-            </div>
+            <EmptyState
+              icon={CalendarX2}
+              title={search ? 'No events match your search' : 'No events published yet'}
+              description={
+                search
+                  ? 'Try a shorter search term, or clear it to see everything the department has scheduled.'
+                  : 'Competitions, hackathons and workshops appear here as soon as the department publishes them.'
+              }
+            />
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <ul className="divide-y divide-edge">
               {visibleEvents.map((evt) => {
+                const date = eventDateParts(evt.date);
                 const isOpen = OPEN_STATUSES.has(evt.status ?? 'OPEN');
                 return (
-                  <div
-                    key={evt.id}
-                    className="surface p-6 flex flex-col justify-between hover:border-brand hover:shadow-card-hover transition-colors"
-                  >
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <span
-                          className={`inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider ${
-                            isOpen
-                              ? 'bg-status-bg-approved text-status-approved border border-status-bg-approved'
-                              : 'bg-surface-sunken text-ink-muted border border-edge'
-                          }`}
-                        >
-                          {isOpen ? (
-                            <CheckCircle2 className="w-3 h-3" aria-hidden="true" />
-                          ) : (
-                            <Clock className="w-3 h-3" aria-hidden="true" />
-                          )}
-                          <span>{isOpen ? 'Open' : (evt.status ?? 'Closed')}</span>
+                  <li key={evt.id}>
+                    <Link
+                      to={`/events/${evt.id}`}
+                      className="-mx-2 flex items-center gap-4 rounded-lg px-2 py-4 transition-colors duration-fast hover:bg-surface-sunken"
+                    >
+                      <span className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-lg border border-edge bg-surface-inset">
+                        <span className="font-heading text-label-sm tracking-wide text-brand">
+                          {date?.month ?? 'TBA'}
                         </span>
-                        {evt.type && (
-                          <span className="text-[10px] font-bold text-ink-secondary bg-surface-sunken border border-edge px-2 py-0.5 rounded-md uppercase tracking-wider">
-                            {evt.type}
+                        <span className="font-heading text-headline-sm leading-none text-ink">
+                          {date?.day ?? '--'}
+                        </span>
+                      </span>
+
+                      <span className="min-w-0 flex-1">
+                        <span className="flex flex-wrap items-center gap-2">
+                          <span className="truncate font-heading text-headline-sm text-ink">
+                            {evt.title}
+                          </span>
+                          <span className={isOpen ? 'badge badge-approved' : 'badge badge-draft'}>
+                            {isOpen ? (
+                              <CheckCircle2 size={12} strokeWidth={2.5} aria-hidden="true" />
+                            ) : (
+                              <Clock size={12} strokeWidth={2.5} aria-hidden="true" />
+                            )}
+                            {isOpen ? 'Open' : (evt.status ?? 'Closed')}
+                          </span>
+                        </span>
+                        {evt.description && (
+                          <span className="mt-0.5 line-clamp-2 block text-body-sm text-ink-secondary">
+                            {evt.description}
                           </span>
                         )}
-                      </div>
+                        <span className="mt-1 block truncate text-label-md text-ink-muted">
+                          {[evt.type || 'Event', date?.full, evt.eligibility || 'All students']
+                            .filter(Boolean)
+                            .join(' · ')}
+                        </span>
+                      </span>
 
-                      <h2 className="text-body-md font-bold text-ink font-heading leading-snug">
-                        {evt.title}
-                      </h2>
-
-                      {evt.description && (
-                        <p className="text-label-sm text-ink-secondary leading-relaxed line-clamp-3">
-                          {evt.description}
-                        </p>
-                      )}
-
-                      <div className="p-3 bg-surface-sunken border border-edge rounded-lg space-y-1.5 text-label-sm text-ink-secondary">
-                        <div className="flex justify-between items-center">
-                          <span className="text-ink-muted">Announced</span>
-                          <span className="font-semibold text-ink">{formatDate(evt.date)}</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-ink-muted">Eligibility</span>
-                          <span className="font-semibold text-ink">
-                            {evt.eligibility || 'All students'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="pt-5 mt-4 border-t border-edge space-y-2">
-                      <Link
-                        to={`/events/${evt.id}`}
-                        className="w-full btn btn-primary"
-                      >
-                        <span>View Event Details</span>
-                        <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
-                      </Link>
-                      <button
-                        type="button"
-                        onClick={handleSignIn}
-                        className="w-full text-label-sm font-semibold text-ink-secondary hover:text-brand transition-colors cursor-pointer"
-                      >
-                        Sign in to register
-                      </button>
-                    </div>
-                  </div>
+                      <ChevronRight
+                        size={16}
+                        strokeWidth={1.75}
+                        className="shrink-0 text-ink-muted"
+                        aria-hidden="true"
+                      />
+                    </Link>
+                  </li>
                 );
               })}
-            </div>
+            </ul>
           )}
         </div>
       </main>
