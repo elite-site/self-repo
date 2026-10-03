@@ -218,6 +218,55 @@ router.post(
         });
       }
 
+      // Sync introVideo table if student account exists
+      if (uploadResult.videoDriveId) {
+        try {
+          const student = await prisma.student.findFirst({
+            where: {
+              OR: [
+                { rollNo: { equals: rollNo, mode: 'insensitive' } },
+                { email: { equals: email, mode: 'insensitive' } },
+              ],
+            },
+          });
+          if (student) {
+            const sizeMb = parseFloat((videoFile.size / (1024 * 1024)).toFixed(2));
+            let thumbnailBuffer: Buffer | null = null;
+            try {
+              thumbnailBuffer = await driveService.generateThumbnail(uploadResult.videoDriveId, 'video');
+            } catch {}
+            const ivData = {
+              driveFileId: uploadResult.videoDriveId,
+              filename: videoFile.originalname,
+              mimeType: videoFile.mimetype,
+              sizeMb,
+              thumbnail: thumbnailBuffer,
+              status: 'PENDING' as const,
+              reviewNote: null,
+              reviewedBy: null,
+              reviewedAt: null,
+              submittedAt: new Date(),
+              isActive: true,
+              isPublic: false,
+              publishedAt: null,
+              changeRequestedAt: null,
+              changeRequestNote: null,
+            };
+            const iv = await prisma.introVideo.findFirst({
+              where: { studentId: student.id },
+              orderBy: { submittedAt: 'desc' },
+            });
+            if (iv) {
+              await prisma.introVideo.update({ where: { id: iv.id }, data: ivData });
+            } else {
+              await prisma.introVideo.create({ data: { studentId: student.id, ...ivData } });
+            }
+          }
+        } catch (syncErr) {
+          console.warn('[public submit] introVideo sync notice:', syncErr);
+        }
+      }
+
       await ActivityService.log({
         eventId: EVENT_ID,
         category: 'APPLICATION',
@@ -499,17 +548,9 @@ router.get('/public/media/:type/:fileId', async (req: Request, res: Response): P
         });
         if (prof?.photoDriveId) resolvedDriveId = prof.photoDriveId;
       } else if (type === 'video') {
-        let vid: any = null;
-        if (typeof (prisma as any).video?.findFirst === 'function') {
-          vid = await (prisma as any).video.findFirst({
-            where: { OR: [{ id: fileId }, { studentId: fileId }] },
-          });
-        }
-        if (!vid && typeof prisma.introVideo?.findFirst === 'function') {
-          vid = await prisma.introVideo.findFirst({
-            where: { OR: [{ id: fileId }, { studentId: fileId }] },
-          });
-        }
+        const vid = await prisma.introVideo.findFirst({
+          where: { OR: [{ id: fileId }, { studentId: fileId }] },
+        });
         if (vid?.driveFileId) {
           resolvedDriveId = vid.driveFileId;
         } else {

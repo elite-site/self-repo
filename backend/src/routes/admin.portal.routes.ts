@@ -85,7 +85,6 @@ router.get('/students/:id', async (req: Request, res: Response) => {
         // the map below to throw it away; the previews are served by
         // /api/public/media/thumbnail/:type/:id.
         achievements: {
-          include: { category: true },
           orderBy: { createdAt: 'desc' },
           take: 100,
           select: {
@@ -381,7 +380,9 @@ router.delete('/students/:studentId/items/:type/:itemId', async (req: Request, r
 
       // a) If item.driveFileId, delete it from Google Drive / mock storage via driveService.deleteFileById
       if (item?.driveFileId) {
-        await driveService.deleteFileById(item.driveFileId).catch(() => {});
+        const cleanRollNo = student.rollNo.toUpperCase().replace(/[^a-zA-Z0-9]/g, '');
+        const studentRelativePath = `Students/${cleanRollNo}`;
+        await driveService.deleteFileById(item.driveFileId, studentRelativePath).catch(() => {});
       }
 
       // b) Reset all IntroVideo rows for this student: wipe Drive ID, thumbnail, and set status to CHANGES_REQUESTED
@@ -634,13 +635,13 @@ const handleModerationDecision = async (
       return updated;
     }
     case 'resumes':
-      return prisma.resume.update({ where: { id }, data: { status, reviewNote: reason } });
+      return prisma.resume.update({ where: { id }, data: { status, reviewNote: reason, isPublic: status === 'APPROVED' } });
     case 'achievements':
-      return prisma.achievement.update({ where: { id }, data: { status, reviewNote: reason } });
+      return prisma.achievement.update({ where: { id }, data: { status, reviewNote: reason, isPublic: status === 'APPROVED' } });
     case 'certificates':
-      return prisma.certificate.update({ where: { id }, data: { status, reviewNote: reason } });
+      return prisma.certificate.update({ where: { id }, data: { status, reviewNote: reason, isPublic: status === 'APPROVED' } });
     case 'projects':
-      return prisma.project.update({ where: { id }, data: { status, reviewNote: reason } });
+      return prisma.project.update({ where: { id }, data: { status, reviewNote: reason, isPublic: status === 'APPROVED' } });
     default:
       throw new Error(`Invalid moderation type: ${type}`);
   }

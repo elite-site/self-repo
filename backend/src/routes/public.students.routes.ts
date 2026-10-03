@@ -32,6 +32,15 @@ router.get('/', async (req: Request, res: Response) => {
       where.status = { in: ['ACTIVE', 'GRADUATED'] };
     }
 
+    if (year && year !== 'ALL') {
+      const parsedYear = parseInt(String(year), 10);
+      if (!isNaN(parsedYear)) where.year = parsedYear;
+    }
+
+    if (section && section !== 'ALL') {
+      where.section = String(section);
+    }
+
     if (search) {
       const term = String(search).trim();
       where.OR = [

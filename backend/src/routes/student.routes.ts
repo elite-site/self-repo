@@ -465,7 +465,8 @@ router.delete('/submission', requireStudentAuth, async (req: Request, res: Respo
     for (const v of introVideos) {
       if (v.driveFileId) fileIds.add(v.driveFileId);
     }
-    const folderPath = submissions[0]?.driveFolderPath;
+    const cleanRollNo = student.rollNo.toUpperCase().replace(/[^a-zA-Z0-9]/g, '');
+    const folderPath = submissions[0]?.driveFolderPath || `Students/${cleanRollNo}`;
 
     // `rating` is a plain enum column on Submission and EmailLog.submissionId is
     // an unconstrained string, so the rows can be removed directly.
@@ -592,6 +593,21 @@ router.get('/submission/media/video', requireStudentAuth, async (req: Request, r
           videoDriveId: submission.videoDriveId,
           driveFolderPath: submission.driveFolderPath,
         });
+      }
+    }
+
+    if (!submission?.videoDriveId) {
+      const iv = await prisma.introVideo.findFirst({
+        where: { studentId },
+        orderBy: { submittedAt: 'desc' },
+        select: { driveFileId: true },
+      });
+      if (iv?.driveFileId) {
+        const cleanRollNo = (rollNo || studentId).toUpperCase().replace(/[^a-zA-Z0-9]/g, '');
+        submission = {
+          videoDriveId: iv.driveFileId,
+          driveFolderPath: `Students/${cleanRollNo}`,
+        };
       }
     }
 
@@ -999,6 +1015,7 @@ router.post('/resume', requireStudentAuth, submissionRateLimiter, resumeUpload, 
         console.warn('Failed to delete old resume from Drive:', e);
       }
     }
+    await driveService.deleteFilesByPrefix(relativePath, `${cleanRollNo}_resume`).catch(() => {});
 
     // Upload new resume to Drive or mock storage
     const ext = path.extname(resumeFile.originalname) || '.pdf';

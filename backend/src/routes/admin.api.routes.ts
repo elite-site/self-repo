@@ -927,9 +927,11 @@ router.delete('/submissions/:id/video', async (req: Request, res: Response): Pro
           ],
         },
       });
+      const cleanRollNo = (submission?.rollNo || '').toUpperCase().replace(/[^a-zA-Z0-9]/g, '');
+      const studentRelativePath = submission.driveFolderPath || (cleanRollNo ? `Students/${cleanRollNo}` : undefined);
       for (const iv of introVideos) {
         if (iv.driveFileId) {
-          await driveService.deleteFileById(iv.driveFileId).catch(() => {});
+          await driveService.deleteFileById(iv.driveFileId, studentRelativePath).catch(() => {});
         }
       }
       await prisma.introVideo.updateMany({
@@ -1101,9 +1103,11 @@ router.delete('/submissions/:id', async (req: Request, res: Response): Promise<R
       },
     });
 
+    const cleanRollNo = (submission?.rollNo || student?.rollNo || '').toUpperCase().replace(/[^a-zA-Z0-9]/g, '');
+    const studentRelativePath = submission.driveFolderPath || (cleanRollNo ? `Students/${cleanRollNo}` : undefined);
     for (const iv of introVideos) {
       if (iv.driveFileId) {
-        await driveService.deleteFileById(iv.driveFileId).catch(() => {});
+        await driveService.deleteFileById(iv.driveFileId, studentRelativePath).catch(() => {});
       }
     }
 

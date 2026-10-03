@@ -1358,6 +1358,49 @@ export class DriveService {
   }
 
   /**
+   * Deletes all files matching a prefix within a student's relative path or Drive folder.
+   * Useful when overriding files (e.g. photos, videos, resumes) to guarantee no previous takes remain.
+   */
+  public async deleteFilesByPrefix(folderRelativePath: string, filePrefix: string): Promise<number> {
+    let deletedCount = 0;
+    if (this.isMock || !this.drive) {
+      const dirPath = path.join(this.mockBaseDir, folderRelativePath);
+      if (fs.existsSync(dirPath)) {
+        for (const file of fs.readdirSync(dirPath)) {
+          if (file.startsWith(filePrefix)) {
+            try {
+              fs.rmSync(path.join(dirPath, file), { force: true });
+              deletedCount++;
+            } catch (_) {}
+          }
+        }
+      }
+      return deletedCount;
+    }
+
+    try {
+      const folderId = await this.resolveFolderPath(folderRelativePath, env.GOOGLE_DRIVE_ROOT_FOLDER_ID);
+      const res = await this.drive.files.list({
+        q: `'${folderId}' in parents and name contains '${filePrefix.replace(/'/g, "\\'")}' and trashed = false`,
+        fields: 'files(id, name)',
+        supportsAllDrives: true,
+        pageSize: 50,
+      });
+      if (res.data.files) {
+        for (const f of res.data.files) {
+          if (f.id && f.name && f.name.startsWith(filePrefix)) {
+            await this.drive.files.delete({ fileId: f.id, supportsAllDrives: true }).catch(() => {});
+            deletedCount++;
+          }
+        }
+      }
+    } catch (err) {
+      console.warn(`[Drive] Error deleting files by prefix ${filePrefix}:`, err);
+    }
+    return deletedCount;
+  }
+
+  /**
    * Deletes only the video file for a submission (mock storage or Google Drive),
    * leaving the rest of the record and folder intact so the student can re-upload.
    */
@@ -1428,6 +1471,9 @@ export class DriveService {
     ];
 
     if (this.isMock || !this.drive) {
+      for (const fileId of fileIds) {
+        await this.deleteFileById(fileId, submission.driveFolderPath);
+      }
       if (submission.driveFolderPath) {
         const dirPath = path.join(this.mockBaseDir, submission.driveFolderPath);
         if (fs.existsSync(dirPath)) {

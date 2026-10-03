@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import path from 'path';
 import { requireStudentAuth } from '../middleware/studentAuth';
 import { prisma } from '../lib/prisma';
 import { profilePhotoUpload } from '../middleware/upload';
@@ -195,13 +196,14 @@ router.post('/photo', profilePhotoUpload, async (req: Request, res: Response) =>
     });
     const cleanRollNo = student?.rollNo ? student.rollNo.toUpperCase().replace(/[^a-zA-Z0-9]/g, '') : 'STUDENT';
     const relativePath = `Students/${cleanRollNo}`;
-    const ext = req.file.originalname.split('.').pop() || 'jpg';
-    const fileName = `${cleanRollNo}_photo_${Date.now()}.${ext}`;
+    const ext = path.extname(req.file.originalname) || '.jpg';
+    const fileName = `${cleanRollNo}_photo${ext}`;
 
-    // Clean up previous photo from Drive if present
+    // Clean up previous photo files from Drive to ensure complete override
     if (student?.profile?.photoDriveId) {
       await driveService.deleteFileById(student.profile.photoDriveId, relativePath).catch(() => {});
     }
+    await driveService.deleteFilesByPrefix(relativePath, `${cleanRollNo}_photo`).catch(() => {});
 
     try {
       driveFileId = await driveService.uploadFile(
@@ -269,9 +271,13 @@ router.delete('/photo', async (req: Request, res: Response) => {
       where: { id: studentId },
       select: { rollNo: true, profile: { select: { photoDriveId: true } } },
     });
-    if (student?.profile?.photoDriveId) {
-      const cleanRollNo = student.rollNo.toUpperCase().replace(/[^a-zA-Z0-9]/g, '');
-      await driveService.deleteFileById(student.profile.photoDriveId, `Students/${cleanRollNo}`).catch(() => {});
+    if (student?.profile?.photoDriveId || student?.rollNo) {
+      const cleanRollNo = (student?.rollNo || 'STUDENT').toUpperCase().replace(/[^a-zA-Z0-9]/g, '');
+      const relativePath = `Students/${cleanRollNo}`;
+      if (student?.profile?.photoDriveId) {
+        await driveService.deleteFileById(student.profile.photoDriveId, relativePath).catch(() => {});
+      }
+      await driveService.deleteFilesByPrefix(relativePath, `${cleanRollNo}_photo`).catch(() => {});
     }
     await prisma.studentProfile.updateMany({
       where: { studentId },
