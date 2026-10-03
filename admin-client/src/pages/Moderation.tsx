@@ -101,6 +101,55 @@ const ItemTypeBadge: React.FC<{ itemType: string }> = ({ itemType }) => {
   }
 };
 
+const DocumentOrImagePreview: React.FC<{
+  url: string;
+  title: string;
+  isPdfHint?: boolean;
+}> = ({ url, title, isPdfHint }) => {
+  const [isPdf, setIsPdf] = useState(isPdfHint || false);
+  const [imgLoaded, setImgLoaded] = useState(false);
+
+  useEffect(() => {
+    setIsPdf(isPdfHint || false);
+    setImgLoaded(false);
+  }, [url, isPdfHint]);
+
+  if (isPdf) {
+    return (
+      <div className="w-full h-[65vh] min-h-[400px] rounded-lg overflow-hidden border border-edge bg-white shadow-sm">
+        <iframe
+          src={url}
+          title={title}
+          className="w-full h-full"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative flex items-center justify-center max-h-[72vh] w-auto max-w-full mx-auto">
+      {!imgLoaded && (
+        <div className="flex items-center justify-center p-8">
+          <Loader2 className="w-6 h-6 animate-spin text-brand" />
+        </div>
+      )}
+      <img
+        src={url}
+        alt={title}
+        loading="lazy"
+        onLoad={() => setImgLoaded(true)}
+        onError={() => {
+          // If the image fails to decode (e.g. it is a PDF), switch to iframe PDF viewer
+          setIsPdf(true);
+        }}
+        className={`max-h-[72vh] w-auto max-w-full mx-auto object-contain rounded-lg shadow-md transition-opacity duration-200 ${
+          imgLoaded ? 'opacity-100' : 'opacity-0'
+        }`}
+      />
+    </div>
+  );
+};
+
 export const Moderation: React.FC = () => {
   const confirm = useConfirm();
   const [items, setItems] = useState<UnifiedModerationItem[]>([]);
@@ -918,27 +967,15 @@ export const Moderation: React.FC = () => {
                       {/* 3. CERTIFICATE */}
                       {selectedItem.itemType === 'certificate' && (() => {
                         const certUrl = selectedItem.fileUrl || selectedItem.thumbnailUrl;
-                        const isPdf = certUrl && (certUrl.toLowerCase().includes('.pdf') || certUrl.toLowerCase().includes('/pdf'));
                         return (
                           <div className="w-full flex-1 flex flex-col space-y-3">
                             <div className="w-full flex-1 min-h-[320px] flex items-center justify-center">
                               {certUrl ? (
-                                isPdf ? (
-                                  <div className="w-full h-[65vh] min-h-[400px] rounded-lg overflow-hidden border border-edge bg-white">
-                                    <iframe
-                                      src={certUrl}
-                                      title={selectedItem.title}
-                                      className="w-full h-full"
-                                    />
-                                  </div>
-                                ) : (
-                                  <img
-                                    src={certUrl}
-                                    alt={selectedItem.title}
-                                    loading="lazy"
-                                    className="max-h-[72vh] w-auto max-w-full mx-auto object-contain rounded-lg shadow-md"
-                                  />
-                                )
+                                <DocumentOrImagePreview
+                                  url={certUrl}
+                                  title={selectedItem.title}
+                                  isPdfHint={Boolean(certUrl.toLowerCase().includes('.pdf') || certUrl.toLowerCase().includes('/pdf'))}
+                                />
                               ) : (
                                 <div className="flex flex-col items-center justify-center p-12 text-center gap-3 my-auto">
                                   <div className="w-20 h-20 rounded-full bg-brand-soft flex items-center justify-center text-brand border border-brand/20">
@@ -1019,27 +1056,15 @@ export const Moderation: React.FC = () => {
                       {/* 5. ACHIEVEMENT */}
                       {selectedItem.itemType === 'achievement' && (() => {
                         const proofUrl = selectedItem.fileUrl || selectedItem.proofUrl;
-                        const isPdf = proofUrl && (proofUrl.toLowerCase().includes('.pdf') || proofUrl.toLowerCase().includes('/pdf'));
                         return (
                           <div className="w-full flex-1 flex flex-col space-y-4">
                             <div className="w-full flex-1 min-h-[320px] flex items-center justify-center">
                               {proofUrl ? (
-                                isPdf ? (
-                                  <div className="w-full h-[65vh] min-h-[400px] rounded-lg overflow-hidden border border-edge bg-white">
-                                    <iframe
-                                      src={proofUrl}
-                                      title={selectedItem.title}
-                                      className="w-full h-full"
-                                    />
-                                  </div>
-                                ) : (
-                                  <img
-                                    src={proofUrl}
-                                    alt={selectedItem.title}
-                                    loading="lazy"
-                                    className="max-h-[72vh] w-auto max-w-full mx-auto object-contain rounded-lg shadow-md"
-                                  />
-                                )
+                                <DocumentOrImagePreview
+                                  url={proofUrl}
+                                  title={selectedItem.title}
+                                  isPdfHint={Boolean(proofUrl.toLowerCase().includes('.pdf') || proofUrl.toLowerCase().includes('/pdf'))}
+                                />
                               ) : (
                                 <div className="flex flex-col items-center justify-center p-12 text-center gap-3 my-auto">
                                   <div className="w-20 h-20 rounded-full bg-brand-soft flex items-center justify-center text-brand border border-brand/20">
