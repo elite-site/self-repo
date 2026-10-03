@@ -29,7 +29,7 @@ export interface AvatarProps extends Omit<React.HTMLAttributes<HTMLSpanElement>,
  * §4.8 dimension column. Every step is an exact Tailwind default, so nothing
  * here is an arbitrary value.
  *
- * `xs` uses `text-xs` (12px) rather than the plan's `text-[10px]`: there is no
+ * `xs` uses `text-xs` (12px) rather than the plan's `text-xs`: there is no
  * 10px type token, and §3.6 makes tokens mandatory, so the nearest real step
  * wins. At a 24px box a two-letter initial still fits.
  */

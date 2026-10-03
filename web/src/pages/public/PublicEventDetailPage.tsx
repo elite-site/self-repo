@@ -120,7 +120,7 @@ export const PublicEventDetailPage: React.FC<PublicEventDetailPageProps> = ({ se
         <div className="surface p-6 sm:p-8 space-y-5">
           <div className="space-y-2">
             {event.status && (
-              <span className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider bg-status-bg-approved text-status-approved border border-status-bg-approved">
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wider bg-status-bg-approved text-status-approved border border-status-bg-approved">
                 <ShieldCheck className="w-3 h-3" aria-hidden="true" />
                 {event.status}
               </span>

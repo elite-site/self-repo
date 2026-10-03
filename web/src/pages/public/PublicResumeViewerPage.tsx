@@ -91,7 +91,7 @@ export const PublicResumeViewerPage: React.FC<PublicResumeViewerProps> = ({ sess
 
       <main className="flex-1 w-full bg-surface-inverse flex flex-col">
         {loading ? (
-          <div className="flex-1 flex items-center justify-center min-h-[500px]">
+          <div className="flex-1 flex items-center justify-center min-h-[60dvh]">
             <Loader2 className="w-8 h-8 animate-spin text-ink-inverse" aria-hidden="true" />
           </div>
         ) : resumeUrl ? (
@@ -108,7 +108,7 @@ export const PublicResumeViewerPage: React.FC<PublicResumeViewerProps> = ({ sess
             />
           </div>
         ) : (
-          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center min-h-[500px] text-ink-inverse/60 space-y-3">
+          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center min-h-[60dvh] text-ink-inverse/60 space-y-3">
             <div className="w-14 h-14 rounded-lg bg-surface-raised flex items-center justify-center text-ink-inverse/40">
               <FileText className="w-7 h-7" aria-hidden="true" />
             </div>

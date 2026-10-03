@@ -169,7 +169,7 @@ export const SwipeCard = React.forwardRef<HTMLDivElement, SwipeCardProps>(functi
       // student's own drag, and the reduced-motion variant of this helper is
       // deliberately the same function.
       style={swipeCardStackVariants(index)}
-      className={cn('relative h-96 w-full', className)}
+      className={cn('relative h-[min(24rem,65dvh)] w-full', className)}
     >
       <motion.div
         drag={isTop ? 'x' : false}
@@ -220,7 +220,7 @@ export const SwipeCard = React.forwardRef<HTMLDivElement, SwipeCardProps>(functi
               className={cn(actionButtonBase, 'border-2 border-danger text-danger hover:bg-danger-subtle')}
             >
               <X size={20} aria-hidden="true" />
-              <span className="font-ui text-[10px] font-semibold uppercase">Pass</span>
+              <span className="font-ui text-xs font-semibold uppercase">Pass</span>
             </motion.button>
 
             <motion.button
@@ -231,7 +231,7 @@ export const SwipeCard = React.forwardRef<HTMLDivElement, SwipeCardProps>(functi
               className={cn(actionButtonBase, 'bg-brand text-on-brand hover:bg-brand-hover')}
             >
               <Check size={20} aria-hidden="true" />
-              <span className="font-ui text-[10px] font-semibold uppercase">Vote</span>
+              <span className="font-ui text-xs font-semibold uppercase">Vote</span>
             </motion.button>
           </div>
         )}

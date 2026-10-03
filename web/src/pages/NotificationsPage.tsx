@@ -236,7 +236,7 @@ export const NotificationsPage: React.FC = () => {
               <div className="flex-1 min-w-0 space-y-1">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    <span className="badge badge-draft text-[10px]">
+                    <span className="badge badge-draft text-xs">
                       {n.type}
                     </span>
                     <h4

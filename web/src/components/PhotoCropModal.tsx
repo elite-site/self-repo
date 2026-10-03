@@ -167,7 +167,7 @@ export const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
         )}
 
         {/* Crop Area (1:1 aspect ratio) */}
-        <div className="relative w-full h-72 sm:h-80 bg-surface-inverse rounded-lg overflow-hidden shadow-inner border border-edge-strong select-none">
+        <div className="relative w-full h-[40dvh] min-h-[14rem] sm:h-80 bg-surface-inverse rounded-lg overflow-hidden shadow-inner border border-edge-strong select-none">
           <ImageCropper
             image={imageSrc}
             crop={crop}
@@ -191,14 +191,14 @@ export const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
           <div className="flex items-center justify-between text-label-sm text-ink-secondary font-medium">
             <span>Zoom & Position</span>
             <div className="flex items-center gap-2">
-              <span className="font-mono text-ink-muted text-[11px]">
+              <span className="font-mono text-ink-muted text-xs">
                 {Math.round(zoom * 100)}%
               </span>
               <button
                 type="button"
                 onClick={handleReset}
                 disabled={isBusy}
-                className="text-[11px] text-ink-muted hover:text-status-rejected font-medium flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-40 min-h-[44px] min-w-[44px] px-2"
+                className="text-xs text-ink-muted hover:text-status-rejected font-medium flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-40 min-h-[44px] min-w-[44px] px-2"
               >
                 <RotateCcw className="w-3 h-3" />
                 <span>Reset</span>

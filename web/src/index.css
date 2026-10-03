@@ -288,3 +288,24 @@ svg {
     page-break-inside: avoid !important;
   }
 }
+
+/* ── Fluid layout safety net ─────────────────────────────────────────────────
+   Most "it doesn't fit my phone" bugs are the same two things: a flex/grid
+   child that refuses to shrink below its content (long email, URL, filename),
+   and a long word with nowhere to break. Both are fixed once here instead of
+   on every `justify-between` row. `:where()` keeps specificity at zero, so any
+   utility class (`shrink-0`, `min-w-[44px]`, `whitespace-nowrap`) still wins. */
+:where(main, [role='dialog']) :where(.flex, .grid, .inline-flex) > * {
+  min-width: 0;
+}
+:where(main, [role='dialog']) :where(p, h1, h2, h3, h4, h5, h6, li, dd, dt, label, a, span) {
+  overflow-wrap: break-word;
+}
+:where(main) :where(iframe, video, canvas, svg, img) {
+  max-width: 100%;
+}
+/* Last line of defence against sideways scrolling. `clip` (unlike `hidden`)
+   does not create a scroll container, so `position: sticky` keeps working. */
+body {
+  overflow-x: clip;
+}

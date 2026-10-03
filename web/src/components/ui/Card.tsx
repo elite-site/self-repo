@@ -40,7 +40,7 @@ const VARIANT: Record<CardVariant, string> = {
   // runtime cannot reflow the content inside.
   elevated: 'border border-transparent bg-surface shadow-md',
   ghost: 'border border-edge bg-transparent',
-  // §4.8 writes `bg-brand-subtle`; the preset spells that token `brand-soft`.
+  // §4.8 subtle-brand fill; the preset spells that token `brand-soft`.
   brand: 'border border-brand bg-brand-soft',
   interactive: 'border border-edge bg-surface shadow-sm enabled:hover:shadow-md',
 };

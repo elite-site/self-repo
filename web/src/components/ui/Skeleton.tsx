@@ -41,7 +41,7 @@ const TEXT_LINE_WIDTHS = ['w-full', 'w-4/5', 'w-3/5'] as const;
 export const SkeletonPageHeader: React.FC = () => (
   <div className="space-y-2" aria-hidden="true">
     <Skeleton className="h-7 w-56" />
-    <Skeleton className="h-4 w-80" />
+    <Skeleton className="h-4 w-80 max-w-full" />
   </div>
 );
 

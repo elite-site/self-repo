@@ -282,7 +282,7 @@ export const ResumePage: React.FC = () => {
       {!hasValidFile ? (
         <div
           onClick={() => fileInputRef.current?.click()}
-          className="surface border-2 border-dashed border-edge hover:border-brand bg-surface p-16 flex flex-col items-center text-center justify-center min-h-[350px] transition-colors cursor-pointer shadow-card"
+          className="surface border-2 border-dashed border-edge hover:border-brand bg-surface p-6 sm:p-12 md:p-16 flex flex-col items-center text-center justify-center min-h-[350px] transition-colors cursor-pointer shadow-card"
         >
           <input
             type="file"
@@ -327,7 +327,7 @@ export const ResumePage: React.FC = () => {
               )}
               <div>
                 <h4 className="font-bold text-xs text-ink font-heading">{resumeData.filename || 'resume.pdf'}</h4>
-                <span className="text-[11px] text-ink-secondary">
+                <span className="text-xs text-ink-secondary">
                   Submitted {resumeData.submittedAt ? new Date(resumeData.submittedAt).toLocaleDateString() : 'Recently'}
                 </span>
               </div>
@@ -350,7 +350,7 @@ export const ResumePage: React.FC = () => {
 
           {/* Embedded PDF Viewer */}
           {embedUrl && (
-            <div className="surface rounded-lg shadow-card border border-edge overflow-hidden h-[750px] w-full relative">
+            <div className="surface rounded-lg shadow-card border border-edge overflow-hidden h-[75dvh] min-h-[24rem] max-h-[56rem] w-full relative">
               <iframe
                 src={embedUrl}
                 className="w-full h-full border-0"

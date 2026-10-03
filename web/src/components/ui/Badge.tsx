@@ -27,7 +27,7 @@ const VARIANT: Record<BadgeVariant, string> = {
   danger: 'bg-danger-subtle text-danger',
   info: 'bg-info-subtle text-info',
   neutral: 'bg-surface-sunken text-ink-secondary',
-  // §4.8 writes `bg-brand-subtle`; the preset spells that token `brand-soft`.
+  // §4.8 subtle-brand fill; the preset spells that token `brand-soft`.
   brand: 'bg-brand-soft text-brand',
 };
 

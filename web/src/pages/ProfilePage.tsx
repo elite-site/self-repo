@@ -211,7 +211,7 @@ export const ProfilePage: React.FC = () => {
         {/* Cover banner */}
         <div className="h-28 sm:h-36 bg-gradient-to-br from-red-950 via-red-900/80 to-slate-900 relative px-6 sm:px-8 flex items-end">
           <div className="absolute top-4 right-4 flex items-center gap-2">
-            <span className="text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-ink-inverse bg-on-primary/10 backdrop-blur-sm px-2.5 py-1 rounded-lg border border-on-primary/20">
+            <span className="text-xs sm:text-xs font-extrabold uppercase tracking-wider text-ink-inverse bg-on-primary/10 backdrop-blur-sm px-2.5 py-1 rounded-lg border border-on-primary/20">
               Verified Student Account
             </span>
           </div>
@@ -411,7 +411,7 @@ export const ProfilePage: React.FC = () => {
           <div className="text-center py-8 px-4 bg-surface-sunken rounded-xl border border-dashed border-edge">
             <Video className="w-8 h-8 text-ink-muted mx-auto mb-2" />
             <div className="text-xs font-bold text-ink-secondary">No introduction video uploaded yet</div>
-            <p className="text-[11px] text-ink-muted mt-0.5 mb-3">
+            <p className="text-xs text-ink-muted mt-0.5 mb-3">
               Upload your 60-90 second introduction video to showcase on your profile.
             </p>
             <Link to="/intro-video" className="btn btn-primary text-xs">
@@ -452,7 +452,7 @@ export const ProfilePage: React.FC = () => {
           <div className="text-center py-6 px-4 bg-surface-sunken rounded-xl border border-dashed border-edge">
             <Sparkles className="w-6 h-6 text-ink-muted mx-auto mb-1.5" />
             <div className="text-xs font-semibold text-ink-secondary">No technical skills added yet</div>
-            <p className="text-[11px] text-ink-muted mt-0.5 mb-3">
+            <p className="text-xs text-ink-muted mt-0.5 mb-3">
               Highlight languages, frameworks, databases, and developer tools.
             </p>
             <Link to="/profile/edit" className="btn btn-primary text-xs">
@@ -485,7 +485,7 @@ export const ProfilePage: React.FC = () => {
           <div className="text-center py-8 px-4 bg-surface-sunken rounded-xl border border-dashed border-edge">
             <FolderGit2 className="w-8 h-8 text-ink-muted mx-auto mb-2" />
             <div className="text-xs font-bold text-ink-secondary">No projects added yet</div>
-            <p className="text-[11px] text-ink-muted mt-0.5 mb-3">
+            <p className="text-xs text-ink-muted mt-0.5 mb-3">
               Showcase software applications, AI models, hardware builds, or academic projects.
             </p>
             <Link to="/portfolio" className="btn btn-primary text-xs">
@@ -506,7 +506,7 @@ export const ProfilePage: React.FC = () => {
                     </span>
                   </div>
                   <h4 className="text-xs font-bold text-ink font-heading line-clamp-1">{proj.title}</h4>
-                  <p className="text-[11px] text-ink-secondary line-clamp-2">{proj.description}</p>
+                  <p className="text-xs text-ink-secondary line-clamp-2">{proj.description}</p>
                 </div>
 
                 <div className="pt-3 mt-2 border-t border-edge flex items-center justify-between text-xs">
@@ -514,7 +514,7 @@ export const ProfilePage: React.FC = () => {
                     {proj.techStack?.slice(0, 2).map((t) => (
                       <span
                         key={t}
-                        className="text-[9px] bg-surface border border-edge text-ink-secondary px-1.5 py-0.5 rounded"
+                        className="text-xs bg-surface border border-edge text-ink-secondary px-1.5 py-0.5 rounded"
                       >
                         {t}
                       </span>
@@ -561,7 +561,7 @@ export const ProfilePage: React.FC = () => {
           <div className="text-center py-6 px-4 bg-surface-sunken rounded-xl border border-dashed border-edge">
             <Award className="w-6 h-6 text-ink-muted mx-auto mb-1.5" />
             <div className="text-xs font-semibold text-ink-secondary">No credentials uploaded yet</div>
-            <p className="text-[11px] text-ink-muted mt-0.5">
+            <p className="text-xs text-ink-muted mt-0.5">
               Upload competition awards, hackathon ranks, and industry certifications.
             </p>
           </div>
@@ -574,7 +574,7 @@ export const ProfilePage: React.FC = () => {
               >
                 <div>
                   <h4 className="text-xs font-bold text-ink font-heading">{ach.title}</h4>
-                  <p className="text-[11px] text-ink-secondary">{ach.organization || ach.category}</p>
+                  <p className="text-xs text-ink-secondary">{ach.organization || ach.category}</p>
                 </div>
                 <span className={getItemStatusBadgeClass(ach.status)}>
                   {ach.status}
@@ -588,7 +588,7 @@ export const ProfilePage: React.FC = () => {
               >
                 <div>
                   <h4 className="text-xs font-bold text-ink font-heading">{cert.title}</h4>
-                  <p className="text-[11px] text-ink-secondary">{cert.issuer}</p>
+                  <p className="text-xs text-ink-secondary">{cert.issuer}</p>
                 </div>
                 <span className={getItemStatusBadgeClass(cert.status)}>
                   {cert.status}
@@ -659,7 +659,7 @@ export const ProfilePage: React.FC = () => {
                 </div>
                 <div>
                   <h4 className="text-xs font-bold text-ink font-heading">PDF Resume</h4>
-                  <span className="text-[10px] text-ink-secondary">
+                  <span className="text-xs text-ink-secondary">
                     {(resume?.fileUrl || resume?.driveFileId) ? 'Uploaded Document' : 'Pending upload'}
                   </span>
                 </div>
@@ -683,18 +683,18 @@ export const ProfilePage: React.FC = () => {
                     className="surface-sunken p-3 rounded-lg border border-edge text-xs space-y-1"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-ink uppercase text-[10px]">
+                      <span className="font-bold text-ink uppercase text-xs">
                         Field: {cr.fieldName}
                       </span>
                       <span className={getItemStatusBadgeClass(cr.status)}>
                         {cr.status}
                       </span>
                     </div>
-                    <div className="text-[11px] text-ink-secondary">
+                    <div className="text-xs text-ink-secondary">
                       Requested: <span className="font-semibold text-ink">{cr.requestedValue}</span>
                     </div>
                     {cr.reason && (
-                      <p className="text-[10px] text-ink-muted italic">"{cr.reason}"</p>
+                      <p className="text-xs text-ink-muted italic">"{cr.reason}"</p>
                     )}
                   </div>
                 ))}

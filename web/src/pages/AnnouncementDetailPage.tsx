@@ -77,7 +77,7 @@ export const AnnouncementDetailPage: React.FC = () => {
 
       <article className="bg-surface border border-edge rounded-lg shadow-card overflow-hidden">
         <div className="bg-gradient-to-br from-ink to-surface-inverse px-6 sm:px-8 py-7 text-on-primary">
-          <div className="flex items-center gap-2 text-[10px] font-extrabold uppercase tracking-wider text-brand-soft mb-4">
+          <div className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-brand-soft mb-4">
             <Megaphone className="w-4 h-4 text-brand-soft" />
             Department announcement
           </div>

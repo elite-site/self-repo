@@ -207,7 +207,7 @@ export const VotingPage: React.FC = () => {
                     </div>
                   )}
 
-                  <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1" role="radiogroup" aria-label="Candidates">
+                  <div className="space-y-2.5 max-h-[40dvh] overflow-y-auto pr-1" role="radiogroup" aria-label="Candidates">
                     {(!activeCampaign.candidates || activeCampaign.candidates.length === 0) ? (
                       <div className="text-center py-6 text-body-sm text-ink-muted">
                         No candidates registered for this ballot yet.

@@ -18,7 +18,7 @@ export const SettingsPage: React.FC = () => {
 
   return (
     <div className="min-h-[100dvh] bg-surface px-6 sm:px-8 py-8">
-      <div className="max-w-md w-full bg-surface-canvas rounded-2xl shadow-xl p-8 sm:p-10 border border-surface-border">
+      <div className="max-w-md w-full bg-surface-canvas rounded-2xl shadow-xl p-8 sm:p-10 border border-edge">
         <h2 className="text-2xl font-heading text-brand mb-6">Settings</h2>
 
         {/* Theme preference */}
@@ -31,12 +31,12 @@ export const SettingsPage: React.FC = () => {
               { value: 'dark', label: 'Dark' },
             ]}
             onChange={(e) => handleThemeChange(e.target.value as 'light' | 'dark')}
-            className="bg-surface-foreground"
+            className="bg-surface-sunken"
           />
         </div>
 
         {/* Sign out */}
-        <div className="mt-8 pt-8 border-t border-surface-border">
+        <div className="mt-8 pt-8 border-t border-edge">
           <Button
             onClick={async () => {
               await logout();

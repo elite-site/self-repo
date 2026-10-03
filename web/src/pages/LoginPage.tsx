@@ -45,7 +45,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
   return (
     <div className="min-h-[100dvh] bg-surface flex items-center justify-center px-6 sm:px-8 py-8">
-      <div className="max-w-md w-full bg-surface-canvas rounded-2xl shadow-xl p-8 sm:p-10 border border-surface-border">
+      <div className="max-w-md w-full bg-surface-canvas rounded-2xl shadow-xl p-6 sm:p-10 border border-edge">
         <div className="text-center mb-6">
           <h1 className="text-5xl font-heading text-brand mb-2">ELITE Portal</h1>
           <p className="text-text-secondary">Student Introduction Portal</p>

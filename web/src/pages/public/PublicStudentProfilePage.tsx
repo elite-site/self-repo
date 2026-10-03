@@ -203,7 +203,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#070B16] text-slate-100 flex flex-col">
+      <div className="min-h-[100dvh] bg-[#070B16] text-slate-100 flex flex-col">
         <header className="sticky top-0 z-50 h-16 border-b border-slate-800/80 bg-[#070B16]/80 backdrop-blur-md px-6 flex items-center justify-between">
           <Skeleton className="h-6 w-32 rounded-lg" />
           <div className="hidden md:flex gap-4">
@@ -218,7 +218,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
             <div className="lg:col-span-5 space-y-4">
               <Skeleton className="h-6 w-28 rounded-full" />
-              <Skeleton className="h-12 w-64 rounded-lg" />
+              <Skeleton className="h-12 w-64 max-w-full rounded-lg" />
               <Skeleton className="h-5 w-48" />
               <SkeletonText lines={3} />
             </div>
@@ -240,7 +240,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
 
   if (!student) {
     return (
-      <div className="min-h-screen bg-[#070B16] text-slate-100 flex flex-col justify-center items-center px-4">
+      <div className="min-h-[100dvh] bg-[#070B16] text-slate-100 flex flex-col justify-center items-center px-4">
         <div className="max-w-md w-full text-center space-y-6">
           <EmptyState
             icon={ShieldCheck}
@@ -292,7 +292,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
   const graduationStartYear = 2024;
 
   return (
-    <div className="min-h-screen bg-[#070B16] text-slate-100 font-sans selection:bg-rose-500 selection:text-white antialiased overflow-x-hidden scroll-smooth print:bg-white print:text-black">
+    <div className="min-h-[100dvh] bg-[#070B16] text-slate-100 font-sans selection:bg-rose-500 selection:text-white antialiased overflow-x-hidden scroll-smooth print:bg-white print:text-black">
       {/* Background ambient lighting */}
       <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(ellipse_80%_60%_at_50%_-20%,rgba(225,29,72,0.14),rgba(255,255,255,0))] print:hidden" />
       <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(ellipse_60%_50%_at_80%_100%,rgba(59,130,246,0.08),rgba(0,0,0,0))] print:hidden" />
@@ -569,27 +569,27 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
             <div className="lg:col-span-3 order-3">
               <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 p-5 backdrop-blur-md shadow-lg space-y-3.5">
                 <div className="flex items-center justify-between pb-2 border-b border-slate-800/80">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Student Profile</span>
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Student Profile</span>
                   <span className="font-mono text-xs font-semibold text-rose-400">{student.rollNo}</span>
                 </div>
 
                 <div>
-                  <span className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold">Academic Year</span>
+                  <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Academic Year</span>
                   <p className="text-sm font-bold text-white mt-0.5">Year {student.year || 1} (Section {student.section || 'A'})</p>
                 </div>
 
                 <div>
-                  <span className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold">Department</span>
+                  <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Department</span>
                   <p className="text-sm font-bold text-white mt-0.5">{student.branch || DEPARTMENT}</p>
                 </div>
 
                 <div>
-                  <span className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold">Institution</span>
+                  <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Institution</span>
                   <p className="text-xs font-medium text-slate-300 mt-0.5 leading-snug">SASI Institute of Technology & Engineering</p>
                 </div>
 
                 <div className="pt-2 border-t border-slate-800/80">
-                  <span className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold">Current Focus</span>
+                  <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Current Focus</span>
                   <p className="text-xs font-semibold text-rose-300 mt-0.5">Full Stack & Software Engineering</p>
                 </div>
               </div>
@@ -632,7 +632,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
                     <VideoIcon size={18} className="text-rose-400" />
                     <h3 className="font-heading text-base font-bold text-white">Introduction Video</h3>
                   </div>
-                  <span className="text-[11px] text-slate-400">Department Verified Recording</span>
+                  <span className="text-xs text-slate-400">Department Verified Recording</span>
                 </div>
 
                 {introVideo?.streamUrl ? (
@@ -664,7 +664,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
                   <div className="py-12 px-4 text-center rounded-xl border border-dashed border-slate-800 bg-slate-950/60 space-y-2">
                     <VideoIcon size={28} className="text-slate-600 mx-auto" />
                     <h4 className="text-xs font-semibold text-slate-300">No introduction video published yet</h4>
-                    <p className="text-[11px] text-slate-500 max-w-xs mx-auto">
+                    <p className="text-xs text-slate-500 max-w-xs mx-auto">
                       A video preview appears here once verified by department coordinators.
                     </p>
                   </div>
@@ -719,7 +719,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
               {projects.map((project) => (
                 <div
                   key={project.id}
-                  className="flex-1 min-w-[260px] max-w-full md:max-w-[calc(50%-12px)] lg:max-w-[calc(33.333%-16px)] rounded-2xl border border-slate-800/80 bg-slate-900/60 p-5 backdrop-blur-sm hover:border-rose-500/40 hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between shadow-sm print:break-inside-avoid print:border-slate-300"
+                  className="flex-1 min-w-[min(16rem,100%)] max-w-full md:max-w-[calc(50%-12px)] lg:max-w-[calc(33.333%-16px)] rounded-2xl border border-slate-800/80 bg-slate-900/60 p-5 backdrop-blur-sm hover:border-rose-500/40 hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between shadow-sm print:break-inside-avoid print:border-slate-300"
                 >
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
@@ -744,7 +744,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
                         {project.techStack.map((tech) => (
                           <span
                             key={tech}
-                            className="text-[10px] font-semibold px-2 py-0.5 rounded-md border border-slate-800 bg-slate-950/80 text-slate-300"
+                            className="text-xs font-semibold px-2 py-0.5 rounded-md border border-slate-800 bg-slate-950/80 text-slate-300"
                           >
                             {tech}
                           </span>
@@ -819,17 +819,17 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
               <div className="rounded-xl border border-slate-800/80 bg-slate-950/50 p-3.5">
-                <span className="text-slate-400 uppercase font-semibold text-[10px] tracking-wider">Current Year</span>
+                <span className="text-slate-400 uppercase font-semibold text-xs tracking-wider">Current Year</span>
                 <p className="text-sm font-bold text-white mt-1">Year {student.year || 1} (Section {student.section || 'A'})</p>
               </div>
 
               <div className="rounded-xl border border-slate-800/80 bg-slate-950/50 p-3.5">
-                <span className="text-slate-400 uppercase font-semibold text-[10px] tracking-wider">Department</span>
+                <span className="text-slate-400 uppercase font-semibold text-xs tracking-wider">Department</span>
                 <p className="text-sm font-bold text-white mt-1">{student.branch || DEPARTMENT}</p>
               </div>
 
               <div className="rounded-xl border border-slate-800/80 bg-slate-950/50 p-3.5">
-                <span className="text-slate-400 uppercase font-semibold text-[10px] tracking-wider">Core Focus</span>
+                <span className="text-slate-400 uppercase font-semibold text-xs tracking-wider">Core Focus</span>
                 <p className="text-sm font-bold text-white mt-1">Software Engineering & Tools</p>
               </div>
             </div>
@@ -849,7 +849,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
                       <div key={ach.id} className="p-3 rounded-xl border border-slate-800 bg-slate-950/50 flex items-center justify-between">
                         <div>
                           <h4 className="text-xs font-bold text-white">{ach.title}</h4>
-                          {ach.organization && <p className="text-[11px] text-slate-400">{ach.organization}</p>}
+                          {ach.organization && <p className="text-xs text-slate-400">{ach.organization}</p>}
                         </div>
                       </div>
                     ))}
@@ -868,7 +868,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
                       <div key={cert.id} className="p-3 rounded-xl border border-slate-800 bg-slate-950/50 flex items-center justify-between">
                         <div>
                           <h4 className="text-xs font-bold text-white">{cert.title}</h4>
-                          {cert.issuer && <p className="text-[11px] text-slate-400">{cert.issuer}</p>}
+                          {cert.issuer && <p className="text-xs text-slate-400">{cert.issuer}</p>}
                         </div>
                       </div>
                     ))}
@@ -899,7 +899,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
                 <Mail size={18} />
               </div>
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Email</span>
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Email</span>
                 <p className="text-xs font-semibold text-white truncate mt-0.5">
                   {student.email || 'Contact via portal'}
                 </p>
@@ -917,7 +917,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
                 <Linkedin size={18} />
               </div>
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">LinkedIn</span>
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">LinkedIn</span>
                 <p className="text-xs font-semibold text-white truncate mt-0.5">
                   {profile.linkedinUrl ? 'Connect on LinkedIn' : 'Profile not linked'}
                 </p>
@@ -935,7 +935,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
                 <Github size={18} />
               </div>
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">GitHub</span>
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">GitHub</span>
                 <p className="text-xs font-semibold text-white truncate mt-0.5">
                   {profile.githubUrl ? 'Explore Repositories' : 'Profile not linked'}
                 </p>
@@ -948,7 +948,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
                 <MapPin size={18} />
               </div>
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Campus Location</span>
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Campus Location</span>
                 <p className="text-xs font-semibold text-white mt-0.5 leading-snug">
                   SASI Institute, Tadepalligudem
                 </p>

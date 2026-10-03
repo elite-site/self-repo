@@ -734,7 +734,7 @@ export const VideoPage: React.FC = () => {
           </div>
 
           {publishNotice && (
-            <p className="text-[11px] text-ink-secondary flex items-center gap-1.5">
+            <p className="text-xs text-ink-secondary flex items-center gap-1.5">
               <Info className="w-3 h-3 shrink-0 text-brand" />
               <span>{publishNotice}</span>
             </p>
@@ -797,7 +797,7 @@ export const VideoPage: React.FC = () => {
                       ? 'Finalizing submission with Google Drive...'
                       : 'Streaming video to Google Drive...'}
                   </h3>
-                  <p className="text-[11px] text-ink-secondary mt-0.5">
+                  <p className="text-xs text-ink-secondary mt-0.5">
                     Zero server buffering • Direct parallel pipeline to cloud storage
                   </p>
                 </div>
@@ -813,7 +813,7 @@ export const VideoPage: React.FC = () => {
 
                   {/* Live Metrics Row */}
                   {uploadStats && (
-                    <div className="flex items-center justify-between text-[11px] text-ink-secondary px-0.5">
+                    <div className="flex items-center justify-between text-xs text-ink-secondary px-0.5">
                       <span>{uploadStats.loadedMb} / {uploadStats.totalMb} MB</span>
                       <div className="flex items-center gap-2.5">
                         {uploadStats.speedFormatted && (
@@ -829,7 +829,7 @@ export const VideoPage: React.FC = () => {
 
                 {/* Video Meta Badges */}
                 {videoMeta && (
-                  <div className="flex flex-wrap items-center justify-center gap-2 pt-1 text-[11px]">
+                  <div className="flex flex-wrap items-center justify-center gap-2 pt-1 text-xs">
                     <span className="px-2 py-0.5 rounded-md bg-surface border border-edge font-medium text-ink-secondary">
                       File: {videoMeta.sizeMb} MB
                     </span>
@@ -848,7 +848,7 @@ export const VideoPage: React.FC = () => {
 
                 {/* Duration notice if outside 60-90s */}
                 {videoMeta?.durationNotice && (
-                  <div className="max-w-md mx-auto p-2 bg-brand-soft/40 border border-brand/30 rounded-lg text-[11px] text-brand-soft-text text-left flex items-start gap-1.5">
+                  <div className="max-w-md mx-auto p-2 bg-brand-soft/40 border border-brand/30 rounded-lg text-xs text-brand-soft-text text-left flex items-start gap-1.5">
                     <Info className="w-4 h-4 text-brand shrink-0 mt-0.5" />
                     <span>{videoMeta.durationNotice}</span>
                   </div>
@@ -856,7 +856,7 @@ export const VideoPage: React.FC = () => {
 
                 {/* Wi-Fi Optimization Notice if file is large */}
                 {videoMeta?.isLarge && (
-                  <div className="max-w-md mx-auto p-2.5 bg-status-bg-pending border border-status-pending rounded-lg text-[11px] text-status-pending text-left flex items-start gap-2">
+                  <div className="max-w-md mx-auto p-2.5 bg-status-bg-pending border border-status-pending rounded-lg text-xs text-status-pending text-left flex items-start gap-2">
                     <Zap className="w-4 h-4 shrink-0 mt-0.5" />
                     <span>
                       <strong>Fast Upload Tip:</strong> This video is {videoMeta.sizeMb} MB. Recording at 720p HD (~8–12 MB) uploads up to 2× faster on campus Wi-Fi!
@@ -876,7 +876,7 @@ export const VideoPage: React.FC = () => {
                 </div>
               </div>
             ) : playbackUrl ? (
-              <div className="mx-auto max-w-2xl max-h-[420px] bg-surface-inverse rounded-lg overflow-hidden aspect-video border border-edge-strong shadow-inner">
+              <div className="mx-auto max-w-2xl max-h-[60dvh] bg-surface-inverse rounded-lg overflow-hidden aspect-video border border-edge-strong shadow-inner">
                 {playbackUrl ? (
                   <video
                     ref={videoRef}
@@ -903,7 +903,7 @@ export const VideoPage: React.FC = () => {
                   />
                 ) : null}
                 {previewError && (
-                  <p className="px-4 py-2 text-[11px] text-ink bg-status-bg-pending border-t border-edge" role="alert">
+                  <p className="px-4 py-2 text-xs text-ink bg-status-bg-pending border-t border-edge" role="alert">
                     Could not load your recording from the server. Refresh the page to try again.
                   </p>
                 )}
@@ -911,7 +911,7 @@ export const VideoPage: React.FC = () => {
             ) : (
               <div
                 onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-edge hover:border-edge-strong bg-surface-canvas hover:bg-brand-soft/10 rounded-lg p-12 flex flex-col items-center text-center justify-center min-h-[300px] transition-colors cursor-pointer group"
+                className="border-2 border-dashed border-edge hover:border-edge-strong bg-surface-canvas hover:bg-brand-soft/10 rounded-lg p-6 sm:p-12 flex flex-col items-center text-center justify-center min-h-[300px] transition-colors cursor-pointer group"
               >
                 <div className="w-16 h-16 rounded-lg bg-surface border border-edge flex items-center justify-center mb-4 group-hover:scale-105 transition-transform shadow-card">
                   <FileVideo className="w-8 h-8 text-brand" />
@@ -932,7 +932,7 @@ export const VideoPage: React.FC = () => {
             {/* WHAT IS CURRENTLY STORED */}
             {video && video.hasFile && (
               <div className="rounded-lg border border-edge bg-surface-canvas px-4 py-3">
-                <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[11px] text-ink-secondary">
+                <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-ink-secondary">
                   <div className="flex items-center gap-1.5">
                     <FileVideo className="w-3.5 h-3.5 text-brand shrink-0" />
                     <span className="font-semibold text-ink truncate max-w-[16rem]">
@@ -958,7 +958,7 @@ export const VideoPage: React.FC = () => {
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploading}
-                  className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-edge bg-surface text-ink-secondary hover:border-edge-strong hover:text-brand font-bold text-[11px] transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer min-h-[44px]"
+                  className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-edge bg-surface text-ink-secondary hover:border-edge-strong hover:text-brand font-bold text-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer min-h-[44px]"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
                   <span>Record a replacement</span>
@@ -990,7 +990,7 @@ export const VideoPage: React.FC = () => {
 
               {submission.reviewPros && submission.reviewPros.length > 0 && (
                 <div className="space-y-1.5">
-                  <span className="text-[11px] font-bold text-ink flex items-center gap-1">
+                  <span className="text-xs font-bold text-ink flex items-center gap-1">
                     <ThumbsUp className="w-3.5 h-3.5 text-status-approved" /> Strengths
                   </span>
                   <ul className="space-y-1">
@@ -1005,7 +1005,7 @@ export const VideoPage: React.FC = () => {
 
               {submission.reviewCons && submission.reviewCons.length > 0 && (
                 <div className="space-y-1.5 pt-2">
-                  <span className="text-[11px] font-bold text-ink flex items-center gap-1">
+                  <span className="text-xs font-bold text-ink flex items-center gap-1">
                     <ThumbsDown className="w-3.5 h-3.5 text-status-pending" /> Suggestions
                   </span>
                   <ul className="space-y-1">
