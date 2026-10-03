@@ -1,0 +1,55 @@
+# Post-deploy / scheduled check of the LIVE system.
+# Setup: Settings -> Secrets and variables -> Actions -> Variables:
+#   API_URL = https://<render-service>.onrender.com     (no trailing slash)
+#   WEB_URL = https://<netlify-site>.netlify.app
+# Cost note: every run bills >= 1 minute. */30 is ~1,440 min/month; on a
+# private repo's free tier (2,000 min) do not go more frequent than that.
+# A side effect worth having: the ping keeps a sleeping free-tier API warm.
+name: Smoke (live)
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+    inputs:
+      api_url:
+        description: Override API_URL
+        required: false
+      web_url:
+        description: Override WEB_URL
+        required: false
+  repository_dispatch:
+    types: [deployed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: smoke
+  cancel-in-progress: false
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      API_URL: ${{ inputs.api_url || vars.API_URL }}
+      WEB_URL: ${{ inputs.web_url || vars.WEB_URL }}
+      CURL: curl --fail --silent --show-error --retry 6 --retry-delay 10 --retry-all-errors --max-time 60
+    steps:
+      - name: Require URLs
+        run: |
+          test -n "$API_URL" && test -n "$WEB_URL" || { echo "::error::Set repo variables API_URL and WEB_URL"; exit 1; }
+      - name: API liveness
+        run: $CURL "$API_URL/health"
+      - name: API readiness (database + Drive)
+        run: |
+          body=$($CURL "$API_URL/ready"); echo "$body"
+          echo "$body" | grep -q '"status":"ok"'
+      - name: Public endpoints respond
+        run: |
+          for p in /api/branches /api/public/events /api/public/videos; do
+            echo "GET $p"; $CURL -o /dev/null "$API_URL$p"
+          done
+      - name: Web app serves the shell
+        run: $CURL "$WEB_URL/" | grep -q 'id="root"'

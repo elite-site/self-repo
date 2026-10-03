@@ -1,32 +1,230 @@
+# CI gate for the ELITE portal monorepo.
+# One required status check protects main: "ci-ok" (see bottom of file).
+# Everything below only runs for the part of the repo that changed.
 name: CI
+
 on:
   pull_request:
   push:
     branches: [main]
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
 jobs:
-  build-test:
+  # ---------------------------------------------------------------- scope
+  changes:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      backend: ${{ steps.f.outputs.backend }}
+      web: ${{ steps.f.outputs.web }}
+      admin: ${{ steps.f.outputs.admin }}
+      migrations: ${{ steps.f.outputs.migrations }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: f
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+              - '.github/workflows/ci.yml'
+            web:
+              - 'web/**'
+              - 'shared/**'
+              - 'tools/**'
+              - '.github/workflows/ci.yml'
+            admin:
+              - 'admin-client/**'
+              - 'shared/**'
+              - 'tools/**'
+              - '.github/workflows/ci.yml'
+            migrations:
+              - 'backend/prisma/**'
+
+  # -------------------------------------------------------------- backend
+  # Runs against a REAL Postgres. The existing unit tests mock Prisma, so
+  # without this job no migration or SQL is ever executed before production.
+  backend:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: portal_ci
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/portal_ci?schema=public
+      DIRECT_URL: postgresql://postgres:postgres@localhost:5432/portal_ci?schema=public
+      SHADOW_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/portal_shadow?schema=public
+    defaults:
+      run:
+        working-directory: backend
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      # --ignore-scripts: backend's postinstall would also install+build web and admin.
+      - run: npm ci --ignore-scripts
+      - run: npx prisma generate
+      - run: npx prisma validate
+      - name: Typecheck and compile
+        run: npx tsc
+      - name: Migrations apply cleanly from scratch
+        run: npx prisma migrate deploy
+      - name: Schema matches migrations (no drift)
+        run: |
+          PGPASSWORD=postgres psql -h localhost -U postgres -c 'CREATE DATABASE portal_shadow'
+          npx prisma migrate diff \
+            --from-migrations prisma/migrations \
+            --to-schema-datamodel prisma/schema.prisma \
+            --shadow-database-url "$SHADOW_DATABASE_URL" \
+            --exit-code
+      - name: Unit and route tests
+        run: npm test
+      - name: Production secret guard + ESM interop
+        run: |
+          node scripts/verify-env-guard.js
+          node scripts/verify-esm-interop.js
+
+  # ------------------------------------------------------------------ web
+  web:
+    needs: changes
+    if: needs.changes.outputs.web == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci --ignore-scripts
+      - run: npm test
+      - name: Typecheck and build
+        run: npm run build
+      - name: Bundle budget
+        working-directory: ${{ github.workspace }}
+        run: node tools/check-bundle-size.mjs web/dist
+
+  # ---------------------------------------------------------------- admin
+  admin:
+    needs: changes
+    if: needs.changes.outputs.admin == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: admin-client
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: admin-client/package-lock.json
+      - run: npm ci --ignore-scripts
+      - run: npm test
+      - name: Typecheck and build
+        run: npm run build
+
+  # --------------------------------------------------------- design system
+  design:
+    needs: changes
+    if: needs.changes.outputs.web == 'true' || needs.changes.outputs.admin == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
           cache: npm
           cache-dependency-path: |
-            backend/package-lock.json
             web/package-lock.json
             admin-client/package-lock.json
-      - name: Backend build + test
-        working-directory: backend
+      - run: npm ci --ignore-scripts --prefix web
+      - run: npm ci --ignore-scripts --prefix admin-client
+      - run: node tools/build-tokens.mjs --check
+      - run: node tools/check-contrast.mjs
+      # Red on main today: bg-brand-subtle (Badge.tsx), bg-surface-foreground
+      # (SettingsPage.tsx), border-surface-border (LoginPage.tsx) generate no CSS.
+      # Fix those three classes, then delete the next line to make this blocking.
+      - run: node tools/check-utilities.mjs
+        continue-on-error: true
+
+  # ------------------------------------------------------------ migrations
+  migrations:
+    needs: changes
+    if: github.event_name == 'pull_request' && needs.changes.outputs.migrations == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: node tools/check-migrations.mjs "origin/${{ github.base_ref }}"
+
+  # -------------------------------------------------------------- security
+  security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: No secrets or personal data tracked in git
         run: |
-          npm ci
-          npx prisma generate
-          npm run build
-          npm test
-      - name: Web build
-        working-directory: web
-        run: npm ci && npm run build
-      - name: Admin-client build
-        working-directory: admin-client
-        run: npm ci && npm run build
+          bad=$(git ls-files | grep -E '(^|/)\.env(\.[^/]+)?$|\.xlsx$|^backend/storage/' \
+                | grep -vE '\.env\.example$|^web/\.env\.production$' || true)
+          if [ -n "$bad" ]; then echo "::error::Sensitive files are tracked:"; echo "$bad"; exit 1; fi
+          envs=$(git ls-files | grep -E '(^|/)\.env' | grep -v '\.example$' || true)
+          if [ -n "$envs" ] && grep -nE 'SECRET|PASSWORD|PRIVATE|TOKEN|API_KEY' $envs; then
+            echo "::error::Secret-looking key in a tracked env file"; exit 1
+          fi
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      # Advisory until the baseline is clean; then drop the "|| echo" to block.
+      - name: Dependency audit (production deps, high+)
+        run: |
+          for d in backend web admin-client; do
+            (cd "$d" && npm audit --omit=dev --audit-level=high) \
+              || echo "::warning::npm audit reported high-severity issues in $d"
+          done
+
+  # ------------------------------------------------- the ONE required check
+  ci-ok:
+    if: always()
+    needs: [changes, backend, web, admin, design, migrations, security]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail if any required job failed or was cancelled
+        run: |
+          echo '${{ toJSON(needs) }}'
+          if [ "${{ contains(needs.*.result, 'failure') }}" = "true" ] || \
+             [ "${{ contains(needs.*.result, 'cancelled') }}" = "true" ]; then
+            exit 1
+          fi
