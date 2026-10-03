@@ -513,6 +513,22 @@ export class DriveService {
       console.warn('[Drive] Error ensuring submissions viewer access:', e);
     }
 
+    // 8. Student Profiles (photoDriveId)
+    try {
+      const profiles = await prisma.studentProfile.findMany({
+        where: { photoDriveId: { not: null } },
+        select: { photoDriveId: true },
+      });
+      for (const p of profiles) {
+        if (p.photoDriveId) {
+          const ok = await this.setViewerPermission(p.photoDriveId);
+          if (ok) count++; else failed++;
+        }
+      }
+    } catch (e) {
+      console.warn('[Drive] Error ensuring student profiles viewer access:', e);
+    }
+
     return { count, failed };
   }
 
@@ -798,11 +814,6 @@ export class DriveService {
 
     return sessionUrl;
   }
-
-  /**
-   * Reachability probe used by /ready: verifies the Drive root folder exists and
-   * is not trashed (no-op for the local mock storage).
-   */
 
   /**
    * Pipes a Node.js Readable stream (the browser's upload) directly into a
@@ -1420,7 +1431,10 @@ export class DriveService {
       if (submission.driveFolderPath) {
         const dirPath = path.join(this.mockBaseDir, submission.driveFolderPath);
         if (fs.existsSync(dirPath)) {
-          fs.rmSync(dirPath, { recursive: true, force: true });
+          const files = fs.readdirSync(dirPath);
+          if (files.length === 0) {
+            fs.rmSync(dirPath, { recursive: true, force: true });
+          }
         }
       }
       return;
@@ -1436,7 +1450,7 @@ export class DriveService {
       }
     }
 
-    // Search and delete student folder
+    // Search and delete student folder only if empty
     try {
       const folderName = path.basename(submission.driveFolderPath);
       if (folderName) {
@@ -1452,7 +1466,15 @@ export class DriveService {
         if (res.data.files && res.data.files.length > 0) {
           for (const folder of res.data.files) {
             if (folder.id) {
-              await this.drive.files.delete({ fileId: folder.id, supportsAllDrives: true });
+              const children = await this.drive.files.list({
+                q: `'${folder.id}' in parents and trashed = false`,
+                fields: 'files(id)',
+                pageSize: 1,
+                supportsAllDrives: true,
+              });
+              if (!children.data.files || children.data.files.length === 0) {
+                await this.drive.files.delete({ fileId: folder.id, supportsAllDrives: true });
+              }
             }
           }
         }
