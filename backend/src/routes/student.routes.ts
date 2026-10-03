@@ -21,7 +21,7 @@ import { clearVideoListCache } from './public.videos.routes';
 const router = Router();
 const studentSubmissionVideoCache = new TtlCache<{ videoDriveId: string; driveFolderPath: string }>(120_000, 500);
 
-const EVENT_ID = 'self-introduction-2026';
+const EVENT_ID = env.ACTIVE_EVENT_ID;
 const EVENT_NAME = 'Self Introduction';
 
 // Serialize the student's profile + their submission for the frontend

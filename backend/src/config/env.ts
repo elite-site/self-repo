@@ -88,6 +88,10 @@ export const env = {
   EVENT_YEAR: parseInt(process.env.EVENT_YEAR || '2026', 10),
   ADMIN_DEFAULT_EMAIL: process.env.ADMIN_DEFAULT_EMAIL || 'admin@club.internal',
   ADMIN_DEFAULT_PASSWORD: process.env.ADMIN_DEFAULT_PASSWORD || 'AdminPassword123!',
+  // The primary event that the student portal and legacy submission form target.
+  // Override via ACTIVE_EVENT_ID env var on Render to point at a new event without
+  // a code change.
+  ACTIVE_EVENT_ID: process.env.ACTIVE_EVENT_ID || 'self-introduction-2026',
 };
 
 // Every literal this codebase will fall back to. If a value used at runtime

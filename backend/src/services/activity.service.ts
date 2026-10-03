@@ -1,5 +1,6 @@
 import { ActivityStatus } from '@prisma/client';
 import { prisma } from '../lib/prisma';
+import { env } from '../config/env';
 
 export interface LogActivityParams {
   eventId?: string;
@@ -20,7 +21,7 @@ export class ActivityService {
     try {
       await prisma.activityLog.create({
         data: {
-          eventId: params.eventId || 'self-introduction-2026',
+          eventId: params.eventId || env.ACTIVE_EVENT_ID,
           category: params.category,
           action: params.action,
           details: params.details || null,

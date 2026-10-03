@@ -10,10 +10,14 @@ router.use(requireStudentAuth);
 
 let cachedOpenEvents: { data: any[]; expiry: number } | null = null;
 
+export function invalidateStudentEventsCache(): void {
+  cachedOpenEvents = null;
+}
+
 router.get('/', async (req: Request, res: Response) => {
   try {
     if (cachedOpenEvents && Date.now() < cachedOpenEvents.expiry) {
-      res.set('Cache-Control', 'private, max-age=30, must-revalidate');
+      res.set('Cache-Control', 'no-cache, must-revalidate');
       return res.json(cachedOpenEvents.data);
     }
 
@@ -33,7 +37,7 @@ router.get('/', async (req: Request, res: Response) => {
 
     cachedOpenEvents = { data: mapped, expiry: Date.now() + 15_000 };
 
-    res.set('Cache-Control', 'private, max-age=30, must-revalidate');
+    res.set('Cache-Control', 'no-cache, must-revalidate');
     res.json(mapped);
   } catch (err: any) {
     res.status(500).json({ error: 'SERVER_ERROR', message: err.message });

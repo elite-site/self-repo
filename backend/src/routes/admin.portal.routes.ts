@@ -10,6 +10,8 @@ import {
 import { getDefaultMaxVideoSizeMb, getMaxVideoHardCapMb, VIDEO_SIZE_SETTING_KEY } from '../services/limits.service';
 import { notifyStudent, notifyVideoChangeRequested } from '../services/notification.service';
 import { driveService } from '../services/drive.service';
+import { invalidateStudentEventsCache } from './student.events.routes';
+import { env } from '../config/env';
 
 const router = Router();
 router.use(requireAdminAuth);
@@ -870,6 +872,7 @@ router.post('/events', async (req: Request, res: Response) => {
     const event = await prisma.event.create({
       data: { id, ...parsed.data } as any,
     });
+    invalidateStudentEventsCache();
     res.status(201).json(event);
   } catch (err: any) {
     console.error('Error creating event:', err);
@@ -924,6 +927,7 @@ router.put('/events/:id', async (req: Request, res: Response) => {
       where: { id: req.params.id },
       data: parsed.data as any,
     });
+    invalidateStudentEventsCache();
     res.json(event);
   } catch (err: any) {
     console.error('Error updating event:', err);
@@ -953,6 +957,7 @@ async function setEventStatus(req: Request, res: Response, status: 'OPEN' | 'CLO
       where: { id: req.params.id },
       data: { status },
     });
+    invalidateStudentEventsCache();
     res.json(event);
   } catch (err: any) {
     console.error(`Error setting event ${req.params.id} to ${status}:`, err);
@@ -969,10 +974,10 @@ router.post('/events/:id/archive', (req: Request, res: Response) => setEventStat
 router.delete('/events/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    if (id === 'self-introduction-2026') {
+    if (id === env.ACTIVE_EVENT_ID) {
       return res.status(400).json({
         error: 'PROTECTED_EVENT',
-        message: 'The default self-introduction event cannot be deleted.',
+        message: 'The active self-introduction event cannot be deleted.',
       });
     }
 
@@ -1030,6 +1035,8 @@ router.delete('/events/:id', async (req: Request, res: Response) => {
         where: { id },
       });
     });
+
+    invalidateStudentEventsCache();
 
     await ActivityService.log({
       category: 'ADMIN',

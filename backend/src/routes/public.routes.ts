@@ -17,7 +17,7 @@ export function invalidateMediaDriveIdCache(type: string, id: string): void {
   mediaDriveIdCache.delete(`${type}:${id}`);
 }
 
-const EVENT_ID = 'self-introduction-2026';
+const EVENT_ID = env.ACTIVE_EVENT_ID;
 const EVENT_NAME = 'Self Introduction';
 
 /**

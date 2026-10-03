@@ -51,9 +51,10 @@ export const EventsPage: React.FC = () => {
     loadEventsData(true);
   }, []);
 
+  const openEventIds = new Set(events.map((e) => e.id));
   const registeredEventIds = new Set(
     registrations
-      .filter((r) => r.status === 'REGISTERED' || r.status === 'CONFIRMED')
+      .filter((r) => (r.status === 'REGISTERED' || r.status === 'CONFIRMED') && openEventIds.has(r.eventId))
       .map((r) => r.eventId)
   );
 
