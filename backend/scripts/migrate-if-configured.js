@@ -146,6 +146,47 @@ function unappliedMigrations() {
   }
 }
 
+// --- Resolve any previously failed migrations ------------------------------
+// If a migration previously failed (e.g. CONCURRENTLY inside a transaction),
+// Prisma records it as failed and blocks all future deploys. Detect and roll
+// back each failed row so the corrected SQL can be applied cleanly.
+
+const failedProbe = `
+  const { PrismaClient } = require('@prisma/client');
+  const prisma = new PrismaClient({ datasources: { db: { url: process.env.DATABASE_URL } }, log: [] });
+  prisma.$queryRawUnsafe(
+    "SELECT migration_name FROM _prisma_migrations WHERE finished_at IS NULL AND rolled_back_at IS NULL AND started_at IS NOT NULL"
+  )
+    .then((rows) => { process.stdout.write(JSON.stringify(rows.map((r) => r.migration_name))); })
+    .catch((e) => { process.stderr.write(String(e.stack || e.message || e)); process.exit(1); })
+    .finally(() => prisma.$disconnect().catch(() => {}));
+`;
+
+const probeUrlForResolve = tuneProbeUrl(databaseUrl);
+const failedResult = spawnSync(process.execPath, ['-e', failedProbe], {
+  encoding: 'utf8',
+  cwd: path.join(__dirname, '..'),
+  env: { ...process.env, DATABASE_URL: probeUrlForResolve },
+  timeout: 30000,
+});
+
+if (failedResult.status === 0) {
+  try {
+    const failedMigrations = JSON.parse(failedResult.stdout);
+    for (const name of failedMigrations) {
+      log(`Resolving previously failed migration: ${name}`);
+      const resolveResult = prisma(['migrate', 'resolve', '--rolled-back', name]);
+      if (resolveResult.status !== 0) {
+        warn(`Could not resolve ${name}: ${resolveResult.output.trim()}`);
+      } else {
+        log(`Resolved ${name} as rolled back.`);
+      }
+    }
+  } catch {
+    // Non-fatal: if we can't parse, just proceed and let deploy handle it.
+  }
+}
+
 // --- Apply, with backoff ---------------------------------------------------
 
 log('Applying pending migrations...');
