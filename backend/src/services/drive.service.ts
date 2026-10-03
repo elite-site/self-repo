@@ -268,50 +268,31 @@ export class DriveService {
   }
 
   /**
-   * Builds the folder tree: {eventName}/{eventYear}/{year}-{section}/{BRANCH}_{RollNo}_{Name}
+   * Builds the folder tree: Students/{RollNo}
    */
   public async resolveStudentFolder(meta: StudentFolderMeta): Promise<{ folderId: string; relativePath: string }> {
-    const cleanName = meta.name.replace(/[^a-zA-Z0-9]/g, '');
     const cleanRollNo = meta.rollNo.toUpperCase().replace(/[^a-zA-Z0-9]/g, '');
-    const cleanBranch = meta.branch.toUpperCase().replace(/[^a-zA-Z0-9]/g, '');
-
-    const eventFolderName = meta.eventName || 'Photography';
-    const yearFolderName = `${meta.eventYear}`;
-    const sectionFolderName = `${meta.year}-${meta.section.toUpperCase()}`;
-    const studentFolderName = `${cleanBranch}_${cleanRollNo}_${cleanName}`;
-    const relativePath = `${eventFolderName}/${yearFolderName}/${sectionFolderName}/${studentFolderName}`;
+    const relativePath = `Students/${cleanRollNo}`;
 
     if (this.isMock || !this.drive) {
       const fullMockPath = path.join(this.mockBaseDir, relativePath);
       fs.mkdirSync(fullMockPath, { recursive: true });
-      return { folderId: `mock_${studentFolderName}`, relativePath };
+      return { folderId: `mock_${cleanRollNo}`, relativePath };
     }
 
-    // 1. Root -> Event folder (e.g. "Photography", "Dancing", "Singing")
-    const eventKey = `${eventFolderName}`;
-    const eventFolderId = await this.getOrCreateDriveFolder(eventFolderName, env.GOOGLE_DRIVE_ROOT_FOLDER_ID, eventKey);
-
-    // 2. Event folder -> Year folder (e.g. "2026")
-    const yearKey = `${eventFolderName}/${yearFolderName}`;
-    const yearFolderId = await this.getOrCreateDriveFolder(yearFolderName, eventFolderId, yearKey);
-
-    // 3. Year folder -> Section folder (e.g. "2-A")
-    const sectionKey = `${eventFolderName}/${yearFolderName}/${sectionFolderName}`;
-    const sectionFolderId = await this.getOrCreateDriveFolder(sectionFolderName, yearFolderId, sectionKey);
-
-    // 4. Section folder -> Student folder
-    const studentFolderId = await this.getOrCreateDriveFolder(studentFolderName, sectionFolderId);
-
-    return { folderId: studentFolderId, relativePath };
+    const folderId = await this.resolveFolderPath(relativePath, env.GOOGLE_DRIVE_ROOT_FOLDER_ID);
+    return { folderId, relativePath };
   }
 
   /**
    * Recursively gets or creates a folder hierarchy in Google Drive
-   * (e.g. "Resumes/2-A/24K61A1259_KoppisettiHemanth" or "Certificates/2-A/24K61A1259_KoppisettiHemanth")
+   * (e.g. "Students/24K61A1259")
    */
   public async resolveFolderPath(relativePath: string, rootFolderId?: string): Promise<string> {
     const rootId = rootFolderId || env.GOOGLE_DRIVE_ROOT_FOLDER_ID || 'root';
     if (this.isMock || !this.drive) {
+      const fullMockPath = path.join(this.mockBaseDir, relativePath);
+      fs.mkdirSync(fullMockPath, { recursive: true });
       return `mock_folder_${relativePath.replace(/[\/\s]/g, '_')}`;
     }
 
@@ -542,10 +523,21 @@ export class DriveService {
     file: UploadedFileData,
     fileName: string,
     parentFolderId: string,
-    relativePath: string
+    relativePath?: string
   ): Promise<string> {
+    let targetFolderId = parentFolderId;
+    if (relativePath) {
+      targetFolderId = await this.resolveFolderPath(
+        relativePath,
+        parentFolderId && parentFolderId !== 'root' && parentFolderId !== env.GOOGLE_DRIVE_ROOT_FOLDER_ID
+          ? parentFolderId
+          : env.GOOGLE_DRIVE_ROOT_FOLDER_ID
+      );
+    }
+
     if (this.isMock || !this.drive) {
-      const dirPath = path.join(this.mockBaseDir, relativePath);
+      const targetRelPath = relativePath || '';
+      const dirPath = path.join(this.mockBaseDir, targetRelPath);
       fs.mkdirSync(dirPath, { recursive: true });
       const filePath = path.join(dirPath, fileName);
       fs.writeFileSync(filePath, file.buffer);
@@ -559,6 +551,26 @@ export class DriveService {
       }));
       return mockId;
     }
+
+    // Google Drive override: if a file with the same name exists in target folder, delete old duplicate
+    try {
+      const existing = await this.drive.files.list({
+        q: `'${targetFolderId}' in parents and name = '${fileName.replace(/'/g, "\\'")}' and trashed = false`,
+        fields: 'files(id, name)',
+        supportsAllDrives: true,
+        pageSize: 10,
+      });
+      if (existing.data.files && existing.data.files.length > 0) {
+        for (const f of existing.data.files) {
+          if (f.id) {
+            await this.drive.files.delete({ fileId: f.id, supportsAllDrives: true }).catch(() => {});
+          }
+        }
+      }
+    } catch (cleanErr) {
+      console.warn('[Drive] Error cleaning up old file during override:', cleanErr);
+    }
+
     const media = {
       mimeType: file.mimetype,
       body: Readable.from(file.buffer),
@@ -567,7 +579,7 @@ export class DriveService {
     const res = await this.drive.files.create({
       requestBody: {
         name: fileName,
-        parents: [parentFolderId],
+        parents: [targetFolderId],
         copyRequiresWriterPermission: true,
       },
       media,
@@ -596,6 +608,7 @@ export class DriveService {
       audio?: UploadedFileData;
     }
   ): Promise<DriveUploadResult> {
+    const cleanRollNo = meta.rollNo.toUpperCase().replace(/[^a-zA-Z0-9]/g, '');
     const { folderId, relativePath } = await this.resolveStudentFolder(meta);
     const createdFileIds: string[] = [];
 
@@ -606,28 +619,26 @@ export class DriveService {
 
       if (files.photo1) {
         const ext1 = path.extname(files.photo1.originalname) || '.jpg';
-        photo1DriveId = await this.uploadFile(files.photo1, `photo1${ext1}`, folderId, relativePath);
+        photo1DriveId = await this.uploadFile(files.photo1, `${cleanRollNo}_photo1${ext1}`, folderId, relativePath);
         createdFileIds.push(photo1DriveId);
       }
 
       if (files.photo2) {
         const ext2 = path.extname(files.photo2.originalname) || '.jpg';
-        photo2DriveId = await this.uploadFile(files.photo2, `photo2${ext2}`, folderId, relativePath);
+        photo2DriveId = await this.uploadFile(files.photo2, `${cleanRollNo}_photo2${ext2}`, folderId, relativePath);
         createdFileIds.push(photo2DriveId);
       }
 
       if (files.photo3) {
         const ext3 = path.extname(files.photo3.originalname) || '.jpg';
-        photo3DriveId = await this.uploadFile(files.photo3, `photo3${ext3}`, folderId, relativePath);
+        photo3DriveId = await this.uploadFile(files.photo3, `${cleanRollNo}_photo3${ext3}`, folderId, relativePath);
         createdFileIds.push(photo3DriveId);
       }
 
       let videoDriveId: string | undefined = undefined;
       if (files.video) {
         const videoExt = path.extname(files.video.originalname) || '.mp4';
-        const cleanName = meta.name.replace(/[^a-zA-Z0-9]/g, '');
-        const cleanRollNo = meta.rollNo.toUpperCase().replace(/[^a-zA-Z0-9]/g, '');
-        const videoFileName = `${cleanRollNo}_${cleanName}${videoExt}`;
+        const videoFileName = `${cleanRollNo}_video${videoExt}`;
         videoDriveId = await this.uploadFile(files.video, videoFileName, folderId, relativePath);
         createdFileIds.push(videoDriveId);
       }
@@ -635,7 +646,7 @@ export class DriveService {
       let audioDriveId: string | undefined = undefined;
       if (files.audio) {
         const audioExt = path.extname(files.audio.originalname) || '.mp3';
-        audioDriveId = await this.uploadFile(files.audio, `audio${audioExt}`, folderId, relativePath);
+        audioDriveId = await this.uploadFile(files.audio, `${cleanRollNo}_audio${audioExt}`, folderId, relativePath);
         createdFileIds.push(audioDriveId);
       }
 
@@ -729,6 +740,27 @@ export class DriveService {
     } catch (err) {
       console.warn('[Drive] Could not obtain access token for resumable upload session:', err);
       return null;
+    }
+
+    // Clean up duplicate file if it already exists in parentFolderId to allow clean override
+    if (this.drive) {
+      try {
+        const existing = await this.drive.files.list({
+          q: `'${parentFolderId}' in parents and name = '${fileName.replace(/'/g, "\\'")}' and trashed = false`,
+          fields: 'files(id, name)',
+          supportsAllDrives: true,
+          pageSize: 10,
+        });
+        if (existing.data.files && existing.data.files.length > 0) {
+          for (const f of existing.data.files) {
+            if (f.id) {
+              await this.drive.files.delete({ fileId: f.id, supportsAllDrives: true }).catch(() => {});
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('[Drive] Error cleaning up old file before resumable upload:', err);
+      }
     }
 
     // Step 1: Initiate a resumable upload session — Drive returns a Location URL.
@@ -907,15 +939,43 @@ export class DriveService {
     if (res.data.trashed) throw new Error('Drive root folder is trashed');
     if (env.GOOGLE_DRIVE_ROOT_FOLDER_ID) {
       this.setViewerPermission(env.GOOGLE_DRIVE_ROOT_FOLDER_ID).catch(() => {});
-      // Ensure top-level category folders exist and are cached
-      Promise.all([
-        this.resolveFolderPath('Resumes', env.GOOGLE_DRIVE_ROOT_FOLDER_ID),
-        this.resolveFolderPath('Certificates', env.GOOGLE_DRIVE_ROOT_FOLDER_ID),
-        this.resolveFolderPath('Achievements', env.GOOGLE_DRIVE_ROOT_FOLDER_ID),
-        this.resolveFolderPath('Profiles', env.GOOGLE_DRIVE_ROOT_FOLDER_ID),
-      ]).catch((err) => {
-        console.warn('[Drive] Pre-creating category folders notice:', err?.message || err);
+      // Ensure top-level Students folder exists and is cached
+      this.resolveFolderPath('Students', env.GOOGLE_DRIVE_ROOT_FOLDER_ID).catch((err) => {
+        console.warn('[Drive] Pre-creating Students folder notice:', err?.message || err);
       });
+    }
+  }
+
+  /**
+   * Checks whether a file exists in Drive or mock storage
+   */
+  public async checkFileExists(fileId?: string | null, relativePath?: string): Promise<boolean> {
+    if (!fileId) return false;
+    if (this.isMock || !this.drive || fileId.startsWith('mock_') || fileId.startsWith('drive_')) {
+      if (relativePath) {
+        const dirPath = path.join(this.mockBaseDir, relativePath);
+        if (fs.existsSync(dirPath)) {
+          const files = fs.readdirSync(dirPath);
+          for (const f of files) {
+            if (!f.endsWith('.meta.json')) continue;
+            try {
+              const meta = JSON.parse(fs.readFileSync(path.join(dirPath, f), 'utf-8'));
+              if (meta.id === fileId) return true;
+            } catch (_) {}
+          }
+        }
+      }
+      return false;
+    }
+    try {
+      const res = await this.drive.files.get({
+        fileId,
+        fields: 'id, trashed',
+        supportsAllDrives: true,
+      });
+      return Boolean(res.data.id && !res.data.trashed);
+    } catch {
+      return false;
     }
   }
 

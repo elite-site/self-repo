@@ -442,8 +442,10 @@ router.delete('/students/:studentId/items/:type/:itemId', async (req: Request, r
       if (!item || item.studentId !== student.id) {
         return res.status(404).json({ error: 'NOT_FOUND', message: 'Resume not found.' });
       }
+      const cleanRollNo = student.rollNo.toUpperCase().replace(/[^a-zA-Z0-9]/g, '');
+      const studentRelativePath = `Students/${cleanRollNo}`;
       if (item.driveFileId) {
-        await driveService.deleteFileById(item.driveFileId).catch(() => {});
+        await driveService.deleteFileById(item.driveFileId, studentRelativePath).catch(() => {});
       }
       await prisma.resume.delete({ where: { id: itemId } });
       await notifyStudent({
@@ -459,8 +461,10 @@ router.delete('/students/:studentId/items/:type/:itemId', async (req: Request, r
       if (!item || item.studentId !== student.id) {
         return res.status(404).json({ error: 'NOT_FOUND', message: 'Achievement not found.' });
       }
+      const cleanRollNo = student.rollNo.toUpperCase().replace(/[^a-zA-Z0-9]/g, '');
+      const studentRelativePath = `Students/${cleanRollNo}`;
       if (item.proofDriveId) {
-        await driveService.deleteFileById(item.proofDriveId).catch(() => {});
+        await driveService.deleteFileById(item.proofDriveId, studentRelativePath).catch(() => {});
       }
       await prisma.achievement.delete({ where: { id: itemId } });
       await notifyStudent({
@@ -476,8 +480,10 @@ router.delete('/students/:studentId/items/:type/:itemId', async (req: Request, r
       if (!item || item.studentId !== student.id) {
         return res.status(404).json({ error: 'NOT_FOUND', message: 'Certificate not found.' });
       }
+      const cleanRollNo = student.rollNo.toUpperCase().replace(/[^a-zA-Z0-9]/g, '');
+      const studentRelativePath = `Students/${cleanRollNo}`;
       if (item.fileDriveId) {
-        await driveService.deleteFileById(item.fileDriveId).catch(() => {});
+        await driveService.deleteFileById(item.fileDriveId, studentRelativePath).catch(() => {});
       }
       await prisma.certificate.delete({ where: { id: itemId } });
       await notifyStudent({

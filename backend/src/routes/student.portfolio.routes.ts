@@ -215,11 +215,9 @@ router.post('/achievements', submissionRateLimiter, handleProofUpload, async (re
     if (file) {
       const ext = path.extname(file.originalname) || (file.mimetype === 'application/pdf' ? '.pdf' : '.jpg');
       const cleanRollNo = student?.rollNo ? student.rollNo.toUpperCase().replace(/[^a-zA-Z0-9]/g, '') : 'STUDENT';
-      const cleanName = student?.name ? student.name.replace(/[^a-zA-Z0-9]/g, '') : '';
       const cleanTitle = title.trim().replace(/[^a-zA-Z0-9]/g, '_');
-      const fileName = `Achievement_${cleanRollNo}_${cleanTitle}_${Date.now()}${ext}`;
-      const studentFolder = cleanName ? `${cleanRollNo}_${cleanName}` : cleanRollNo;
-      const relativePath = `Achievements/${student?.year || 'All'}-${student?.section || 'All'}/${studentFolder}`;
+      const fileName = `${cleanRollNo}_achievement_${cleanTitle}_${Date.now()}${ext}`;
+      const relativePath = `Students/${cleanRollNo}`;
 
       try {
         proofDriveId = await driveService.uploadFile(
@@ -311,10 +309,19 @@ router.put('/achievements/:id', async (req: Request, res: Response) => {
 router.delete('/achievements/:id', async (req: Request, res: Response) => {
   try {
     const studentId = (req as any).studentId;
-    const deleted = await prisma.achievement.deleteMany({
-      where: { id: req.params.id, studentId }
+    const item = await prisma.achievement.findFirst({
+      where: { id: req.params.id, studentId },
+      include: { student: { select: { rollNo: true } } },
     });
-    if (deleted.count === 0) return res.status(404).json({ error: 'NOT_FOUND', message: 'Not found' });
+    if (!item) return res.status(404).json({ error: 'NOT_FOUND', message: 'Not found' });
+
+    if (item.proofDriveId) {
+      const cleanRollNo = item.student?.rollNo?.toUpperCase().replace(/[^a-zA-Z0-9]/g, '');
+      const relativePath = cleanRollNo ? `Students/${cleanRollNo}` : undefined;
+      await driveService.deleteFileById(item.proofDriveId, relativePath).catch(() => {});
+    }
+
+    await prisma.achievement.delete({ where: { id: item.id } });
     res.json({ message: 'Deleted successfully' });
   } catch (err: any) {
     res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
@@ -386,11 +393,9 @@ router.post('/certificates', submissionRateLimiter, certificateUpload, async (re
     if (file) {
       const ext = path.extname(file.originalname) || (file.mimetype === 'application/pdf' ? '.pdf' : '.jpg');
       const cleanRollNo = student?.rollNo ? student.rollNo.toUpperCase().replace(/[^a-zA-Z0-9]/g, '') : 'STUDENT';
-      const cleanName = student?.name ? student.name.replace(/[^a-zA-Z0-9]/g, '') : '';
       const cleanTitle = (req.body.title || 'Certificate').replace(/[^a-zA-Z0-9]/g, '_');
-      const fileName = `Cert_${cleanRollNo}_${cleanTitle}_${Date.now()}${ext}`;
-      const studentFolder = cleanName ? `${cleanRollNo}_${cleanName}` : cleanRollNo;
-      const relativePath = `Certificates/${student?.year || 'All'}-${student?.section || 'All'}/${studentFolder}`;
+      const fileName = `${cleanRollNo}_cert_${cleanTitle}_${Date.now()}${ext}`;
+      const relativePath = `Students/${cleanRollNo}`;
 
       try {
         driveFileId = await driveService.uploadFile(
@@ -484,10 +489,19 @@ router.patch('/certificates/:id/visibility', async (req: Request, res: Response)
 router.delete('/certificates/:id', async (req: Request, res: Response) => {
   try {
     const studentId = (req as any).studentId;
-    const deleted = await prisma.certificate.deleteMany({
-      where: { id: req.params.id, studentId }
+    const cert = await prisma.certificate.findFirst({
+      where: { id: req.params.id, studentId },
+      include: { student: { select: { rollNo: true } } },
     });
-    if (deleted.count === 0) return res.status(404).json({ error: 'NOT_FOUND', message: 'Not found' });
+    if (!cert) return res.status(404).json({ error: 'NOT_FOUND', message: 'Not found' });
+
+    if (cert.fileDriveId) {
+      const cleanRollNo = cert.student?.rollNo?.toUpperCase().replace(/[^a-zA-Z0-9]/g, '');
+      const relativePath = cleanRollNo ? `Students/${cleanRollNo}` : undefined;
+      await driveService.deleteFileById(cert.fileDriveId, relativePath).catch(() => {});
+    }
+
+    await prisma.certificate.delete({ where: { id: cert.id } });
     res.json({ message: 'Deleted successfully' });
   } catch (err: any) {
     res.status(500).json({ error: 'SERVER_ERROR', message: err.message });

@@ -753,7 +753,7 @@ router.post(
 
       const ext = path.extname(origFilename) || '.mp4';
       const clean = (s: string) => s.toUpperCase().replace(/[^a-zA-Z0-9]/g, '');
-      const videoFileName = `${clean(student.rollNo)}_${clean(student.name)}${ext}`;
+      const videoFileName = `${clean(student.rollNo)}_video${ext}`;
 
       // ── 4. Fetch existing submission (for cleanup & upsert) ──────────────
       const existing = await prisma.submission.findFirst({
@@ -984,6 +984,9 @@ router.post('/resume', requireStudentAuth, submissionRateLimiter, resumeUpload, 
     }
 
     // Clean up existing resume file on Drive if present
+    const cleanRollNo = student.rollNo.toUpperCase().replace(/[^a-zA-Z0-9]/g, '');
+    const relativePath = `Students/${cleanRollNo}`;
+
     const existingResume = await prisma.resume.findFirst({
       where: { studentId },
       orderBy: { submittedAt: 'desc' },
@@ -991,7 +994,7 @@ router.post('/resume', requireStudentAuth, submissionRateLimiter, resumeUpload, 
 
     if (existingResume?.driveFileId) {
       try {
-        await driveService.cleanupFailedUpload([existingResume.driveFileId]);
+        await driveService.deleteFileById(existingResume.driveFileId, relativePath);
       } catch (e) {
         console.warn('Failed to delete old resume from Drive:', e);
       }
@@ -999,10 +1002,7 @@ router.post('/resume', requireStudentAuth, submissionRateLimiter, resumeUpload, 
 
     // Upload new resume to Drive or mock storage
     const ext = path.extname(resumeFile.originalname) || '.pdf';
-    const cleanRollNo = student.rollNo.toUpperCase().replace(/[^a-zA-Z0-9]/g, '');
-    const cleanName = student.name.replace(/[^a-zA-Z0-9]/g, '');
-    const fileName = `Resume_${cleanRollNo}_${cleanName}${ext}`;
-    const relativePath = `Resumes/${student.year}-${student.section}/${cleanRollNo}_${cleanName}`;
+    const fileName = `${cleanRollNo}_resume${ext}`;
 
     const driveFileId = await driveService.uploadFile(
       {
@@ -1107,7 +1107,8 @@ router.delete('/resume', requireStudentAuth, async (req: Request, res: Response)
 
     if (fileId) {
       try {
-        await driveService.deleteFileById(fileId);
+        const cleanRollNo = student.rollNo.toUpperCase().replace(/[^a-zA-Z0-9]/g, '');
+        await driveService.deleteFileById(fileId, `Students/${cleanRollNo}`);
       } catch (e) {
         console.warn('Could not delete resume file from storage:', e);
       }

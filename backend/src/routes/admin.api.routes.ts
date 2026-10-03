@@ -2170,7 +2170,7 @@ router.delete('/moderation/:kind/:id', async (req, res) => {
 
     const record = await delegate.findUnique({
       where: { id: req.params.id },
-      include: { student: { select: { id: true, name: true } } },
+      include: { student: { select: { id: true, name: true, rollNo: true } } },
     });
     if (!record) {
       return httpError(res, 404, new Error(`${meta.label} not found`), "NOT_FOUND");
@@ -2181,7 +2181,9 @@ router.delete('/moderation/:kind/:id', async (req, res) => {
     // Delete from Drive when there is a real Drive-backed file. Projects store a
     // URL rather than a Drive id, so there is nothing to delete for those.
     if (driveFileId && kind !== 'projects' && typeof driveService.deleteFileById === 'function') {
-      await driveService.deleteFileById(driveFileId).catch(() => {});
+      const cleanRollNo = (record as any).student?.rollNo?.toUpperCase().replace(/[^a-zA-Z0-9]/g, '');
+      const studentRelativePath = cleanRollNo ? `Students/${cleanRollNo}` : undefined;
+      await driveService.deleteFileById(driveFileId, studentRelativePath).catch(() => {});
     }
 
     const note = `${meta.label} removed by administrator. Please upload a new one.`;

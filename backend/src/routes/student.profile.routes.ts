@@ -191,14 +191,17 @@ router.post('/photo', profilePhotoUpload, async (req: Request, res: Response) =>
 
     const student = await prisma.student.findUnique({
       where: { id: studentId },
-      select: { rollNo: true, name: true, year: true, section: true },
+      select: { rollNo: true, name: true, profile: { select: { photoDriveId: true } } },
     });
     const cleanRollNo = student?.rollNo ? student.rollNo.toUpperCase().replace(/[^a-zA-Z0-9]/g, '') : 'STUDENT';
-    const cleanName = student?.name ? student.name.replace(/[^a-zA-Z0-9]/g, '') : '';
-    const studentFolder = cleanName ? `${cleanRollNo}_${cleanName}` : cleanRollNo;
-    const relativePath = `Profiles/${student?.year || 'All'}-${student?.section || 'All'}/${studentFolder}`;
+    const relativePath = `Students/${cleanRollNo}`;
     const ext = req.file.originalname.split('.').pop() || 'jpg';
-    const fileName = `Photo_${cleanRollNo}_${Date.now()}.${ext}`;
+    const fileName = `${cleanRollNo}_photo_${Date.now()}.${ext}`;
+
+    // Clean up previous photo from Drive if present
+    if (student?.profile?.photoDriveId) {
+      await driveService.deleteFileById(student.profile.photoDriveId, relativePath).catch(() => {});
+    }
 
     try {
       driveFileId = await driveService.uploadFile(
@@ -256,6 +259,27 @@ router.post('/photo', profilePhotoUpload, async (req: Request, res: Response) =>
     }
     console.error('Error saving profile photo:', err);
     res.status(500).json({ error: 'Server error' });
+  }
+});
+
+router.delete('/photo', async (req: Request, res: Response) => {
+  try {
+    const studentId = (req as any).studentId;
+    const student = await prisma.student.findUnique({
+      where: { id: studentId },
+      select: { rollNo: true, profile: { select: { photoDriveId: true } } },
+    });
+    if (student?.profile?.photoDriveId) {
+      const cleanRollNo = student.rollNo.toUpperCase().replace(/[^a-zA-Z0-9]/g, '');
+      await driveService.deleteFileById(student.profile.photoDriveId, `Students/${cleanRollNo}`).catch(() => {});
+    }
+    await prisma.studentProfile.updateMany({
+      where: { studentId },
+      data: { photoDriveId: null, photoUrl: null },
+    });
+    res.json({ success: true, message: 'Profile photo removed.' });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Server error', message: err.message });
   }
 });
 
