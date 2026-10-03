@@ -63,6 +63,7 @@ export const EditProfilePage: React.FC = () => {
   const { onPhotoChange } = useOutletContext<StudentOutletContext>() ?? {};
 
   const [bio, setBio] = useState('');
+  const [specialQualities, setSpecialQualities] = useState('');
   const [githubUrl, setGithubUrl] = useState('');
   const [linkedinUrl, setLinkedinUrl] = useState('');
   const [leetcodeUrl, setLeetcodeUrl] = useState('');
@@ -95,6 +96,7 @@ export const EditProfilePage: React.FC = () => {
       .then((data) => {
         setProfile(data);
         setBio(data.bio || (data as any).biography || '');
+        setSpecialQualities((data as any).specialQualities || '');
         setGithubUrl(data.githubUrl || '');
         setLinkedinUrl(data.linkedinUrl || '');
         setLeetcodeUrl(data.leetcodeUrl || '');
@@ -244,6 +246,7 @@ export const EditProfilePage: React.FC = () => {
       await Promise.all([
         api.updateProfile({
           bio: bio.trim(),
+          specialQualities: specialQualities.trim(),
           githubUrl: normalized.github,
           linkedinUrl: normalized.linkedin,
           leetcodeUrl: normalized.leetcode,
@@ -394,6 +397,31 @@ export const EditProfilePage: React.FC = () => {
           />
           <p className="text-label-sm text-ink-muted">
             Keep it clear and professional. This appears on your showcase card in the student directory.
+          </p>
+        </div>
+
+        {/* SECTION 2b: SPECIAL QUALITIES */}
+        <div className="surface space-y-3">
+          <div className="flex items-center justify-between">
+            <label className="text-label-lg font-bold text-ink font-heading">Special Qualities</label>
+            <span
+              className={`text-body-sm font-mono ${
+                specialQualities.length >= 280 ? 'text-status-rejected font-bold' : 'text-ink-muted'
+              }`}
+            >
+              {specialQualities.length}/300
+            </span>
+          </div>
+          <textarea
+            value={specialQualities}
+            onChange={(e) => setSpecialQualities(e.target.value)}
+            maxLength={300}
+            rows={3}
+            placeholder="e.g. Problem Solver, Quick Learner, Team Player, Creative Thinker..."
+            className="textarea"
+          />
+          <p className="text-label-sm text-ink-muted">
+            Describe what makes you stand out. These appear as highlights on your public profile.
           </p>
         </div>
 

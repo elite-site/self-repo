@@ -58,6 +58,7 @@ export interface StudentProfile {
   section: string;
   branch: string;
   bio?: string;
+  specialQualities?: string;
   skills: string[];
   photoUrl?: string;
   viewUrl?: string;

@@ -360,7 +360,8 @@ model StudentProfile {
   studentId String  @unique
   student   Student @relation(fields: [studentId], references: [id])
 
-  biography    String? @db.VarChar(300)
+  biography         String? @db.VarChar(300)
+  specialQualities  String? @db.VarChar(300)
   photoDriveId String? // Google Drive file ID of profile photo
   photoUrl     String? // cached public URL
   photoOffsetX Float?  @default(0) // crop X offset (0-100%)

@@ -33,10 +33,6 @@ import {
   X,
   ChevronUp,
   Code2,
-  Lightbulb,
-  Zap,
-  Users,
-  Rocket,
   CheckCircle2,
 } from 'lucide-react';
 
@@ -64,6 +60,7 @@ interface PublicProfileFields {
   leetcodeUrl?: string | null;
   codechefUrl?: string | null;
   portfolioUrl?: string | null;
+  specialQualities?: string | null;
 }
 
 interface PublicProject {
@@ -618,40 +615,13 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
                 </p>
               </div>
 
-              {/* 4 Feature Cards */}
-              <div className="grid grid-cols-2 gap-3.5">
-                <div className="rounded-xl border border-slate-800/80 bg-slate-900/50 p-4 space-y-1">
-                  <div className="flex items-center gap-2 text-rose-400">
-                    <Lightbulb size={16} />
-                    <h4 className="text-xs font-bold text-white">Problem Solver</h4>
-                  </div>
-                  <p className="text-[11px] text-slate-400">Analytical mindset with strong problem-solving skills.</p>
+              {/* Special Qualities */}
+              {profile.specialQualities ? (
+                <div className="rounded-xl border border-slate-800/80 bg-slate-900/50 p-4 space-y-2">
+                  <h4 className="text-xs font-bold text-white uppercase tracking-wide">Special Qualities</h4>
+                  <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-line">{profile.specialQualities}</p>
                 </div>
-
-                <div className="rounded-xl border border-slate-800/80 bg-slate-900/50 p-4 space-y-1">
-                  <div className="flex items-center gap-2 text-pink-400">
-                    <Zap size={16} />
-                    <h4 className="text-xs font-bold text-white">Quick Learner</h4>
-                  </div>
-                  <p className="text-[11px] text-slate-400">Rapidly adapting to modern tech stacks and tools.</p>
-                </div>
-
-                <div className="rounded-xl border border-slate-800/80 bg-slate-900/50 p-4 space-y-1">
-                  <div className="flex items-center gap-2 text-amber-400">
-                    <Users size={16} />
-                    <h4 className="text-xs font-bold text-white">Team Player</h4>
-                  </div>
-                  <p className="text-[11px] text-slate-400">Collaborative mindset with clear communication.</p>
-                </div>
-
-                <div className="rounded-xl border border-slate-800/80 bg-slate-900/50 p-4 space-y-1">
-                  <div className="flex items-center gap-2 text-indigo-400">
-                    <Rocket size={16} />
-                    <h4 className="text-xs font-bold text-white">Tech Enthusiast</h4>
-                  </div>
-                  <p className="text-[11px] text-slate-400">Passionate builder committed to real-world impact.</p>
-                </div>
-              </div>
+              ) : null}
             </div>
 
             {/* Right: Introduction Video Player */}

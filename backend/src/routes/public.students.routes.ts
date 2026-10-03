@@ -122,6 +122,7 @@ router.get('/', async (req: Request, res: Response) => {
                 photoOffsetY: true,
                 photoZoom: true,
                 biography: true,
+                specialQualities: true,
                 skills: { include: { skill: true } }
               }
             }

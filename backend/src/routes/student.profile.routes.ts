@@ -90,6 +90,7 @@ router.get('/', async (req: Request, res: Response) => {
       email: student.email,
       bio: student.profile?.biography || '',
       biography: student.profile?.biography || '',
+      specialQualities: student.profile?.specialQualities || '',
       photoUrl: (student.profile?.photoDriveId || student.profile?.photoUrl)
         ? `/api/public/media/photo/${student.profile.id || student.id}`
         : null,
@@ -139,12 +140,15 @@ router.get('/', async (req: Request, res: Response) => {
 router.put('/', async (req: Request, res: Response) => {
   try {
     const studentId = req.student?.studentId || (req as any).studentId;
-    const { biography, bio } = req.body;
+    const { biography, bio, specialQualities } = req.body;
     // Prefer `bio` over `biography` — the edit form sends `bio` explicitly,
     // but `...profile` spread also includes `biography` with the OLD value.
     const bioText = bio !== undefined ? bio : (biography !== undefined ? biography : undefined);
     if (bioText && bioText.length > 300) {
       return res.status(400).json({ error: 'Biography max 300 chars' });
+    }
+    if (specialQualities !== undefined && specialQualities.length > 300) {
+      return res.status(400).json({ error: 'Special qualities max 300 chars' });
     }
 
     // Validate the professional link fields. The client normalises the accepted
@@ -168,6 +172,7 @@ router.put('/', async (req: Request, res: Response) => {
     // Build update data — only include fields that were actually sent
     const updateData: any = {};
     if (bioText !== undefined) updateData.biography = bioText;
+    if (specialQualities !== undefined) updateData.specialQualities = specialQualities.trim();
     if (normalizedLinks.githubUrl !== undefined) updateData.githubUrl = normalizedLinks.githubUrl;
     if (normalizedLinks.linkedinUrl !== undefined) updateData.linkedinUrl = normalizedLinks.linkedinUrl;
     if (normalizedLinks.leetcodeUrl !== undefined) updateData.leetcodeUrl = normalizedLinks.leetcodeUrl;
@@ -181,6 +186,7 @@ router.put('/', async (req: Request, res: Response) => {
         studentId,
         isPublic: true,
         biography: bioText || '',
+        specialQualities: specialQualities?.trim() || '',
         githubUrl: normalizedLinks.githubUrl || '',
         linkedinUrl: normalizedLinks.linkedinUrl || '',
         leetcodeUrl: normalizedLinks.leetcodeUrl || '',
