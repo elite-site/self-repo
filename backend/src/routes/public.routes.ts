@@ -432,6 +432,21 @@ router.get(
             where: { OR: [{ id }, { rollNo: id }] },
           });
           driveFileId = sub?.videoDriveId ?? null;
+          if (driveFileId) {
+            record = await prisma.introVideo.findFirst({
+              where: {
+                OR: [
+                  { driveFileId },
+                  { student: { rollNo: sub?.rollNo || id } },
+                ],
+              },
+            });
+          }
+        }
+
+        const requestedVersion = typeof req.query.v === 'string' ? req.query.v.trim() : null;
+        if (requestedVersion && requestedVersion.length > 0) {
+          driveFileId = requestedVersion;
         }
 
         // If video was deleted or has no driveFileId, return placeholder SVG immediately rather than serving a stale or cached thumbnail
@@ -446,18 +461,21 @@ router.get(
         }
       }
 
-      if (record?.thumbnail) {
-        thumbnail = Buffer.isBuffer(record.thumbnail)
-          ? record.thumbnail
-          : Buffer.from(record.thumbnail);
+      // Only use stored thumbnail if it matches the current driveFileId and no force-refresh query is present
+      if (!req.query.t && record?.thumbnail) {
+        const matchesCurrentVideo = !record.driveFileId || !driveFileId || record.driveFileId === driveFileId;
+        if (matchesCurrentVideo) {
+          thumbnail = Buffer.isBuffer(record.thumbnail)
+            ? record.thumbnail
+            : Buffer.from(record.thumbnail);
+        }
       }
 
       const versionKey = driveFileId || id;
       const etag = `"${versionKey}"`;
-      const cacheControl = 'public, max-age=60, must-revalidate';
 
-      if (req.headers['if-none-match'] === etag) {
-        res.setHeader('Cache-Control', cacheControl);
+      if (req.headers['if-none-match'] === etag && !req.query.t) {
+        res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
         res.setHeader('ETag', etag);
         res.status(304).end();
         return;
@@ -471,7 +489,7 @@ router.get(
             const { stream, mimeType } = await driveService.streamDriveFile(driveFileId);
             if (mimeType && mimeType.startsWith('image/')) {
               res.setHeader('Content-Type', mimeType);
-              res.setHeader('Cache-Control', cacheControl);
+              res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
               res.setHeader('ETag', etag);
               stream.pipe(res);
               return;
@@ -489,8 +507,15 @@ router.get(
               thumbnail = generated;
               if (type === 'resume') {
                 await prisma.resume.update({ where: { id }, data: { thumbnail: generated } }).catch(() => {});
-              } else if (type === 'video' && record?.id) {
-                await prisma.introVideo.update({ where: { id: record.id }, data: { thumbnail: generated } }).catch(() => {});
+              } else if (type === 'video') {
+                if (record?.id) {
+                  await prisma.introVideo.update({ where: { id: record.id }, data: { thumbnail: generated } }).catch(() => {});
+                } else {
+                  await prisma.introVideo.updateMany({
+                    where: { driveFileId },
+                    data: { thumbnail: generated },
+                  }).catch(() => {});
+                }
               }
             }
           } catch (genErr) {
@@ -499,15 +524,18 @@ router.get(
         }
       }
 
-      res.setHeader('Cache-Control', cacheControl);
-      res.setHeader('ETag', etag);
-
       if (thumbnail) {
+        res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
+        res.setHeader('ETag', etag);
         res.setHeader('Content-Type', 'image/webp');
         res.status(200).send(thumbnail);
       } else {
         const svg = getThumbnailPlaceholderSvg(type);
         res.setHeader('Content-Type', 'image/svg+xml');
+        // Do NOT cache fallback placeholder so fresh thumbnail displays as soon as ready!
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
         res.status(200).send(svg);
       }
     } catch (err: any) {

@@ -43,6 +43,7 @@ export class TtlCache<T> {
   private readonly inflight = new Map<string, { token: object; promise: Promise<T> }>();
   /** Bumped by `clear()`; lets an in-flight load detect that it was cancelled. */
   private generation = 0;
+  private cleanupTimer?: NodeJS.Timeout;
 
   /**
    * @param ttlMs        how long a loaded value stays fresh
@@ -51,7 +52,24 @@ export class TtlCache<T> {
   constructor(
     private readonly ttlMs: number,
     private readonly maxEntries: number = 200,
-  ) {}
+  ) {
+    if (typeof setInterval !== 'undefined') {
+      this.cleanupTimer = setInterval(() => this.sweepExpired(), 60_000);
+      if (this.cleanupTimer?.unref) {
+        this.cleanupTimer.unref();
+      }
+    }
+  }
+
+  /** Sweeps expired entries out of the store to immediately free heap memory when not in use. */
+  sweepExpired(): void {
+    const now = Date.now();
+    for (const [key, entry] of this.store.entries()) {
+      if (now > entry.expiresAt) {
+        this.store.delete(key);
+      }
+    }
+  }
 
   /** Returns the cached value, or `undefined` when absent or expired. */
   get(key: string): T | undefined {

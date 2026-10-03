@@ -15,6 +15,8 @@ import { ssoService } from '../services/sso.service';
 import { resolveContentRange } from '../utils/rangeParser';
 import { getMaxVideoSizeMb } from '../services/limits.service';
 import { TtlCache } from '../utils/ttlCache';
+import { invalidateMediaDriveIdCache } from './public.routes';
+import { clearVideoListCache } from './public.videos.routes';
 
 const router = Router();
 const studentSubmissionVideoCache = new TtlCache<{ videoDriveId: string; driveFolderPath: string }>(120_000, 500);
@@ -479,6 +481,21 @@ router.delete('/submission', requireStudentAuth, async (req: Request, res: Respo
       deleteStoredFile(fileId, folderPath);
     }
 
+    // Invalidate all video caches so old video and thumbnails are never served
+    studentSubmissionVideoCache.delete(studentId);
+    studentSubmissionVideoCache.delete(student.rollNo);
+    for (const v of introVideos) {
+      invalidateMediaDriveIdCache('video', v.id);
+      if (v.driveFileId) invalidateMediaDriveIdCache('video', v.driveFileId);
+    }
+    for (const s of submissions) {
+      invalidateMediaDriveIdCache('video', s.id);
+      if (s.videoDriveId) invalidateMediaDriveIdCache('video', s.videoDriveId);
+    }
+    invalidateMediaDriveIdCache('video', studentId);
+    invalidateMediaDriveIdCache('video', student.rollNo);
+    clearVideoListCache();
+
     await ActivityService.log({
       eventId: EVENT_ID,
       category: 'APPLICATION',
@@ -911,6 +928,31 @@ router.post(
         const orphaned = await purgeSupersededIntroVideos(student.id, keptId, driveFileId);
         for (const fileId of orphaned) {
           deleteStoredFile(fileId, relativePath);
+        }
+
+        // Invalidate all video caches so old video and thumbnails are never served
+        studentSubmissionVideoCache.delete(student.id);
+        studentSubmissionVideoCache.delete(student.rollNo);
+        invalidateMediaDriveIdCache('video', keptId);
+        invalidateMediaDriveIdCache('video', student.id);
+        invalidateMediaDriveIdCache('video', student.rollNo);
+        invalidateMediaDriveIdCache('video', driveFileId);
+        if (existing?.videoDriveId) {
+          invalidateMediaDriveIdCache('video', existing.videoDriveId);
+        }
+        clearVideoListCache();
+
+        // If thumbnailBuffer couldn't be generated immediately (Drive still processing),
+        // schedule background generation in 3s so the new thumbnail is pre-warmed
+        if (!thumbnailBuffer && driveFileId && keptId) {
+          setTimeout(async () => {
+            try {
+              const bgThumb = await driveService.generateThumbnail(driveFileId, 'video');
+              if (bgThumb) {
+                await prisma.introVideo.update({ where: { id: keptId }, data: { thumbnail: bgThumb } });
+              }
+            } catch {}
+          }, 3000);
         }
       } catch (e) {
         console.warn('[video-stream] introVideo sync failed:', e);
