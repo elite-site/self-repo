@@ -81,6 +81,26 @@ function localMigrations() {
   }
 }
 
+function tuneProbeUrl(raw) {
+  try {
+    const url = new URL(raw);
+    const isPooler =
+      url.port === '6543' ||
+      url.hostname.includes('pooler.supabase.com') ||
+      url.searchParams.get('pgbouncer') === 'true';
+    if (isPooler) {
+      url.searchParams.set('pgbouncer', 'true');
+      url.searchParams.set('statement_cache_size', '0');
+    }
+    url.searchParams.set('connection_limit', '1');
+    url.searchParams.set('pool_timeout', '10');
+    url.searchParams.set('connect_timeout', '10');
+    return url.toString();
+  } catch {
+    return raw;
+  }
+}
+
 /**
  * Reads the applied-migration ledger over the transaction-mode pooler
  * (DATABASE_URL, port 6543), which is a separate connection budget from the
@@ -102,14 +122,15 @@ function unappliedMigrations() {
       'SELECT migration_name FROM _prisma_migrations WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL'
     )
       .then((rows) => { process.stdout.write(JSON.stringify(rows.map((r) => r.migration_name))); })
-      .catch((e) => { process.stderr.write(String(e.message || e)); process.exit(1); })
-      .finally(() => prisma.$disconnect());
+      .catch((e) => { process.stderr.write(String(e.stack || e.message || e)); process.exit(1); })
+      .finally(() => prisma.$disconnect().catch(() => {}));
   `;
 
+  const probeUrl = tuneProbeUrl(databaseUrl);
   const result = spawnSync(process.execPath, ['-e', probe], {
     encoding: 'utf8',
     cwd: path.join(__dirname, '..'),
-    env: { ...process.env, DATABASE_URL: databaseUrl },
+    env: { ...process.env, DATABASE_URL: probeUrl },
     timeout: 60000,
   });
 

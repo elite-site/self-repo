@@ -83,6 +83,10 @@ export const CertificatesTab: React.FC = () => {
       setTitleError('Give this certificate a name.');
       return;
     }
+    if (!selectedFile) {
+      setModalError('Please select a certificate document to upload.');
+      return;
+    }
     setUploading(true);
     setModalError(null);
 
@@ -301,7 +305,7 @@ export const CertificatesTab: React.FC = () => {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         title="Upload certificate"
-        description="A title is required. The file and issuer are optional."
+        description="A title and document are required. The issuer is optional."
         initialFocusRef={firstInputRef}
       >
         <form onSubmit={handleUploadCertificate} className="space-y-5" noValidate>
@@ -365,7 +369,7 @@ export const CertificatesTab: React.FC = () => {
           <FormSection title="Document">
             <div>
               <label htmlFor="certificate-file" className="label">
-                PDF or image <span className="text-ink-muted">(optional)</span>
+                PDF or image <span className="text-status-rejected">*</span>
               </label>
               <input
                 id="certificate-file"

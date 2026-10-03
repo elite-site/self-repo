@@ -1259,199 +1259,212 @@ router.get(['/moderation', '/moderation/items'], async (req: Request, res: Respo
 
     const requestedType = String(req.query.type || 'all').toLowerCase();
     const statusQuery = req.query.status as string | undefined;
-    const statuses = statusQuery
+    const statuses = statusQuery && statusQuery !== 'ALL' && statusQuery !== 'all'
       ? statusQuery.split(',').map((s) => s.trim())
-      : ['PENDING', 'UNDER_REVIEW', 'CHANGES_REQUESTED'];
+      : ['PENDING', 'UNDER_REVIEW', 'CHANGES_REQUESTED', 'APPROVED', 'REJECTED', 'HIDDEN'];
 
     const items: any[] = [];
+    const studentSelect = {
+      select: {
+        name: true,
+        rollNo: true,
+        year: true,
+        section: true,
+        branch: true,
+      },
+    };
 
-    // 1. Videos
-    if (requestedType === 'all' || requestedType === 'videos' || requestedType === 'video') {
-      const videos = await prisma.introVideo.findMany({
-        where: {
-          status: { in: statuses as any },
-          driveFileId: { not: null },
-        },
-        include: { student: true },
-        orderBy: { submittedAt: 'desc' },
+    const shouldFetchVideos = requestedType === 'all' || requestedType === 'videos' || requestedType === 'video';
+    const shouldFetchResumes = requestedType === 'all' || requestedType === 'resumes' || requestedType === 'resume';
+    const shouldFetchCerts = requestedType === 'all' || requestedType === 'certificates' || requestedType === 'certificate';
+    const shouldFetchProjects = requestedType === 'all' || requestedType === 'projects' || requestedType === 'project';
+    const shouldFetchAchievements = requestedType === 'all' || requestedType === 'achievements' || requestedType === 'achievement';
+
+    const [videos, resumes, certs, projs, achs] = await Promise.all([
+      shouldFetchVideos
+        ? prisma.introVideo.findMany({
+            where: {
+              status: { in: statuses as any },
+              driveFileId: { not: null },
+            },
+            include: { student: studentSelect },
+            orderBy: { submittedAt: 'desc' },
+          })
+        : Promise.resolve([]),
+      shouldFetchResumes
+        ? prisma.resume.findMany({
+            where: {
+              status: { in: statuses as any },
+            },
+            include: { student: studentSelect },
+            orderBy: { submittedAt: 'desc' },
+          })
+        : Promise.resolve([]),
+      shouldFetchCerts
+        ? prisma.certificate.findMany({
+            where: {
+              status: { in: statuses as any },
+            },
+            include: { student: studentSelect },
+            orderBy: { createdAt: 'desc' },
+          })
+        : Promise.resolve([]),
+      shouldFetchProjects
+        ? prisma.project.findMany({
+            where: { status: { in: statuses as any } },
+            include: { student: studentSelect },
+            orderBy: { createdAt: 'desc' },
+          })
+        : Promise.resolve([]),
+      shouldFetchAchievements
+        ? prisma.achievement.findMany({
+            where: { status: { in: statuses as any } },
+            include: { student: studentSelect, category: true },
+            orderBy: { createdAt: 'desc' },
+          })
+        : Promise.resolve([]),
+    ]);
+
+    for (const v of videos) {
+      items.push({
+        id: v.id,
+        type: 'videos',
+        itemType: 'video',
+        studentId: v.studentId,
+        studentName: v.student?.name || 'Unknown',
+        studentRoll: v.student?.rollNo || 'Unknown',
+        studentYear: v.student?.year,
+        studentSection: v.student?.section,
+        studentBranch: v.student?.branch || 'IT',
+        title: `Intro Video - ${v.student?.name || v.student?.rollNo}`,
+        description: v.reviewNote || null,
+        reviewNote: v.reviewNote || null,
+        reviewedBy: v.reviewedBy || null,
+        reviewedAt: v.reviewedAt || null,
+        changeRequestedAt: v.changeRequestedAt || null,
+        changeRequestNote: v.changeRequestNote || null,
+        fileUrl: (v.driveFileId && v.driveFileId.trim()) ? `/api/public/media/video/${v.driveFileId}?stream=true` : null,
+        driveFileId: v.driveFileId,
+        thumbnailUrl: (v.driveFileId && v.driveFileId.trim()) ? `/api/public/media/thumbnail/video/${v.id}?v=${encodeURIComponent(v.driveFileId.trim())}` : null,
+        status: v.status,
+        submittedAt: v.submittedAt,
+        isPublic: Boolean(v.isPublic),
+        publicUrl: v.isPublic && v.status === 'APPROVED' ? `/api/public/videos/stream/${v.id}` : null,
       });
-      for (const v of videos) {
-        items.push({
-          id: v.id,
-          type: 'videos',
-          itemType: 'video',
-          studentId: v.studentId,
-          studentName: v.student?.name || 'Unknown',
-          studentRoll: v.student?.rollNo || 'Unknown',
-          studentYear: v.student?.year,
-          studentSection: v.student?.section,
-          studentBranch: v.student?.branch || 'IT',
-          title: `Intro Video - ${v.student?.name || v.student?.rollNo}`,
-          description: v.reviewNote || null,
-          reviewNote: v.reviewNote || null,
-          reviewedBy: v.reviewedBy || null,
-          reviewedAt: v.reviewedAt || null,
-          changeRequestedAt: v.changeRequestedAt || null,
-          changeRequestNote: v.changeRequestNote || null,
-          fileUrl: (v.driveFileId && v.driveFileId.trim()) ? `/api/public/media/video/${v.driveFileId}` : null,
-          driveFileId: v.driveFileId,
-          thumbnailUrl: (v.driveFileId && v.driveFileId.trim()) ? `/api/public/media/thumbnail/video/${v.id}?v=${encodeURIComponent(v.driveFileId.trim())}` : null,
-          status: v.status,
-          submittedAt: v.submittedAt,
-          isPublic: Boolean(v.isPublic),
-          publicUrl: v.isPublic && v.status === 'APPROVED' ? `/api/public/videos/stream/${v.id}` : null,
-        });
-      }
     }
 
-    // 2. Resumes
-    if (requestedType === 'all' || requestedType === 'resumes' || requestedType === 'resume') {
-      const resumes = await prisma.resume.findMany({
-        where: {
-          status: { in: statuses as any },
-        },
-        include: { student: true },
-        orderBy: { submittedAt: 'desc' },
+    for (const r of resumes) {
+      items.push({
+        id: r.id,
+        type: 'resumes',
+        itemType: 'resume',
+        studentId: r.studentId,
+        studentName: r.student?.name || 'Unknown',
+        studentRoll: r.student?.rollNo || 'Unknown',
+        studentYear: r.student?.year,
+        studentSection: r.student?.section,
+        studentBranch: r.student?.branch || 'IT',
+        title: `Resume - ${r.student?.name || r.student?.rollNo}`,
+        description: r.filename || 'Curriculum Vitae',
+        filename: r.filename || null,
+        sizeMb: r.sizeMb || null,
+        reviewNote: r.reviewNote || null,
+        reviewedBy: r.reviewedBy || null,
+        reviewedAt: r.reviewedAt || null,
+        fileUrl: r.driveFileId ? `/api/public/media/resume/${r.id}` : null,
+        driveFileId: r.driveFileId,
+        thumbnailUrl: r.driveFileId ? `/api/public/media/thumbnail/resume/${r.id}?v=${encodeURIComponent(r.driveFileId)}` : null,
+        status: r.status,
+        submittedAt: r.submittedAt,
+        isPublic: Boolean(r.isPublic),
       });
-      for (const r of resumes) {
-        items.push({
-          id: r.id,
-          type: 'resumes',
-          itemType: 'resume',
-          studentId: r.studentId,
-          studentName: r.student?.name || 'Unknown',
-          studentRoll: r.student?.rollNo || 'Unknown',
-          studentYear: r.student?.year,
-          studentSection: r.student?.section,
-          studentBranch: r.student?.branch || 'IT',
-          title: `Resume - ${r.student?.name || r.student?.rollNo}`,
-          description: r.filename || 'Curriculum Vitae',
-          filename: r.filename || null,
-          sizeMb: r.sizeMb || null,
-          reviewNote: r.reviewNote || null,
-          reviewedBy: r.reviewedBy || null,
-          reviewedAt: r.reviewedAt || null,
-          fileUrl: r.driveFileId ? `/api/public/media/resume/${r.id}` : null,
-          driveFileId: r.driveFileId,
-          thumbnailUrl: r.driveFileId ? `/api/public/media/thumbnail/resume/${r.id}?v=${encodeURIComponent(r.driveFileId)}` : null,
-          status: r.status,
-          submittedAt: r.submittedAt,
-          isPublic: Boolean(r.isPublic),
-        });
-      }
     }
 
-    // 3. Certificates
-    if (requestedType === 'all' || requestedType === 'certificates' || requestedType === 'certificate') {
-      const certs = await prisma.certificate.findMany({
-        where: {
-          status: { in: statuses as any },
-        },
-        include: { student: true },
-        orderBy: { createdAt: 'desc' },
+    for (const c of certs) {
+      items.push({
+        id: c.id,
+        type: 'certificates',
+        itemType: 'certificate',
+        studentId: c.studentId,
+        studentName: c.student?.name || 'Unknown',
+        studentRoll: c.student?.rollNo || 'Unknown',
+        studentYear: c.student?.year,
+        studentSection: c.student?.section,
+        studentBranch: c.student?.branch || 'IT',
+        title: c.title || `Certificate - ${c.student?.name}`,
+        description: c.issuer ? `Issued by ${c.issuer}` : 'Verified Certificate',
+        issuer: c.issuer || null,
+        issuedAt: c.issuedAt || null,
+        reviewNote: c.reviewNote || null,
+        reviewedBy: c.reviewedBy || null,
+        reviewedAt: c.reviewedAt || null,
+        fileUrl: c.fileDriveId ? `/api/public/media/certificate/${c.id}` : null,
+        fileDriveId: c.fileDriveId,
+        driveFileId: c.fileDriveId,
+        thumbnailUrl: c.fileDriveId ? `/api/public/media/thumbnail/certificate/${c.id}?v=${encodeURIComponent(c.fileDriveId)}` : null,
+        status: c.status,
+        submittedAt: c.createdAt,
+        isPublic: Boolean(c.isPublic),
       });
-      for (const c of certs) {
-        items.push({
-          id: c.id,
-          type: 'certificates',
-          itemType: 'certificate',
-          studentId: c.studentId,
-          studentName: c.student?.name || 'Unknown',
-          studentRoll: c.student?.rollNo || 'Unknown',
-          studentYear: c.student?.year,
-          studentSection: c.student?.section,
-          studentBranch: c.student?.branch || 'IT',
-          title: c.title || `Certificate - ${c.student?.name}`,
-          description: c.issuer ? `Issued by ${c.issuer}` : 'Verified Certificate',
-          issuer: c.issuer || null,
-          issuedAt: c.issuedAt || null,
-          reviewNote: c.reviewNote || null,
-          reviewedBy: c.reviewedBy || null,
-          reviewedAt: c.reviewedAt || null,
-          fileUrl: c.fileDriveId ? `/api/public/media/certificate/${c.id}` : null,
-          fileDriveId: c.fileDriveId,
-          driveFileId: c.fileDriveId,
-          thumbnailUrl: c.fileDriveId ? `/api/public/media/thumbnail/certificate/${c.id}?v=${encodeURIComponent(c.fileDriveId)}` : null,
-          status: c.status,
-          submittedAt: c.createdAt,
-          isPublic: Boolean(c.isPublic),
-        });
-      }
     }
 
-    // 4. Projects
-    if (requestedType === 'all' || requestedType === 'projects' || requestedType === 'project') {
-      const projs = await prisma.project.findMany({
-        where: { status: { in: statuses as any } },
-        include: { student: true },
-        orderBy: { createdAt: 'desc' },
+    for (const p of projs) {
+      items.push({
+        id: p.id,
+        type: 'projects',
+        itemType: 'project',
+        studentId: p.studentId,
+        studentName: p.student?.name || 'Unknown',
+        studentRoll: p.student?.rollNo || 'Unknown',
+        studentYear: p.student?.year,
+        studentSection: p.student?.section,
+        studentBranch: p.student?.branch || 'IT',
+        title: p.title,
+        description: p.description,
+        technologies: p.technologies || [],
+        githubUrl: p.githubUrl,
+        driveVideoUrl: p.driveVideoUrl,
+        fileUrl: p.driveVideoUrl || p.githubUrl,
+        proofUrl: p.githubUrl,
+        reviewNote: p.reviewNote || null,
+        reviewedBy: p.reviewedBy || null,
+        reviewedAt: p.reviewedAt || null,
+        status: p.status,
+        submittedAt: p.createdAt,
+        isPublic: Boolean(p.isPublic),
       });
-      for (const p of projs) {
-        items.push({
-          id: p.id,
-          type: 'projects',
-          itemType: 'project',
-          studentId: p.studentId,
-          studentName: p.student?.name || 'Unknown',
-          studentRoll: p.student?.rollNo || 'Unknown',
-          studentYear: p.student?.year,
-          studentSection: p.student?.section,
-          studentBranch: p.student?.branch || 'IT',
-          title: p.title,
-          description: p.description,
-          technologies: p.technologies || [],
-          githubUrl: p.githubUrl,
-          driveVideoUrl: p.driveVideoUrl,
-          fileUrl: p.driveVideoUrl || p.githubUrl,
-          proofUrl: p.githubUrl,
-          reviewNote: p.reviewNote || null,
-          reviewedBy: p.reviewedBy || null,
-          reviewedAt: p.reviewedAt || null,
-          status: p.status,
-          submittedAt: p.createdAt,
-          isPublic: Boolean(p.isPublic),
-        });
-      }
     }
 
-    // 5. Achievements
-    if (requestedType === 'all' || requestedType === 'achievements' || requestedType === 'achievement') {
-      const achs = await prisma.achievement.findMany({
-        where: { status: { in: statuses as any } },
-        include: { student: true, category: true },
-        orderBy: { createdAt: 'desc' },
+    for (const a of achs) {
+      const proofUrl = a.proofUrl || (a.proofDriveId ? `/api/public/media/achievement/${a.id}` : null);
+      const thumbnailUrl = a.proofDriveId ? `/api/public/media/thumbnail/achievement/${a.id}?v=${encodeURIComponent(a.proofDriveId)}` : null;
+      items.push({
+        id: a.id,
+        type: 'achievements',
+        itemType: 'achievement',
+        studentId: a.studentId,
+        studentName: a.student?.name || 'Unknown',
+        studentRoll: a.student?.rollNo || 'Unknown',
+        studentYear: a.student?.year,
+        studentSection: a.student?.section,
+        studentBranch: a.student?.branch || 'IT',
+        title: a.title,
+        description: a.description,
+        organization: a.organization,
+        category: a.category?.name || 'Achievement',
+        achievedAt: a.achievedAt || null,
+        fileUrl: proofUrl,
+        proofUrl,
+        proofDriveId: a.proofDriveId,
+        driveFileId: a.proofDriveId,
+        thumbnailUrl,
+        reviewNote: a.reviewNote || null,
+        reviewedBy: a.reviewedBy || null,
+        reviewedAt: a.reviewedAt || null,
+        status: a.status,
+        submittedAt: a.createdAt,
+        isPublic: Boolean(a.isPublic),
       });
-      for (const a of achs) {
-        const proofUrl = a.proofUrl || (a.proofDriveId ? `/api/public/media/achievement/${a.id}` : null);
-        const thumbnailUrl = a.proofDriveId ? `/api/public/media/thumbnail/achievement/${a.id}?v=${encodeURIComponent(a.proofDriveId)}` : null;
-        items.push({
-          id: a.id,
-          type: 'achievements',
-          itemType: 'achievement',
-          studentId: a.studentId,
-          studentName: a.student?.name || 'Unknown',
-          studentRoll: a.student?.rollNo || 'Unknown',
-          studentYear: a.student?.year,
-          studentSection: a.student?.section,
-          studentBranch: a.student?.branch || 'IT',
-          title: a.title,
-          description: a.description,
-          organization: a.organization,
-          category: a.category?.name || 'Achievement',
-          achievedAt: a.achievedAt || null,
-          fileUrl: proofUrl,
-          proofUrl,
-          proofDriveId: a.proofDriveId,
-          driveFileId: a.proofDriveId,
-          thumbnailUrl,
-          reviewNote: a.reviewNote || null,
-          reviewedBy: a.reviewedBy || null,
-          reviewedAt: a.reviewedAt || null,
-          status: a.status,
-          submittedAt: a.createdAt,
-          isPublic: Boolean(a.isPublic),
-        });
-      }
     }
 
     items.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());

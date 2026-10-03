@@ -625,6 +625,26 @@ router.get('/submission/media/video', requireStudentAuth, async (req: Request, r
       return;
     }
 
+    // Direct Google Drive redirect: allows the browser's <video> element to stream
+    // directly from Google's high-speed CDN with full byte-range seeking instead
+    // of proxying heavy video streams through Render's single-core CPU.
+    if (driveService.canRedirectToDrive()) {
+      const directLink = driveService.getDirectLink(driveFileId);
+      if (directLink) {
+        let isPublic = await driveService.isPubliclyReadable(driveFileId);
+        if (!isPublic) {
+          await driveService.setViewerPermission(driveFileId).catch(() => {});
+          isPublic = await driveService.isPubliclyReadable(driveFileId);
+        }
+        if (isPublic) {
+          res.setHeader('Cache-Control', 'private, max-age=3600');
+          res.setHeader('ETag', etag);
+          res.redirect(302, directLink);
+          return;
+        }
+      }
+    }
+
     const rangeHeader = req.headers.range;
 
     // The service performs the real byte-range fetch, so the body always

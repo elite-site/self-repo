@@ -396,7 +396,7 @@ export const AdminEvents: React.FC = () => {
   const handleDelete = async (ev: EventItem) => {
     const confirmed = await confirm({
       title: `Delete “${ev.name}”?`,
-      description: 'This permanently deletes the event along with its registrations, teams and form fields. This cannot be undone.',
+      description: 'Are you sure you want to permanently delete this event and all its associated registrations? This action cannot be undone.',
       confirmLabel: 'Delete event',
       tone: 'danger',
     });
@@ -550,15 +550,19 @@ export const AdminEvents: React.FC = () => {
                             ? <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />
                             : <Archive className="w-3.5 h-3.5" aria-hidden="true" />}
                         </button>
-                        <button
-                          onClick={() => handleDelete(ev)}
-                          disabled={busyId === ev.id}
-                          title="Delete"
-                          className="btn btn-ghost p-2 text-status-rejected hover:bg-status-bg-rejected"
-                          aria-label={`Delete ${ev.name}`}
-                        >
-                          <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
-                        </button>
+                        {ev.id !== 'self-introduction-2026' && (
+                          <button
+                            onClick={() => handleDelete(ev)}
+                            disabled={busyId === ev.id}
+                            title="Delete"
+                            className="btn btn-ghost p-2 text-status-rejected hover:bg-status-bg-rejected"
+                            aria-label={`Delete ${ev.name}`}
+                          >
+                            {busyId === ev.id
+                              ? <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />
+                              : <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />}
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

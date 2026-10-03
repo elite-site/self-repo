@@ -148,14 +148,23 @@ export const EditProfilePage: React.FC = () => {
     setUploadingPhoto(true);
     setPhotoError(null);
     try {
-      const webpFile = new File([croppedBlob], `photo_${Date.now()}.webp`, { type: 'image/webp' });
+      const webpFile = new File([croppedBlob], 'photo.webp', { type: 'image/webp' });
       const formData = new FormData();
       formData.append('photo', webpFile);
 
       const res = await api.uploadProfilePhoto(formData);
       if (res.photoUrl) {
-        setProfile((prev) => (prev ? { ...prev, photoUrl: res.photoUrl, photoOffsetX: 50, photoOffsetY: 50, photoZoom: 1 } : prev));
-        onPhotoChange?.(res.photoUrl);
+        const photoWithTimestamp = res.photoUrl.includes('?t=')
+          ? res.photoUrl
+          : `${res.photoUrl}${res.photoUrl.includes('?') ? '&' : '?'}t=${Date.now()}`;
+        setProfile((prev) => (prev ? {
+          ...prev,
+          photoUrl: photoWithTimestamp,
+          photoOffsetX: 50,
+          photoOffsetY: 50,
+          photoZoom: 1,
+        } : prev));
+        onPhotoChange?.(photoWithTimestamp);
         invalidateApiCache();
         showToast('Profile photo updated successfully', 'success');
         handleCloseCropModal();
