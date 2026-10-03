@@ -315,6 +315,7 @@ model Student {
   @@index([name])
   @@index([section, year])
   @@index([status])
+  @@index([status, year, section])
 }
 
 model EmailLog {

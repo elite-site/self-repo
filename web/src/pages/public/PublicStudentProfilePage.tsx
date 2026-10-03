@@ -715,11 +715,11 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
           </div>
 
           {projects.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="flex flex-wrap gap-6">
               {projects.map((project) => (
                 <div
                   key={project.id}
-                  className="rounded-2xl border border-slate-800/80 bg-slate-900/60 p-5 backdrop-blur-sm hover:border-rose-500/40 hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between shadow-sm print:break-inside-avoid print:border-slate-300"
+                  className="flex-1 min-w-[260px] max-w-full md:max-w-[calc(50%-12px)] lg:max-w-[calc(33.333%-16px)] rounded-2xl border border-slate-800/80 bg-slate-900/60 p-5 backdrop-blur-sm hover:border-rose-500/40 hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between shadow-sm print:break-inside-avoid print:border-slate-300"
                 >
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
