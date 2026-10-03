@@ -25,22 +25,17 @@ export function createQueryClient(): QueryClient {
   return new QueryClient({
     defaultOptions: {
       queries: {
-        // Half a minute of freshness. Enough that moving between two pages that
-        // read the same list does not re-fetch it on every navigation, short
-        // enough that a data entry never lingers long after it stops mattering.
-        staleTime: 30_000,
-        // Five minutes of grace for an entry nothing is reading. This cache is a
-        // handoff between components, not a second database: it lives in memory
-        // only, is never persisted, and is cleared on logout, so nothing a
-        // student's browser holds about that student outlives the session.
+        // Always considered stale so the UI refetches on mount/focus instead
+        // of showing cached data. In-flight deduplication means two components
+        // on the same page still only fire one request.
+        staleTime: 0,
+        // Five minutes of grace for an entry nothing is reading.
         gcTime: 5 * 60_000,
-        // One retry, which covers a request dropped mid-flight. More than that
-        // does not rescue a genuinely failing endpoint, it just delays the error
-        // state the UI has to be able to show.
+        // One retry covers a dropped request. More just delays the error state.
         retry: 1,
-        // The portal is idle on one route at a time. Refetching on focus would
-        // re-fire every list the moment a student tabs back to the window.
-        refetchOnWindowFocus: false,
+        // Refetch when the student returns to the tab — catches profile photo
+        // and data changes made on another device or in another tab.
+        refetchOnWindowFocus: true,
       },
     },
   });
