@@ -74,8 +74,8 @@ export const VotingResults: React.FC = () => {
     <div className="space-y-6">
       {/* Finalize Confirm Dialog */}
       {showFinalizeConfirm && (
-        <div className="fixed inset-0 z-50 bg-on-primary/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-surface border border-edge rounded-2xl shadow-2xl p-6 max-w-md w-full space-y-4">
+        <div className="fixed inset-0 z-50 bg-scrim backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-surface text-ink border border-edge rounded-2xl shadow-2xl p-6 max-w-md w-full space-y-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-status-bg-rejected flex items-center justify-center">
                 <AlertTriangle className="w-5 h-5 text-status-rejected" />

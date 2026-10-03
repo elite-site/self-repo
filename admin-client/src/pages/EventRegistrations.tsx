@@ -1047,8 +1047,8 @@ export const EventRegistrations: React.FC = () => {
 
       {/* 5. REGISTRATION DETAIL DRAWER (ADM-08) */}
       {selectedRegistration && (
-        <div className="fixed inset-0 z-50 bg-on-primary/40 backdrop-blur-xs flex justify-end">
-          <div className="w-full max-w-lg bg-surface h-full shadow-2xl flex flex-col overflow-hidden animate-fade-in slide-in-from-right duration-base">
+        <div className="fixed inset-0 z-50 bg-scrim backdrop-blur-xs flex justify-end">
+          <div className="w-full max-w-lg bg-surface text-ink h-full shadow-2xl flex flex-col overflow-hidden animate-fade-in slide-in-from-right duration-base">
             {/* Drawer Header */}
             <div className="p-5 border-b border-edge flex items-center justify-between">
               <div>
@@ -1274,8 +1274,8 @@ export const EventRegistrations: React.FC = () => {
 
       {/* 6. REMOVE TEAM MEMBER DIALOG (ADM-09) */}
       {memberToRemove && (
-        <div className="fixed inset-0 z-50 bg-on-primary/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-surface rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4 animate-fade-in (_m) => 'animate-scale-in' duration-fast border border-edge">
+        <div className="fixed inset-0 z-50 bg-scrim backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-surface text-ink rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4 animate-scale-in duration-fast border border-edge">
             <div className="flex items-center gap-3 text-status-rejected">
               <div className="w-10 h-10 rounded-xl bg-status-bg-rejected flex items-center justify-center shrink-0">
                 <UserMinus className="w-5 h-5 text-status-rejected" />

@@ -134,8 +134,8 @@ const EventWizard: React.FC<{
   };
 
   return (
-    <div className="fixed inset-0 z-modal bg-on-primary/40 flex items-center justify-center p-4 animate-fade-in" role="dialog" aria-modal="true" aria-labelledby="wizard-title">
-      <div className="surface w-full max-w-2xl max-h-[90dvh] overflow-hidden flex flex-col shadow-modal animate-scale-in">
+    <div className="fixed inset-0 z-modal bg-scrim backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in" role="dialog" aria-modal="true" aria-labelledby="wizard-title">
+      <div className="surface bg-surface text-ink w-full max-w-2xl max-h-[90dvh] overflow-hidden flex flex-col shadow-modal animate-scale-in">
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-edge">
           <h2 id="wizard-title" className="text-headline-sm font-extrabold text-ink">{existing ? 'Edit Event' : 'Create Event'}</h2>
@@ -293,8 +293,8 @@ const EventWizard: React.FC<{
 };
 
 const EventDetail: React.FC<{ event: EventItem; onClose: () => void }> = ({ event, onClose }) => (
-  <div className="fixed inset-0 z-modal bg-on-primary/40 flex items-center justify-center p-4 animate-fade-in" role="dialog" aria-modal="true" aria-labelledby="detail-title">
-    <div className="surface w-full max-w-lg max-h-[90dvh] overflow-hidden flex flex-col shadow-modal animate-scale-in">
+  <div className="fixed inset-0 z-modal bg-scrim backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in" role="dialog" aria-modal="true" aria-labelledby="detail-title">
+    <div className="surface bg-surface text-ink w-full max-w-lg max-h-[90dvh] overflow-hidden flex flex-col shadow-modal animate-scale-in">
       <div className="flex items-center justify-between p-5 border-b border-edge">
         <h2 id="detail-title" className="text-headline-sm font-extrabold text-ink">{event.name}</h2>
         <button onClick={onClose} className="btn btn-ghost p-2" aria-label="Close details">

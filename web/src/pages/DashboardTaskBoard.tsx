@@ -129,7 +129,7 @@ const TaskCard: React.FC<{ task: DashboardTask }> = ({ task }) => {
         <span
           aria-hidden="true"
           className={cn(
-            'btn pointer-events-none',
+            'btn pointer-events-none text-xs px-2.5 py-1',
             task.state === 'todo' ? 'btn-primary' : 'btn-secondary',
           )}
         >
@@ -154,7 +154,7 @@ export const DashboardTaskBoard: React.FC<DashboardTaskBoardProps> = ({ tasks })
   const doneCount = tasks.filter((task) => task.state === 'done').length;
 
   return (
-    <section className="surface p-5 sm:p-6" aria-labelledby="task-board-heading">
+    <section className="surface p-4 sm:p-5 lg:p-6" aria-labelledby="task-board-heading">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <h2 id="task-board-heading" className="font-heading text-headline-md text-ink">
           Your setup
@@ -168,7 +168,7 @@ export const DashboardTaskBoard: React.FC<DashboardTaskBoardProps> = ({ tasks })
         role="region"
         aria-label="Task board"
         tabIndex={0}
-        className="-mx-5 mt-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-5 pb-1 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-x-visible sm:px-0"
+        className="-mx-4 sm:mx-0 mt-4 flex snap-x snap-mandatory gap-3 sm:gap-4 overflow-x-auto px-4 sm:px-0 pb-2 sm:pb-0 sm:grid sm:grid-cols-3 sm:overflow-x-visible"
       >
         {COLUMNS.map((column) => {
           const columnTasks = tasks.filter((task) => task.state === column.id);
@@ -178,7 +178,7 @@ export const DashboardTaskBoard: React.FC<DashboardTaskBoardProps> = ({ tasks })
               key={column.id}
               role="group"
               aria-label={`${column.title} tasks`}
-              className="min-w-[80vw] snap-start sm:min-w-0"
+              className="min-w-[82vw] xs:min-w-[280px] snap-start sm:min-w-0"
             >
               <div className="flex items-center gap-2">
                 <h3 className="font-heading text-headline-sm text-ink">{column.title}</h3>

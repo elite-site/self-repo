@@ -378,7 +378,7 @@ export const TeamsPage: React.FC = () => {
             }}
           >
             <div
-              className="surface max-w-md w-full max-h-[90vh] overflow-y-auto p-6 shadow-modal border border-edge text-left my-auto animate-scale-in"
+              className="surface bg-surface text-ink max-w-md w-full max-h-[90vh] overflow-y-auto p-6 shadow-modal border border-edge text-left my-auto animate-scale-in"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between pb-3 border-b border-edge">
@@ -479,7 +479,7 @@ export const TeamsPage: React.FC = () => {
             }}
           >
             <div
-              className="surface max-w-md w-full max-h-[90vh] overflow-y-auto p-6 shadow-modal border border-edge text-left my-auto animate-scale-in"
+              className="surface bg-surface text-ink max-w-md w-full max-h-[90vh] overflow-y-auto p-6 shadow-modal border border-edge text-left my-auto animate-scale-in"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between pb-3 border-b border-edge">

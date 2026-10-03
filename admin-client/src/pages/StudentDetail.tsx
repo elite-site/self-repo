@@ -1032,8 +1032,8 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
 
       {/* ── MODAL: REQUEST CHANGES ── */}
       {requestModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-on-primary/60 backdrop-blur-xs">
-          <div className="bg-surface rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-edge text-left animate-fade-in fade-in (_m) => 'animate-scale-in' duration-fast">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-scrim backdrop-blur-xs">
+          <div className="bg-surface text-ink rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-edge text-left animate-scale-in duration-fast">
             <div className="flex items-center justify-between pb-3 border-b border-edge">
               <div className="flex items-center gap-2">
                 <MessageSquare className="w-5 h-5 text-status-changes" />
@@ -1117,8 +1117,8 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
 
       {/* ── MODAL: DELETE ITEM ── */}
       {deleteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-on-primary/60 backdrop-blur-xs">
-          <div className="bg-surface rounded-2xl max-w-md w-full p-6 shadow-2xl border border-edge text-left animate-fade-in fade-in (_m) => 'animate-scale-in' duration-fast">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-scrim backdrop-blur-xs">
+          <div className="bg-surface text-ink rounded-2xl max-w-md w-full p-6 shadow-2xl border border-edge text-left animate-scale-in duration-fast">
             <div className="flex items-center justify-between pb-3 border-b border-edge">
               <div className="flex items-center gap-2 text-status-rejected">
                 <Trash2 className="w-5 h-5" />

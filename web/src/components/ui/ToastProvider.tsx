@@ -383,7 +383,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       <div
         className={cn(
           'pointer-events-none fixed inset-x-0 bottom-0 z-toast flex flex-col items-center gap-2 px-4',
-          'pb-[calc(1rem+var(--safe-area-bottom))]',
+          'pb-[calc(4.5rem+var(--safe-area-bottom))] sm:pb-[calc(1rem+var(--safe-area-bottom))]',
           // Bottom-right on desktop, bottom-centre on mobile (§4.8).
           'sm:inset-x-auto sm:bottom-5 sm:right-5 sm:items-end sm:px-0',
         )}

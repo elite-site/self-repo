@@ -119,7 +119,7 @@ export const Dialog: React.FC<DialogProps> = ({
   if (!open) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-modal flex items-start justify-center overflow-y-auto p-4 sm:items-center sm:p-6">
+    <div className="fixed inset-0 z-modal flex items-center justify-center overflow-y-auto p-4 sm:p-6">
       <div className="fixed inset-0 bg-scrim animate-fade-in" onClick={onClose} aria-hidden="true" />
 
       <div

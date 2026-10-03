@@ -27,6 +27,8 @@ export interface ProgressBarProps {
   showValue?: boolean;
   /** On the wrapper. */
   className?: string;
+  /** On the background track element. */
+  trackClassName?: string;
   /** On the filled portion. */
   barClassName?: string;
 }
@@ -54,6 +56,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
   showLabel = false,
   showValue = false,
   className,
+  trackClassName,
   barClassName,
 }) => {
   const shouldReduce = useReducedMotion();
@@ -87,7 +90,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
         aria-label={showLabel ? undefined : label}
         aria-labelledby={showLabel ? labelId : undefined}
         // `surface.inset` is the preset's spelling of §4.8's `bg-inset` track.
-        className="h-2 w-full overflow-hidden rounded-full bg-surface-inset"
+        className={cn('h-2 w-full overflow-hidden rounded-full bg-surface-inset', trackClassName)}
       >
         {indeterminate ? (
           // A third of the track, swept end to end and back. Not the full

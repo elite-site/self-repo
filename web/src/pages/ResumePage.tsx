@@ -190,7 +190,7 @@ export const ResumePage: React.FC = () => {
         </div>
 
         {hasValidFile && (
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 shrink-0">
             <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadgeClass(resumeData.status)}`}>
               {getStatusIcon(resumeData.status)}
               <span>{getStatusLabel(resumeData.status)}</span>
@@ -206,7 +206,7 @@ export const ResumePage: React.FC = () => {
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
-              className="btn btn-secondary"
+              className="btn btn-secondary text-xs sm:text-sm px-3 py-1.5 sm:px-4 sm:py-2"
               aria-label="Replace your resume PDF"
             >
               <RotateCcw className="w-3.5 h-3.5" />
@@ -215,7 +215,7 @@ export const ResumePage: React.FC = () => {
             <button
               onClick={handleDelete}
               disabled={deleting || uploading}
-              className="btn btn-ghost text-status-rejected hover:bg-status-bg-rejected hover:border-status-rejected"
+              className="btn btn-ghost text-xs sm:text-sm px-3 py-1.5 sm:px-4 sm:py-2 text-status-rejected hover:bg-status-bg-rejected hover:border-status-rejected"
               aria-label="Delete your submitted resume"
             >
               {deleting ? (

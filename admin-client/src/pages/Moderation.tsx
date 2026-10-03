@@ -116,7 +116,7 @@ const DocumentOrImagePreview: React.FC<{
 
   if (isPdf) {
     return (
-      <div className="w-full h-[65vh] min-h-[400px] rounded-lg overflow-hidden border border-edge bg-white shadow-sm">
+      <div className="w-full h-[65vh] min-h-[400px] rounded-lg overflow-hidden border border-edge bg-surface shadow-sm">
         <iframe
           src={url}
           title={title}
@@ -785,7 +785,7 @@ export const Moderation: React.FC = () => {
       {selectedItem &&
         createPortal(
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto animate-fade-in"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-scrim backdrop-blur-sm overflow-y-auto animate-fade-in"
             role="dialog"
             aria-modal="true"
             aria-labelledby="review-modal-title"
@@ -939,7 +939,7 @@ export const Moderation: React.FC = () => {
                       {selectedItem.itemType === 'resume' && (
                         <div className="w-full flex-1 flex flex-col space-y-3">
                           {selectedItem.fileUrl ? (
-                            <div className="w-full h-[65vh] min-h-[420px] rounded-lg overflow-hidden border border-edge bg-white">
+                            <div className="w-full h-[65vh] min-h-[420px] rounded-lg overflow-hidden border border-edge bg-surface">
                               <iframe
                                 src={selectedItem.fileUrl}
                                 title={selectedItem.title}

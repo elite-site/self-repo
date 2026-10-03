@@ -316,8 +316,8 @@ export const EmailAutomation: React.FC = () => {
 
       {/* Create Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-on-primary/60 backdrop-blur-sm">
-          <div className="bg-surface border border-edge rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-scrim backdrop-blur-sm">
+          <div className="bg-surface text-ink border border-edge rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden">
             <div className="p-5 border-b border-edge flex items-center justify-between">
               <h2 className="text-base font-bold text-ink flex items-center gap-2">
                 <Zap className="w-5 h-5 text-ink-brand" />

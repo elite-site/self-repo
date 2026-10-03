@@ -361,13 +361,13 @@ export const ProfilePage: React.FC = () => {
       </div>
 
       {/* 2. INTRODUCTION VIDEO SECTION */}
-      <div className="surface p-6 rounded-2xl border border-edge shadow-card space-y-4">
-        <div className="flex items-center justify-between">
+      <div className="surface p-4 sm:p-6 rounded-2xl border border-edge shadow-card space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2.5">
           <div className="flex items-center gap-2">
             <Video className="w-5 h-5 text-ink-brand" />
             <h2 className="text-base font-bold text-ink font-heading">Introduction Video</h2>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {(video?.status || profile?.submission?.status) && (
               <span className={getItemStatusBadgeClass(video?.status || profile?.submission?.status)}>
                 {video?.status || profile?.submission?.status}
@@ -422,8 +422,8 @@ export const ProfilePage: React.FC = () => {
       </div>
 
       {/* 3. TECHNICAL SKILLS */}
-      <div className="surface p-6 rounded-2xl border border-edge shadow-card space-y-4">
-        <div className="flex items-center justify-between">
+      <div className="surface p-4 sm:p-6 rounded-2xl border border-edge shadow-card space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2.5">
           <div className="flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-ink-brand" />
             <h2 className="text-base font-bold text-ink font-heading">Technical Skills</h2>
@@ -463,8 +463,8 @@ export const ProfilePage: React.FC = () => {
       </div>
 
       {/* 4. FEATURED PROJECTS */}
-      <div className="surface p-6 rounded-2xl border border-edge shadow-card space-y-4">
-        <div className="flex items-center justify-between">
+      <div className="surface p-4 sm:p-6 rounded-2xl border border-edge shadow-card space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2.5">
           <div className="flex items-center gap-2">
             <FolderGit2 className="w-5 h-5 text-ink-brand" />
             <div>
@@ -539,8 +539,8 @@ export const ProfilePage: React.FC = () => {
       </div>
 
       {/* 5. HONORS & CERTIFICATIONS */}
-      <div className="surface p-6 rounded-2xl border border-edge shadow-card space-y-4">
-        <div className="flex items-center justify-between">
+      <div className="surface p-4 sm:p-6 rounded-2xl border border-edge shadow-card space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2.5">
           <div className="flex items-center gap-2">
             <Award className="w-5 h-5 text-brand-soft-text" />
             <div>
@@ -602,8 +602,8 @@ export const ProfilePage: React.FC = () => {
       {/* 6. ACADEMIC INFORMATION, RESUME & OFFICIAL REQUESTS */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* OFFICIAL ACADEMIC INFORMATION */}
-        <div className="surface p-6 rounded-2xl border border-edge shadow-card space-y-4">
-          <div className="flex items-center justify-between">
+        <div className="surface p-4 sm:p-6 rounded-2xl border border-edge shadow-card space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-2.5">
             <div className="flex items-center gap-2">
               <GraduationCap className="w-5 h-5 text-ink-brand" />
               <h2 className="text-base font-bold text-ink font-heading">Academic Records</h2>
@@ -650,9 +650,9 @@ export const ProfilePage: React.FC = () => {
 
         {/* DELIVERABLES & CHANGE REQUESTS */}
         <div className="space-y-6">
-          <div className="surface p-6 rounded-2xl border border-edge shadow-card space-y-4">
+          <div className="surface p-4 sm:p-6 rounded-2xl border border-edge shadow-card space-y-4">
             <h2 className="text-base font-bold text-ink font-heading">Resume Document</h2>
-            <div className="surface-sunken p-3.5 rounded-xl border border-edge flex items-center justify-between">
+            <div className="surface-sunken p-3.5 rounded-xl border border-edge flex flex-wrap items-center justify-between gap-2.5">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-brand-soft text-brand-soft-text">
                   <FileText className="w-4 h-4" />
@@ -674,7 +674,7 @@ export const ProfilePage: React.FC = () => {
           </div>
 
           {changeRequests.length > 0 && (
-            <div className="surface p-6 rounded-2xl border border-edge shadow-card space-y-3">
+            <div className="surface p-4 sm:p-6 rounded-2xl border border-edge shadow-card space-y-3">
               <h2 className="text-sm font-bold text-ink font-heading">Submitted Change Requests</h2>
               <div className="space-y-2">
                 {changeRequests.map((cr) => (
@@ -709,7 +709,7 @@ export const ProfilePage: React.FC = () => {
       {modalOpen &&
         createPortal(
           <div
-            className="fixed inset-0 z-modal flex items-center justify-center p-4 bg-overlay-scrim overflow-y-auto animate-fade-in"
+            className="fixed inset-0 z-modal flex items-center justify-center p-4 bg-scrim backdrop-blur-xs overflow-y-auto animate-fade-in"
             role="dialog"
             aria-modal="true"
             aria-labelledby="modal-title"
@@ -718,7 +718,7 @@ export const ProfilePage: React.FC = () => {
             }}
           >
             <div
-              className="surface max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 shadow-modal border border-edge animate-scale-in text-left my-auto"
+              className="surface bg-surface text-ink max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 shadow-modal border border-edge animate-scale-in text-left my-auto"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between pb-3 border-b border-edge">

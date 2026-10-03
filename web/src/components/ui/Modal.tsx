@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
@@ -6,73 +6,27 @@ import type { Variants } from 'framer-motion';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { cn } from '../../lib/cn';
 import {
-  bottomSheetVariants,
   modalBackdropVariants,
   modalPanelVariants,
-  reducedBottomSheetVariants,
   reducedModalBackdropVariants,
   reducedModalPanelVariants,
   selectVariants,
 } from '../../lib/motion';
 
-/**
- * Tailwind's `md`, which is where §4.8 and §8.2 both put the sheet/panel
- * boundary. Written in rem because that is how Tailwind declares the
- * breakpoint, so the media query and the `md:` classes below cannot drift.
- */
-const DESKTOP_QUERY = '(min-width: 48rem)';
-
-function readDesktopQuery(): boolean {
-  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false;
-  return window.matchMedia(DESKTOP_QUERY).matches;
-}
-
-/**
- * Which of the two layouts the panel is in right now.
- *
- * The layout is pure CSS — the classes below flip at `md:`. The entrance
- * animation cannot be, because Framer Motion cannot read a media query and a
- * bottom sheet that rose like a centred panel (or the reverse) is the wrong
- * motion for the shape on screen. So the breakpoint is resolved once for the
- * variant choice and kept live, or rotating a tablet would leave the sheet
- * animating as a panel.
- *
- * Without `matchMedia` (a test DOM) this reports mobile, which is also what
- * the CSS resolves to at a zero-width viewport.
- */
-function useIsDesktopViewport(): boolean {
-  const [isDesktop, setIsDesktop] = useState(readDesktopQuery);
-
-  useEffect(() => {
-    const query = window.matchMedia(DESKTOP_QUERY);
-    const sync = () => setIsDesktop(query.matches);
-    sync();
-    query.addEventListener('change', sync);
-    return () => query.removeEventListener('change', sync);
-  }, []);
-
-  return isDesktop;
-}
-
 const selectPanelVariants = (
   shouldReduce: boolean,
-  isDesktop: boolean,
 ): Variants =>
-  isDesktop
-    ? selectVariants(shouldReduce, modalPanelVariants, reducedModalPanelVariants)
-    : selectVariants(shouldReduce, bottomSheetVariants, reducedBottomSheetVariants);
+  selectVariants(shouldReduce, modalPanelVariants, reducedModalPanelVariants);
 
 /**
- * §4.8's five sizes, in the plan's own pixels rather than the nearest step on
- * Tailwind's scale — it asks for 400/560/720/920 and `max-w-md`/`lg`/`2xl` are
- * 448/512/672. Every cap is under `md:` because a sheet is full-bleed (§8.2).
+ * Centered modal sizes across all viewports.
  */
 const PANEL_SIZES = {
-  sm: 'md:max-w-[400px]',
-  md: 'md:max-w-[560px]',
-  lg: 'md:max-w-[720px]',
-  xl: 'md:max-w-[920px]',
-  full: 'md:max-w-[calc(100vw-3rem)]',
+  sm: 'max-w-[400px]',
+  md: 'max-w-[560px]',
+  lg: 'max-w-[720px]',
+  xl: 'max-w-[920px]',
+  full: 'max-w-[calc(100vw-2rem)] md:max-w-[calc(100vw-3rem)]',
 } as const;
 
 export type ModalSize = keyof typeof PANEL_SIZES;
@@ -94,22 +48,8 @@ export interface ModalProps {
 
 /**
  * The one modal in the portal — Radix `Dialog` for behaviour, this file for
- * looks. §4.8: centred panel on desktop, bottom sheet under `md`, blurred
- * scrim behind, `rounded-xl`, header / scrollable body / footer.
- *
- * Every page used to hand-roll its own overlay: a portal, a scrim and a
- * click-outside handler, but no Escape key, no focus trap and no scroll lock —
- * so Tab walked out of the dialog into the page behind it and a swipe on a
- * phone scrolled that page underneath. Owning it once is what makes "Cancel"
- * and "Delete" behave identically in every flow.
- *
- * Radix supplies the behaviour that is tedious to get right and easy to get
- * wrong: focus trapping and restoration, `aria-modal`, Escape, `aria-hidden` on
- * the page behind, and the body scroll lock. The lock in particular is not
- * hand-written here — `react-remove-scroll` behind Radix's Overlay counts its
- * own active instances, so a palette opening another overlay stacks instead of
- * two locks fighting over `document.body`, and nothing in this file touches
- * global state.
+ * looks. Centred panel across all viewports, blurred scrim behind, `rounded-xl`,
+ * header / scrollable body / footer.
  */
 export const Modal: React.FC<ModalProps> = ({
   open,
@@ -123,7 +63,6 @@ export const Modal: React.FC<ModalProps> = ({
   children,
 }) => {
   const shouldReduce = useReducedMotion();
-  const isDesktop = useIsDesktopViewport();
 
   const panelRef = useRef<HTMLDivElement>(null);
   const restoreFocusRef = useRef<HTMLElement | null>(null);
@@ -187,19 +126,13 @@ export const Modal: React.FC<ModalProps> = ({
             >
               <motion.div
                 ref={panelRef}
-                variants={selectPanelVariants(shouldReduce, isDesktop)}
+                variants={selectPanelVariants(shouldReduce)}
                 initial="hidden"
                 animate="visible"
                 exit="exit"
                 className={cn(
-                  // Below `md`: the bottom sheet — full width, rounded at the
-                  // top only, sitting on the bottom edge (§8.2).
-                  'fixed inset-x-0 bottom-0 z-modal flex w-full max-h-[85dvh] flex-col',
-                  'rounded-t-2xl border-t border-edge bg-surface shadow-xl',
-                  // From `md`: the centred panel. Auto margins on both axes
-                  // centre the box horizontally and vertically.
-                  'md:inset-0 md:m-auto md:h-fit md:max-h-[calc(100dvh-4rem)]',
-                  'md:rounded-xl md:border',
+                  'fixed inset-0 m-auto z-modal flex w-[calc(100%-2rem)] max-h-[calc(100dvh-2rem)] h-fit flex-col',
+                  'rounded-xl border border-edge bg-surface shadow-modal text-ink',
                   PANEL_SIZES[size],
                   className,
                 )}

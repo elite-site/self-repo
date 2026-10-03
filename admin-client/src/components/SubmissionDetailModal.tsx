@@ -328,7 +328,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
   return ReactDOM.createPortal(
     <>
       <div
-        className="fixed inset-0 z-modal bg-on-primary/40 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 md:p-6 animate-fade-in"
+        className="fixed inset-0 z-modal bg-scrim backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 md:p-6 animate-fade-in"
         onClick={(e) => {
           if (e.target === e.currentTarget) onClose();
         }}

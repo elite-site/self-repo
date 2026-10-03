@@ -52,8 +52,8 @@ const ComposeDialog: React.FC<{ onClose: () => void; onPublished: () => void }> 
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-on-primary/50 backdrop-blur-xs flex items-center justify-center p-4">
-      <div className="bg-surface rounded-2xl shadow-2xl border border-edge w-full max-w-xl flex flex-col overflow-hidden max-h-[90vh]">
+    <div className="fixed inset-0 z-50 bg-scrim backdrop-blur-xs flex items-center justify-center p-4">
+      <div className="bg-surface text-ink rounded-2xl shadow-2xl border border-edge w-full max-w-xl flex flex-col overflow-hidden max-h-[90vh]">
         <div className="flex items-center justify-between p-5 border-b border-edge">
           <h2 className="text-base font-extrabold text-ink">New Announcement</h2>
           <button onClick={onClose} className="text-ink-muted hover:text-ink cursor-pointer"><X className="w-5 h-5" /></button>

@@ -45,8 +45,8 @@ const CreateCampaignWizard: React.FC<{ onClose: () => void; onCreated: () => voi
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-on-primary/40 flex items-center justify-center p-4">
-      <div className="bg-surface rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-50 bg-scrim backdrop-blur-xs flex items-center justify-center p-4">
+      <div className="bg-surface text-ink rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden border border-edge">
         <div className="flex items-center justify-between p-5 border-b border-edge">
           <h2 className="text-base font-extrabold text-ink">Create Voting Campaign</h2>
           <button onClick={onClose} className="text-ink-muted hover:text-ink cursor-pointer"><X className="w-5 h-5" /></button>
@@ -67,20 +67,20 @@ const CreateCampaignWizard: React.FC<{ onClose: () => void; onCreated: () => voi
           {step === 0 && (
             <>
               <label className="block"><span className="text-xs font-bold text-ink-secondary uppercase">Title *</span>
-                <input value={form.title} onChange={e => update('title', e.target.value)} className="mt-1 w-full text-sm border border-edge rounded-lg px-3 py-2 focus:outline-none focus:border-status-rejected" placeholder="e.g. Best Project Award 2026" />
+                <input value={form.title} onChange={e => update('title', e.target.value)} className="mt-1 w-full text-sm border border-edge rounded-lg px-3 py-2 bg-surface text-ink focus:outline-none focus:border-status-rejected" placeholder="e.g. Best Project Award 2026" />
               </label>
               <label className="block"><span className="text-xs font-bold text-ink-secondary uppercase">Description</span>
-                <textarea value={form.description} onChange={e => update('description', e.target.value)} rows={3} className="mt-1 w-full text-sm border border-edge rounded-lg px-3 py-2 focus:outline-none focus:border-status-rejected resize-none" />
+                <textarea value={form.description} onChange={e => update('description', e.target.value)} rows={3} className="mt-1 w-full text-sm border border-edge rounded-lg px-3 py-2 bg-surface text-ink focus:outline-none focus:border-status-rejected resize-none" />
               </label>
             </>
           )}
           {step === 1 && (
             <>
               <label className="block"><span className="text-xs font-bold text-ink-secondary uppercase">Voting Opens</span>
-                <input type="datetime-local" value={form.votingStart} onChange={e => update('votingStart', e.target.value)} className="mt-1 w-full text-sm border border-edge rounded-lg px-3 py-2 focus:outline-none focus:border-status-rejected" />
+                <input type="datetime-local" value={form.votingStart} onChange={e => update('votingStart', e.target.value)} className="mt-1 w-full text-sm border border-edge rounded-lg px-3 py-2 bg-surface text-ink focus:outline-none focus:border-status-rejected" />
               </label>
               <label className="block"><span className="text-xs font-bold text-ink-secondary uppercase">Voting Closes</span>
-                <input type="datetime-local" value={form.votingEnd} onChange={e => update('votingEnd', e.target.value)} className="mt-1 w-full text-sm border border-edge rounded-lg px-3 py-2 focus:outline-none focus:border-status-rejected" />
+                <input type="datetime-local" value={form.votingEnd} onChange={e => update('votingEnd', e.target.value)} className="mt-1 w-full text-sm border border-edge rounded-lg px-3 py-2 bg-surface text-ink focus:outline-none focus:border-status-rejected" />
               </label>
             </>
           )}
@@ -89,7 +89,7 @@ const CreateCampaignWizard: React.FC<{ onClose: () => void; onCreated: () => voi
           {step === 4 && (
             <>
               <label className="block"><span className="text-xs font-bold text-ink-secondary uppercase">Votes Per Person</span>
-                <input type="number" min={1} value={form.votesPerPerson} onChange={e => update('votesPerPerson', +e.target.value)} className="mt-1 w-full text-sm border border-edge rounded-lg px-3 py-2 focus:outline-none focus:border-status-rejected" />
+                <input type="number" min={1} value={form.votesPerPerson} onChange={e => update('votesPerPerson', +e.target.value)} className="mt-1 w-full text-sm border border-edge rounded-lg px-3 py-2 bg-surface text-ink focus:outline-none focus:border-status-rejected" />
               </label>
               <label className="flex items-center gap-3 mt-2">
                 <input type="checkbox" checked={form.anonymous} onChange={e => update('anonymous', e.target.checked)} className="w-4 h-4 accent-status-rejected" />

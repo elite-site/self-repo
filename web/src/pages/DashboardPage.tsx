@@ -198,21 +198,22 @@ const DashboardSkeleton: React.FC = () => (
       <Skeleton className="h-4 w-80" />
     </div>
 
-    <div className="surface p-5 sm:p-6">
+    <div className="surface p-4 sm:p-5 lg:p-6">
       <div className="flex items-start justify-between gap-3">
-        <div className="space-y-2">
-          <Skeleton className="h-5 w-44" />
-          <Skeleton className="h-3 w-72" />
+        <div className="min-w-0 flex-1 space-y-1.5">
+          <Skeleton className="h-5 w-40 sm:w-48" />
+          <Skeleton className="h-3 w-56 sm:w-72" />
         </div>
-        <Skeleton className="h-9 w-20" />
+        <Skeleton className="h-7 w-14 sm:h-9 sm:w-20 shrink-0" />
       </div>
-      <Skeleton className="mt-4 h-2 w-full rounded-full" />
-      <div className="mt-4 flex flex-wrap gap-2">
-        <Skeleton className="h-7 w-28 rounded-full" />
-        <Skeleton className="h-7 w-32 rounded-full" />
-        <Skeleton className="h-7 w-24 rounded-full" />
+      <Skeleton className="mt-3 sm:mt-4 h-2 w-full rounded-full" />
+      <div className="mt-3 sm:mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="flex flex-wrap gap-1.5">
+          <Skeleton className="h-6 w-24 rounded-full" />
+          <Skeleton className="h-6 w-28 rounded-full" />
+        </div>
+        <Skeleton className="h-8 w-28 rounded-md" />
       </div>
-      <Skeleton className="mt-5 h-10 w-36 rounded-md" />
     </div>
 
     <div className="grid gap-6 lg:grid-cols-3">
@@ -567,18 +568,18 @@ export const DashboardPage: React.FC = () => {
         <h2 id="quick-actions-heading" className="sr-only">
           Quick actions
         </h2>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
+        <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-6 gap-2 sm:gap-3">
           {quickActions.map((action) => (
             <Link
               key={action.to + action.label}
               to={action.to}
-              className="flex flex-col items-center text-center gap-2 rounded-xl border border-edge bg-surface p-4 transition-all duration-fast hover:-translate-y-1 hover:border-brand hover:shadow-md"
+              className="flex flex-col items-center text-center gap-1.5 sm:gap-2 rounded-xl border border-edge bg-surface p-2.5 sm:p-4 transition-all duration-fast hover:-translate-y-1 hover:border-brand hover:shadow-md"
             >
-              <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-brand-soft text-brand-soft-text">
-                <action.icon size={18} strokeWidth={2} aria-hidden="true" />
+              <span className="flex size-8 sm:size-10 shrink-0 items-center justify-center rounded-full bg-brand-soft text-brand-soft-text">
+                <action.icon className="w-4 h-4 sm:w-5 sm:h-5" strokeWidth={2} aria-hidden="true" />
               </span>
               <span className="min-w-0">
-                <span className="block font-heading text-label-md font-bold leading-tight text-ink">
+                <span className="block font-heading text-label-xs sm:text-label-md font-bold leading-tight text-ink">
                   {action.label}
                 </span>
               </span>
@@ -591,66 +592,107 @@ export const DashboardPage: React.FC = () => {
       <motion.div variants={staggerItem} className="grid gap-6 lg:grid-cols-3 xl:grid-cols-4">
         <div className="space-y-6 lg:col-span-2 xl:col-span-3">
           {/* PROFILE COMPLETION */}
-          <Card variant="brand" className="p-5 sm:p-6" aria-labelledby="completion-heading">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div className="min-w-0">
-                <h2 id="completion-heading" className="font-heading text-headline-md text-ink">
-                  Profile completion
-                </h2>
-                <p className="mt-0.5 text-body-sm text-ink-secondary">
+          <Card
+            variant="brand"
+            className="p-4 sm:p-5 lg:p-6 transition-all duration-normal"
+            aria-labelledby="completion-heading"
+          >
+            {/* Header: Title + Subtitle and Percentage */}
+            <div className="flex items-start sm:items-center justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2
+                    id="completion-heading"
+                    className="font-heading text-headline-sm sm:text-headline-md text-ink leading-tight"
+                  >
+                    Profile completion
+                  </h2>
+                  {isComplete ? (
+                    <span className="badge badge-approved text-xs">Complete</span>
+                  ) : (
+                    <span className="text-label-xs sm:text-label-sm font-medium text-ink-muted">
+                      {completedCount} of {completionItems.length} done
+                    </span>
+                  )}
+                </div>
+                <p className="mt-1 text-body-xs sm:text-body-sm text-ink-secondary line-clamp-2 sm:line-clamp-none">
                   {isComplete
                     ? 'Everything is filled in — your profile is fully showcased.'
                     : 'A complete profile ranks higher in the public directory and gives recruiters more to work with.'}
                 </p>
               </div>
-              <p className="font-heading text-headline-xl tabular-nums text-ink">
-                {completionPercentage}
-                <span className="text-headline-md text-ink-muted">%</span>
-              </p>
+
+              <div className="shrink-0 text-right">
+                <p className="font-heading text-headline-lg sm:text-headline-xl tabular-nums text-ink leading-none">
+                  {completionPercentage}
+                  <span className="text-headline-sm sm:text-headline-md text-ink-muted">%</span>
+                </p>
+              </div>
             </div>
 
+            {/* Progress Bar */}
             <ProgressBar
-              className="mt-4"
+              className="mt-3 sm:mt-4"
               label="Profile completion"
               value={completionPercentage}
               barClassName={isComplete ? 'bg-status-approved' : undefined}
             />
 
+            {/* Bottom row: Next steps / Status + Action button */}
             {isComplete ? (
-              <p className="mt-4 flex items-center gap-2 text-body-sm text-status-approved">
-                <CheckCircle2 size={16} strokeWidth={2} aria-hidden="true" />
-                <span>All {completionItems.length} sections are done.</span>
-              </p>
+              <div className="mt-3 sm:mt-4 flex flex-wrap items-center justify-between gap-2.5 pt-0.5">
+                <p className="flex items-center gap-1.5 text-body-xs sm:text-body-sm text-status-approved font-medium">
+                  <CheckCircle2 size={16} strokeWidth={2.5} aria-hidden="true" />
+                  <span>All {completionItems.length} sections are done.</span>
+                </p>
+                <Link
+                  to="/profile"
+                  className="btn btn-secondary text-xs sm:text-sm px-3.5 py-1.5 sm:px-4 sm:py-2 shrink-0"
+                >
+                  Review profile
+                </Link>
+              </div>
             ) : (
-              <>
-                <p className="mt-4 text-label-sm text-ink-muted">Next up</p>
-                <ul className="mt-2 flex flex-wrap gap-2">
-                  {nextMissing.map((item) => (
-                    <li key={item.id}>
+              <div className="mt-3 sm:mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-0.5">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                    <span className="text-label-xs sm:text-label-sm font-semibold uppercase tracking-wider text-ink-muted shrink-0 mr-0.5">
+                      Next up:
+                    </span>
+                    {nextMissing.map((item) => (
                       <Link
+                        key={item.id}
                         to={item.to}
-                        className="inline-flex items-center gap-1.5 rounded-full border border-edge bg-surface px-3 py-1.5 text-label-md text-ink-secondary transition-colors duration-fast hover:border-brand-ring hover:text-ink"
+                        className="inline-flex items-center gap-1 rounded-full border border-edge bg-surface px-2.5 py-1 text-label-xs sm:text-label-sm text-ink-secondary transition-colors duration-fast hover:border-brand-ring hover:text-ink hover:bg-surface-sunken shrink-0"
                       >
-                        <Plus size={13} strokeWidth={2.5} aria-hidden="true" />
+                        <Plus size={12} strokeWidth={2.5} aria-hidden="true" />
                         <span>{item.title}</span>
                       </Link>
-                    </li>
-                  ))}
-                </ul>
-              </>
-            )}
+                    ))}
+                    {remainingItems.length > nextMissing.length && (
+                      <span className="text-label-xs text-ink-muted px-0.5">
+                        +{remainingItems.length - nextMissing.length} more
+                      </span>
+                    )}
+                  </div>
+                </div>
 
-            <div className="mt-5">
-              <Link to={isComplete ? '/profile' : '/profile/edit'} className="btn btn-primary">
-                {isComplete ? 'Review profile' : 'Complete profile'}
-              </Link>
-            </div>
+                <div className="shrink-0 self-start sm:self-auto">
+                  <Link
+                    to="/profile/edit"
+                    className="btn btn-primary text-xs sm:text-sm px-3.5 py-1.5 sm:px-4 sm:py-2 shrink-0"
+                  >
+                    Complete profile
+                  </Link>
+                </div>
+              </div>
+            )}
           </Card>
 
           <DashboardTaskBoard tasks={completionItems} />
 
           {/* 4. RECENT ACTIVITY. §6.2 (6): eight rows, "See all" out. */}
-          <section className="surface p-5 sm:p-6" aria-labelledby="activity-heading">
+          <section className="surface p-4 sm:p-5 lg:p-6" aria-labelledby="activity-heading">
             <div className="flex items-center justify-between gap-3">
               <h2 id="activity-heading" className="font-heading text-headline-md text-ink">
                 Recent activity
@@ -724,7 +766,7 @@ export const DashboardPage: React.FC = () => {
               and the open votes. */}
         <div className="space-y-6">
           {/* §6.2 (7) */}
-          <section className="surface p-5 sm:p-6" aria-labelledby="events-heading">
+          <section className="surface p-4 sm:p-5 lg:p-6" aria-labelledby="events-heading">
             <div className="flex items-center justify-between gap-3">
               <h2 id="events-heading" className="font-heading text-headline-md text-ink">
                 Upcoming events
@@ -812,7 +854,7 @@ export const DashboardPage: React.FC = () => {
               reason to exist: an empty "no campaigns" card would be noise on a
               dashboard, so it only appears when there is something to vote on. */}
           {!votingError && votingCampaigns.length > 0 && (
-            <section className="surface p-5 sm:p-6" aria-labelledby="voting-heading">
+            <section className="surface p-4 sm:p-5 lg:p-6" aria-labelledby="voting-heading">
               <div className="flex items-center gap-2">
                 <Vote size={18} strokeWidth={1.75} className="text-brand" aria-hidden="true" />
                 <h2 id="voting-heading" className="font-heading text-headline-md text-ink">

@@ -162,6 +162,12 @@ ${block(':root', {
   html {
     -webkit-text-size-adjust: 100%;
     scrollbar-gutter: stable;
+    color-scheme: light;
+  }
+
+  html[data-theme='dark'],
+  html.dark {
+    color-scheme: dark;
   }
 
   body {
@@ -192,6 +198,11 @@ ${block(':root', {
     font-family: inherit;
   }
 
+  select option {
+    background-color: var(--surface);
+    color: var(--text);
+  }
+
   /* A single focus treatment for the whole app. Visible on every surface
      because the ring colour is a semantic token with a checked 5.3:1 against
      the canvas and 4.7:1 against --surface. */
@@ -214,6 +225,7 @@ ${block(':root', {
 @layer components {
   .surface {
     background-color: var(--surface);
+    color: var(--text);
     border: 1px solid var(--border);
     border-radius: var(--lg);
   }
