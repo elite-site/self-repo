@@ -218,12 +218,13 @@ export const ProfilePage: React.FC = () => {
         </div>
 
         {/* Profile Details Container */}
-        <div className="px-6 sm:px-8 pb-8 pt-0 relative">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 -mt-14 sm:-mt-16 mb-6">
+        <div className="px-4 sm:px-8 pb-6 pt-0 relative">
+          {/* Avatar row — on mobile, avatar + buttons stack vertically */}
+          <div className="flex flex-col gap-3 -mt-12 sm:-mt-16 mb-5 sm:flex-row sm:items-end sm:justify-between">
             {/* Avatar */}
-            <div className="relative">
+            <div className="relative shrink-0">
               {profile?.photoUrl && !imageError ? (
-                <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden border-4 border-surface shadow-card bg-surface shrink-0">
+                <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full overflow-hidden border-4 border-surface shadow-card bg-surface">
                   <img
                     src={resolveMediaUrl(profile.photoUrl)}
                     alt={profile.name}
@@ -232,7 +233,7 @@ export const ProfilePage: React.FC = () => {
                   />
                 </div>
               ) : (
-                <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-brand-soft text-brand-soft-text flex items-center justify-center font-black text-3xl sm:text-4xl border-4 border-surface shadow-card shrink-0 font-heading">
+                <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full bg-brand-soft text-brand-soft-text flex items-center justify-center font-black text-3xl sm:text-4xl border-4 border-surface shadow-card font-heading">
                   {profile?.name
                     ? profile.name
                         .split(' ')
@@ -245,11 +246,11 @@ export const ProfilePage: React.FC = () => {
               )}
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex flex-wrap items-center gap-2.5">
+            {/* Action Buttons — on mobile these wrap below the avatar in a row */}
+            <div className="flex flex-wrap items-center gap-2">
               <Link
                 to={`/students/${profile?.rollNo || ''}`}
-                className="btn btn-secondary"
+                className="btn btn-secondary text-xs"
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -258,13 +259,14 @@ export const ProfilePage: React.FC = () => {
               </Link>
               <Link
                 to="/profile/edit"
-                className="btn btn-primary"
+                className="btn btn-primary text-xs"
               >
                 <Edit3 className="w-3.5 h-3.5" />
                 <span>Edit Profile</span>
               </Link>
             </div>
           </div>
+
 
           {/* Name & Academic Tags */}
           <div className="space-y-3">

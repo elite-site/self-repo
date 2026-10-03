@@ -285,6 +285,20 @@ export const api = {
 
   // Public (in-memory cached for instant navigation without loading spinners)
   async getPublicStudents(params?: any) {
+    // Bypass the cache entirely when the user is actively searching/filtering
+    // so results are always fresh. Only use cache for the unfiltered first page.
+    const hasFilters = params && (
+      params.search ||
+      (params.year && params.year !== 'ALL') ||
+      (params.section && params.section !== 'ALL') ||
+      params.skillName ||
+      (params.status && params.status !== 'ALL') ||
+      (params.page && params.page > 1)
+    );
+    if (hasFilters) {
+      const res = await client.get('/public/students', { params });
+      return res.data;
+    }
     const key = `students_${JSON.stringify(params || {})}`;
     return cachedFetch(key, 30_000, async () => {
       const res = await client.get('/public/students', { params });

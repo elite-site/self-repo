@@ -185,6 +185,52 @@ html {
   }
 }
 
+/* ── Cursor control ──────────────────────────────────────────────────────────
+   Browsers default to `cursor: auto` which shows a text (I-beam) cursor
+   whenever the pointer hovers over any text node — even non-selectable UI
+   labels. This resets everything to `default` (arrow) globally and re-enables
+   the text cursor only where the user can actually type. Interactive elements
+   get `pointer` via Tailwind's .cursor-pointer or the btn class above. */
+*, *::before, *::after {
+  cursor: default;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="search"],
+input[type="number"],
+input[type="tel"],
+input[type="url"],
+input[type="date"],
+input[type="time"],
+textarea {
+  cursor: text;
+}
+
+a,
+button,
+[role="button"],
+select,
+label[for],
+summary,
+[tabindex]:not([tabindex="-1"]) {
+  cursor: pointer;
+}
+
+a:where([href]),
+button:not(:disabled) {
+  cursor: pointer;
+}
+
+input:disabled,
+textarea:disabled,
+select:disabled,
+button:disabled,
+button[aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
 /* Long unbroken strings (emails, Drive file names, URLs) are the most common
    source of horizontal scroll on narrow screens. */
 img,

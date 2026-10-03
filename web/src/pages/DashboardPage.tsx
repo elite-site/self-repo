@@ -532,7 +532,7 @@ export const DashboardPage: React.FC = () => {
       {/* 1. GREETING. The one thing the page has to say before anything else. */}
       <motion.header
         variants={staggerItem}
-        className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"
+        className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"
       >
         <div className="min-w-0">
           <h1 className="font-heading text-headline-xl-mobile text-ink sm:text-headline-xl">
@@ -542,7 +542,7 @@ export const DashboardPage: React.FC = () => {
           {!profileError && <p className="mt-1 text-body-md text-ink-secondary">{contextLine}</p>}
         </div>
         {profile?.rollNo && (
-          <Link to={`/students/${profile.rollNo}`} className="btn btn-secondary shrink-0 self-start">
+          <Link to={`/students/${profile.rollNo}`} className="btn btn-secondary shrink-0 self-start text-sm">
             <span>Public showcase</span>
             <ExternalLink size={14} strokeWidth={2} aria-hidden="true" />
           </Link>
@@ -623,8 +623,8 @@ export const DashboardPage: React.FC = () => {
       {/* 3. MAIN + SIDEBAR. §6.2 "Layout Description": the board and the
           activity feed in the wide column, the contextual sidebar beside it,
           dropping below it on one-column layouts. */}
-      <motion.div variants={staggerItem} className="grid gap-6 2xl:grid-cols-3 xl:grid-cols-2">
-        <div className="space-y-6 2xl:col-span-2">
+      <motion.div variants={staggerItem} className="grid gap-6 lg:grid-cols-3">
+        <div className="space-y-6 lg:col-span-2">
           <DashboardTaskBoard tasks={completionItems} />
 
           {/* 4. RECENT ACTIVITY. §6.2 (6): eight rows, "See all" out. */}
