@@ -568,7 +568,7 @@ export const DashboardPage: React.FC = () => {
         <h2 id="quick-actions-heading" className="sr-only">
           Quick actions
         </h2>
-        <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-6 gap-2 sm:gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 sm:gap-3">
           {quickActions.map((action) => (
             <Link
               key={action.to + action.label}
