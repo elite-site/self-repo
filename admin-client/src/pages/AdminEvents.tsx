@@ -550,19 +550,17 @@ export const AdminEvents: React.FC = () => {
                             ? <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />
                             : <Archive className="w-3.5 h-3.5" aria-hidden="true" />}
                         </button>
-                        {ev.id !== 'self-introduction-2026' && (
-                          <button
-                            onClick={() => handleDelete(ev)}
-                            disabled={busyId === ev.id}
-                            title="Delete"
-                            className="btn btn-ghost p-2 text-status-rejected hover:bg-status-bg-rejected"
-                            aria-label={`Delete ${ev.name}`}
-                          >
-                            {busyId === ev.id
-                              ? <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />
-                              : <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />}
-                          </button>
-                        )}
+                        <button
+                          onClick={() => handleDelete(ev)}
+                          disabled={busyId === ev.id}
+                          title="Delete"
+                          className="btn btn-ghost p-2 text-status-rejected hover:bg-status-bg-rejected"
+                          aria-label={`Delete ${ev.name}`}
+                        >
+                          {busyId === ev.id
+                            ? <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />
+                            : <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />}
+                        </button>
                       </div>
                     </td>
                   </tr>

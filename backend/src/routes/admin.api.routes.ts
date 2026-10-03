@@ -1817,6 +1817,13 @@ router.patch('/moderation/videos/:id', async (req, res) => {
       data,
     });
 
+    if (video.student?.rollNo) {
+      await prisma.submission.updateMany({
+        where: { rollNo: video.student.rollNo },
+        data: { status },
+      }).catch(() => {});
+    }
+
     // Keep the student informed about the decision on their video.
     if (video.student?.id) {
       if (status === 'CHANGES_REQUESTED') {

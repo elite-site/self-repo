@@ -460,10 +460,10 @@ export const DashboardPage: React.FC = () => {
 
   // If a task is in progress (e.g. video under review), the student has done their part.
   const completedCount = completionItems.filter((i) => i.state !== 'todo').length;
-  const completionPercentage = Math.round((completedCount / completionItems.length) * 100);
   // Only items that actually need student action should block 100% completion banner.
   const remainingItems = completionItems.filter((i) => i.state === 'todo');
   const isComplete = remainingItems.length === 0;
+  const completionPercentage = isComplete ? 100 : Math.round((completedCount / completionItems.length) * 100);
   /** §6.2 (2): the three chips on the banner. The board still lists them all. */
   const nextMissing = remainingItems.slice(0, 3);
 

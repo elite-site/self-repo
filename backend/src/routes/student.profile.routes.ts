@@ -66,6 +66,19 @@ router.get('/', async (req: Request, res: Response) => {
       },
     });
 
+    const introVideo = await prisma.introVideo.findFirst({
+      where: { studentId: student.id },
+      orderBy: { submittedAt: 'desc' },
+      select: {
+        id: true,
+        status: true,
+        reviewNote: true,
+        isPublic: true,
+        submittedAt: true,
+        driveFileId: true,
+      },
+    });
+
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     res.json({
       id: student.id,
@@ -95,6 +108,14 @@ router.get('/', async (req: Request, res: Response) => {
       skills: (student.profile?.skills || []).map(s => s.skill.name),
       skillObjects: (student.profile?.skills || []).map(s => s.skill),
       isPublic: student.profile?.isPublic || false,
+      video: introVideo ? {
+        id: introVideo.id,
+        status: introVideo.status,
+        reviewNote: introVideo.reviewNote || null,
+        isPublic: Boolean(introVideo.isPublic),
+        submittedAt: introVideo.submittedAt,
+        hasFile: Boolean(introVideo.driveFileId && introVideo.driveFileId.trim() !== ''),
+      } : null,
       submission: submission ? {
         id: submission.id,
         status: submission.status,
