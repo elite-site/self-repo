@@ -382,25 +382,26 @@ export const DashboardPage: React.FC = () => {
   const checkPhoto = !!profile?.photoUrl;
   const checkBio = !!(profile?.bio || profile?.biography);
   const checkSkills = !!(profile?.skills && profile.skills.length > 0);
-  const submissionStatus = profile?.submission?.status;
+  const effectiveVideoStatus = profile?.video?.status || profile?.submission?.status;
   const checkVideo =
-    !!(profile?.submission?.videoUploaded ||
+    !!(profile?.video ||
+      profile?.submission?.videoUploaded ||
       profile?.submission?.videoUrl ||
-      submissionStatus);
+      effectiveVideoStatus);
   const activeResume = Array.isArray(resume) ? (resume.length > 0 ? resume[0] : null) : resume;
   const checkResume = !!(activeResume?.driveFileId || activeResume?.fileUrl);
   const checkProjects = projects.length > 0;
 
-  const videoStatus = VIDEO_STATUS[submissionStatus ?? ''] ?? 
-    (submissionStatus === 'PENDING' 
+  const videoStatus = VIDEO_STATUS[effectiveVideoStatus ?? ''] ?? 
+    (effectiveVideoStatus === 'PENDING' 
       ? { tone: 'badge-pending' as DashboardTone, label: 'Under review' } 
       : { tone: 'badge-draft' as DashboardTone, label: 'Not submitted' });
 
   let videoState: 'todo' | 'progress' | 'done' = 'todo';
   if (checkVideo) {
-    if (submissionStatus === 'APPROVED') {
+    if (effectiveVideoStatus === 'APPROVED') {
       videoState = 'done';
-    } else if (submissionStatus === 'SUBMITTED' || submissionStatus === 'PENDING') {
+    } else if (effectiveVideoStatus === 'SUBMITTED' || effectiveVideoStatus === 'PENDING') {
       videoState = 'progress';
     } else {
       // CHANGES_REQUESTED or REJECTED
