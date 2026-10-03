@@ -559,72 +559,91 @@ export const DashboardPage: React.FC = () => {
         </motion.div>
       )}
 
-      {/* 2. PROFILE COMPLETION. §6.2 makes this conditional on being under
-          100%; it stays mounted at 100% because the completion state is the
-          half of this the student worked for, and "Review profile" lives here. */}
-      <motion.div variants={staggerItem}>
-        <Card variant="brand" className="p-5 sm:p-6" aria-labelledby="completion-heading">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="min-w-0">
-              <h2 id="completion-heading" className="font-heading text-headline-md text-ink">
-                Profile completion
-              </h2>
-              <p className="mt-0.5 text-body-sm text-ink-secondary">
-                {isComplete
-                  ? 'Everything is filled in — your profile is fully showcased.'
-                  : 'A complete profile ranks higher in the public directory and gives recruiters more to work with.'}
+      {/* 2. QUICK ACTIONS BAR - Top Layer */}
+      <motion.section variants={staggerItem} aria-labelledby="quick-actions-heading">
+        <h2 id="quick-actions-heading" className="sr-only">
+          Quick actions
+        </h2>
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
+          {quickActions.map((action) => (
+            <Link
+              key={action.to + action.label}
+              to={action.to}
+              className="flex flex-col items-center text-center gap-2 rounded-xl border border-edge bg-surface p-4 transition-all duration-fast hover:-translate-y-1 hover:border-brand hover:shadow-md"
+            >
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-brand-soft text-brand-soft-text">
+                <action.icon size={18} strokeWidth={2} aria-hidden="true" />
+              </span>
+              <span className="min-w-0">
+                <span className="block font-heading text-label-md font-bold leading-tight text-ink">
+                  {action.label}
+                </span>
+              </span>
+            </Link>
+          ))}
+        </div>
+      </motion.section>
+
+      {/* 3. MAIN + SIDEBAR */}
+      <motion.div variants={staggerItem} className="grid gap-6 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="space-y-6 lg:col-span-2 xl:col-span-3">
+          {/* PROFILE COMPLETION */}
+          <Card variant="brand" className="p-5 sm:p-6" aria-labelledby="completion-heading">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h2 id="completion-heading" className="font-heading text-headline-md text-ink">
+                  Profile completion
+                </h2>
+                <p className="mt-0.5 text-body-sm text-ink-secondary">
+                  {isComplete
+                    ? 'Everything is filled in — your profile is fully showcased.'
+                    : 'A complete profile ranks higher in the public directory and gives recruiters more to work with.'}
+                </p>
+              </div>
+              <p className="font-heading text-headline-xl tabular-nums text-ink">
+                {completionPercentage}
+                <span className="text-headline-md text-ink-muted">%</span>
               </p>
             </div>
-            <p className="font-heading text-headline-xl tabular-nums text-ink">
-              {completionPercentage}
-              <span className="text-headline-md text-ink-muted">%</span>
-            </p>
-          </div>
 
-          <ProgressBar
-            className="mt-4"
-            label="Profile completion"
-            value={completionPercentage}
-            barClassName={isComplete ? 'bg-status-approved' : undefined}
-          />
+            <ProgressBar
+              className="mt-4"
+              label="Profile completion"
+              value={completionPercentage}
+              barClassName={isComplete ? 'bg-status-approved' : undefined}
+            />
 
-          {isComplete ? (
-            <p className="mt-4 flex items-center gap-2 text-body-sm text-status-approved">
-              <CheckCircle2 size={16} strokeWidth={2} aria-hidden="true" />
-              <span>All {completionItems.length} sections are done.</span>
-            </p>
-          ) : (
-            <>
-              <p className="mt-4 text-label-sm text-ink-muted">Next up</p>
-              <ul className="mt-2 flex flex-wrap gap-2">
-                {nextMissing.map((item) => (
-                  <li key={item.id}>
-                    <Link
-                      to={item.to}
-                      className="inline-flex items-center gap-1.5 rounded-full border border-edge bg-surface px-3 py-1.5 text-label-md text-ink-secondary transition-colors duration-fast hover:border-brand-ring hover:text-ink"
-                    >
-                      <Plus size={13} strokeWidth={2.5} aria-hidden="true" />
-                      <span>{item.title}</span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
+            {isComplete ? (
+              <p className="mt-4 flex items-center gap-2 text-body-sm text-status-approved">
+                <CheckCircle2 size={16} strokeWidth={2} aria-hidden="true" />
+                <span>All {completionItems.length} sections are done.</span>
+              </p>
+            ) : (
+              <>
+                <p className="mt-4 text-label-sm text-ink-muted">Next up</p>
+                <ul className="mt-2 flex flex-wrap gap-2">
+                  {nextMissing.map((item) => (
+                    <li key={item.id}>
+                      <Link
+                        to={item.to}
+                        className="inline-flex items-center gap-1.5 rounded-full border border-edge bg-surface px-3 py-1.5 text-label-md text-ink-secondary transition-colors duration-fast hover:border-brand-ring hover:text-ink"
+                      >
+                        <Plus size={13} strokeWidth={2.5} aria-hidden="true" />
+                        <span>{item.title}</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
 
-          <div className="mt-5">
-            <Link to={isComplete ? '/profile' : '/profile/edit'} className="btn btn-primary">
-              {isComplete ? 'Review profile' : 'Complete profile'}
-            </Link>
-          </div>
-        </Card>
-      </motion.div>
+            <div className="mt-5">
+              <Link to={isComplete ? '/profile' : '/profile/edit'} className="btn btn-primary">
+                {isComplete ? 'Review profile' : 'Complete profile'}
+              </Link>
+            </div>
+          </Card>
 
-      {/* 3. MAIN + SIDEBAR. §6.2 "Layout Description": the board and the
-          activity feed in the wide column, the contextual sidebar beside it,
-          dropping below it on one-column layouts. */}
-      <motion.div variants={staggerItem} className="grid gap-6 lg:grid-cols-3">
-        <div className="space-y-6 lg:col-span-2">
           <DashboardTaskBoard tasks={completionItems} />
 
           {/* 4. RECENT ACTIVITY. §6.2 (6): eight rows, "See all" out. */}
@@ -783,37 +802,6 @@ export const DashboardPage: React.FC = () => {
                   })}
                 </ul>
               )}
-            </div>
-          </section>
-
-          {/* §6.2 (5). The plan names four; the two it drops (edit profile,
-              resume) stay because the completion banner only ever showed the
-              top three missing items, so these are the only way straight to
-              them. */}
-          <section className="surface p-5 sm:p-6" aria-labelledby="quick-actions-heading">
-            <h2 id="quick-actions-heading" className="font-heading text-headline-md text-ink">
-              Quick actions
-            </h2>
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              {quickActions.map((action) => (
-                <Link
-                  key={action.to + action.label}
-                  to={action.to}
-                  className="flex flex-col items-start gap-2 rounded-xl border border-edge bg-surface-sunken p-3 transition-colors duration-fast hover:border-edge-strong hover:bg-surface-inset"
-                >
-                  <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-brand-soft text-brand-soft-text">
-                    <action.icon size={17} strokeWidth={1.75} aria-hidden="true" />
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block font-heading text-label-lg font-semibold leading-tight text-ink">
-                      {action.label}
-                    </span>
-                    <span className="mt-0.5 block text-body-sm leading-tight text-ink-muted">
-                      {action.hint}
-                    </span>
-                  </span>
-                </Link>
-              ))}
             </div>
           </section>
 
