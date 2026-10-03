@@ -1764,7 +1764,7 @@ router.patch('/moderation/videos/:id', async (req, res) => {
     const { action, reason, approvalNote, publish } = req.body;
     const video = await prisma.introVideo.findUnique({
       where: { id: req.params.id },
-      include: { student: { select: { id: true, name: true } } },
+      include: { student: { select: { id: true, name: true, rollNo: true } } },
     });
 
     if (!video) {
@@ -1817,10 +1817,10 @@ router.patch('/moderation/videos/:id', async (req, res) => {
       data,
     });
 
-    if (video.student?.rollNo) {
+    if (status === 'REJECTED' && video.student?.rollNo) {
       await prisma.submission.updateMany({
         where: { rollNo: video.student.rollNo },
-        data: { status },
+        data: { status: 'REJECTED' },
       }).catch(() => {});
     }
 
