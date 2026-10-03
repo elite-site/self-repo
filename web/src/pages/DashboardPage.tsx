@@ -386,27 +386,27 @@ export const DashboardPage: React.FC = () => {
   const checkVideo =
     !!(profile?.submission?.videoUploaded ||
       profile?.submission?.videoUrl ||
-      submissionStatus === 'APPROVED' ||
-      submissionStatus === 'SUBMITTED');
+      submissionStatus);
   const activeResume = Array.isArray(resume) ? (resume.length > 0 ? resume[0] : null) : resume;
   const checkResume = !!(activeResume?.driveFileId || activeResume?.fileUrl);
   const checkProjects = projects.length > 0;
 
-  const videoStatus = VIDEO_STATUS[submissionStatus ?? ''] ?? {
-    tone: 'badge-draft' as DashboardTone,
-    label: 'Not submitted',
-  };
+  const videoStatus = VIDEO_STATUS[submissionStatus ?? ''] ?? 
+    (submissionStatus === 'PENDING' 
+      ? { tone: 'badge-pending' as DashboardTone, label: 'Under review' } 
+      : { tone: 'badge-draft' as DashboardTone, label: 'Not submitted' });
 
-  /**
-   * A submitted video is the only thing here that is genuinely mid-flight — it
-   * is with a moderator, not with the student — so it is the only card that
-   * lands in "In Progress".
-   */
-  const videoState = checkVideo
-    ? submissionStatus === 'SUBMITTED'
-      ? ('progress' as const)
-      : ('done' as const)
-    : ('todo' as const);
+  let videoState: 'todo' | 'progress' | 'done' = 'todo';
+  if (checkVideo) {
+    if (submissionStatus === 'APPROVED') {
+      videoState = 'done';
+    } else if (submissionStatus === 'SUBMITTED' || submissionStatus === 'PENDING') {
+      videoState = 'progress';
+    } else {
+      // CHANGES_REQUESTED or REJECTED
+      videoState = 'todo';
+    }
+  }
 
   const completionItems: DashboardTask[] = [
     ...SETUP_ITEMS.map<DashboardTask>((item) => {
@@ -457,10 +457,12 @@ export const DashboardPage: React.FC = () => {
     },
   ];
 
-  const completedCount = completionItems.filter((i) => i.state === 'done').length;
+  // If a task is in progress (e.g. video under review), the student has done their part.
+  const completedCount = completionItems.filter((i) => i.state !== 'todo').length;
   const completionPercentage = Math.round((completedCount / completionItems.length) * 100);
-  const remainingItems = completionItems.filter((i) => i.state !== 'done');
-  const isComplete = completionPercentage === 100;
+  // Only items that actually need student action should block 100% completion banner.
+  const remainingItems = completionItems.filter((i) => i.state === 'todo');
+  const isComplete = remainingItems.length === 0;
   /** §6.2 (2): the three chips on the banner. The board still lists them all. */
   const nextMissing = remainingItems.slice(0, 3);
 
