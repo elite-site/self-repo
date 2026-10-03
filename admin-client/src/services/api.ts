@@ -305,6 +305,11 @@ export const adminApi = {
     return res.data;
   },
 
+  async deleteEvent(id: string): Promise<{ success: boolean; message: string }> {
+    const res = await client.delete(`/admin/api/portal/events/${id}`);
+    return res.data;
+  },
+
   // Voting
   async getVotingCampaigns(): Promise<{ campaigns: any[] }> {
     const res = await client.get('/admin/api/voting');

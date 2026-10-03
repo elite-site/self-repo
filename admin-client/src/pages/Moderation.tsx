@@ -31,7 +31,7 @@ import { adminApi } from '../services/api';
 import { UnifiedModerationItem, ModerationType } from '../types';
 
 type TabType = 'all' | 'videos' | 'resumes' | 'certificates' | 'projects' | 'achievements';
-type StatusFilter = 'PENDING_REVIEW' | 'CHANGES_REQUESTED' | 'ALL';
+type StatusFilter = 'ALL' | 'PENDING_REVIEW' | 'APPROVED' | 'CHANGES_REQUESTED' | 'REJECTED';
 
 const TAB_CONFIG: Array<{ id: TabType; label: string; icon: React.FC<{ className?: string }> }> = [
   { id: 'all', label: 'All Submissions', icon: Inbox },
@@ -109,11 +109,20 @@ export const Moderation: React.FC = () => {
 
   // Filters
   const [activeTab, setActiveTab] = useState<TabType>('all');
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('PENDING_REVIEW');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Pagination
+  const PAGE_SIZE = 10;
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Selected Item for Unified Review (NO video loads when selectedItem is null)
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+
+  // Reset to page 1 whenever filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab, statusFilter, searchQuery]);
 
   // Decision Form State
   const [action, setAction] = useState<'approve' | 'reject' | 'changes' | 'hide' | null>(null);
@@ -135,7 +144,7 @@ export const Moderation: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await adminApi.getModerationItems('all');
+      const res = await adminApi.getModerationItems('all', 'ALL');
       setItems(res.items ?? []);
     } catch (err: any) {
       console.error('Failed to load moderation queue:', err);
@@ -182,8 +191,12 @@ export const Moderation: React.FC = () => {
       // Status filter
       if (statusFilter === 'PENDING_REVIEW') {
         if (item.status !== 'PENDING' && item.status !== 'UNDER_REVIEW') return false;
+      } else if (statusFilter === 'APPROVED') {
+        if (item.status !== 'APPROVED') return false;
       } else if (statusFilter === 'CHANGES_REQUESTED') {
         if (item.status !== 'CHANGES_REQUESTED') return false;
+      } else if (statusFilter === 'REJECTED') {
+        if (item.status !== 'REJECTED') return false;
       }
 
       // Search query filter
@@ -199,6 +212,12 @@ export const Moderation: React.FC = () => {
       return true;
     });
   }, [items, activeTab, statusFilter, searchQuery]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredItems.length / PAGE_SIZE));
+  const paginatedItems = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return filteredItems.slice(start, start + PAGE_SIZE);
+  }, [filteredItems, currentPage]);
 
   // Active selected item in review
   const selectedItem = useMemo(() => {
@@ -296,11 +315,26 @@ export const Moderation: React.FC = () => {
           : `${readableType} hidden.`
       );
 
-      // Advance to next item in the filtered list
-      const nextRemaining = filteredItems.filter((i) => i.id !== selectedItem.id);
-      const updatedAll = items.filter((i) => i.id !== selectedItem.id);
+      const newStatus =
+        action === 'approve' ? 'APPROVED' :
+        action === 'reject' ? 'REJECTED' :
+        action === 'changes' ? 'CHANGES_REQUESTED' : 'HIDDEN';
+
+      // Update the item's status in the list so approved/reviewed items remain visible on the queue
+      const updatedAll = items.map((i) =>
+        i.id === selectedItem.id
+          ? {
+              ...i,
+              status: newStatus,
+              isPublic: action === 'approve' ? publishOnApprove : i.isPublic,
+              reviewNote: approvalNote.trim() || reason.trim() || i.reviewNote,
+            }
+          : i
+      );
       setItems(updatedAll);
 
+      // Advance to next item in the filtered list if currently filtering out this status
+      const nextRemaining = filteredItems.filter((i) => i.id !== selectedItem.id);
       if (nextRemaining.length > 0) {
         const nextIndex = Math.min(selectedIndex, nextRemaining.length - 1);
         setSelectedItemId(nextRemaining[nextIndex].id);
@@ -504,9 +538,11 @@ export const Moderation: React.FC = () => {
             className="select text-body-sm min-w-[170px]"
             aria-label="Filter by status"
           >
-            <option value="PENDING_REVIEW">Pending & In Review</option>
-            <option value="CHANGES_REQUESTED">Changes Requested</option>
             <option value="ALL">All Statuses</option>
+            <option value="PENDING_REVIEW">Pending & In Review</option>
+            <option value="APPROVED">Approved</option>
+            <option value="CHANGES_REQUESTED">Changes Requested</option>
+            <option value="REJECTED">Rejected</option>
           </select>
         </div>
       </div>
@@ -532,11 +568,11 @@ export const Moderation: React.FC = () => {
           <p className="text-body-sm text-ink-muted max-w-md">
             No submissions matching your current filters require moderation right now.
           </p>
-          {(searchQuery || statusFilter !== 'PENDING_REVIEW' || activeTab !== 'all') && (
+          {(searchQuery || statusFilter !== 'ALL' || activeTab !== 'all') && (
             <button
               onClick={() => {
                 setActiveTab('all');
-                setStatusFilter('PENDING_REVIEW');
+                setStatusFilter('ALL');
                 setSearchQuery('');
               }}
               className="text-body-sm font-semibold text-brand hover:underline cursor-pointer mt-1"
@@ -561,7 +597,7 @@ export const Moderation: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-edge">
-                {filteredItems.map((item) => {
+                {paginatedItems.map((item) => {
                   const academicInfo = [
                     item.studentBranch || 'IT',
                     item.studentYear ? `Year ${item.studentYear}` : null,
@@ -657,6 +693,42 @@ export const Moderation: React.FC = () => {
               </tbody>
             </table>
           </div>
+
+          {/* Pagination Bar (10 per page) */}
+          {filteredItems.length > 0 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-edge bg-surface-sunken">
+              <div className="text-body-sm text-ink-muted">
+                Showing <span className="font-semibold text-ink">{(currentPage - 1) * PAGE_SIZE + 1}</span> to{' '}
+                <span className="font-semibold text-ink">{Math.min(currentPage * PAGE_SIZE, filteredItems.length)}</span> of{' '}
+                <span className="font-semibold text-ink">{filteredItems.length}</span> submissions
+              </div>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage <= 1}
+                  className="btn btn-ghost text-body-sm p-1.5 sm:px-3 sm:py-1.5 inline-flex items-center gap-1"
+                  aria-label="Previous page"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  <span className="hidden sm:inline">Previous</span>
+                </button>
+                <span className="text-label-sm font-semibold text-ink px-2">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage >= totalPages}
+                  className="btn btn-ghost text-body-sm p-1.5 sm:px-3 sm:py-1.5 inline-flex items-center gap-1"
+                  aria-label="Next page"
+                >
+                  <span className="hidden sm:inline">Next</span>
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

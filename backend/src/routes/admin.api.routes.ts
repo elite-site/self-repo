@@ -1259,9 +1259,9 @@ router.get(['/moderation', '/moderation/items'], async (req: Request, res: Respo
 
     const requestedType = String(req.query.type || 'all').toLowerCase();
     const statusQuery = req.query.status as string | undefined;
-    const statuses = statusQuery
+    const statuses = statusQuery && statusQuery !== 'ALL' && statusQuery !== 'all'
       ? statusQuery.split(',').map((s) => s.trim())
-      : ['PENDING', 'UNDER_REVIEW', 'CHANGES_REQUESTED'];
+      : ['PENDING', 'UNDER_REVIEW', 'CHANGES_REQUESTED', 'APPROVED', 'REJECTED', 'HIDDEN'];
 
     const items: any[] = [];
 
@@ -1293,7 +1293,7 @@ router.get(['/moderation', '/moderation/items'], async (req: Request, res: Respo
           reviewedAt: v.reviewedAt || null,
           changeRequestedAt: v.changeRequestedAt || null,
           changeRequestNote: v.changeRequestNote || null,
-          fileUrl: (v.driveFileId && v.driveFileId.trim()) ? `/api/public/media/video/${v.driveFileId}` : null,
+          fileUrl: (v.driveFileId && v.driveFileId.trim()) ? `/api/public/media/video/${v.driveFileId}?stream=true` : null,
           driveFileId: v.driveFileId,
           thumbnailUrl: (v.driveFileId && v.driveFileId.trim()) ? `/api/public/media/thumbnail/video/${v.id}?v=${encodeURIComponent(v.driveFileId.trim())}` : null,
           status: v.status,

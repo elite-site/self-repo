@@ -353,6 +353,7 @@ export class DriveService {
         sendNotificationEmail: false,
       });
       this.viewerPermissionCache.add(fileOrFolderId);
+      this.rememberAnyoneReadable(fileOrFolderId);
       this.drive.files.update({
         fileId: fileOrFolderId,
         requestBody: { copyRequiresWriterPermission: true },
@@ -366,6 +367,7 @@ export class DriveService {
         // The 'anyone' grant is what collided, so this is anonymously readable
         // even though we did not create the permission ourselves.
         this.viewerPermissionCache.add(fileOrFolderId);
+        this.rememberAnyoneReadable(fileOrFolderId);
         return true;
       }
 
@@ -555,6 +557,15 @@ export class DriveService {
       const targetRelPath = relativePath || '';
       const dirPath = path.join(this.mockBaseDir, targetRelPath);
       fs.mkdirSync(dirPath, { recursive: true });
+      if (fileName.includes('photo')) {
+        try {
+          for (const entry of fs.readdirSync(dirPath)) {
+            if (entry.includes('photo') && entry !== fileName) {
+              fs.rmSync(path.join(dirPath, entry), { force: true });
+            }
+          }
+        } catch (_) {}
+      }
       const filePath = path.join(dirPath, fileName);
       fs.writeFileSync(filePath, file.buffer);
       const mockId = `mock_file_${Date.now()}_${Math.random().toString(36).substring(2, 9)}_${fileName}`;
@@ -568,13 +579,17 @@ export class DriveService {
       return mockId;
     }
 
-    // Google Drive override: if a file with the same name exists in target folder, delete old duplicate
+    // Google Drive override: if a file with the same name or older photo exists in target folder, delete old duplicate
     try {
+      const isPhoto = fileName.includes('photo');
+      const query = isPhoto
+        ? `'${targetFolderId}' in parents and (name contains 'photo' or name = '${fileName.replace(/'/g, "\\'")}') and trashed = false`
+        : `'${targetFolderId}' in parents and name = '${fileName.replace(/'/g, "\\'")}' and trashed = false`;
       const existing = await this.drive.files.list({
-        q: `'${targetFolderId}' in parents and name = '${fileName.replace(/'/g, "\\'")}' and trashed = false`,
+        q: query,
         fields: 'files(id, name)',
         supportsAllDrives: true,
-        pageSize: 10,
+        pageSize: 25,
       });
       if (existing.data.files && existing.data.files.length > 0) {
         for (const f of existing.data.files) {

@@ -11,7 +11,11 @@ import { resolveContentRange } from '../utils/rangeParser';
 import { TtlCache } from '../utils/ttlCache';
 
 const router = Router();
-const mediaDriveIdCache = new TtlCache<string>(300_000, 1000);
+export const mediaDriveIdCache = new TtlCache<string>(300_000, 1000);
+
+export function invalidateMediaDriveIdCache(type: string, id: string): void {
+  mediaDriveIdCache.delete(`${type}:${id}`);
+}
 
 const EVENT_ID = 'self-introduction-2026';
 const EVENT_NAME = 'Self Introduction';
@@ -527,6 +531,9 @@ router.get('/public/media/:type/:fileId', async (req: Request, res: Response): P
     }
 
     const cacheKey = `${type}:${fileId}`;
+    if (req.query.t || req.query.v) {
+      mediaDriveIdCache.delete(cacheKey);
+    }
     let resolvedDriveId: string | null = mediaDriveIdCache.get(cacheKey) || null;
     if (!resolvedDriveId && (fileId.startsWith('mock_') || fileId.startsWith('drive_'))) {
       resolvedDriveId = fileId;
@@ -571,7 +578,7 @@ router.get('/public/media/:type/:fileId', async (req: Request, res: Response): P
     const targetDriveFileId = resolvedDriveId || fileId;
     const etag = `"${targetDriveFileId}"`;
     const clientEtag = req.headers['if-none-match'];
-    if (clientEtag === etag || clientEtag === `"${fileId}"`) {
+    if (clientEtag === etag) {
       res.setHeader('Cache-Control', 'private, max-age=3600');
       res.setHeader('ETag', etag);
       res.status(304).end();
@@ -603,7 +610,8 @@ router.get('/public/media/:type/:fileId', async (req: Request, res: Response): P
     // bogus id costs one `permissions.list` per window rather than one per
     // request. The pre-existing streaming path already spent outbound calls on
     // the same ids, so this does not widen the surface.
-    if (REDIRECTABLE_TYPES.has(type) && driveService.canRedirectToDrive()) {
+    const forceStream = req.query.stream === '1' || req.query.stream === 'true' || req.query.proxy === 'true';
+    if (!forceStream && REDIRECTABLE_TYPES.has(type) && driveService.canRedirectToDrive()) {
       const directLink = driveService.getDirectLink(targetDriveFileId);
       if (directLink && (await driveService.isPubliclyReadable(targetDriveFileId))) {
         res.setHeader('Cache-Control', 'private, max-age=3600');

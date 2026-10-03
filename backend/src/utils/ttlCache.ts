@@ -79,6 +79,13 @@ export class TtlCache<T> {
     }
   }
 
+  /** Removes a single key from cache and any in-flight loads. */
+  delete(key: string): boolean {
+    const deleted = this.store.delete(key);
+    this.inflight.delete(key);
+    return deleted;
+  }
+
   /**
    * Returns the cached value for `key`, calling `load` only on a miss.
    *

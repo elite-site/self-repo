@@ -966,6 +966,85 @@ router.post('/events/:id/close', (req: Request, res: Response) => setEventStatus
 
 router.post('/events/:id/archive', (req: Request, res: Response) => setEventStatus(req, res, 'ARCHIVED'));
 
+router.delete('/events/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    if (id === 'self-introduction-2026') {
+      return res.status(400).json({
+        error: 'PROTECTED_EVENT',
+        message: 'The default self-introduction event cannot be deleted.',
+      });
+    }
+
+    const existing = await prisma.event.findUnique({
+      where: { id },
+      select: { id: true, name: true },
+    });
+    if (!existing) {
+      return res.status(404).json({ error: 'NOT_FOUND', message: 'Event not found.' });
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.registrationAnswer.deleteMany({
+        where: {
+          OR: [
+            { registration: { eventId: id } },
+            { field: { eventId: id } },
+          ],
+        },
+      });
+
+      await tx.eventRegistration.deleteMany({
+        where: { eventId: id },
+      });
+
+      await tx.teamMember.deleteMany({
+        where: { team: { eventId: id } },
+      });
+      await tx.teamInvitation.deleteMany({
+        where: { team: { eventId: id } },
+      });
+
+      await tx.team.deleteMany({
+        where: { eventId: id },
+      });
+
+      await tx.registrationFormField.deleteMany({
+        where: { eventId: id },
+      });
+
+      await tx.emailLog.deleteMany({
+        where: { eventId: id },
+      });
+
+      await tx.submission.deleteMany({
+        where: { eventId: id },
+      });
+
+      await tx.votingCampaign.updateMany({
+        where: { eventId: id },
+        data: { eventId: null },
+      });
+
+      await tx.event.delete({
+        where: { id },
+      });
+    });
+
+    await ActivityService.log({
+      category: 'ADMIN',
+      action: 'EVENT_DELETE',
+      details: `Admin deleted event "${existing.name}" (${id})`,
+      userEmail: (req as any).user?.email || 'admin',
+    });
+
+    res.json({ success: true, message: `Event "${existing.name}" deleted successfully.` });
+  } catch (err: any) {
+    console.error(`Error deleting event ${req.params.id}:`, err);
+    res.status(500).json({ error: 'SERVER_ERROR', message: 'Could not delete the event.' });
+  }
+});
+
 router.get('/events/:id/registrations', async (req: Request, res: Response) => {
   try {
     const registrations = await prisma.eventRegistration.findMany({
