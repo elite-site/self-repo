@@ -12,7 +12,7 @@
     "install:web": "npm install --include=dev --prefix ../web",
     "build:web": "npm run install:web && npm run --prefix ../web build",
     "build:all": "npm run build:admin && npm run build:web && npm run build",
-    "postinstall": "npm run install:admin && npm run install:web",
+    "render:build": "npm run build:admin && npm run prebuild && npm run build",
     "start": "node dist/server.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
