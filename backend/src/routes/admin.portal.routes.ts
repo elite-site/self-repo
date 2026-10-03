@@ -966,6 +966,45 @@ router.post('/events/:id/close', (req: Request, res: Response) => setEventStatus
 
 router.post('/events/:id/archive', (req: Request, res: Response) => setEventStatus(req, res, 'ARCHIVED'));
 
+router.delete('/events/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const existing = await prisma.event.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        name: true,
+        _count: { select: { submissions: true, votingCampaigns: true } },
+      },
+    });
+    if (!existing) {
+      return res.status(404).json({ error: 'NOT_FOUND', message: 'Event not found.' });
+    }
+    if (existing._count.submissions > 0 || existing._count.votingCampaigns > 0) {
+      return res.status(409).json({
+        error: 'CONFLICT',
+        message: 'This event has submissions or voting campaigns and cannot be deleted. Archive it instead.',
+      });
+    }
+
+    await prisma.$transaction([
+      prisma.registrationAnswer.deleteMany({ where: { registration: { eventId: id } } }),
+      prisma.eventRegistration.deleteMany({ where: { eventId: id } }),
+      prisma.teamMember.deleteMany({ where: { team: { eventId: id } } }),
+      prisma.teamInvitation.deleteMany({ where: { team: { eventId: id } } }),
+      prisma.team.deleteMany({ where: { eventId: id } }),
+      prisma.registrationFormField.deleteMany({ where: { eventId: id } }),
+      prisma.emailLog.deleteMany({ where: { eventId: id } }),
+      prisma.event.delete({ where: { id } }),
+    ]);
+
+    res.json({ success: true, message: 'Event deleted successfully.' });
+  } catch (err: any) {
+    console.error(`Error deleting event ${req.params.id}:`, err);
+    res.status(500).json({ error: 'SERVER_ERROR', message: 'Could not delete the event.' });
+  }
+});
+
 router.get('/events/:id/registrations', async (req: Request, res: Response) => {
   try {
     const registrations = await prisma.eventRegistration.findMany({

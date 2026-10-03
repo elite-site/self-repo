@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  CalendarDays, Plus, Pencil, Copy, Archive, Eye, Users,
+  CalendarDays, Plus, Pencil, Copy, Archive, Eye, Users, Trash2,
   AlertCircle, Loader2, CheckCircle, X, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { adminApi } from '../services/api';
@@ -393,6 +393,26 @@ export const AdminEvents: React.FC = () => {
     }
   };
 
+  const handleDelete = async (ev: EventItem) => {
+    const confirmed = await confirm({
+      title: `Delete “${ev.name}”?`,
+      description: 'This permanently deletes the event along with its registrations, teams and form fields. This cannot be undone.',
+      confirmLabel: 'Delete event',
+      tone: 'danger',
+    });
+    if (!confirmed) return;
+    setBusyId(ev.id);
+    try {
+      await adminApi.deleteEvent(ev.id);
+      notify(`Deleted "${ev.name}".`);
+      await fetchEvents();
+    } catch (err: any) {
+      notify(err?.response?.data?.message || 'Could not delete the event.', 'error');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   return (
     <div className="space-y-6 page-enter">
       {/* Toast Notification */}
@@ -529,6 +549,15 @@ export const AdminEvents: React.FC = () => {
                           {busyId === ev.id
                             ? <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />
                             : <Archive className="w-3.5 h-3.5" aria-hidden="true" />}
+                        </button>
+                        <button
+                          onClick={() => handleDelete(ev)}
+                          disabled={busyId === ev.id}
+                          title="Delete"
+                          className="btn btn-ghost p-2 text-status-rejected hover:bg-status-bg-rejected"
+                          aria-label={`Delete ${ev.name}`}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
                         </button>
                       </div>
                     </td>

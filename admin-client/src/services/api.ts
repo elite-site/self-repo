@@ -304,6 +304,10 @@ export const adminApi = {
     const res = await client.post(`/admin/api/portal/events/${id}/${action}`);
     return res.data;
   },
+  async deleteEvent(id: string): Promise<{ success: boolean; message: string }> {
+    const res = await client.delete(`/admin/api/portal/events/${id}`);
+    return res.data;
+  },
 
   // Voting
   async getVotingCampaigns(): Promise<{ campaigns: any[] }> {
@@ -338,6 +342,10 @@ export const adminApi = {
   },
   async createAnnouncement(data: any): Promise<any> {
     const res = await client.post('/admin/api/announcements', data);
+    return res.data;
+  },
+  async deleteAnnouncement(id: string): Promise<{ success: boolean; message: string }> {
+    const res = await client.delete(`/admin/api/announcements/${id}`);
     return res.data;
   },
   async getAnnouncementAudiencePreview(audience: string): Promise<{ count: number }> {

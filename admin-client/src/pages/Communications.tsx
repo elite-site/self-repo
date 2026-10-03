@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Megaphone, Plus, Send, X, Users, Clock, Loader2, AlertCircle, Inbox } from 'lucide-react';
+import { Megaphone, Plus, Send, X, Users, Clock, Loader2, AlertCircle, Inbox, Trash2 } from 'lucide-react';
 import { adminApi } from '../services/api';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 
 interface Announcement {
   id: string;
@@ -102,6 +103,8 @@ const ComposeDialog: React.FC<{ onClose: () => void; onPublished: () => void }> 
 };
 
 export const Communications: React.FC = () => {
+  const confirm = useConfirm();
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -118,6 +121,25 @@ export const Communications: React.FC = () => {
   };
 
   useEffect(() => { fetchAnnouncements(); }, []);
+
+  const handleDelete = async (a: Announcement) => {
+    const confirmed = await confirm({
+      title: `Delete “${a.title}”?`,
+      description: 'This permanently removes the announcement. This cannot be undone.',
+      confirmLabel: 'Delete announcement',
+      tone: 'danger',
+    });
+    if (!confirmed) return;
+    setDeletingId(a.id);
+    try {
+      await adminApi.deleteAnnouncement(a.id);
+      setAnnouncements(list => list.filter(x => x.id !== a.id));
+    } catch (err: any) {
+      setError(err?.response?.data?.message || 'Could not delete the announcement.');
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -161,13 +183,24 @@ export const Communications: React.FC = () => {
                   <h3 className="font-bold text-ink text-sm truncate">{a.title}</h3>
                   <p className="text-xs text-ink-secondary mt-1 line-clamp-2 leading-relaxed">{a.body || a.message || ''}</p>
                 </div>
-                <div className="text-right shrink-0">
-                  <div className="text-xs font-semibold text-ink-muted">{a.createdAt ? new Date(a.createdAt).toLocaleDateString() : ''}</div>
-                  {a.recipientCount != null && (
-                    <div className="flex items-center gap-1 text-xs text-ink-muted mt-1 justify-end">
-                      <Users className="w-3 h-3" /> {a.recipientCount} recipients
-                    </div>
-                  )}
+                <div className="flex items-start gap-2 shrink-0">
+                  <div className="text-right">
+                    <div className="text-xs font-semibold text-ink-muted">{a.createdAt ? new Date(a.createdAt).toLocaleDateString() : ''}</div>
+                    {a.recipientCount != null && (
+                      <div className="flex items-center gap-1 text-xs text-ink-muted mt-1 justify-end">
+                        <Users className="w-3 h-3" /> {a.recipientCount} recipients
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => handleDelete(a)}
+                    disabled={deletingId === a.id}
+                    title="Delete"
+                    aria-label={`Delete ${a.title}`}
+                    className="p-2 rounded-lg text-status-rejected hover:bg-status-bg-rejected disabled:opacity-50 cursor-pointer"
+                  >
+                    {deletingId === a.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                  </button>
                 </div>
               </div>
               <div className="flex items-center gap-4 mt-3 pt-3 border-t border-edge">

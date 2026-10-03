@@ -2343,6 +2343,22 @@ router.get('/announcements', async (req, res) => {
   }
 });
 
+router.delete('/announcements/:id', async (req, res) => {
+  try {
+    const existing = await prisma.announcement.findUnique({
+      where: { id: req.params.id },
+      select: { id: true },
+    });
+    if (!existing) {
+      return res.status(404).json({ error: 'NOT_FOUND', message: 'Announcement not found.' });
+    }
+    await prisma.announcement.delete({ where: { id: req.params.id } });
+    res.json({ success: true, message: 'Announcement deleted successfully.' });
+  } catch (err: any) {
+    return httpError(res, 500, err, "SERVER_ERROR");
+  }
+});
+
 router.get('/announcements/preview', async (req, res) => {
   try {
     const target = resolveAnnouncementTarget({
