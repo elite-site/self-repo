@@ -25,17 +25,17 @@ export function createQueryClient(): QueryClient {
   return new QueryClient({
     defaultOptions: {
       queries: {
-        // Always considered stale so the UI refetches on mount/focus instead
-        // of showing cached data. In-flight deduplication means two components
-        // on the same page still only fire one request.
-        staleTime: 0,
+        // 30 s is fresh enough for dashboard data and avoids a refetch storm
+        // when navigating between pages or returning to a tab. Queries that
+        // need instant cross-tab sync (session) override this individually.
+        staleTime: 30_000,
         // Five minutes of grace for an entry nothing is reading.
         gcTime: 5 * 60_000,
         // One retry covers a dropped request. More just delays the error state.
         retry: 1,
-        // Refetch when the student returns to the tab — catches profile photo
-        // and data changes made on another device or in another tab.
-        refetchOnWindowFocus: true,
+        // Off globally — only the session query opts back in so that a photo
+        // change made in another tab is picked up without a full page reload.
+        refetchOnWindowFocus: false,
       },
     },
   });

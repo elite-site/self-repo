@@ -79,6 +79,9 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     // The student is verified once per page load, exactly as before. Re-verifying
     // mid-visit would hand every page holding a `session` a different copy of it.
     staleTime: Infinity,
+    // Opt back in to window-focus refetch for this query only — it is the one
+    // place a photo change made on another tab needs to propagate immediately.
+    refetchOnWindowFocus: true,
   });
 
   const session = data ?? null;
