@@ -127,7 +127,7 @@ export const PublicVideoShowcase: React.FC<Props> = ({
               key={video.id}
               className="surface overflow-hidden shadow-card hover:shadow-card-hover transition-shadow"
             >
-              <div className="relative bg-surface-inverse aspect-video">
+              <div className="relative bg-surface-inverse aspect-[4/3] min-h-[240px] sm:aspect-video sm:min-h-0">
                 {video.driveFileId && !video.driveFileId.startsWith('mock_') ? (
                   <iframe
                     src={`https://drive.google.com/file/d/${video.driveFileId}/preview`}

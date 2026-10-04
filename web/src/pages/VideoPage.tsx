@@ -925,7 +925,7 @@ export const VideoPage: React.FC = () => {
                   </button>
                 </div>
               ) : (
-                <div className="mx-auto max-w-2xl max-h-[60dvh] bg-surface-inverse rounded-lg overflow-hidden aspect-video border border-edge-strong shadow-inner">
+                <div className="mx-auto max-w-2xl max-h-[60dvh] bg-surface-inverse rounded-lg overflow-hidden aspect-[4/3] min-h-[240px] sm:aspect-video sm:min-h-0 border border-edge-strong shadow-inner">
                   {playbackUrl ? (
                     <video
                       ref={videoRef}
@@ -947,7 +947,7 @@ export const VideoPage: React.FC = () => {
                     <iframe
                       src={`https://drive.google.com/file/d/${video?.driveFileId || (submission as any)?.videoDriveId}/preview`}
                       allow="autoplay; fullscreen"
-                      className="w-full h-full border-0 rounded-lg aspect-video"
+                      className="w-full h-full border-0 rounded-lg"
                       title="Introduction video preview"
                     />
                   ) : null}

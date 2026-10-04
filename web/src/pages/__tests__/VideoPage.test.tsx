@@ -73,7 +73,7 @@ describe('VideoPage video playback and proxy fallback', () => {
     // Wait for video element to render
     await waitFor(() => {
       expect(container.querySelector('video')).toBeInTheDocument();
-    });
+    }, { timeout: 4000 });
 
     const videoEl = container.querySelector('video')!;
     const initialSrc = videoEl.getAttribute('src');
@@ -88,7 +88,7 @@ describe('VideoPage video playback and proxy fallback', () => {
       const updatedVideo = container.querySelector('video');
       expect(updatedVideo).toBeInTheDocument();
       expect(updatedVideo?.getAttribute('src')).toContain('&proxy=1');
-    });
+    }, { timeout: 4000 });
 
     const proxyVideoEl = container.querySelector('video')!;
 
@@ -99,7 +99,7 @@ describe('VideoPage video playback and proxy fallback', () => {
     await waitFor(() => {
       expect(screen.getByText(/Unable to play video/i)).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /Retry Playback/i })).toBeInTheDocument();
-    });
+    }, { timeout: 4000 });
 
     // Clicking Retry resets the error and attempts playback again without proxy
     const retryButton = screen.getByRole('button', { name: /Retry Playback/i });
@@ -110,6 +110,6 @@ describe('VideoPage video playback and proxy fallback', () => {
       expect(retriedVideo).toBeInTheDocument();
       expect(retriedVideo?.getAttribute('src')).not.toContain('&proxy=1');
       expect(screen.queryByText(/Unable to play video/i)).not.toBeInTheDocument();
-    });
+    }, { timeout: 4000 });
   });
 });

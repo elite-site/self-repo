@@ -401,7 +401,7 @@ export const ProfilePage: React.FC = () => {
         </div>
 
         {(video?.driveFileId && !video.driveFileId.startsWith('mock_')) ? (
-          <div className="w-full overflow-hidden rounded-xl border border-edge bg-surface-inverse aspect-video shadow-card">
+          <div className="w-full overflow-hidden rounded-xl border border-edge bg-surface-inverse aspect-[4/3] min-h-[240px] sm:aspect-video sm:min-h-0 shadow-card">
             <iframe
               src={`https://drive.google.com/file/d/${video.driveFileId}/preview`}
               allow="autoplay; fullscreen"

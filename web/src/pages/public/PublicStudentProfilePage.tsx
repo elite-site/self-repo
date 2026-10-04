@@ -667,7 +667,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
                 </div>
 
                 {introVideo?.streamUrl ? (
-                  <div className="w-full overflow-hidden rounded-xl border border-slate-800 bg-slate-950 aspect-video shadow-md">
+                  <div className="w-full overflow-hidden rounded-xl border border-slate-800 bg-slate-950 aspect-[4/3] min-h-[240px] sm:aspect-video sm:min-h-0 shadow-md">
                     {introVideo.driveFileId && !introVideo.driveFileId.startsWith('mock_') ? (
                       <iframe
                         src={`https://drive.google.com/file/d/${introVideo.driveFileId}/preview`}
