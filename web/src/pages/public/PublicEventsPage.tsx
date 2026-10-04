@@ -73,11 +73,16 @@ export const PublicEventsPage: React.FC<PublicEventsPageProps> = ({ session, onL
         )
       : events;
 
-    // Soonest first: an events page is read from the top.
+    // Upcoming events first (soonest first), then past events (most recently ended first).
     return [...matched].sort((a, b) => {
-      const left = a.date ? new Date(a.date).getTime() : Number.POSITIVE_INFINITY;
-      const right = b.date ? new Date(b.date).getTime() : Number.POSITIVE_INFINITY;
-      return left - right;
+      const now = Date.now();
+      const aTime = a.date ? new Date(a.date).getTime() : 0;
+      const bTime = b.date ? new Date(b.date).getTime() : 0;
+      const aIsPast = a.status === 'Ended' || (aTime > 0 && aTime < now);
+      const bIsPast = b.status === 'Ended' || (bTime > 0 && bTime < now);
+
+      if (aIsPast !== bIsPast) return aIsPast ? 1 : -1;
+      return aIsPast ? bTime - aTime : aTime - bTime;
     });
   }, [events, search]);
 
@@ -162,7 +167,8 @@ export const PublicEventsPage: React.FC<PublicEventsPageProps> = ({ session, onL
             <ul className="divide-y divide-edge">
               {visibleEvents.map((evt) => {
                 const date = eventDateParts(evt.date);
-                const isOpen = OPEN_STATUSES.has(evt.status ?? 'OPEN');
+                const isEnded = evt.status === 'Ended' || (evt.date ? new Date(evt.date).getTime() < Date.now() : false);
+                const isOpen = !isEnded && OPEN_STATUSES.has(evt.status ?? 'OPEN');
                 return (
                   <li key={evt.id}>
                     <Link
@@ -183,13 +189,15 @@ export const PublicEventsPage: React.FC<PublicEventsPageProps> = ({ session, onL
                           <span className="line-clamp-2 break-words font-heading text-headline-sm text-ink">
                             {evt.title}
                           </span>
-                          <span className={isOpen ? 'badge badge-approved' : 'badge badge-draft'}>
-                            {isOpen ? (
+                          <span className={isEnded ? 'badge badge-draft' : isOpen ? 'badge badge-approved' : 'badge badge-draft'}>
+                            {isEnded ? (
+                              <Clock size={12} strokeWidth={2.5} aria-hidden="true" />
+                            ) : isOpen ? (
                               <CheckCircle2 size={12} strokeWidth={2.5} aria-hidden="true" />
                             ) : (
                               <Clock size={12} strokeWidth={2.5} aria-hidden="true" />
                             )}
-                            {isOpen ? 'Open' : (evt.status ?? 'Closed')}
+                            {isEnded ? 'Ended' : isOpen ? 'Open' : (evt.status ?? 'Closed')}
                           </span>
                         </span>
                         {evt.description && (

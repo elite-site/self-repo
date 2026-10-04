@@ -120,9 +120,21 @@ export const PublicEventDetailPage: React.FC<PublicEventDetailPageProps> = ({ se
         <div className="surface p-6 sm:p-8 space-y-5">
           <div className="space-y-2">
             {event.status && (
-              <span className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wider bg-status-bg-approved text-status-approved border border-status-bg-approved">
-                <ShieldCheck className="w-3 h-3" aria-hidden="true" />
-                {event.status}
+              <span
+                className={`inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wider border ${
+                  event.status === 'Ended' || (event.date && new Date(event.date).getTime() < Date.now())
+                    ? 'bg-surface-sunken text-ink-muted border-edge'
+                    : 'bg-status-bg-approved text-status-approved border-status-bg-approved'
+                }`}
+              >
+                {event.status === 'Ended' || (event.date && new Date(event.date).getTime() < Date.now()) ? (
+                  <Clock className="w-3 h-3" aria-hidden="true" />
+                ) : (
+                  <ShieldCheck className="w-3 h-3" aria-hidden="true" />
+                )}
+                {event.status === 'Ended' || (event.date && new Date(event.date).getTime() < Date.now())
+                  ? 'Ended'
+                  : event.status}
               </span>
             )}
             <h1 className="text-headline-md font-extrabold text-ink font-heading tracking-tight leading-tight">
@@ -140,7 +152,7 @@ export const PublicEventDetailPage: React.FC<PublicEventDetailPageProps> = ({ se
             <div className="flex items-start gap-2.5">
               <Calendar className="w-4 h-4 text-brand shrink-0 mt-0.5" aria-hidden="true" />
               <div>
-                <div className="text-ink-muted">Announced</div>
+                <div className="text-ink-muted">Event Date</div>
                 <div className="font-semibold text-ink mt-0.5">{formatDate(event.date)}</div>
               </div>
             </div>

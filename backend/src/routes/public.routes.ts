@@ -318,19 +318,42 @@ router.post(
 // GET /api/public/events - Public list of open events
 router.get('/public/events', async (_req: Request, res: Response): Promise<void> => {
   try {
+    const now = new Date();
     const events = await prisma.event.findMany({
-      where: { status: 'OPEN' },
-      orderBy: { createdAt: 'desc' }
+      where: { status: { in: ['OPEN', 'CLOSED'] } },
+      orderBy: { eventDate: 'asc' }
     });
     res.set('Cache-Control', 'public, max-age=60');
-    res.json(events.map(e => ({
-      ...e,
-      title: e.name,
-      date: e.createdAt,
-      type: 'GENERAL',
-      eligibility: `Year ${e.year || 'All'}`,
-      deadline: e.createdAt
-    })));
+
+    const mapped = events.map((e) => {
+      const eventDate = e.eventDate || e.createdAt;
+      const isPast = eventDate < now;
+      const status = isPast ? 'Ended' : e.status;
+      const eligibility =
+        e.eligibilityYears && e.eligibilityYears.length > 0
+          ? e.eligibilityYears.map((y) => `Year ${y}`).join(', ')
+          : 'All students';
+
+      return {
+        ...e,
+        title: e.name,
+        date: eventDate,
+        type: e.type || 'GENERAL',
+        eligibility,
+        deadline: e.registrationEnd || e.createdAt,
+        status,
+        isPast,
+      };
+    });
+
+    mapped.sort((a, b) => {
+      if (a.isPast !== b.isPast) return a.isPast ? 1 : -1;
+      const timeA = new Date(a.date).getTime();
+      const timeB = new Date(b.date).getTime();
+      return a.isPast ? timeB - timeA : timeA - timeB;
+    });
+
+    res.json(mapped);
   } catch (err: any) {
     res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
   }
@@ -339,24 +362,33 @@ router.get('/public/events', async (_req: Request, res: Response): Promise<void>
 // GET /api/public/events/:id - Public event detail
 router.get('/public/events/:id', async (req: Request, res: Response): Promise<void> => {
   try {
-    // Only open events are public. The list route filters on `status: 'OPEN'`,
-    // so the detail route must too, otherwise a closed event is readable by
-    // anyone who can guess or obtain its id.
     const event = await prisma.event.findFirst({
-      where: { id: req.params.id, status: 'OPEN' },
+      where: { id: req.params.id, status: { in: ['OPEN', 'CLOSED'] } },
       include: { formFields: { orderBy: { displayOrder: 'asc' } } }
     });
     if (!event) {
       res.status(404).json({ error: 'NOT_FOUND', message: 'Event not found' });
       return;
     }
+    const now = new Date();
+    const eventDate = event.eventDate || event.createdAt;
+    const isPast = eventDate < now;
+    const status = isPast ? 'Ended' : event.status;
+    const eligibility =
+      event.eligibilityYears && event.eligibilityYears.length > 0
+        ? event.eligibilityYears.map((y) => `Year ${y}`).join(', ')
+        : 'All students';
+
     res.set('Cache-Control', 'public, max-age=60');
     res.json({
       ...event,
       title: event.name,
-      date: event.eventDate || event.createdAt,
-      eligibility: `Year ${event.year || 'All'}`,
+      date: eventDate,
+      type: event.type || 'GENERAL',
+      eligibility,
       deadline: event.registrationEnd || event.createdAt,
+      status,
+      isPast,
       registrationFields: event.formFields
     });
   } catch (err: any) {
