@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { api, resolveMediaUrl } from '../../services/api';
 import { StudentSession } from '../../types';
+import { safeUrl } from '../../utils/safeUrl';
 import { Loader2, ArrowLeft, FileText, ExternalLink, Download } from 'lucide-react';
 import { Navbar } from '../../components/Navbar';
 import { Footer } from '../../components/Footer';
@@ -60,10 +61,10 @@ export const PublicResumeViewerPage: React.FC<PublicResumeViewerProps> = ({ sess
           <span>Back to Profile</span>
         </Link>
         <div className="flex flex-wrap items-center gap-2 sm:gap-3 min-w-0">
-          {resumeUrl && (
+          {resumeUrl && safeUrl(resumeUrl) && (
             <>
               <a
-                href={resumeUrl}
+                href={safeUrl(resumeUrl)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface-raised hover:bg-surface-sunken text-ink hover:text-ink-brand rounded-lg text-label-sm font-bold transition-colors min-h-[44px]"
@@ -72,7 +73,7 @@ export const PublicResumeViewerPage: React.FC<PublicResumeViewerProps> = ({ sess
                 <span>Open in Tab</span>
               </a>
               <a
-                href={`${resumeUrl}${resumeUrl.includes('?') ? '&' : '?'}download=1`}
+                href={safeUrl(`${resumeUrl}${resumeUrl.includes('?') ? '&' : '?'}download=1`)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface-raised hover:bg-surface-sunken text-ink hover:text-ink-brand rounded-lg text-label-sm font-bold transition-colors min-h-[44px]"

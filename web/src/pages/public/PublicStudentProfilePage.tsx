@@ -8,6 +8,7 @@ import { useToast } from '../../components/Toast';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { selectVariantsByName } from '../../lib/motion';
 import { getPhotoStyle } from '../../utils/photoStyle';
+import { safeUrl } from '../../utils/safeUrl';
 import { LeetCodeIcon, CodeChefIcon } from '../../components/icons/PlatformIcons';
 import { Skeleton, SkeletonText } from '../../components/ui/Skeleton';
 import { EmptyState } from '../../components/ui/EmptyState';
@@ -283,9 +284,10 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
   const bio = profile.biography || profile.bio || '';
   const photo = profile.viewUrl || profile.photoUrl;
 
-  const resumeDownloadHref = resume?.viewUrl || resume?.fileUrl ? `${resolveMediaUrl(resume?.viewUrl || resume?.fileUrl || '')}${
+  const rawResumeHref = resume?.viewUrl || resume?.fileUrl ? `${resolveMediaUrl(resume?.viewUrl || resume?.fileUrl || '')}${
     (resume?.viewUrl || resume?.fileUrl || '').includes('?') ? '&' : '?'
   }download=1` : null;
+  const resumeDownloadHref = safeUrl(rawResumeHref) || null;
 
   const currentYearNum = student.year || 1;
   const graduationEndYear = 2024 + 4;
@@ -472,9 +474,9 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
 
               {/* Social Links Row */}
               <div className="mt-6 flex flex-wrap items-center justify-center lg:justify-start gap-2.5">
-                {profile.githubUrl && (
+                {safeUrl(profile.githubUrl) && (
                   <a
-                    href={profile.githubUrl}
+                    href={safeUrl(profile.githubUrl)}
                     target="_blank"
                     rel="noreferrer"
                     className="flex size-9 items-center justify-center rounded-xl border border-slate-800 bg-slate-900/80 text-slate-300 hover:border-slate-700 hover:text-white transition-colors"
@@ -483,9 +485,9 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
                     <Github size={16} />
                   </a>
                 )}
-                {profile.linkedinUrl && (
+                {safeUrl(profile.linkedinUrl) && (
                   <a
-                    href={profile.linkedinUrl}
+                    href={safeUrl(profile.linkedinUrl)}
                     target="_blank"
                     rel="noreferrer"
                     className="flex size-9 items-center justify-center rounded-xl border border-slate-800 bg-slate-900/80 text-slate-300 hover:border-slate-700 hover:text-white transition-colors"
@@ -494,9 +496,9 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
                     <Linkedin size={16} />
                   </a>
                 )}
-                {profile.leetcodeUrl && (
+                {safeUrl(profile.leetcodeUrl) && (
                   <a
-                    href={profile.leetcodeUrl}
+                    href={safeUrl(profile.leetcodeUrl)}
                     target="_blank"
                     rel="noreferrer"
                     className="flex size-9 items-center justify-center rounded-xl border border-slate-800 bg-slate-900/80 text-slate-300 hover:border-slate-700 hover:text-amber-400 transition-colors"
@@ -505,9 +507,9 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
                     <LeetCodeIcon className="size-4 text-amber-500" />
                   </a>
                 )}
-                {profile.codechefUrl && (
+                {safeUrl(profile.codechefUrl) && (
                   <a
-                    href={profile.codechefUrl}
+                    href={safeUrl(profile.codechefUrl)}
                     target="_blank"
                     rel="noreferrer"
                     className="flex size-9 items-center justify-center rounded-xl border border-slate-800 bg-slate-900/80 text-slate-300 hover:border-slate-700 hover:text-amber-600 transition-colors"
@@ -516,9 +518,9 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
                     <CodeChefIcon className="size-4 text-amber-600" />
                   </a>
                 )}
-                {profile.portfolioUrl && (
+                {safeUrl(profile.portfolioUrl) && (
                   <a
-                    href={profile.portfolioUrl}
+                    href={safeUrl(profile.portfolioUrl)}
                     target="_blank"
                     rel="noreferrer"
                     className="flex size-9 items-center justify-center rounded-xl border border-slate-800 bg-slate-900/80 text-slate-300 hover:border-slate-700 hover:text-white transition-colors"
@@ -527,9 +529,9 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
                     <Globe size={16} />
                   </a>
                 )}
-                {student.email && (
+                {student.email && safeUrl(`mailto:${student.email}`) && (
                   <a
-                    href={`mailto:${student.email}`}
+                    href={safeUrl(`mailto:${student.email}`)}
                     className="flex size-9 items-center justify-center rounded-xl border border-slate-800 bg-slate-900/80 text-slate-300 hover:border-slate-700 hover:text-white transition-colors"
                     title="Email"
                   >
@@ -753,11 +755,11 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
                     )}
                   </div>
 
-                  {(project.githubUrl || project.videoUrl) && (
+                  {(safeUrl(project.githubUrl) || safeUrl(project.videoUrl)) && (
                     <div className="mt-5 pt-3 border-t border-slate-800/80 flex items-center gap-3">
-                      {project.githubUrl && (
+                      {safeUrl(project.githubUrl) && (
                         <a
-                          href={project.githubUrl}
+                          href={safeUrl(project.githubUrl)}
                           target="_blank"
                           rel="noreferrer"
                           className="inline-flex items-center gap-1.5 text-xs font-semibold text-rose-400 hover:text-rose-300 transition-colors"
@@ -766,9 +768,9 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
                           <span>Source</span>
                         </a>
                       )}
-                      {project.videoUrl && (
+                      {safeUrl(project.videoUrl) && (
                         <a
-                          href={project.videoUrl}
+                          href={safeUrl(project.videoUrl)}
                           target="_blank"
                           rel="noreferrer"
                           className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-300 hover:text-white transition-colors"
@@ -892,7 +894,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Email Card */}
             <a
-              href={student.email ? `mailto:${student.email}` : undefined}
+              href={student.email ? safeUrl(`mailto:${student.email}`) : undefined}
               className="rounded-2xl border border-slate-800/80 bg-slate-900/60 p-5 backdrop-blur-sm hover:border-rose-500/40 hover:-translate-y-0.5 transition-all block space-y-2 group"
             >
               <div className="p-2 rounded-xl bg-rose-500/10 text-rose-400 w-fit group-hover:bg-rose-500/20 transition-colors">
@@ -908,8 +910,8 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
 
             {/* LinkedIn Card */}
             <a
-              href={profile.linkedinUrl || undefined}
-              target={profile.linkedinUrl ? '_blank' : undefined}
+              href={safeUrl(profile.linkedinUrl)}
+              target={safeUrl(profile.linkedinUrl) ? '_blank' : undefined}
               rel="noreferrer"
               className="rounded-2xl border border-slate-800/80 bg-slate-900/60 p-5 backdrop-blur-sm hover:border-rose-500/40 hover:-translate-y-0.5 transition-all block space-y-2 group"
             >
@@ -926,8 +928,8 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
 
             {/* GitHub Card */}
             <a
-              href={profile.githubUrl || undefined}
-              target={profile.githubUrl ? '_blank' : undefined}
+              href={safeUrl(profile.githubUrl)}
+              target={safeUrl(profile.githubUrl) ? '_blank' : undefined}
               rel="noreferrer"
               className="rounded-2xl border border-slate-800/80 bg-slate-900/60 p-5 backdrop-blur-sm hover:border-rose-500/40 hover:-translate-y-0.5 transition-all block space-y-2 group"
             >

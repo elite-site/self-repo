@@ -23,6 +23,17 @@ const handleProofUpload = (req: Request, res: Response, next: any) => {
   next();
 };
 
+const SAFE_LINK_RE = /^https?:\/\/[^\s<>"'`\\]+$/i;
+
+function assertSafeLink(field: string, value: unknown): string | { error: string } {
+  const raw = typeof value === 'string' ? value.trim() : '';
+  if (!raw) return '';
+  if (!SAFE_LINK_RE.test(raw)) {
+    return { error: `${field} must be an absolute http:// or https:// link.` };
+  }
+  return raw;
+}
+
 const router = Router();
 router.use(requireStudentAuth);
 
@@ -56,6 +67,17 @@ router.post('/projects', async (req: Request, res: Response) => {
     }
     const { title, description, techStack, technologies, githubUrl, videoUrl, driveVideoUrl } = req.body;
 
+    const validatedGithubUrl = githubUrl ? assertSafeLink('githubUrl', githubUrl) : '';
+    if (typeof validatedGithubUrl !== 'string') {
+      return res.status(400).json({ error: 'VALIDATION_ERROR', message: validatedGithubUrl.error });
+    }
+
+    const finalVideoUrl = videoUrl || driveVideoUrl;
+    const validatedVideoUrl = finalVideoUrl ? assertSafeLink('videoUrl', finalVideoUrl) : null;
+    if (validatedVideoUrl && typeof validatedVideoUrl !== 'string') {
+      return res.status(400).json({ error: 'VALIDATION_ERROR', message: (validatedVideoUrl as any).error });
+    }
+
     // determine display order
     const maxOrderProj = await prisma.project.findFirst({
       where: { studentId },
@@ -69,8 +91,8 @@ router.post('/projects', async (req: Request, res: Response) => {
         title,
         description,
         technologies: techStack || technologies || [],
-        githubUrl,
-        driveVideoUrl: videoUrl || driveVideoUrl || null,
+        githubUrl: validatedGithubUrl || null,
+        driveVideoUrl: validatedVideoUrl || null,
         displayOrder,
         status: 'PENDING',
         isPublic: false
@@ -110,18 +132,44 @@ router.put('/projects/:id', async (req: Request, res: Response) => {
   try {
     const studentId = (req as any).studentId;
     const { title, description, techStack, technologies, githubUrl, videoUrl, driveVideoUrl } = req.body;
+
+    const updateData: any = {
+      title,
+      description,
+      technologies: techStack || technologies || undefined,
+      status: 'PENDING',
+      isPublic: false,
+      reviewNote: null
+    };
+
+    if (githubUrl !== undefined) {
+      if (githubUrl) {
+        const result = assertSafeLink('githubUrl', githubUrl);
+        if (typeof result !== 'string') {
+          return res.status(400).json({ error: 'VALIDATION_ERROR', message: result.error });
+        }
+        updateData.githubUrl = result;
+      } else {
+        updateData.githubUrl = null;
+      }
+    }
+
+    const finalVideoUrl = videoUrl || driveVideoUrl;
+    if (finalVideoUrl !== undefined) {
+      if (finalVideoUrl) {
+        const result = assertSafeLink('videoUrl', finalVideoUrl);
+        if (typeof result !== 'string') {
+          return res.status(400).json({ error: 'VALIDATION_ERROR', message: result.error });
+        }
+        updateData.driveVideoUrl = result;
+      } else {
+        updateData.driveVideoUrl = null;
+      }
+    }
+
     const proj = await prisma.project.updateMany({
       where: { id: req.params.id, studentId },
-      data: {
-        title,
-        description,
-        technologies: techStack || technologies || undefined,
-        githubUrl,
-        driveVideoUrl: videoUrl || driveVideoUrl || undefined,
-        status: 'PENDING',
-        isPublic: false,
-        reviewNote: null
-      }
+      data: updateData
     });
     if (proj.count === 0) return res.status(404).json({ error: 'NOT_FOUND', message: 'Project not found' });
     res.json({ message: 'Updated successfully' });
