@@ -315,7 +315,19 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
   const currentYearNum = student.year || 1;
 
   return (
-    <div className="min-h-[100dvh] bg-[#070B16] text-slate-100 font-sans selection:bg-rose-500 selection:text-white antialiased overflow-x-clip scroll-smooth print:bg-white print:text-slate-900 print:[&_*]:!text-slate-900 print:[&_*]:!bg-transparent print:[&_*]:!border-slate-300 print:[&_*]:!shadow-none">
+    <div className="min-h-[100dvh] bg-[#070B16] text-slate-100 font-sans selection:bg-rose-500 selection:text-white antialiased overflow-x-clip scroll-smooth print:bg-white print:text-black">
+      {/* Print stylesheet to ensure all dark-styled elements print dark text on white */}
+      <style>{`
+        @media print {
+          *, *::before, *::after {
+            color: #0f172a !important;
+            background-color: transparent !important;
+            box-shadow: none !important;
+            text-shadow: none !important;
+            border-color: #cbd5e1 !important;
+          }
+        }
+      `}</style>
       {/* Background ambient lighting */}
       <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(ellipse_80%_60%_at_50%_-20%,rgba(225,29,72,0.14),rgba(255,255,255,0))] print:hidden" />
       <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(ellipse_60%_50%_at_80%_100%,rgba(59,130,246,0.08),rgba(0,0,0,0))] print:hidden" />
