@@ -236,6 +236,7 @@ const spacing = {
   'gutter-mobile': '1rem',
   margin: '2rem',
   'margin-mobile': '1rem',
+  30: '7.5rem',
 };
 
 export const eliteTheme = {
@@ -310,6 +311,9 @@ export const eliteTheme = {
       '3xl': '1536px',
     },
     spacing,
+    backdropBlur: {
+      xs: '2px',
+    },
     opacity: {
       // Sits just above Tailwind's default so a 0.14 fade still reads.
       subtle: '0.14',

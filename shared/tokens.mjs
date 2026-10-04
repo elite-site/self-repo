@@ -533,10 +533,12 @@ export const namedType = {
   'body-md': { size: '14px', lineHeight: '21px', letterSpacing: '0.01em', fontWeight: '400', family: 'body' },
   // No plan step: 13px body copy.
   'body-sm': { size: '13px', lineHeight: '20px', letterSpacing: '0', fontWeight: '400', family: 'body' },
+  'body-xs': { size: '11px', lineHeight: '16px', letterSpacing: '0', fontWeight: '400', family: 'body' },
   'label-lg': { size: '14px', lineHeight: '21px', letterSpacing: '0.01em', fontWeight: '500', family: 'ui' },
   'label-md': { size: '12px', lineHeight: '18px', letterSpacing: '0.025em', fontWeight: '500', family: 'ui' },
   // No plan step: 11px tracked uppercase labels.
   'label-sm': { size: '11px', lineHeight: '14px', letterSpacing: '0.04em', fontWeight: '600', family: 'ui' },
+  'label-xs': { size: '10px', lineHeight: '14px', letterSpacing: '0.04em', fontWeight: '600', family: 'ui' },
   // No plan step: 13px identifiers in JetBrains Mono.
   'data-mono': { size: '13px', lineHeight: '18px', letterSpacing: '0', fontWeight: '400', family: 'mono' },
 };

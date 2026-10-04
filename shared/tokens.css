@@ -578,9 +578,11 @@
   .text-body-lg { font-family: var(--font-body); }
   .text-body-md { font-family: var(--font-body); }
   .text-body-sm { font-family: var(--font-body); }
+  .text-body-xs { font-family: var(--font-body); }
   .text-label-lg { font-family: var(--font-ui); }
   .text-label-md { font-family: var(--font-ui); }
   .text-label-sm { font-family: var(--font-ui); }
+  .text-label-xs { font-family: var(--font-ui); }
   .text-data-mono { font-family: var(--font-mono); }
 }
 
