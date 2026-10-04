@@ -182,7 +182,11 @@ const loadPublicProfile = (rollNo: string) =>
     where: { rollNo },
     include: {
       profile: { include: { skills: { include: { skill: true } } } },
-      projects: { orderBy: { displayOrder: 'asc' }, take: 100 },
+      projects: {
+        where: { status: 'APPROVED', isPublic: true },
+        orderBy: { displayOrder: 'asc' },
+        take: 100,
+      },
       achievements: {
         where: { status: 'APPROVED' },
         orderBy: { achievedAt: 'desc' },
@@ -304,6 +308,13 @@ router.get('/:rollNo', async (req: Request, res: Response) => {
           thumbnailUrl,
         };
       }),
+      projects: (student.projects || [])
+        .filter((p: any) => p.status === 'APPROVED' && p.isPublic === true)
+        .map((p: any) => ({
+          ...p,
+          techStack: p.technologies || [],
+          videoUrl: p.driveVideoUrl || null,
+        })),
       certificates: student.certificates.map((c: any) => {
         const { fileDriveId: _f, ...rest } = c;
         const viewUrl = c.fileDriveId ? `/api/public/media/certificate/${c.id}` : null;
@@ -313,6 +324,7 @@ router.get('/:rollNo', async (req: Request, res: Response) => {
           : null;
         return {
           ...rest,
+          issueDate: c.issuedAt || null,
           viewUrl,
           fileUrl: viewUrl,
           previewUrl,
