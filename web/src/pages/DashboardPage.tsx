@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { api } from '../services/api';
 import { getNotificationDestination, navigateToNotification } from '../utils/notificationRouting';
+import { formatContentStatus } from '../utils/status';
 import {
   Achievement,
   Certificate,
@@ -383,26 +384,30 @@ export const DashboardPage: React.FC = () => {
   const checkPhoto = !!profile?.photoUrl;
   const checkBio = !!(profile?.bio || profile?.biography);
   const checkSkills = !!(profile?.skills && profile.skills.length > 0);
-  const effectiveVideoStatus = profile?.video?.status || profile?.submission?.status;
-  const checkVideo =
-    !!(profile?.video ||
-      profile?.submission?.videoUploaded ||
-      profile?.submission?.videoUrl ||
-      effectiveVideoStatus);
+  const effectiveVideoStatus = profile?.video?.status;
+  const checkVideo = !!profile?.video;
   const activeResume = Array.isArray(resume) ? (resume.length > 0 ? resume[0] : null) : resume;
   const checkResume = !!(activeResume?.driveFileId || activeResume?.fileUrl);
   const checkProjects = projects.length > 0;
 
-  const videoStatus = VIDEO_STATUS[effectiveVideoStatus ?? ''] ?? 
-    (effectiveVideoStatus === 'PENDING' 
-      ? { tone: 'badge-pending' as DashboardTone, label: 'Under review' } 
-      : { tone: 'badge-draft' as DashboardTone, label: 'Not submitted' });
+  const videoStatus = {
+    label: formatContentStatus(effectiveVideoStatus),
+    tone: (effectiveVideoStatus === 'APPROVED'
+      ? 'badge-approved'
+      : effectiveVideoStatus === 'CHANGES_REQUESTED'
+        ? 'badge-changes'
+        : effectiveVideoStatus === 'REJECTED'
+          ? 'badge-rejected'
+          : effectiveVideoStatus === 'PENDING' || effectiveVideoStatus === 'UNDER_REVIEW'
+            ? 'badge-pending'
+            : 'badge-draft') as DashboardTone,
+  };
 
   let videoState: 'todo' | 'progress' | 'done' = 'todo';
   if (checkVideo) {
     if (effectiveVideoStatus === 'APPROVED') {
       videoState = 'done';
-    } else if (effectiveVideoStatus === 'SUBMITTED' || effectiveVideoStatus === 'PENDING') {
+    } else if (effectiveVideoStatus === 'PENDING' || effectiveVideoStatus === 'UNDER_REVIEW') {
       videoState = 'progress';
     } else {
       // CHANGES_REQUESTED or REJECTED

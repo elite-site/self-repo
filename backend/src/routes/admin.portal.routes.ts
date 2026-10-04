@@ -12,6 +12,7 @@ import { notifyStudent, notifyVideoChangeRequested } from '../services/notificat
 import { driveService } from '../services/drive.service';
 import { invalidateStudentEventsCache } from './student.events.routes';
 import { env } from '../config/env';
+import { EXCLUDE_INTERNAL_EVENT, isInternalEvent } from '../config/constants';
 
 const router = Router();
 router.use(requireAdminAuth);
@@ -689,6 +690,7 @@ router.post('/moderation/:type/:id/hide', async (req: Request, res: Response) =>
 router.get('/events', async (_req: Request, res: Response) => {
   try {
     const events = await prisma.event.findMany({
+      where: EXCLUDE_INTERNAL_EVENT,
       orderBy: { createdAt: 'desc' },
       include: {
         _count: {
@@ -882,6 +884,10 @@ router.post('/events', async (req: Request, res: Response) => {
 
 router.get('/events/:id', async (req: Request, res: Response) => {
   try {
+    if (isInternalEvent(req.params.id)) {
+      return res.status(409).json({ error: 'SYSTEM_RECORD', message: 'This is a system record, not an event.' });
+    }
+
     const event = await prisma.event.findUnique({
       where: { id: req.params.id },
       include: {
@@ -899,6 +905,10 @@ router.get('/events/:id', async (req: Request, res: Response) => {
 
 router.put('/events/:id', async (req: Request, res: Response) => {
   try {
+    if (isInternalEvent(req.params.id)) {
+      return res.status(409).json({ error: 'SYSTEM_RECORD', message: 'This is a system record, not an event.' });
+    }
+
     const parsed = parseEventPayload(req.body, { partial: true });
     if (!parsed.ok) {
       return res.status(400).json({ error: 'BAD_REQUEST', message: parsed.message });
@@ -945,6 +955,9 @@ router.put('/events/:id', async (req: Request, res: Response) => {
  */
 async function setEventStatus(req: Request, res: Response, status: 'OPEN' | 'CLOSED' | 'ARCHIVED') {
   try {
+    if (isInternalEvent(req.params.id)) {
+      return res.status(409).json({ error: 'SYSTEM_RECORD', message: 'This is a system record, not an event.' });
+    }
     const existing = await prisma.event.findUnique({
       where: { id: req.params.id },
       select: { id: true },
@@ -1054,6 +1067,10 @@ router.delete('/events/:id', async (req: Request, res: Response) => {
 
 router.get('/events/:id/registrations', async (req: Request, res: Response) => {
   try {
+    if (isInternalEvent(req.params.id)) {
+      return res.status(409).json({ error: 'SYSTEM_RECORD', message: 'This is a system record, not an event.' });
+    }
+
     const registrations = await prisma.eventRegistration.findMany({
       where: { eventId: req.params.id },
       include: {
@@ -1082,6 +1099,10 @@ router.get('/events/:id/registrations', async (req: Request, res: Response) => {
 
 router.post('/events/:id/form-fields', async (req: Request, res: Response) => {
   try {
+    if (isInternalEvent(req.params.id)) {
+      return res.status(409).json({ error: 'SYSTEM_RECORD', message: 'This is a system record, not an event.' });
+    }
+
     const { label, fieldType, isRequired, options, displayOrder } = req.body;
     const field = await prisma.registrationFormField.create({
       data: {
@@ -1101,6 +1122,10 @@ router.post('/events/:id/form-fields', async (req: Request, res: Response) => {
 
 router.put('/events/:id/form-fields/:fieldId', async (req: Request, res: Response) => {
   try {
+    if (isInternalEvent(req.params.id)) {
+      return res.status(409).json({ error: 'SYSTEM_RECORD', message: 'This is a system record, not an event.' });
+    }
+
     const { label, fieldType, isRequired, options, displayOrder } = req.body;
     const field = await prisma.registrationFormField.update({
       where: { id: req.params.fieldId },
@@ -1120,6 +1145,10 @@ router.put('/events/:id/form-fields/:fieldId', async (req: Request, res: Respons
 
 router.delete('/events/:id/form-fields/:fieldId', async (req: Request, res: Response) => {
   try {
+    if (isInternalEvent(req.params.id)) {
+      return res.status(409).json({ error: 'SYSTEM_RECORD', message: 'This is a system record, not an event.' });
+    }
+
     await prisma.registrationFormField.delete({ where: { id: req.params.fieldId } });
     res.json({ success: true, message: 'Form field deleted' });
   } catch (err: any) {
@@ -1421,7 +1450,7 @@ router.get('/analytics', async (_req: Request, res: Response) => {
       prisma.achievement.count(),
       prisma.certificate.count(),
       prisma.resume.count(),
-      prisma.event.count(),
+      prisma.event.count({ where: EXCLUDE_INTERNAL_EVENT }),
       prisma.eventRegistration.count(),
       prisma.votingCampaign.count(),
       prisma.vote.count(),

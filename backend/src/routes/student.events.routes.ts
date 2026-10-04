@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { requireStudentAuth } from '../middleware/studentAuth';
 import { prisma } from '../lib/prisma';
 import { ActivityService } from '../services/activity.service';
+import { EXCLUDE_INTERNAL_EVENT, isInternalEvent } from '../config/constants';
 
 const router = Router();
 router.use(requireStudentAuth);
@@ -22,7 +23,10 @@ router.get('/', async (req: Request, res: Response) => {
     }
 
     const events = await prisma.event.findMany({
-      where: { status: 'OPEN' },
+      where: {
+        status: 'OPEN',
+        ...EXCLUDE_INTERNAL_EVENT,
+      },
       orderBy: { createdAt: 'desc' },
       take: 100
     });
@@ -46,6 +50,10 @@ router.get('/', async (req: Request, res: Response) => {
 
 router.get('/:id', async (req: Request, res: Response) => {
   try {
+    if (isInternalEvent(req.params.id)) {
+      return res.status(404).json({ error: 'NOT_FOUND', message: 'Event not found' });
+    }
+
     const event = await prisma.event.findFirst({
       where: {
         OR: [
@@ -71,6 +79,10 @@ router.get('/:id', async (req: Request, res: Response) => {
 
 router.post('/:id/register', async (req: Request, res: Response) => {
   try {
+    if (isInternalEvent(req.params.id)) {
+      return res.status(404).json({ error: 'NOT_FOUND', message: 'Event not found' });
+    }
+
     const studentId = req.student?.studentId || (req as any).studentId;
     if (!studentId) {
       return res.status(401).json({ error: 'UNAUTHORIZED', message: 'Authentication required' });

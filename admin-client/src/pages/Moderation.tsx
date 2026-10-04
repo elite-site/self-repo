@@ -186,7 +186,7 @@ export const Moderation: React.FC = () => {
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
-    setTimeout(() => setToast(null), 3500);
+    setTimeout(() => setToast(null), 6000);
   };
 
   const fetchItems = useCallback(async () => {
@@ -483,16 +483,24 @@ export const Moderation: React.FC = () => {
       {/* Toast Notification */}
       {toast && (
         <div
-          className={`fixed top-5 right-5 z-toast text-xs font-semibold px-4 py-3 rounded-lg shadow-modal animate-fade-in flex items-center gap-2 ${
+          className={`fixed bottom-5 right-5 z-overlay text-xs font-semibold px-4 py-3 rounded-lg shadow-modal animate-fade-in flex items-center gap-2 ${
             toast.type === 'error'
               ? 'bg-status-bg-rejected text-status-rejected border border-status-rejected/30'
               : 'bg-surface-inverse text-ink-inverse'
           }`}
-          role="alert"
-          aria-live="polite"
+          role={toast.type === 'error' ? 'alert' : 'status'}
+          aria-live={toast.type === 'error' ? 'assertive' : 'polite'}
         >
           {toast.type === 'error' ? <AlertCircle className="w-4 h-4 shrink-0" /> : <CheckCircle className="w-4 h-4 shrink-0 text-emerald-400" />}
           <span>{toast.message}</span>
+          <button
+            type="button"
+            onClick={() => setToast(null)}
+            className="p-1 hover:opacity-75 rounded ml-2 text-current cursor-pointer"
+            aria-label="Close notification"
+          >
+            <X className="w-3.5 h-3.5" aria-hidden="true" />
+          </button>
         </div>
       )}
 

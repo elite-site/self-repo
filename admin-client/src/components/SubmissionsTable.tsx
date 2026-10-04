@@ -263,7 +263,7 @@ export const SubmissionsTable: React.FC<SubmissionsTableProps> = ({
                   <th className="py-3.5 px-4" scope="col">Section & Year</th>
                   <th className="py-3.5 px-4 text-center" scope="col">Video</th>
                   <th className="py-3.5 px-4" scope="col">Rating</th>
-                  <th className="py-3.5 px-4" scope="col">Response</th>
+                  <th className="py-3.5 px-4" scope="col">Feedback</th>
                   <th className="py-3.5 px-5 text-right" scope="col">Action</th>
                 </tr>
               </thead>
@@ -343,12 +343,12 @@ export const SubmissionsTable: React.FC<SubmissionsTableProps> = ({
                         )}
                       </td>
 
-                      {/* Admin response badge */}
+                      {/* Feedback badge */}
                       <td className="py-3.5 px-4">
                         {sub.reviewedAt && (sub.reviewText || (sub.reviewPros?.length ?? 0) > 0 || (sub.reviewCons?.length ?? 0) > 0) ? (
                           <span className="badge badge-approved">Responded</span>
                         ) : (
-                          <span className="badge badge-pending">Pending</span>
+                          <span className="badge badge-draft">Not sent</span>
                         )}
                       </td>
 

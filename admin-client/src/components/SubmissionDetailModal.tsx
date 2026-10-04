@@ -415,7 +415,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                   <div className="text-ink-muted text-xs font-semibold flex items-center gap-1">
                     <Phone className="w-3 h-3" /> Phone
                   </div>
-                  <div className="text-ink font-mono font-semibold mt-0.5">{submission.phoneNo || 'To be announced'}</div>
+                  <div className="text-ink font-mono font-semibold mt-0.5">{submission.phoneNo || '—'}</div>
                 </div>
                 <div className="min-w-0">
                   <div className="text-ink-muted text-xs font-semibold flex items-center gap-1">

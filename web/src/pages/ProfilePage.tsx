@@ -24,6 +24,7 @@ import {
 import { api, resolveMediaUrl } from '../services/api';
 import { StudentProfile, Project, Certificate, Achievement, StudentIntroVideo } from '../types';
 import { getPhotoStyle } from '../utils/photoStyle';
+import { formatContentStatus, getContentStatusBadgeClass } from '../utils/status';
 import { SkeletonPage } from '../components/ui/Skeleton';
 import { createPortal } from 'react-dom';
 import { LeetCodeIcon, CodeChefIcon } from '../components/icons/PlatformIcons';
@@ -380,11 +381,9 @@ export const ProfilePage: React.FC = () => {
             <h2 className="text-base font-bold text-ink font-heading">Introduction Video</h2>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            {(video?.status || profile?.submission?.status) && (
-              <span className={getItemStatusBadgeClass(video?.status || profile?.submission?.status)}>
-                {video?.status || profile?.submission?.status}
-              </span>
-            )}
+            <span className={getContentStatusBadgeClass(video?.status)}>
+              {formatContentStatus(video?.status)}
+            </span>
             <Link
               to="/intro-video"
               className="btn btn-secondary px-3 py-1.5 text-xs"

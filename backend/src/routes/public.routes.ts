@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { BRANCHES, SECTIONS, YEARS } from '../config/constants';
+import { BRANCHES, SECTIONS, YEARS, EXCLUDE_INTERNAL_EVENT, isInternalEvent } from '../config/constants';
 import { env } from '../config/env';
 import { prisma } from '../lib/prisma';
 import { submissionUploadMiddleware } from '../middleware/upload';
@@ -320,7 +320,10 @@ router.get('/public/events', async (_req: Request, res: Response): Promise<void>
   try {
     const now = new Date();
     const events = await prisma.event.findMany({
-      where: { status: { in: ['OPEN', 'CLOSED'] } },
+      where: {
+        status: 'OPEN',
+        ...EXCLUDE_INTERNAL_EVENT,
+      },
       orderBy: { eventDate: 'asc' }
     });
     res.set('Cache-Control', 'public, max-age=60');
@@ -362,6 +365,11 @@ router.get('/public/events', async (_req: Request, res: Response): Promise<void>
 // GET /api/public/events/:id - Public event detail
 router.get('/public/events/:id', async (req: Request, res: Response): Promise<void> => {
   try {
+    if (isInternalEvent(req.params.id)) {
+      res.status(404).json({ error: 'NOT_FOUND', message: 'Event not found' });
+      return;
+    }
+
     const event = await prisma.event.findFirst({
       where: { id: req.params.id, status: { in: ['OPEN', 'CLOSED'] } },
       include: { formFields: { orderBy: { displayOrder: 'asc' } } }

@@ -90,7 +90,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
 
   const showToast = (msg: string) => {
     setToast(msg);
-    setTimeout(() => setToast(null), 3500);
+    setTimeout(() => setToast(null), 6000);
   };
 
   const loadStudent = useCallback(async () => {
@@ -258,8 +258,20 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
     <div className="space-y-6 text-left pb-16">
       {/* Toast Notification */}
       {toast && (
-        <div className="fixed top-5 right-5 z-50 bg-surface-inverse text-ink-inverse text-xs font-semibold px-4 py-2.5 rounded-xl shadow-xl animate-fade-in fade-in slide-in-from-top-3">
-          {toast}
+        <div
+          className="fixed bottom-5 right-5 z-overlay bg-surface-inverse text-ink-inverse text-xs font-semibold px-4 py-3 rounded-lg shadow-modal animate-fade-in flex items-center gap-2"
+          role="status"
+          aria-live="polite"
+        >
+          <span>{toast}</span>
+          <button
+            type="button"
+            onClick={() => setToast(null)}
+            className="p-1 hover:opacity-75 rounded ml-2 text-current cursor-pointer"
+            aria-label="Close notification"
+          >
+            <X className="w-3.5 h-3.5" aria-hidden="true" />
+          </button>
         </div>
       )}
 

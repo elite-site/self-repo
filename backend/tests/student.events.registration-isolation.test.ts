@@ -239,4 +239,39 @@ describe('Internal self-introduction event isolation', () => {
       expect(prisma.team.create).not.toHaveBeenCalled();
     });
   });
+
+  describe('Admin isolation of internal event', () => {
+    const adminToken = jwt.sign({ userId: 'admin_1', username: 'admin' }, env.JWT_SECRET);
+    const adminAuth = { Authorization: `Bearer ${adminToken}` };
+
+    it('excludes the internal event from GET /admin/api/events', async () => {
+      asMock(prisma.event.findMany).mockResolvedValue([]);
+      const res = await request(app).get('/admin/api/events').set(adminAuth);
+      expect(res.status).toBe(200);
+      expect(prisma.event.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            id: { not: INTERNAL_EVENT_ID },
+          }),
+        })
+      );
+    });
+
+    it('refuses admin PUT update on the internal event with 409', async () => {
+      const res = await request(app)
+        .put(`/admin/api/portal/events/${INTERNAL_EVENT_ID}`)
+        .set(adminAuth)
+        .send({ name: 'Renamed Internal Event' });
+      expect(res.status).toBe(409);
+      expect(res.body.error).toBe('SYSTEM_RECORD');
+    });
+
+    it('refuses admin archive action on the internal event with 409', async () => {
+      const res = await request(app)
+        .post(`/admin/api/portal/events/${INTERNAL_EVENT_ID}/archive`)
+        .set(adminAuth);
+      expect(res.status).toBe(409);
+      expect(res.body.error).toBe('SYSTEM_RECORD');
+    });
+  });
 });

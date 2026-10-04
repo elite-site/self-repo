@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { StudentsResponse, Student } from '../types';
 import { adminApi } from '../services/api';
+import { formatDateTime } from '../utils/formatDate';
 
 interface StudentsTableProps {
   activeEventId: string;
@@ -19,12 +20,7 @@ interface StudentsTableProps {
 }
 
 function formatTime(iso: string | null | undefined): string {
-  if (!iso) return 'To be announced';
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return 'To be announced';
-  const date = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  const time = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-  return `${date} • ${time}`;
+  return formatDateTime(iso);
 }
 
 function studentYearLabel(year: number): string {
@@ -198,7 +194,8 @@ export const StudentsTable: React.FC<StudentsTableProps> = ({
                   <th className="py-3.5 px-4" scope="col">Roll Number</th>
                   <th className="py-3.5 px-4" scope="col">Year & Section</th>
                   <th className="py-3.5 px-4" scope="col">Upload Time</th>
-                  <th className="py-3.5 px-4" scope="col">Response</th>
+                  <th className="py-3.5 px-4" scope="col">Video</th>
+                  <th className="py-3.5 px-4" scope="col">Feedback</th>
                   <th className="py-3.5 px-5 text-right" scope="col">Action</th>
                 </tr>
               </thead>
@@ -209,6 +206,24 @@ export const StudentsTable: React.FC<StudentsTableProps> = ({
                     (student.submission.reviewPros?.length ?? 0) > 0 ||
                     (student.submission.reviewCons?.length ?? 0) > 0
                   );
+                  const videoStatus = student.video?.status;
+                  const renderVideoBadge = () => {
+                    switch (videoStatus?.toUpperCase()) {
+                      case 'APPROVED':
+                        return <span className="badge badge-approved">Approved</span>;
+                      case 'PENDING':
+                      case 'UNDER_REVIEW':
+                        return <span className="badge badge-pending">Under review</span>;
+                      case 'CHANGES_REQUESTED':
+                        return <span className="badge badge-changes">Changes requested</span>;
+                      case 'REJECTED':
+                        return <span className="badge badge-rejected">Rejected</span>;
+                      case 'HIDDEN':
+                        return <span className="badge badge-draft">Hidden</span>;
+                      default:
+                        return <span className="badge badge-draft">Not submitted</span>;
+                    }
+                  };
                   return (
                     <tr
                       key={student.id}
@@ -255,12 +270,14 @@ export const StudentsTable: React.FC<StudentsTableProps> = ({
                       </td>
 
                       <td className="py-3.5 px-4">
+                        {renderVideoBadge()}
+                      </td>
+
+                      <td className="py-3.5 px-4">
                         {reviewed ? (
-                          <span className="badge badge-approved">Responded</span>
-                        ) : student.submission ? (
-                          <span className="badge badge-pending">Pending review</span>
+                          <span className="badge badge-approved">Sent</span>
                         ) : (
-                          <span className="badge badge-draft">No video</span>
+                          <span className="text-ink-muted text-xs font-semibold">—</span>
                         )}
                       </td>
 

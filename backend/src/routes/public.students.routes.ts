@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
 import { driveService } from '../services/drive.service';
 import { TtlCache } from '../utils/ttlCache';
+import { EXCLUDE_INTERNAL_EVENT } from '../config/constants';
 
 const router = Router();
 
@@ -382,7 +383,10 @@ router.get('/:rollNo/resume', async (req: Request, res: Response) => {
 router.get('/events', async (_req: Request, res: Response) => {
   try {
     const events = await prisma.event.findMany({
-      where: { status: 'OPEN' },
+      where: {
+        status: 'OPEN',
+        ...EXCLUDE_INTERNAL_EVENT,
+      },
       orderBy: { createdAt: 'desc' }
     });
     res.set('Cache-Control', 'public, max-age=60');

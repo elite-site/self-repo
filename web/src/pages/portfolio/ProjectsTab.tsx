@@ -7,6 +7,7 @@ import { useConfirm } from '../../components/ui/ConfirmDialog';
 import { Modal } from '../../components/ui/Modal';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { ErrorState } from '../../components/ui/ErrorState';
+import { ProjectBento } from '../../components/ProjectBento';
 
 /** The portal caps a portfolio at five projects; mirrored in the header count. */
 const MAX_PROJECTS = 5;
@@ -258,82 +259,12 @@ export const ProjectsTab: React.FC = () => {
           }
         />
       ) : projects.length > 0 ? (
-        <ul className="surface divide-y divide-edge">
-          {projects.map((p) => (
-            <li
-              key={p.id}
-              className="flex flex-col gap-4 p-4 sm:flex-row sm:items-start sm:gap-5"
-            >
-              <span
-                aria-hidden="true"
-                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-brand-soft font-heading text-label-lg font-bold text-brand-soft-text"
-              >
-                {monogram(p.title)}
-              </span>
-
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="font-heading text-label-lg font-semibold text-ink">{p.title}</h3>
-                  {statusBadge(p.status)}
-                </div>
-                <p className="mt-1 line-clamp-2 text-body-sm text-ink-secondary">{p.description}</p>
-                {p.techStack && p.techStack.length > 0 && (
-                  <ul className="mt-2 flex flex-wrap gap-1.5">
-                    {p.techStack.map((tech) => (
-                      <li
-                        key={tech}
-                        className="rounded border border-edge bg-surface-inset px-2 py-0.5 text-label-md text-ink-secondary"
-                      >
-                        {tech}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-
-              <div className="flex shrink-0 items-center gap-1 self-start">
-                {p.githubUrl && (
-                  <a
-                    href={p.githubUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="btn btn-ghost px-2"
-                    aria-label={`Open the ${p.title} repository`}
-                  >
-                    <Github size={16} strokeWidth={1.75} aria-hidden="true" />
-                  </a>
-                )}
-                {p.videoUrl && (
-                  <a
-                    href={p.videoUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="btn btn-ghost px-2"
-                    aria-label={`Open the ${p.title} live demo`}
-                  >
-                    <ExternalLink size={16} strokeWidth={1.75} aria-hidden="true" />
-                  </a>
-                )}
-                <button
-                  type="button"
-                  onClick={() => handleOpenEditModal(p)}
-                  className="btn btn-ghost px-2"
-                  aria-label={`Edit ${p.title}`}
-                >
-                  <Pencil size={16} strokeWidth={1.75} aria-hidden="true" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleDelete(p)}
-                  className="btn btn-ghost px-2 text-ink-muted hover:text-status-rejected"
-                  aria-label={`Delete ${p.title}`}
-                >
-                  <Trash2 size={16} strokeWidth={1.75} aria-hidden="true" />
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
+        <ProjectBento
+          projects={projects}
+          showStatus
+          onEdit={handleOpenEditModal}
+          onDelete={handleDelete}
+        />
       ) : null}
 
       <Modal

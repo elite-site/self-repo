@@ -157,10 +157,12 @@ describe('Team Creation API (POST /api/student/teams)', () => {
       .send({ name: 'Beta Builders' }); // No eventId in body
 
     expect(res.status).toBe(201);
-    expect(prisma.event.findFirst).toHaveBeenCalledWith({
-      where: { status: 'OPEN' },
-      orderBy: { createdAt: 'desc' },
-    });
+    expect(prisma.event.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ status: 'OPEN' }),
+        orderBy: { createdAt: 'desc' },
+      })
+    );
     expect(prisma.team.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({

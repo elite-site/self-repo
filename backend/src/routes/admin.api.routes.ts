@@ -5,7 +5,7 @@ import { requireAdminAuth } from '../middleware/auth';
 import { httpError } from "../middleware/apiError";
 import { prisma } from '../lib/prisma';
 import { driveService } from '../services/drive.service';
-import { RATINGS, RATING_LABELS, SUBMISSION_STATUSES } from '../config/constants';
+import { RATINGS, RATING_LABELS, SUBMISSION_STATUSES, EXCLUDE_INTERNAL_EVENT, isInternalEvent } from '../config/constants';
 import { ActivityService } from '../services/activity.service';
 import {
   countAnnouncementAudience,
@@ -32,10 +32,7 @@ router.get('/events', async (_req: Request, res: Response): Promise<Response | v
     // The admin Events table renders a Registrations column from registrationCount.
     // Without this _count the client falls back to 0 and every event looks empty.
     const events = await prisma.event.findMany({
-      // `registrationCount` is a Prisma aggregate, not a stored column, so it
-      // arrives as `_count.registrations`. The admin table reads it, so expose
-      // it under the name the client expects rather than making the client know
-      // about the aggregate shape.
+      where: EXCLUDE_INTERNAL_EVENT,
       include: {
         _count: {
           select: { registrations: true, submissions: true },
@@ -111,7 +108,7 @@ router.get('/stats', async (req: Request, res: Response): Promise<Response | voi
       prisma.achievement.count().catch(() => 0),
       prisma.certificate.count().catch(() => 0),
       prisma.resume.count().catch(() => 0),
-      prisma.event.count().catch(() => 0),
+      prisma.event.count({ where: EXCLUDE_INTERNAL_EVENT }).catch(() => 0),
       prisma.eventRegistration.count().catch(() => 0),
       prisma.votingCampaign.count().catch(() => 0),
       prisma.vote.count().catch(() => 0),
@@ -337,27 +334,42 @@ router.get('/students', async (req: Request, res: Response): Promise<Response | 
       }),
     ]);
 
-    // Batch-fetch submissions for just the page of students (not all students)
+    // Batch-fetch submissions and latest introVideos for just the page of students
     const rollNos = students.map((s) => s.rollNo);
-    const submissions = rollNos.length
-      ? await prisma.submission.findMany({
-          where: { eventId, rollNo: { in: rollNos } },
-          orderBy: { submittedAt: 'desc' },
-          select: {
-            id: true,
-            rollNo: true,
-            year: true,
-            section: true,
-            status: true,
-            submittedAt: true,
-            videoDriveId: true,
-            reviewText: true,
-            reviewPros: true,
-            reviewCons: true,
-            reviewedAt: true,
-          },
-        })
-      : [];
+    const studentIds = students.map((s) => s.id);
+
+    const [submissions, introVideos] = await Promise.all([
+      rollNos.length
+        ? prisma.submission.findMany({
+            where: { eventId, rollNo: { in: rollNos } },
+            orderBy: { submittedAt: 'desc' },
+            select: {
+              id: true,
+              rollNo: true,
+              year: true,
+              section: true,
+              status: true,
+              submittedAt: true,
+              videoDriveId: true,
+              reviewText: true,
+              reviewPros: true,
+              reviewCons: true,
+              reviewedAt: true,
+            },
+          })
+        : [],
+      studentIds.length
+        ? prisma.introVideo.findMany({
+            where: { studentId: { in: studentIds } },
+            orderBy: { submittedAt: 'desc' },
+            select: {
+              studentId: true,
+              status: true,
+              isPublic: true,
+            },
+          })
+        : [],
+    ]);
 
     // Join submissions by roll number (latest wins per student)
     const submissionByRoll = new Map<string, typeof submissions[number]>();
@@ -366,12 +378,22 @@ router.get('/students', async (req: Request, res: Response): Promise<Response | 
       if (!submissionByRoll.has(key)) submissionByRoll.set(key, sub);
     }
 
+    // Join intro videos by student id (latest wins per student)
+    const videoByStudent = new Map<string, { status: string; isPublic: boolean }>();
+    for (const vid of introVideos) {
+      if (!videoByStudent.has(vid.studentId)) {
+        videoByStudent.set(vid.studentId, { status: vid.status, isPublic: vid.isPublic });
+      }
+    }
+
     const rows = students.map((student) => {
       const key = `${student.rollNo}|${student.year}|${student.section}`;
       const submission = submissionByRoll.get(key) || null;
+      const video = videoByStudent.get(student.id) || null;
       return {
         ...student,
-        hasUploaded: Boolean(submission?.videoDriveId),
+        video,
+        hasUploaded: Boolean(video ? true : submission?.videoDriveId),
         submission: submission
           ? {
               id: submission.id,

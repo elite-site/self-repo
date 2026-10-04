@@ -559,8 +559,8 @@ export const VideoPage: React.FC = () => {
     return <SkeletonPage label="Loading video submission" cards={2} rows={2} />;
   }
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
+  const getStatusBadge = (status?: string | null) => {
+    switch (status?.toUpperCase()) {
       case 'APPROVED':
         return (
           <span className="badge badge-approved">
@@ -569,6 +569,7 @@ export const VideoPage: React.FC = () => {
         );
       case 'SUBMITTED':
       case 'PENDING':
+      case 'UNDER_REVIEW':
         return (
           <span className="badge badge-pending">
             <Clock className="w-3.5 h-3.5" /> Under review
@@ -586,6 +587,12 @@ export const VideoPage: React.FC = () => {
             <XCircle className="w-3.5 h-3.5" /> Rejected
           </span>
         );
+      case 'HIDDEN':
+        return (
+          <span className="badge badge-draft">
+            Hidden
+          </span>
+        );
       default:
         return (
           <span className="badge badge-draft">
@@ -596,21 +603,20 @@ export const VideoPage: React.FC = () => {
   };
 
   /**
-   * Where the student's video sits in the moderation flow, derived from the two
-   * status fields the API already returns so the stepper can never disagree with
-   * the badge next to it.
+   * Where the student's video sits in the moderation flow, derived from the
+   * video status returned by the API.
    */
   const lifecycleSteps = [
     {
       label: 'Uploaded',
-      detail: submission?.submittedAt ? formatSubmittedAt(submission.submittedAt) : 'Waiting for upload',
+      detail: video?.submittedAt ? formatSubmittedAt(video.submittedAt) : 'Waiting for upload',
     },
     { label: 'Under review', detail: 'Faculty check it' },
     { label: 'Approved', detail: 'Faculty sign-off' },
     { label: 'Published', detail: 'Shown on your profile' },
   ];
 
-  const videoStatus = video?.status || submission?.status || 'DRAFT';
+  const videoStatus = video?.status || 'DRAFT';
   const lifecycle: { current: number; tone: 'brand' | 'changes' | 'rejected' } = (() => {
     if (video?.changeRequestedAt || videoStatus === 'CHANGES_REQUESTED') {
       return { current: 0, tone: 'changes' };
@@ -618,7 +624,7 @@ export const VideoPage: React.FC = () => {
     if (videoStatus === 'REJECTED') return { current: 0, tone: 'rejected' };
     if (video?.isPublic) return { current: lifecycleSteps.length, tone: 'brand' };
     if (videoStatus === 'APPROVED') return { current: 3, tone: 'brand' };
-    if (videoStatus === 'SUBMITTED' || videoStatus === 'PENDING') return { current: 1, tone: 'brand' };
+    if (videoStatus === 'SUBMITTED' || videoStatus === 'PENDING' || videoStatus === 'UNDER_REVIEW') return { current: 1, tone: 'brand' };
     return { current: 0, tone: 'brand' };
   })();
 
@@ -632,11 +638,9 @@ export const VideoPage: React.FC = () => {
             Introduce yourself in 60 to 90 seconds.
           </p>
         </div>
-        {submission && (
-          <div className="flex items-center gap-2 shrink-0">
-            {getStatusBadge(video?.status || submission.status)}
-          </div>
-        )}
+        <div className="flex items-center gap-2 shrink-0">
+          {getStatusBadge(video?.status)}
+        </div>
       </div>
 
       {/* LIFECYCLE. The whole path is always on screen, so "what happens next"
@@ -646,7 +650,7 @@ export const VideoPage: React.FC = () => {
         <p className="mt-0.5 text-body-sm text-ink-secondary">
           {lifecycle.current >= lifecycleSteps.length
             ? 'Your approved video is published.'
-            : lifecycle.current === 0 && submission?.videoUploaded
+            : lifecycle.current === 0 && (video?.changeRequestedAt || videoStatus === 'CHANGES_REQUESTED')
               ? 'Faculty asked for changes. Upload a replacement.'
               : 'Your video moves through these steps after each upload.'}
         </p>
@@ -918,7 +922,7 @@ export const VideoPage: React.FC = () => {
                 <div className="w-16 h-16 rounded-lg bg-surface border border-edge flex items-center justify-center mb-4 group-hover:scale-105 transition-transform shadow-card">
                   <FileVideo className="w-8 h-8 text-brand" />
                 </div>
-                <h3 className="font-bold text-base text-ink font-heading">Upload your self-introduction video</h3>
+                <h3 className="font-bold text-base text-ink font-heading">Upload your introduction video</h3>
                 <p className="text-xs text-ink-secondary max-w-sm mt-1.5 mb-2">
                   MP4, WebM or MOV, up to {maxVideoSizeMb} MB. Aim for 60 to 90 seconds.
                 </p>

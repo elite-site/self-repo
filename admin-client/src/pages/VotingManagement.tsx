@@ -10,6 +10,7 @@ interface Campaign {
   votingEnd: string;
   totalVotes: number;
   candidateCount: number;
+  eventId?: string;
   eventTitle?: string;
 }
 
@@ -190,7 +191,9 @@ export const VotingManagement: React.FC = () => {
                   <h3 className="text-sm font-semibold text-ink truncate">{c.title}</h3>
                   <StatusBadge status={c.status} />
                 </div>
-                {c.eventTitle && <p className="text-xs text-ink-muted mb-2">Event: {c.eventTitle}</p>}
+                <p className="text-xs text-ink-muted mb-2">
+                  Event: {c.eventId === 'self-introduction-2026' || c.eventTitle === 'Self Introduction' ? 'No event' : c.eventTitle || 'No event'}
+                </p>
                 <div className="flex items-center gap-4 text-xs text-ink-muted">
                   <span className="flex items-center gap-1"><Vote className="w-3.5 h-3.5" /> {c.totalVotes} votes</span>
                   <span className="flex items-center gap-1"><BarChart3 className="w-3.5 h-3.5" /> {c.candidateCount} candidates</span>

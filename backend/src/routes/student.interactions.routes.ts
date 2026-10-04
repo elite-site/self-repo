@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { requireStudentAuth } from '../middleware/studentAuth';
 import { prisma } from '../lib/prisma';
 import { ActivityService } from '../services/activity.service';
+import { INTERNAL_EVENT_ID, INTERNAL_EVENT_SLUG } from '../config/constants';
 
 const router = Router();
 router.use(requireStudentAuth);
@@ -336,7 +337,12 @@ router.get(['/registrations', '/registrations/all'], async (req: Request, res: R
     res.setHeader('Expires', '0');
 
     const registrations = await prisma.eventRegistration.findMany({
-      where: { studentId },
+      where: {
+        studentId,
+        eventId: { not: INTERNAL_EVENT_ID },
+        status: { notIn: ['CANCELLED', 'REJECTED'] },
+        event: { status: { notIn: ['CLOSED', 'ARCHIVED'] } },
+      },
       include: {
         event: true,
         student: true,
@@ -423,6 +429,7 @@ router.get('/teams', async (req: Request, res: Response) => {
     const studentId = (req as any).studentId || req.student?.studentId;
     const teams = await prisma.team.findMany({
       where: {
+        eventId: { not: INTERNAL_EVENT_ID },
         OR: [
           { leaderId: studentId },
           { members: { some: { studentId } } }
@@ -456,12 +463,19 @@ router.post('/teams', async (req: Request, res: Response) => {
 
     let eventId = (req.body?.eventId || req.query?.eventId)?.toString()?.trim();
 
+    if (eventId === INTERNAL_EVENT_ID || eventId === INTERNAL_EVENT_SLUG) {
+      return res.status(404).json({ error: 'NOT_FOUND', message: 'Event not found' });
+    }
+
     if (!eventId) {
       const activeEvent = await prisma.event.findFirst({
-        where: { status: 'OPEN' },
+        where: {
+          status: 'OPEN',
+          id: { not: INTERNAL_EVENT_ID },
+        },
         orderBy: { createdAt: 'desc' }
       });
-      if (!activeEvent) {
+      if (!activeEvent || activeEvent.id === INTERNAL_EVENT_ID) {
         return res.status(400).json({
           error: 'VALIDATION_ERROR',
           message: 'No active event available to create a team for.'
@@ -472,7 +486,7 @@ router.post('/teams', async (req: Request, res: Response) => {
       const existingEvent = await prisma.event.findUnique({
         where: { id: eventId }
       });
-      if (!existingEvent) {
+      if (!existingEvent || existingEvent.id === INTERNAL_EVENT_ID) {
         return res.status(404).json({
           error: 'NOT_FOUND',
           message: 'Event not found'

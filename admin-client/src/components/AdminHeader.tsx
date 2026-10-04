@@ -29,7 +29,6 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
   onToggleMobileSidebar,
   onLogout,
 }) => {
-  const [timeString, setTimeString] = useState<string>('');
   const [themeDropdownOpen, setThemeDropdownOpen] = useState(false);
   const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
   const [accountDropdownOpen, setAccountDropdownOpen] = useState(false);
@@ -40,28 +39,6 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
   const themeRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
   const accountRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const updateTime = () => {
-      const now = new Date();
-      setTimeString(
-        now.toLocaleDateString('en-US', {
-          month: 'short',
-          day: 'numeric',
-          year: 'numeric',
-        }) +
-          ' ' +
-          now.toLocaleTimeString('en-US', {
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-          })
-      );
-    };
-    updateTime();
-    const interval = setInterval(updateTime, 1000);
-    return () => clearInterval(interval);
-  }, []);
 
   // Fetch quick stats for notification badge
   useEffect(() => {
@@ -110,7 +87,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
 
   return (
     <header className="w-full bg-surface border-b border-edge py-3 px-4 sm:px-8 flex items-center justify-between sticky top-0 z-sticky shadow-card transition-colors">
-      {/* LEFT: MOBILE SIDEBAR TRIGGER + DATE TIME BADGE */}
+      {/* LEFT: MOBILE SIDEBAR TRIGGER */}
       <div className="flex items-center gap-3">
         {onToggleMobileSidebar && (
           <button
@@ -121,11 +98,6 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
             <Menu strokeWidth={1.75} className="w-5 h-5" aria-hidden="true" />
           </button>
         )}
-
-        <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-surface-sunken border border-edge rounded-lg text-xs font-mono text-ink-muted">
-          <span className="w-2 h-2 rounded-full bg-status-approved" aria-hidden="true" />
-          <span>{timeString || 'May 23, 2026 2:01:07 PM'}</span>
-        </div>
       </div>
 
       {/* RIGHT: THEME TOGGLE, NOTIFICATIONS & USER PROFILE BADGE */}
@@ -320,9 +292,9 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
             </div>
             <div className="text-left leading-tight hidden sm:block">
               <div className="font-heading text-xs font-bold text-ink truncate max-w-[130px]">
-                {user?.username || (user?.email ? user.email.split('@')[0] : 'Admin User')}
+                {user?.username || user?.email || 'Admin'}
               </div>
-              <div className="text-xs text-ink-muted font-medium">Super Admin</div>
+              <div className="text-xs text-ink-muted font-medium">Super admin</div>
             </div>
             <ChevronDown className="w-3.5 h-3.5 text-ink-muted hidden sm:block" aria-hidden="true" />
           </button>
@@ -335,7 +307,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
             >
               <div className="px-4 py-2 border-b border-edge">
                 <div className="font-heading text-xs font-bold text-ink truncate">
-                  {user?.username || 'Admin User'}
+                  {user?.username || user?.email || 'Admin'}
                 </div>
                 <div className="text-xs text-ink-muted truncate">
                   {user?.email || 'admin@sasi.ac.in'}
