@@ -182,7 +182,7 @@ export const VotingManagement: React.FC = () => {
           <p className="text-sm font-semibold text-ink-muted">No campaigns yet</p>
         </div>
       ) : (
-        <div className="grid gap-4">
+        <div className="grid grid-cols-1 gap-4">
           {campaigns.map((c) => (
             <div key={c.id} className="bg-surface rounded-2xl border border-edge p-5 flex items-center gap-6 shadow-sm">
               <div className="flex-1 min-w-0">
