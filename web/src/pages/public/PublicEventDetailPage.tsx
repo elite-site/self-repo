@@ -93,12 +93,12 @@ export const PublicEventDetailPage: React.FC<PublicEventDetailPageProps> = ({ se
         <div className="surface border border-status-rejected/20 p-10 text-center space-y-3" role="alert">
           <AlertCircle className="w-10 h-10 text-status-rejected mx-auto" aria-hidden="true" />
           <h2 className="text-body-md font-bold text-ink font-heading">Event unavailable</h2>
-          <p className="text-label-sm text-ink-secondary">{error ?? 'This event could not be found.'}</p>
+          <p className="text-label-md text-ink-secondary">{error ?? 'This event could not be found.'}</p>
           <Link
             to="/events"
-            className="inline-flex items-center gap-1.5 text-label-sm font-bold text-brand hover:underline"
+            className="inline-flex min-h-[44px] items-center gap-1.5 py-2 text-label-md font-bold text-brand hover:underline"
           >
-            <ArrowLeft className="w-3.5 h-3.5" aria-hidden="true" />
+            <ArrowLeft className="w-4 h-4" aria-hidden="true" />
             Back to all events
           </Link>
         </div>
@@ -111,9 +111,9 @@ export const PublicEventDetailPage: React.FC<PublicEventDetailPageProps> = ({ se
       <div className="space-y-6">
         <Link
           to="/events"
-          className="inline-flex items-center gap-1.5 text-label-sm font-bold text-brand hover:underline"
+          className="inline-flex min-h-[44px] items-center gap-1.5 py-2 text-label-md font-bold text-brand hover:underline"
         >
-          <ArrowLeft className="w-3.5 h-3.5" aria-hidden="true" />
+          <ArrowLeft className="w-4 h-4" aria-hidden="true" />
           All events
         </Link>
 
@@ -136,7 +136,7 @@ export const PublicEventDetailPage: React.FC<PublicEventDetailPageProps> = ({ se
             </p>
           )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-edge text-label-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-edge text-label-md">
             <div className="flex items-start gap-2.5">
               <Calendar className="w-4 h-4 text-brand shrink-0 mt-0.5" aria-hidden="true" />
               <div>
@@ -166,7 +166,7 @@ export const PublicEventDetailPage: React.FC<PublicEventDetailPageProps> = ({ se
         {fields.length > 0 && (
           <div className="surface p-6 space-y-3">
             <h2 className="text-body-sm font-bold text-ink font-heading">What registration asks for</h2>
-            <ul className="space-y-1.5 text-label-sm text-ink-secondary">
+            <ul className="space-y-1.5 text-label-md text-ink-secondary">
               {fields.map((field) => (
                 <li key={field.id} className="flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-brand shrink-0" aria-hidden="true" />
@@ -183,14 +183,14 @@ export const PublicEventDetailPage: React.FC<PublicEventDetailPageProps> = ({ se
         <div className="bg-brand-soft border border-brand-soft rounded-lg p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h2 className="text-body-sm font-bold text-ink font-heading">Want to register?</h2>
-            <p className="text-label-sm text-ink-secondary mt-1">
+            <p className="text-label-md text-ink-secondary mt-1">
               Registration is tied to your student account so coordinators can track your entry.
             </p>
           </div>
           <button
             type="button"
             onClick={handleSignIn}
-            className="shrink-0 btn btn-primary"
+            className="shrink-0 btn btn-primary min-h-[44px]"
           >
             Sign in to register
           </button>

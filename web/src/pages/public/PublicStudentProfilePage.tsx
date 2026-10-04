@@ -306,7 +306,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
           <div className="flex items-center gap-3">
             <Link
               to="/students"
-              className="group inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-white transition-colors py-1.5 px-2 rounded-lg hover:bg-slate-800/60"
+              className="group inline-flex min-h-[44px] items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-white transition-colors py-2 px-2.5 rounded-lg hover:bg-slate-800/60"
               title="Return to Student Directory"
             >
               <ArrowLeft size={14} className="transition-transform group-hover:-translate-x-0.5" />
@@ -315,7 +315,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
 
             <div className="h-4 w-px bg-slate-800 hidden sm:block" />
 
-            <a href="#home" className="flex items-center gap-2.5">
+            <a href="#home" className="flex items-center gap-2.5 min-h-[44px]">
               <span className="flex size-8 items-center justify-center rounded-lg bg-gradient-to-tr from-rose-500 to-pink-500 font-heading text-xs font-black text-white shadow-sm">
                 {initials}
               </span>
@@ -347,7 +347,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
             <button
               type="button"
               onClick={() => window.print()}
-              className="inline-flex items-center gap-1.5 p-2 sm:px-3 sm:py-1.5 rounded-lg border border-slate-800/80 bg-slate-900/60 text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
+              className="inline-flex min-h-[44px] items-center gap-1.5 p-2 sm:px-3 sm:py-2 rounded-lg border border-slate-800/80 bg-slate-900/60 text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
               title="Save PDF / Print"
             >
               <Printer size={15} />
@@ -357,7 +357,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
             <button
               type="button"
               onClick={handleShare}
-              className="inline-flex items-center gap-1.5 p-2 sm:px-3 sm:py-1.5 rounded-lg border border-slate-800/80 bg-slate-900/60 text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
+              className="inline-flex min-h-[44px] items-center gap-1.5 p-2 sm:px-3 sm:py-2 rounded-lg border border-slate-800/80 bg-slate-900/60 text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
               title="Share portfolio"
             >
               <Share2 size={15} />
@@ -369,7 +369,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
                 href={resumeDownloadHref}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="hidden sm:inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-rose-500 to-pink-500 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:from-rose-600 hover:to-pink-600 transition-all"
+                className="hidden sm:inline-flex min-h-[44px] items-center gap-1.5 rounded-lg bg-gradient-to-r from-rose-500 to-pink-500 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:from-rose-600 hover:to-pink-600 transition-all"
               >
                 <FileText size={14} />
                 <span>Resume</span>
@@ -380,7 +380,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
             <button
               type="button"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden p-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800"
+              className="lg:hidden min-h-[44px] min-w-[44px] flex items-center justify-center p-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800"
               aria-label="Toggle navigation menu"
             >
               {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
@@ -396,7 +396,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
                 key={item.id}
                 href={`#${item.id}`}
                 onClick={() => setMobileMenuOpen(false)}
-                className={`block px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                className={`block min-h-[44px] flex items-center px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
                   activeSection === item.id
                     ? 'bg-rose-500/15 text-rose-300'
                     : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
@@ -411,7 +411,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
                   href={resumeDownloadHref}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 text-xs font-semibold text-white"
+                  className="flex min-h-[44px] items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 text-xs font-semibold text-white"
                 >
                   <FileText size={15} />
                   <span>Download Resume PDF</span>
@@ -453,7 +453,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
               <div className="mt-6 flex flex-wrap items-center justify-center lg:justify-start gap-3">
                 <a
                   href="#contact"
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 px-5 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-md shadow-rose-950/40 hover:from-rose-600 hover:to-pink-600 transition-all duration-200"
+                  className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 px-5 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-md shadow-rose-950/40 hover:from-rose-600 hover:to-pink-600 transition-all duration-200"
                 >
                   <Mail size={15} />
                   <span>Contact Me</span>
@@ -464,7 +464,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
                     href={resumeDownloadHref}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-800/80 px-4 py-2.5 text-xs sm:text-sm font-semibold text-slate-200 hover:bg-slate-800 hover:text-white transition-colors"
+                    className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-800/80 px-4 py-2.5 text-xs sm:text-sm font-semibold text-slate-200 hover:bg-slate-800 hover:text-white transition-colors"
                   >
                     <FileText size={15} />
                     <span>Download Resume</span>
@@ -479,7 +479,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
                     href={safeUrl(profile.githubUrl)}
                     target="_blank"
                     rel="noreferrer"
-                    className="flex size-9 items-center justify-center rounded-xl border border-slate-800 bg-slate-900/80 text-slate-300 hover:border-slate-700 hover:text-white transition-colors"
+                    className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-slate-800 bg-slate-900/80 text-slate-300 hover:border-slate-700 hover:text-white transition-colors"
                     title="GitHub"
                   >
                     <Github size={16} />
@@ -490,7 +490,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
                     href={safeUrl(profile.linkedinUrl)}
                     target="_blank"
                     rel="noreferrer"
-                    className="flex size-9 items-center justify-center rounded-xl border border-slate-800 bg-slate-900/80 text-slate-300 hover:border-slate-700 hover:text-white transition-colors"
+                    className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-slate-800 bg-slate-900/80 text-slate-300 hover:border-slate-700 hover:text-white transition-colors"
                     title="LinkedIn"
                   >
                     <Linkedin size={16} />
@@ -501,7 +501,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
                     href={safeUrl(profile.leetcodeUrl)}
                     target="_blank"
                     rel="noreferrer"
-                    className="flex size-9 items-center justify-center rounded-xl border border-slate-800 bg-slate-900/80 text-slate-300 hover:border-slate-700 hover:text-amber-400 transition-colors"
+                    className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-slate-800 bg-slate-900/80 text-slate-300 hover:border-slate-700 hover:text-amber-400 transition-colors"
                     title="LeetCode"
                   >
                     <LeetCodeIcon className="size-4 text-amber-500" />
@@ -512,7 +512,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
                     href={safeUrl(profile.codechefUrl)}
                     target="_blank"
                     rel="noreferrer"
-                    className="flex size-9 items-center justify-center rounded-xl border border-slate-800 bg-slate-900/80 text-slate-300 hover:border-slate-700 hover:text-amber-600 transition-colors"
+                    className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-slate-800 bg-slate-900/80 text-slate-300 hover:border-slate-700 hover:text-amber-600 transition-colors"
                     title="CodeChef"
                   >
                     <CodeChefIcon className="size-4 text-amber-600" />
@@ -523,7 +523,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
                     href={safeUrl(profile.portfolioUrl)}
                     target="_blank"
                     rel="noreferrer"
-                    className="flex size-9 items-center justify-center rounded-xl border border-slate-800 bg-slate-900/80 text-slate-300 hover:border-slate-700 hover:text-white transition-colors"
+                    className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-slate-800 bg-slate-900/80 text-slate-300 hover:border-slate-700 hover:text-white transition-colors"
                     title="Personal Website"
                   >
                     <Globe size={16} />
@@ -532,7 +532,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
                 {student.email && safeUrl(`mailto:${student.email}`) && (
                   <a
                     href={safeUrl(`mailto:${student.email}`)}
-                    className="flex size-9 items-center justify-center rounded-xl border border-slate-800 bg-slate-900/80 text-slate-300 hover:border-slate-700 hover:text-white transition-colors"
+                    className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-slate-800 bg-slate-900/80 text-slate-300 hover:border-slate-700 hover:text-white transition-colors"
                     title="Email"
                   >
                     <Mail size={16} />
@@ -762,7 +762,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
                           href={safeUrl(project.githubUrl)}
                           target="_blank"
                           rel="noreferrer"
-                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-rose-400 hover:text-rose-300 transition-colors"
+                          className="inline-flex min-h-[44px] items-center gap-1.5 py-2 px-1 text-xs font-semibold text-rose-400 hover:text-rose-300 transition-colors"
                         >
                           <Github size={13} />
                           <span>Source</span>
@@ -773,7 +773,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
                           href={safeUrl(project.videoUrl)}
                           target="_blank"
                           rel="noreferrer"
-                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-300 hover:text-white transition-colors"
+                          className="inline-flex min-h-[44px] items-center gap-1.5 py-2 px-1 text-xs font-semibold text-slate-300 hover:text-white transition-colors"
                         >
                           <ExternalLink size={13} />
                           <span>Live Demo</span>
@@ -973,7 +973,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
         <button
           type="button"
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          className="fixed bottom-6 right-6 z-40 p-3 rounded-full bg-rose-500 text-white shadow-lg shadow-rose-950/50 hover:bg-rose-600 transition-all duration-200 print:hidden"
+          className="fixed bottom-6 right-6 z-40 min-h-[44px] min-w-[44px] flex items-center justify-center p-3 rounded-full bg-rose-500 text-white shadow-lg shadow-rose-950/50 hover:bg-rose-600 transition-all duration-200 print:hidden"
           aria-label="Scroll to top"
         >
           <ChevronUp size={18} />

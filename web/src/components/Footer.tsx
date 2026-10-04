@@ -25,10 +25,10 @@ export const Footer: React.FC = () => (
         </div>
 
         <nav aria-label="Footer" className="flex flex-wrap gap-x-6 gap-y-2">
-          <Link to="/students" className="text-label-lg text-ink-secondary hover:text-ink">
+          <Link to="/students" className="inline-flex min-h-[44px] items-center text-label-lg text-ink-secondary hover:text-ink">
             Students
           </Link>
-          <Link to="/events" className="text-label-lg text-ink-secondary hover:text-ink">
+          <Link to="/events" className="inline-flex min-h-[44px] items-center text-label-lg text-ink-secondary hover:text-ink">
             Events
           </Link>
         </nav>

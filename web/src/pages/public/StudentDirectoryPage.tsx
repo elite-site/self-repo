@@ -112,7 +112,7 @@ const FilterControls: React.FC<FilterControlsProps> = ({
         id={`${idPrefix}-year`}
         value={yearFilter}
         onChange={(e) => setYearFilter(e.target.value)}
-        className="select"
+        className="select min-h-[44px]"
       >
         <option value="ALL">All years</option>
         <option value="1">1st year</option>
@@ -130,7 +130,7 @@ const FilterControls: React.FC<FilterControlsProps> = ({
         id={`${idPrefix}-section`}
         value={sectionFilter}
         onChange={(e) => setSectionFilter(e.target.value)}
-        className="select"
+        className="select min-h-[44px]"
       >
         <option value="ALL">All sections</option>
         <option value="A">Section A</option>
@@ -147,7 +147,7 @@ const FilterControls: React.FC<FilterControlsProps> = ({
         id={`${idPrefix}-skill`}
         value={skillFilter}
         onChange={(e) => setSkillFilter(e.target.value)}
-        className="select"
+        className="select min-h-[44px]"
       >
         <option value="">All technical skills</option>
         {availableSkills.map((sk) => (
@@ -401,13 +401,13 @@ export const StudentDirectoryPage: React.FC<StudentDirectoryProps> = ({ session,
               placeholder="Search by name, roll number or skill"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="input pl-11"
+              className="input pl-11 min-h-[44px]"
             />
             {search && (
               <button
                 type="button"
                 onClick={clearSearch}
-                className="absolute right-3 top-2.5 flex size-6 cursor-pointer items-center justify-center rounded text-ink-muted transition-colors hover:text-ink"
+                className="absolute right-2 top-1/2 -translate-y-1/2 flex min-h-[44px] min-w-[44px] cursor-pointer items-center justify-center rounded text-ink-muted transition-colors hover:text-ink"
                 aria-label="Clear search"
               >
                 <X size={14} strokeWidth={2} aria-hidden="true" />
@@ -418,7 +418,7 @@ export const StudentDirectoryPage: React.FC<StudentDirectoryProps> = ({ session,
           <div className="flex items-center gap-2">
             <Button
               variant="secondary"
-              className="lg:hidden"
+              className="lg:hidden min-h-[44px]"
               onClick={() => setFiltersOpen(true)}
               aria-haspopup="dialog"
               aria-expanded={filtersOpen}
@@ -431,7 +431,7 @@ export const StudentDirectoryPage: React.FC<StudentDirectoryProps> = ({ session,
             </Button>
 
             {hasActiveFilters && (
-              <Button variant="ghost" onClick={resetFilters}>
+              <Button variant="ghost" className="min-h-[44px]" onClick={resetFilters}>
                 Clear all
               </Button>
             )}

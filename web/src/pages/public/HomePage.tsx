@@ -70,7 +70,7 @@ export const HomePage: React.FC<HomePageProps> = ({ session, onLogout }) => {
         <section className="border-b border-edge bg-surface">
           <div className="mx-auto grid grid-cols-1 max-w-canvas items-center gap-12 px-6 pb-16 pt-14 sm:px-10 sm:pb-20 sm:pt-20 lg:grid-cols-12 lg:gap-16">
             <div className="min-w-0 lg:col-span-6">
-              <p className="text-label-sm uppercase tracking-widest text-ink-brand">
+              <p className="text-label-md uppercase tracking-widest text-ink-brand">
                 Department of Information Technology
               </p>
               <h1 className="mt-4 font-heading text-headline-xl-mobile font-extrabold tracking-tight text-ink sm:text-headline-xl">
@@ -82,11 +82,11 @@ export const HomePage: React.FC<HomePageProps> = ({ session, onLogout }) => {
               </p>
 
               <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
-                <button type="button" onClick={handleSignIn} className="btn btn-primary px-5 py-2.5">
+                <button type="button" onClick={handleSignIn} className="btn btn-primary min-h-[44px] px-5 py-2.5">
                   <span>Student Sign In</span>
                   <ArrowRight size={16} strokeWidth={2} aria-hidden="true" />
                 </button>
-                <Link to="/students" className="btn btn-secondary px-5 py-2.5">
+                <Link to="/students" className="btn btn-secondary min-h-[44px] px-5 py-2.5">
                   <Users size={16} strokeWidth={1.75} aria-hidden="true" />
                   <span>Browse directory</span>
                 </Link>
@@ -141,14 +141,14 @@ export const HomePage: React.FC<HomePageProps> = ({ session, onLogout }) => {
                             <p className="line-clamp-2 break-words font-heading text-label-lg font-semibold text-ink">
                               {st.name}
                             </p>
-                            <p className="line-clamp-2 text-label-sm text-ink-muted">
+                            <p className="line-clamp-2 text-label-md text-ink-muted">
                               {st.rollNo} · Year {st.year} ({st.section})
                             </p>
                           </div>
                         </div>
                         <Link
                           to={`/students/${st.rollNo || st.id}`}
-                          className="shrink-0 text-label-md font-semibold text-ink-brand hover:text-brand-hover"
+                          className="inline-flex min-h-[44px] shrink-0 items-center py-2 px-1 text-label-md font-semibold text-ink-brand hover:text-brand-hover"
                         >
                           View profile
                         </Link>
@@ -164,7 +164,7 @@ export const HomePage: React.FC<HomePageProps> = ({ session, onLogout }) => {
                 <div className="mt-4 border-t border-edge pt-4">
                   <Link
                     to="/students"
-                    className="inline-flex items-center gap-1.5 text-label-lg font-semibold text-ink-brand hover:text-brand-hover"
+                    className="inline-flex min-h-[44px] items-center gap-1.5 text-label-lg font-semibold text-ink-brand hover:text-brand-hover"
                   >
                     <span>Browse the directory</span>
                     <ArrowRight size={15} strokeWidth={2} aria-hidden="true" />
@@ -228,10 +228,10 @@ export const HomePage: React.FC<HomePageProps> = ({ session, onLogout }) => {
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder="Name, roll number, or skill"
-                      className="input pl-10"
+                      className="input pl-10 min-h-[44px]"
                     />
                   </div>
-                  <button type="submit" className="btn btn-primary shrink-0">
+                  <button type="submit" className="btn btn-primary min-h-[44px] shrink-0">
                     <span>Search</span>
                   </button>
                 </div>
@@ -254,7 +254,7 @@ export const HomePage: React.FC<HomePageProps> = ({ session, onLogout }) => {
               Browse the schedule, eligibility, and venue details before you sign in. Registration
               opens to students only.
             </p>
-            <Link to="/events" className="btn btn-primary mt-7 px-5 py-2.5">
+            <Link to="/events" className="btn btn-primary min-h-[44px] mt-7 px-5 py-2.5">
               <Calendar size={16} strokeWidth={1.75} aria-hidden="true" />
               <span>Browse department events</span>
             </Link>

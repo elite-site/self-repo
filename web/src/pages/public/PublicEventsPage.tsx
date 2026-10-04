@@ -113,7 +113,7 @@ export const PublicEventsPage: React.FC<PublicEventsPageProps> = ({ session, onL
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search events"
-            className="input pl-11"
+            className="input pl-11 min-h-[44px]"
           />
         </div>
 
@@ -122,7 +122,7 @@ export const PublicEventsPage: React.FC<PublicEventsPageProps> = ({ session, onL
             <p className="text-body-sm text-ink-secondary">
               Sign in with your college account to register for any event.
             </p>
-            <button type="button" onClick={handleSignIn} className="btn btn-primary shrink-0">
+            <button type="button" onClick={handleSignIn} className="btn btn-primary min-h-[44px] shrink-0">
               Student Sign In
             </button>
           </div>
@@ -170,7 +170,7 @@ export const PublicEventsPage: React.FC<PublicEventsPageProps> = ({ session, onL
                       className="-mx-2 flex items-center gap-4 rounded-lg px-2 py-4 transition-colors duration-fast hover:bg-surface-sunken"
                     >
                       <span className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-lg border border-edge bg-surface-inset">
-                        <span className="font-heading text-label-sm tracking-wide text-brand">
+                        <span className="font-heading text-label-md tracking-wide text-brand">
                           {date?.month ?? 'TBA'}
                         </span>
                         <span className="font-heading text-headline-sm leading-none text-ink">
