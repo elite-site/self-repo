@@ -84,18 +84,20 @@ export const RegistrationsPage: React.FC = () => {
     <div className="space-y-6 text-left page-enter" role="main">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-headline-md font-black text-ink font-heading">My Event Registrations</h1>
+          <h1 className="text-headline-md font-black text-ink font-heading">My event registrations</h1>
           <p className="text-body-sm text-ink-muted">
             Track confirmed registrations, upcoming competition dates, and participation status
           </p>
         </div>
-        <Link
-          to="/events"
-          className="btn btn-primary inline-flex items-center gap-1.5 shrink-0"
-        >
-          <span>Explore Events</span>
-          <ExternalLink className="w-3.5 h-3.5" aria-hidden="true" />
-        </Link>
+        {regs.length > 0 && (
+          <Link
+            to="/events"
+            className="btn btn-primary inline-flex items-center gap-1.5 shrink-0"
+          >
+            <span>Explore events</span>
+            <ExternalLink className="w-3.5 h-3.5" aria-hidden="true" />
+          </Link>
+        )}
       </div>
 
       {error && (
@@ -121,7 +123,7 @@ export const RegistrationsPage: React.FC = () => {
             to="/events"
             className="btn btn-primary inline-flex items-center gap-1.5"
           >
-            <span>Browse Upcoming Events</span>
+            <span>Explore events</span>
           </Link>
         </div>
       ) : (

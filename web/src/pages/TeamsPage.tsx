@@ -161,29 +161,31 @@ export const TeamsPage: React.FC = () => {
             Form collaborative teams with peers across sections for department hackathons and projects
           </p>
         </div>
-        <button
-          onClick={() => {
-            setTeamName('');
-            setCreateError(null);
-            if (events.length > 0 && !selectedEventId) {
-              setSelectedEventId(events[0].id);
-            }
-            setCreateModalOpen(true);
-          }}
-          disabled={events.length === 0}
-          title={events.length === 0 ? 'No active event available to create a team for.' : undefined}
-          className="btn btn-primary inline-flex items-center gap-1.5 shrink-0"
-        >
-          <Plus className="w-4 h-4" aria-hidden="true" />
-          <span>Create New Team</span>
-        </button>
+        {teams.length > 0 && (
+          <button
+            onClick={() => {
+              setTeamName('');
+              setCreateError(null);
+              if (events.length > 0 && !selectedEventId) {
+                setSelectedEventId(events[0].id);
+              }
+              setCreateModalOpen(true);
+            }}
+            disabled={events.length === 0}
+            title={events.length === 0 ? 'No active event available to create a team for.' : undefined}
+            className="btn btn-primary inline-flex items-center gap-1.5 shrink-0"
+          >
+            <Plus className="w-4 h-4" aria-hidden="true" />
+            <span>Create team</span>
+          </button>
+        )}
       </div>
 
       {events.length === 0 && !loading && (
         <div className="p-4 bg-status-bg-pending border border-edge-strong rounded-lg text-status-pending text-body-sm flex items-center gap-2.5" role="status">
           <AlertCircle className="w-4 h-4 shrink-0" aria-hidden="true" />
           <div>
-            <span className="font-bold block">Team Creation Disabled</span>
+            <span className="font-bold block">Team creation disabled</span>
             <span>No active event available to create a team for. Team creation will become available when an event opens.</span>
           </div>
         </div>
@@ -220,7 +222,7 @@ export const TeamsPage: React.FC = () => {
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             <Mail className="w-4 h-4 text-status-review" aria-hidden="true" />
-            <h2 className="text-body-md font-bold text-ink font-heading">Pending Team Invitations ({invitations.length})</h2>
+            <h2 className="text-body-md font-bold text-ink font-heading">Pending team invitations ({invitations.length})</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {invitations.map((inv) => (
@@ -279,7 +281,7 @@ export const TeamsPage: React.FC = () => {
               className="btn btn-primary inline-flex items-center gap-1.5"
             >
               <Plus className="w-3.5 h-3.5" aria-hidden="true" />
-              <span>Create Your First Team</span>
+              <span>Create team</span>
             </button>
             {events.length === 0 && (
               <p className="text-label-sm text-status-pending mt-2 font-medium">
@@ -382,7 +384,7 @@ export const TeamsPage: React.FC = () => {
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between pb-3 border-b border-edge">
-                <h3 id="create-team-modal-title" className="text-body-md font-bold text-ink font-heading">Create New Team</h3>
+                <h3 id="create-team-modal-title" className="text-body-md font-bold text-ink font-heading">Create team</h3>
                 <button
                   onClick={() => setCreateModalOpen(false)}
                   className="p-1 text-ink-muted hover:text-ink rounded-lg cursor-pointer transition-colors"
@@ -407,7 +409,7 @@ export const TeamsPage: React.FC = () => {
                 )}
 
                 <div>
-                  <label htmlFor="create-team-event" className="label">Target Event *</label>
+                  <label htmlFor="create-team-event" className="label">Target event *</label>
                   {events.length === 0 ? (
                     <div className="p-2.5 surface-sunken border border-edge rounded-lg text-body-sm text-ink-secondary">
                       No active event available to create a team for.
@@ -431,7 +433,7 @@ export const TeamsPage: React.FC = () => {
                 </div>
 
                 <div>
-                  <label htmlFor="create-team-name" className="label">Team Name *</label>
+                  <label htmlFor="create-team-name" className="label">Team name *</label>
                   <input
                     id="create-team-name"
                     type="text"
@@ -457,7 +459,7 @@ export const TeamsPage: React.FC = () => {
                     disabled={creating || !teamName.trim() || !selectedEventId || events.length === 0}
                     className="btn btn-primary"
                   >
-                    {creating ? 'Creating...' : 'Create Team'}
+                    {creating ? 'Creating…' : 'Create team'}
                   </button>
                 </div>
               </form>
@@ -496,7 +498,7 @@ export const TeamsPage: React.FC = () => {
               {inviteSuccess ? (
                 <div className="py-8 text-center space-y-2" role="status" aria-live="polite">
                   <Check className="w-10 h-10 text-status-approved mx-auto" aria-hidden="true" />
-                  <h4 className="text-body-sm font-bold text-ink font-heading">Invitation Sent!</h4>
+                  <h4 className="text-body-sm font-bold text-ink font-heading">Invitation sent</h4>
                   <p className="text-body-sm text-ink-secondary">The student will receive an invitation in their portal inbox.</p>
                 </div>
               ) : (
@@ -536,7 +538,7 @@ export const TeamsPage: React.FC = () => {
                       disabled={inviting || !inviteRollNo.trim()}
                       className="btn btn-primary"
                     >
-                      {inviting ? 'Sending...' : 'Send Invitation'}
+                      {inviting ? 'Sending…' : 'Send invitation'}
                     </button>
                   </div>
                 </form>

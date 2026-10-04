@@ -62,7 +62,7 @@ export const HomePage: React.FC<HomePageProps> = ({ session, onLogout }) => {
   };
 
   const stats = [
-    studentTotal !== null ? { label: 'Verified profiles in the directory', value: studentTotal } : null,
+    studentTotal !== null ? { label: 'Profiles in the directory', value: studentTotal } : null,
   ].filter((stat): stat is { label: string; value: number } => stat !== null);
 
   return (
@@ -116,7 +116,7 @@ export const HomePage: React.FC<HomePageProps> = ({ session, onLogout }) => {
                   </div>
                   <span className="badge badge-approved shrink-0">
                     <CheckCircle2 size={12} strokeWidth={2.5} aria-hidden="true" />
-                    Verified Roster
+                    Department directory
                   </span>
                 </div>
 

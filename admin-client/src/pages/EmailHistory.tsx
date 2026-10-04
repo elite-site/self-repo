@@ -44,7 +44,7 @@ export const EmailHistory: React.FC = () => {
     return (
       <div className="flex flex-col items-center justify-center min-h-[450px]">
         <div className="w-10 h-10 border-3 border-brand border-t-transparent rounded-full animate-spin mb-4" />
-        <p className="text-sm font-medium text-ink-muted">Loading outbound communication logs...</p>
+        <p className="text-sm font-medium text-ink-muted">Loading outbound communication logs…</p>
       </div>
     );
   }
@@ -109,10 +109,10 @@ export const EmailHistory: React.FC = () => {
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="p-4 bg-surface border border-edge rounded-xl shadow-sm">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted block mb-1">
+          <span className="text-xs font-semibold  text-ink-muted block mb-1">
             Workflow Executions
           </span>
-          <div className="text-2xl font-extrabold text-ink">
+          <div className="text-2xl font-semibold text-ink">
             {automationRuns.length} Batches
           </div>
           <p className="text-xs text-ink-muted mt-1">
@@ -121,10 +121,10 @@ export const EmailHistory: React.FC = () => {
         </div>
 
         <div className="p-4 bg-surface border border-edge rounded-xl shadow-sm">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted block mb-1">
+          <span className="text-xs font-semibold  text-ink-muted block mb-1">
             Direct Email Logs
           </span>
-          <div className="text-2xl font-extrabold text-status-approved">
+          <div className="text-2xl font-semibold text-status-approved">
             {emailLogs.length} Records
           </div>
           <p className="text-xs text-ink-muted mt-1">
@@ -133,10 +133,10 @@ export const EmailHistory: React.FC = () => {
         </div>
 
         <div className="p-4 bg-surface border border-edge rounded-xl shadow-sm">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted block mb-1">
+          <span className="text-xs font-semibold  text-ink-muted block mb-1">
             Estimated Student Deliveries
           </span>
-          <div className="text-2xl font-extrabold text-status-approved">
+          <div className="text-2xl font-semibold text-status-approved">
             {totalDispatched.toLocaleString()} Sent
           </div>
           <p className="text-xs text-ink-muted mt-1">
@@ -176,7 +176,7 @@ export const EmailHistory: React.FC = () => {
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" />
           <input
             type="text"
-            placeholder={activeView === 'runs' ? 'Search workflow or subject...' : 'Search recipient email or subject...'}
+            placeholder={activeView === 'runs' ? 'Search workflow or subject…' : 'Search recipient email or subject…'}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-9 pr-3 py-2 text-xs rounded-lg border border-edge-strong bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-brand"
@@ -194,7 +194,7 @@ export const EmailHistory: React.FC = () => {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-surface-sunken text-ink-secondary uppercase font-semibold border-b border-edge">
+                <thead className="bg-surface-sunken text-ink-secondary font-semibold border-b border-edge">
                   <tr>
                     <th className="px-5 py-3">Workflow Rule</th>
                     <th className="px-5 py-3">Trigger Type</th>
@@ -211,7 +211,7 @@ export const EmailHistory: React.FC = () => {
                         {run.automation?.name || 'Automation Dispatch'}
                       </td>
                       <td className="px-5 py-3.5">
-                        <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-status-bg-approved text-status-approved border border-edge">
+                        <span className="font-mono text-xs px-2 py-0.5 rounded bg-status-bg-approved text-status-approved border border-edge">
                           {run.automation?.trigger || 'SCHEDULED'}
                         </span>
                       </td>
@@ -222,12 +222,12 @@ export const EmailHistory: React.FC = () => {
                         <span className="text-status-approved font-bold">{run.sentCount}</span> / {run.recipientCount}
                       </td>
                       <td className="px-5 py-3.5">
-                        <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-status-bg-approved text-status-approved">
+                        <span className="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full bg-status-bg-approved text-status-approved">
                           <CheckCircle2 className="w-3 h-3" />
                           SUCCESS
                         </span>
                       </td>
-                      <td className="px-5 py-3.5 text-ink-muted font-mono text-[11px]">
+                      <td className="px-5 py-3.5 text-ink-muted font-mono text-xs">
                         {new Date(run.runAt).toLocaleString()}
                       </td>
                     </tr>
@@ -249,7 +249,7 @@ export const EmailHistory: React.FC = () => {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-surface-sunken text-ink-secondary uppercase font-semibold border-b border-edge">
+                <thead className="bg-surface-sunken text-ink-secondary font-semibold border-b border-edge">
                   <tr>
                     <th className="px-5 py-3">Recipient Email</th>
                     <th className="px-5 py-3">Recipient Name</th>
@@ -272,18 +272,18 @@ export const EmailHistory: React.FC = () => {
                       </td>
                       <td className="px-5 py-3.5">
                         {log.status === 'SENT' ? (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-status-bg-approved text-status-approved">
+                          <span className="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full bg-status-bg-approved text-status-approved">
                             <CheckCircle2 className="w-3 h-3" />
                             SENT
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-status-bg-rejected text-status-rejected">
+                          <span className="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full bg-status-bg-rejected text-status-rejected">
                             <XCircle className="w-3 h-3" />
                             FAILED
                           </span>
                         )}
                       </td>
-                      <td className="px-5 py-3.5 text-ink-muted font-mono text-[11px]">
+                      <td className="px-5 py-3.5 text-ink-muted font-mono text-xs">
                         {new Date(log.sentAt).toLocaleString()}
                       </td>
                     </tr>

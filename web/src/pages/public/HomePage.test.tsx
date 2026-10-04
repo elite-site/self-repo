@@ -59,7 +59,7 @@ describe('HomePage (public landing)', () => {
     await renderHome();
 
     expect(screen.getByText(/Department Spotlight/i)).toBeInTheDocument();
-    expect(screen.getByText(/Verified Roster/i)).toBeInTheDocument();
+    expect(screen.getByText(/Department directory/i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /browse the directory/i })).toBeInTheDocument();
   });
 

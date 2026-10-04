@@ -15,7 +15,7 @@ const STANDARDS = [
   {
     icon: FileCheck,
     title: 'Verification review',
-    body: 'Achievements, certificates, and resumes are reviewed by department coordinators before a profile is endorsed in the public directory.',
+    body: 'Achievements, certificates, and resumes are reviewed by faculty before a profile is endorsed in the public directory.',
   },
 ];
 

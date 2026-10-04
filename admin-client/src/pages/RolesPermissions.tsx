@@ -56,7 +56,7 @@ export const RolesPermissions: React.FC = () => {
     setSuccess(null);
     try {
       await adminApi.assignRole(adminId, roleId);
-      setSuccess('Security role assigned successfully.');
+      setSuccess('Security role assigned.');
       await loadRoles(true);
     } catch (err: any) {
       console.error('Failed to assign role:', err);
@@ -93,7 +93,7 @@ export const RolesPermissions: React.FC = () => {
     return (
       <div className="flex flex-col items-center justify-center min-h-[450px]">
         <div className="w-10 h-10 border-3 border-brand border-t-transparent rounded-full animate-spin mb-4" />
-        <p className="text-sm font-medium text-ink-muted">Loading access control matrix...</p>
+        <p className="text-sm font-medium text-ink-muted">Loading access control matrix…</p>
       </div>
     );
   }
@@ -184,11 +184,11 @@ export const RolesPermissions: React.FC = () => {
               >
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="font-mono text-xs font-extrabold px-2.5 py-1 rounded bg-surface-sunken text-ink border border-edge">
+                    <span className="font-mono text-xs font-semibold px-2.5 py-1 rounded bg-surface-sunken text-ink border border-edge">
                       {role.name}
                     </span>
                     {role.isSystem && (
-                      <span className="text-[10px] font-bold text-ink-muted uppercase tracking-wider">
+                      <span className="text-xs font-semibold text-ink-muted">
                         System Built-in
                       </span>
                     )}
@@ -203,7 +203,7 @@ export const RolesPermissions: React.FC = () => {
                     <Users className="w-3.5 h-3.5 text-ink-muted" />
                     {assignedCount} Assigned {assignedCount === 1 ? 'Admin' : 'Admins'}
                   </span>
-                  <span className="text-[11px] text-status-approved font-semibold">
+                  <span className="text-xs text-status-approved font-semibold">
                     Full Scope
                   </span>
                 </div>
@@ -226,7 +226,7 @@ export const RolesPermissions: React.FC = () => {
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-surface-sunken text-ink-secondary uppercase font-semibold border-b border-edge">
+            <thead className="bg-surface-sunken text-ink-secondary font-semibold border-b border-edge">
               <tr>
                 <th className="px-5 py-3">Feature Domain</th>
                 <th className="px-5 py-3 text-center">SUPER_ADMIN</th>
@@ -292,7 +292,7 @@ export const RolesPermissions: React.FC = () => {
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-surface-sunken text-ink-secondary uppercase font-semibold border-b border-edge">
+            <thead className="bg-surface-sunken text-ink-secondary font-semibold border-b border-edge">
               <tr>
                 <th className="px-5 py-3">Username</th>
                 <th className="px-5 py-3">Email Address</th>
@@ -312,7 +312,7 @@ export const RolesPermissions: React.FC = () => {
                       {adm.email}
                     </td>
                     <td className="px-5 py-3.5">
-                      <span className="font-mono text-[11px] font-bold px-2 py-0.5 rounded bg-surface-sunken text-ink border border-edge">
+                      <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-surface-sunken text-ink border border-edge">
                         {adm.role}
                       </span>
                     </td>
@@ -343,8 +343,8 @@ export const RolesPermissions: React.FC = () => {
 
       {/* Create Role Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-scrim backdrop-blur-sm">
-          <div className="bg-surface text-ink border border-edge rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-scrim">
+          <div className="bg-surface text-ink border border-edge rounded-lg w-full max-w-md shadow-2xl overflow-hidden">
             <div className="p-5 border-b border-edge flex items-center justify-between">
               <h2 className="text-base font-bold text-ink flex items-center gap-2">
                 <Shield className="w-5 h-5 text-ink-brand" />
@@ -360,7 +360,7 @@ export const RolesPermissions: React.FC = () => {
 
             <form onSubmit={handleCreateRole} className="p-6 space-y-4">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-ink-secondary mb-1">
+                <label className="block text-xs font-semibold text-ink-secondary mb-1">
                   Role Identifier *
                 </label>
                 <input
@@ -374,12 +374,12 @@ export const RolesPermissions: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-ink-secondary mb-1">
+                <label className="block text-xs font-semibold text-ink-secondary mb-1">
                   Description
                 </label>
                 <textarea
                   rows={3}
-                  placeholder="Outline the responsibilities and scope for this role..."
+                  placeholder="Outline the responsibilities and scope for this role…"
                   value={newRoleDesc}
                   onChange={(e) => setNewRoleDesc(e.target.value)}
                   className="w-full px-3 py-2 text-xs rounded-lg border border-edge-strong bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-brand"
@@ -399,7 +399,7 @@ export const RolesPermissions: React.FC = () => {
                   disabled={creating}
                   className="px-5 py-2 text-xs font-bold text-on-primary bg-brand rounded-lg hover:bg-brand-hover transition-colors disabled:opacity-50"
                 >
-                  {creating ? 'Saving...' : 'Create Role'}
+                  {creating ? 'Saving…' : 'Create Role'}
                 </button>
               </div>
             </form>

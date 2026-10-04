@@ -14,7 +14,9 @@ import {
   ArrowLeft,
   GraduationCap,
   ShieldAlert,
-  Crop
+  Crop,
+  User,
+  Trash2
 } from 'lucide-react';
 import { SkeletonPage } from '../components/ui/Skeleton';
 import { api, resolveMediaUrl, invalidateApiCache } from '../services/api';
@@ -26,6 +28,7 @@ import { getPhotoStyle } from '../utils/photoStyle';
 import { compressImageToWebP } from '../utils/cropImage';
 import { LeetCodeIcon, CodeChefIcon } from '../components/icons/PlatformIcons';
 import { useToast } from '../components/Toast';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 import { useReducedMotion } from '../hooks/useReducedMotion';
 
 const COMMON_SKILLS = [
@@ -51,10 +54,12 @@ const COMMON_SKILLS = [
 
 export const EditProfilePage: React.FC = () => {
   const { showToast } = useToast();
+  const confirm = useConfirm();
   const [profile, setProfile] = useState<StudentProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [removingPhoto, setRemovingPhoto] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -117,8 +122,8 @@ export const EditProfilePage: React.FC = () => {
 
     // Validate original file: must be a supported image under 5MB
     if (!file.type.startsWith('image/')) {
-      setPhotoError('Please select a valid image file (JPEG, PNG, WEBP).');
-      showToast('Please select a valid image file (JPEG, PNG, WEBP).', 'error');
+      setPhotoError('Choose a JPG, PNG or WebP image.');
+      showToast('Choose a JPG, PNG or WebP image.', 'error');
       e.target.value = '';
       return;
     }
@@ -146,6 +151,30 @@ export const EditProfilePage: React.FC = () => {
     setCropImageSrc(null);
   };
 
+  const handleRemovePhoto = async () => {
+    const confirmed = await confirm({
+      title: 'Remove your profile photo?',
+      description: 'Your profile photo will be removed from your profile and resume.',
+      confirmLabel: 'Remove photo',
+      tone: 'danger',
+    });
+    if (!confirmed) return;
+
+    setRemovingPhoto(true);
+    setPhotoError(null);
+    try {
+      await api.deleteProfilePhoto();
+      setProfile((prev) => (prev ? { ...prev, photoUrl: undefined } : prev));
+      onPhotoChange?.(null);
+      invalidateApiCache();
+      showToast('Photo updated.');
+    } catch {
+      showToast("Couldn't remove your photo. Try again.", 'error');
+    } finally {
+      setRemovingPhoto(false);
+    }
+  };
+
   const handleCropSave = async (croppedBlob: Blob) => {
     setUploadingPhoto(true);
     setPhotoError(null);
@@ -168,13 +197,13 @@ export const EditProfilePage: React.FC = () => {
         } : prev));
         onPhotoChange?.(photoWithTimestamp);
         invalidateApiCache();
-        showToast('Profile photo updated successfully', 'success');
+        showToast('Photo updated.');
         handleCloseCropModal();
       } else {
         throw new Error('No photo URL was returned.');
       }
     } catch (err: any) {
-      const notice = err.response?.data?.message || err.message || 'Failed to upload photo. Please try again.';
+      const notice = "Couldn't upload your photo. Try again.";
       setPhotoError(notice);
       showToast(notice, 'error');
       throw err;
@@ -286,7 +315,7 @@ export const EditProfilePage: React.FC = () => {
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div>
-            <h1 className="text-headline-lg font-black text-ink font-heading">Edit Student Profile</h1>
+            <h1 className="text-headline-lg font-black text-ink font-heading">Edit student profile</h1>
             <p className="text-body-sm text-ink-secondary">Update your biography, technical stack, and social links</p>
           </div>
         </div>
@@ -310,7 +339,7 @@ export const EditProfilePage: React.FC = () => {
       {success && (
         <div className="p-4 bg-status-bg-approved border border-status-approved rounded-lg text-status-approved text-body-sm flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4 shrink-0" />
-          <span>Profile saved successfully! Redirecting to profile...</span>
+          <span>Profile saved. Redirecting to profile…</span>
         </div>
       )}
 
@@ -338,7 +367,7 @@ export const EditProfilePage: React.FC = () => {
                         .slice(0, 2)
                         .map((n) => n[0]?.toUpperCase())
                         .join('')
-                    : 'IT'}
+                    : <User className="w-10 h-10" />}
                 </div>
               )}
               {uploadingPhoto && (
@@ -360,15 +389,30 @@ export const EditProfilePage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  disabled={uploadingPhoto}
+                  disabled={uploadingPhoto || removingPhoto}
                   className="btn btn-secondary min-h-[44px]"
                 >
                   <Camera className="w-4 h-4" />
-                  <span>{uploadingPhoto ? 'Uploading...' : profile?.photoUrl ? 'Change Photo' : 'Upload Photo'}</span>
+                  <span>{uploadingPhoto ? 'Uploading…' : profile?.photoUrl ? 'Replace photo' : 'Upload photo'}</span>
                 </button>
+                {profile?.photoUrl && (
+                  <button
+                    type="button"
+                    onClick={handleRemovePhoto}
+                    disabled={uploadingPhoto || removingPhoto}
+                    className="btn btn-ghost min-h-[44px] text-status-rejected hover:bg-status-bg-rejected hover:border-status-rejected"
+                  >
+                    {removingPhoto ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="w-4 h-4" />
+                    )}
+                    <span>{removingPhoto ? 'Removing…' : 'Remove photo'}</span>
+                  </button>
+                )}
               </div>
               <p className="text-label-sm text-ink-muted">
-                Recommended: Square image, max 5MB. Visible on public directory and resume card.
+                Square image, JPG, PNG or WebP, up to 5 MB. Shown in the student directory and on your resume.
               </p>
               {photoError && <p className="text-label-sm text-status-rejected font-semibold" role="alert">{photoError}</p>}
             </div>
@@ -378,7 +422,7 @@ export const EditProfilePage: React.FC = () => {
         {/* SECTION 2: BIOGRAPHY */}
         <div className="surface space-y-3">
           <div className="flex items-center justify-between">
-            <label className="text-label-lg font-bold text-ink font-heading">Personal Biography & Focus</label>
+            <label className="text-label-lg font-bold text-ink font-heading">Bio</label>
             <span
               className={`text-body-sm font-mono ${
                 bio.length >= 280 ? 'text-status-rejected font-bold' : 'text-ink-muted'
@@ -664,7 +708,7 @@ export const EditProfilePage: React.FC = () => {
             className="btn btn-primary min-h-[44px]"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            <span>Save Profile</span>
+            <span>Save profile</span>
           </button>
         </div>
       </form>
@@ -677,6 +721,10 @@ export const EditProfilePage: React.FC = () => {
           initialPosition={profile}
           onClose={handleCloseCropModal}
           onCropSave={handleCropSave}
+          onChooseDifferent={() => {
+            handleCloseCropModal();
+            fileInputRef.current?.click();
+          }}
           isSaving={uploadingPhoto}
         />
       )}

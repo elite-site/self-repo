@@ -193,7 +193,7 @@ export const StudentsTable: React.FC<StudentsTableProps> = ({
                 arrow-key cell navigation, which this does not implement. */}
             <table className="w-full border-collapse text-left text-body-sm" aria-label="Students">
               <thead>
-                <tr className="sticky top-0 z-raised border-b border-edge bg-surface-inset text-label-sm uppercase tracking-wider text-ink-secondary">
+                <tr className="sticky top-0 z-raised border-b border-edge bg-surface-inset text-label-sm font-semibold text-ink-secondary">
                   <th className="py-3.5 px-5" scope="col">Student</th>
                   <th className="py-3.5 px-4" scope="col">Roll Number</th>
                   <th className="py-3.5 px-4" scope="col">Year & Section</th>
@@ -245,12 +245,12 @@ export const StudentsTable: React.FC<StudentsTableProps> = ({
 
                       <td className="py-3.5 px-4">
                         {student.submission?.submittedAt ? (
-                          <span className="inline-flex items-center gap-1.5 text-status-approved text-[11px] font-semibold">
+                          <span className="inline-flex items-center gap-1.5 text-status-approved text-xs font-semibold">
                             <Clock className="w-3 h-3" />
                             {formatTime(student.submission.submittedAt)}
                           </span>
                         ) : (
-                          <span className="text-ink-muted text-[11px] font-semibold">NOT SUBMITTED</span>
+                          <span className="text-ink-muted text-xs font-semibold">Not submitted</span>
                         )}
                       </td>
 

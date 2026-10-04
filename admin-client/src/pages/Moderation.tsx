@@ -44,12 +44,12 @@ const TAB_CONFIG: Array<{ id: TabType; label: string; icon: React.FC<{ className
 
 const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
   const map: Record<string, { label: string; cls: string }> = {
-    PENDING: { label: 'Pending Review', cls: 'badge badge-pending' },
-    UNDER_REVIEW: { label: 'Under Review', cls: 'badge badge-review' },
+    PENDING: { label: 'Under review', cls: 'badge badge-pending' },
+    UNDER_REVIEW: { label: 'Under review', cls: 'badge badge-review' },
     APPROVED: { label: 'Approved', cls: 'badge badge-approved' },
     REJECTED: { label: 'Rejected', cls: 'badge badge-rejected' },
-    CHANGES_REQUESTED: { label: 'Changes Requested', cls: 'badge badge-changes' },
-    HIDDEN: { label: 'Hidden', cls: 'badge badge-draft' },
+    CHANGES_REQUESTED: { label: 'Changes requested', cls: 'badge badge-changes' },
+    HIDDEN: { label: 'Unpublished', cls: 'badge badge-draft' },
   };
   const s = map[status] ?? { label: status, cls: 'badge badge-draft' };
   return <span className={s.cls}>{s.label}</span>;
@@ -59,42 +59,42 @@ const ItemTypeBadge: React.FC<{ itemType: string }> = ({ itemType }) => {
   switch (itemType) {
     case 'video':
       return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-brand-soft text-brand-soft-text border border-brand/20">
           <Film className="w-3 h-3" />
-          <span>Intro Video</span>
+          <span>Intro video</span>
         </span>
       );
     case 'resume':
       return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold badge badge-approved">
           <FileText className="w-3 h-3" />
           <span>Resume</span>
         </span>
       );
     case 'certificate':
       return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold badge badge-review">
           <Award className="w-3 h-3" />
           <span>Certificate</span>
         </span>
       );
     case 'project':
       return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-surface-sunken text-ink-secondary border border-edge">
           <FolderGit2 className="w-3 h-3" />
           <span>Project</span>
         </span>
       );
     case 'achievement':
       return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold badge badge-changes">
           <Trophy className="w-3 h-3" />
           <span>Achievement</span>
         </span>
       );
     default:
       return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-surface-sunken text-ink-secondary border border-edge">
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-surface-sunken text-ink-secondary border border-edge">
           <span>{itemType}</span>
         </span>
       );
@@ -197,7 +197,7 @@ export const Moderation: React.FC = () => {
       setItems(res.items ?? []);
     } catch (err: any) {
       console.error('Failed to load moderation queue:', err);
-      setError('Failed to load moderation queue. Please retry.');
+      setError("Couldn't load the queue. Try again.");
     } finally {
       setLoading(false);
     }
@@ -333,7 +333,7 @@ export const Moderation: React.FC = () => {
   const handleDecision = async () => {
     if (!selectedItem || !action) return;
     if ((action === 'reject' || action === 'changes') && !reason.trim()) {
-      showToast('Reason is required when rejecting or requesting changes.', 'error');
+      showToast('Add a note explaining what to change.', 'error');
       return;
     }
 
@@ -356,12 +356,12 @@ export const Moderation: React.FC = () => {
 
       showToast(
         action === 'approve'
-          ? `${readableType} approved ${publishOnApprove ? 'and published.' : 'successfully.'}`
+          ? `${readableType} approved.`
           : action === 'reject'
           ? `${readableType} rejected.`
           : action === 'changes'
-          ? `Change request sent to ${selectedItem.studentName}.`
-          : `${readableType} hidden.`
+          ? 'Change request sent.'
+          : `${readableType} unpublished.`
       );
 
       const newStatus =
@@ -392,7 +392,7 @@ export const Moderation: React.FC = () => {
       }
     } catch (err: any) {
       console.error('Decision error:', err);
-      showToast('Failed to record decision. Please try again.', 'error');
+      showToast("Couldn't save the decision. Try again.", 'error');
     } finally {
       setSubmitting(false);
     }
@@ -412,9 +412,9 @@ export const Moderation: React.FC = () => {
     try {
       await adminApi.setModerationVisibility(typeKeyFor(selectedItem), selectedItem.id, next);
       setItems((prev) => prev.map((i) => (i.id === selectedItem.id ? { ...i, isPublic: next } : i)));
-      showToast(next ? 'Published to the public page.' : 'Removed from the public page.');
+      showToast(next ? 'Showing on public profile.' : 'Hidden from public profile.');
     } catch (err: any) {
-      showToast(err.response?.data?.message || 'Could not change visibility.', 'error');
+      showToast("Couldn't change visibility. Try again.", 'error');
     } finally {
       setVisibilityBusy(false);
     }
@@ -432,9 +432,9 @@ export const Moderation: React.FC = () => {
     setActionBusy(true);
     try {
       await adminApi.requestModerationChanges(typeKeyFor(selectedItem), selectedItem.id, note.trim() || undefined);
-      showToast(`Re-upload requested from ${selectedItem.studentName}.`);
+      showToast('Change request sent.');
     } catch (err: any) {
-      showToast(err.response?.data?.message || 'Could not send the request.', 'error');
+      showToast("Couldn't send the request. Try again.", 'error');
     } finally {
       setActionBusy(false);
     }
@@ -445,8 +445,8 @@ export const Moderation: React.FC = () => {
     if (!selectedItem) return;
     const confirmed = await confirm({
       title: `Delete this ${readableTypeOf(selectedItem).toLowerCase()}?`,
-      description: `The ${readableTypeOf(selectedItem).toLowerCase()} for ${selectedItem.studentName} will be permanently removed and the student will be asked to upload a replacement.`,
-      confirmLabel: 'Delete',
+      description: 'This permanently deletes the record and its file. The student will be asked to upload again.',
+      confirmLabel: 'Delete file',
       tone: 'danger',
     });
     if (!confirmed) return;
@@ -454,7 +454,7 @@ export const Moderation: React.FC = () => {
     setDeleteBusy(true);
     try {
       await adminApi.deleteModerationItem(typeKeyFor(selectedItem), selectedItem.id);
-      showToast(`${readableTypeOf(selectedItem)} deleted. Re-upload requested.`);
+      showToast(`Deleted ${readableTypeOf(selectedItem).toLowerCase()}.`);
 
       const nextRemaining = filteredItems.filter((i) => i.id !== selectedItem.id);
       setItems((prev) => prev.filter((i) => i.id !== selectedItem.id));
@@ -464,7 +464,7 @@ export const Moderation: React.FC = () => {
         setSelectedItemId(null);
       }
     } catch (err: any) {
-      showToast(err.response?.data?.message || 'Could not delete this item.', 'error');
+      showToast("Couldn't delete this item. Try again.", 'error');
     } finally {
       setDeleteBusy(false);
     }
@@ -503,7 +503,7 @@ export const Moderation: React.FC = () => {
             <Sparkles className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-headline-sm font-extrabold text-ink">Moderation Queue</h1>
+            <h1 className="text-headline-sm font-semibold text-ink">Moderation queue</h1>
             <p className="text-body-sm text-ink-muted">
               Unified review for Intro Videos, Resumes, Certificates, Projects, and Achievements
             </p>
@@ -543,7 +543,7 @@ export const Moderation: React.FC = () => {
               <Icon className="w-4 h-4" />
               <span>{tab.label}</span>
               <span
-                className={`ml-1 text-[11px] px-1.5 py-0.2 rounded-full font-mono ${
+                className={`ml-1 text-xs px-1.5 py-0.2 rounded-full font-mono ${
                   isActive ? 'bg-white/20 text-white' : 'bg-surface-sunken text-ink-muted border border-edge'
                 }`}
               >
@@ -600,20 +600,20 @@ export const Moderation: React.FC = () => {
       {loading && items.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-64 surface-sunken rounded-xl gap-3">
           <Loader2 className="w-8 h-8 animate-spin text-brand" aria-hidden="true" />
-          <p className="text-body-sm text-ink-muted font-medium">Loading moderation items...</p>
+          <p className="text-body-sm text-ink-muted font-medium">Loading moderation items…</p>
         </div>
       ) : error ? (
         <div className="flex flex-col items-center justify-center h-64 surface-sunken rounded-xl gap-3 text-center" role="alert">
           <AlertCircle className="w-8 h-8 text-status-rejected" aria-hidden="true" />
           <p className="text-body-sm text-ink-muted">{error}</p>
           <button onClick={fetchItems} className="btn btn-secondary text-body-sm">
-            Retry Loading
+            Try again
           </button>
         </div>
       ) : filteredItems.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-64 surface-sunken rounded-xl gap-3 text-center p-6">
           <Inbox className="w-12 h-12 text-ink-muted" aria-hidden="true" />
-          <p className="text-body-md font-bold text-ink">Queue is Clear</p>
+          <p className="text-body-md font-semibold text-ink">Queue is clear</p>
           <p className="text-body-sm text-ink-muted max-w-md">
             No submissions matching your current filters require moderation right now.
           </p>
@@ -636,10 +636,10 @@ export const Moderation: React.FC = () => {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-body-sm">
               <thead>
-                <tr className="border-b border-edge bg-surface-sunken text-label-sm font-bold text-ink-secondary uppercase tracking-wider">
+                <tr className="border-b border-edge bg-surface-sunken text-label-sm font-semibold text-ink-secondary">
                   <th className="py-3 px-4">Student</th>
-                  <th className="py-3 px-4">Artifact Type</th>
-                  <th className="py-3 px-4">Title / Summary</th>
+                  <th className="py-3 px-4">Artifact type</th>
+                  <th className="py-3 px-4">Title / summary</th>
                   <th className="py-3 px-4">Submitted</th>
                   <th className="py-3 px-4">Status</th>
                   <th className="py-3 px-4 text-right">Action</th>
@@ -648,10 +648,10 @@ export const Moderation: React.FC = () => {
               <tbody className="divide-y divide-edge">
                 {paginatedItems.map((item) => {
                   const academicInfo = [
-                    item.studentBranch || 'IT',
-                    item.studentYear ? `Year ${item.studentYear}` : null,
-                    item.studentSection ? `Sec ${item.studentSection}` : null,
-                  ]
+                     item.studentBranch || 'IT',
+                     item.studentYear ? `Year ${item.studentYear}` : null,
+                     item.studentSection ? `Sec ${item.studentSection}` : null,
+                   ]
                     .filter(Boolean)
                     .join(' · ');
 
@@ -671,7 +671,7 @@ export const Moderation: React.FC = () => {
                             <div className="font-bold text-ink truncate group-hover:text-brand transition-colors">
                               {item.studentName}
                             </div>
-                            <div className="text-[12px] font-mono text-ink-muted">
+                            <div className="text-xs font-mono text-ink-muted">
                               {item.studentRoll} {academicInfo && `• ${academicInfo}`}
                             </div>
                           </div>
@@ -689,7 +689,7 @@ export const Moderation: React.FC = () => {
                           {item.title || 'Untitled Submission'}
                         </div>
                         {item.description && (
-                          <div className="text-[12px] text-ink-muted truncate max-w-xs sm:max-w-md">
+                          <div className="text-xs text-ink-muted truncate max-w-xs sm:max-w-md">
                             {item.description}
                           </div>
                         )}
@@ -698,13 +698,13 @@ export const Moderation: React.FC = () => {
                             {item.technologies.slice(0, 3).map((tech, idx) => (
                               <span
                                 key={idx}
-                                className="text-[10px] px-1.5 py-0.2 rounded bg-surface-sunken text-ink-muted border border-edge"
+                                className="text-xs px-1.5 py-0.5 rounded bg-surface-sunken text-ink-muted border border-edge"
                               >
                                 {tech}
                               </span>
                             ))}
                             {item.technologies.length > 3 && (
-                              <span className="text-[10px] text-ink-muted">
+                              <span className="text-xs text-ink-muted">
                                 +{item.technologies.length - 3}
                               </span>
                             )}
@@ -785,7 +785,7 @@ export const Moderation: React.FC = () => {
       {selectedItem &&
         createPortal(
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-scrim backdrop-blur-sm overflow-y-auto animate-fade-in"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-scrim overflow-y-auto animate-fade-in"
             role="dialog"
             aria-modal="true"
             aria-labelledby="review-modal-title"
@@ -793,7 +793,7 @@ export const Moderation: React.FC = () => {
               if (e.target === e.currentTarget) setSelectedItemId(null);
             }}
           >
-            <div className="w-full max-w-[1700px] bg-surface rounded-2xl shadow-2xl border border-edge flex flex-col overflow-hidden my-auto max-h-[95vh]">
+            <div className="w-full max-w-[1700px] bg-surface rounded-lg shadow-2xl border border-edge flex flex-col overflow-hidden my-auto max-h-[95vh]">
               {/* Modal Header */}
               <div className="flex items-center justify-between px-5 py-4 border-b border-edge bg-surface-sunken shrink-0">
                 <div className="flex items-center gap-3 min-w-0">
@@ -802,7 +802,7 @@ export const Moderation: React.FC = () => {
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h2 id="review-modal-title" className="font-extrabold text-ink text-body-md truncate">
+                      <h2 id="review-modal-title" className="font-semibold text-ink text-body-md truncate">
                         {selectedItem.studentName}
                       </h2>
                       <ItemTypeBadge itemType={selectedItem.itemType} />
@@ -860,7 +860,7 @@ export const Moderation: React.FC = () => {
                   <div className="lg:col-span-8 flex flex-col justify-center items-center bg-surface-sunken rounded-xl p-4 min-h-[400px]">
                     {/* Media Action Strip */}
                     <div className="w-full flex items-center justify-between pb-3 mb-4 border-b border-edge shrink-0">
-                      <span className="text-label-sm font-bold text-ink-muted uppercase tracking-wider">
+                      <span className="text-label-sm font-semibold text-ink-muted">
                         {selectedItem.itemType === 'video'
                           ? 'Video Player'
                           : selectedItem.itemType === 'resume'
@@ -880,7 +880,7 @@ export const Moderation: React.FC = () => {
                             className="btn btn-ghost text-label-sm py-1 px-2.5 inline-flex items-center gap-1.5"
                           >
                             <ExternalLink className="w-3.5 h-3.5 text-brand" />
-                            <span>Drive</span>
+                            <span>Open in Drive</span>
                           </a>
                         )}
                         {selectedItem.fileUrl && (
@@ -891,7 +891,7 @@ export const Moderation: React.FC = () => {
                             className="btn btn-ghost text-label-sm py-1 px-2.5 inline-flex items-center gap-1.5"
                           >
                             <ExternalLink className="w-3.5 h-3.5 text-brand" />
-                            <span>Open Tab</span>
+                            <span>Open in new tab</span>
                           </a>
                         )}
                         {selectedItem.fileUrl && (
@@ -923,13 +923,13 @@ export const Moderation: React.FC = () => {
                           ) : (
                             <div className="text-center p-8 text-ink-muted">
                               <Film className="w-12 h-12 mx-auto mb-2 opacity-40" />
-                              <p className="text-body-sm font-semibold">Video file not streamable</p>
+                              <p className="text-sm font-semibold">This video can't be played here.</p>
                             </div>
                           )}
                           <div className="w-full text-label-sm text-ink-muted flex items-center justify-between px-1 mt-3">
                             <span>Submitted: {new Date(selectedItem.submittedAt).toLocaleString()}</span>
                             {selectedItem.driveFileId && (
-                              <span className="font-mono text-[11px]">Drive ID: {selectedItem.driveFileId}</span>
+                              <span className="font-mono text-xs">File ID: {selectedItem.driveFileId}</span>
                             )}
                           </div>
                         </div>
@@ -1010,7 +1010,7 @@ export const Moderation: React.FC = () => {
 
                           {selectedItem.technologies && selectedItem.technologies.length > 0 && (
                             <div className="space-y-1.5">
-                              <span className="text-label-sm font-bold text-ink-muted uppercase">Tech Stack</span>
+                              <span className="text-label-sm font-semibold text-ink-muted">Tech stack</span>
                               <div className="flex flex-wrap gap-1.5">
                                 {selectedItem.technologies.map((tech, i) => (
                                   <span
@@ -1079,7 +1079,7 @@ export const Moderation: React.FC = () => {
                             <div className="space-y-3 p-4 surface rounded-xl border border-edge w-full">
                               <div className="space-y-1">
                                 <div className="flex items-center gap-2">
-                                  <span className="badge badge-pending text-[11px] font-bold">
+                                  <span className="badge badge-pending text-xs font-semibold">
                                     {selectedItem.category || 'Achievement'}
                                   </span>
                                   {selectedItem.organization && (
@@ -1119,9 +1119,8 @@ export const Moderation: React.FC = () => {
                   {/* Right review & decision column: lg:col-span-4 flex flex-col p-6 overflow-y-auto max-h-[85vh] */}
                   <div className="lg:col-span-4 flex flex-col p-6 overflow-y-auto max-h-[85vh] space-y-5 bg-surface rounded-xl border border-edge">
                     <div className="space-y-4">
-                      <h3 className="text-label-md font-extrabold text-ink uppercase tracking-wider flex items-center justify-between">
-                        <span>Moderation Decision</span>
-                        <span className="text-[11px] text-ink-muted font-normal">One-Click Triage</span>
+                      <h3 className="text-sm font-semibold text-ink flex items-center justify-between">
+                        <span>Moderation decision</span>
                       </h3>
 
                       {/* Decision Action Buttons */}
@@ -1131,10 +1130,10 @@ export const Moderation: React.FC = () => {
                           onClick={() => setAction('approve')}
                           className={`btn ${
                             action === 'approve' ? 'btn-primary' : 'btn-secondary'
-                          } text-body-sm py-2.5 inline-flex items-center justify-center gap-2 cursor-pointer`}
+                          } text-sm py-2.5 inline-flex items-center justify-center gap-2 cursor-pointer`}
                           aria-pressed={action === 'approve'}
                         >
-                          <CheckCircle className="w-4 h-4 text-emerald-500" />
+                          <CheckCircle className="w-4 h-4 text-status-approved" />
                           <span>Approve</span>
                         </button>
 
@@ -1143,10 +1142,10 @@ export const Moderation: React.FC = () => {
                           onClick={() => setAction('reject')}
                           className={`btn ${
                             action === 'reject' ? 'btn-danger' : 'btn-secondary'
-                          } text-body-sm py-2.5 inline-flex items-center justify-center gap-2 cursor-pointer`}
+                          } text-sm py-2.5 inline-flex items-center justify-center gap-2 cursor-pointer`}
                           aria-pressed={action === 'reject'}
                         >
-                          <XCircle className="w-4 h-4 text-rose-500" />
+                          <XCircle className="w-4 h-4 text-status-rejected" />
                           <span>Reject</span>
                         </button>
 
@@ -1155,11 +1154,11 @@ export const Moderation: React.FC = () => {
                           onClick={() => setAction('changes')}
                           className={`btn ${
                             action === 'changes' ? 'btn-primary' : 'btn-secondary'
-                          } text-body-sm py-2.5 inline-flex items-center justify-center gap-2 cursor-pointer`}
+                          } text-sm py-2.5 inline-flex items-center justify-center gap-2 cursor-pointer`}
                           aria-pressed={action === 'changes'}
                         >
-                          <MessageSquare className="w-4 h-4 text-amber-500" />
-                          <span>Changes</span>
+                          <MessageSquare className="w-4 h-4 text-status-changes" />
+                          <span>Request changes</span>
                         </button>
 
                         <button
@@ -1167,20 +1166,20 @@ export const Moderation: React.FC = () => {
                           onClick={() => setAction('hide')}
                           className={`btn ${
                             action === 'hide' ? 'btn-secondary bg-surface-sunken' : 'btn-ghost'
-                          } text-body-sm py-2.5 inline-flex items-center justify-center gap-2 cursor-pointer`}
+                          } text-sm py-2.5 inline-flex items-center justify-center gap-2 cursor-pointer`}
                           aria-pressed={action === 'hide'}
                         >
                           <EyeOff className="w-4 h-4 text-ink-muted" />
-                          <span>Hide</span>
+                          <span>Unpublish</span>
                         </button>
                       </div>
 
                       {/* Reason Textarea (Required for Reject & Changes) */}
                       {(action === 'reject' || action === 'changes') && (
                         <div className="space-y-1.5 animate-fade-in">
-                          <label htmlFor="moderation-reason" className="label text-label-sm font-bold flex items-center justify-between">
-                            <span>Feedback / Instructions to Student</span>
-                            <span className="text-status-rejected">* Required</span>
+                          <label htmlFor="moderation-reason" className="label text-sm font-semibold flex items-center justify-between">
+                            <span>Note to student</span>
+                            <span className="text-status-rejected font-medium">Required</span>
                           </label>
                           <textarea
                             id="moderation-reason"
@@ -1189,15 +1188,15 @@ export const Moderation: React.FC = () => {
                             rows={3}
                             placeholder={
                               action === 'changes'
-                                ? 'Explain specifically what needs to be changed before re-uploading...'
-                                : 'State the specific reason for rejecting this submission...'
+                                ? 'Explain what needs to be changed before re-uploading…'
+                                : 'State the reason for rejecting this submission…'
                             }
-                            className="textarea text-body-sm w-full"
+                            className="textarea text-sm w-full"
                             aria-required="true"
                             autoFocus
                           />
                           {!reason.trim() && (
-                            <p className="text-[12px] text-status-rejected font-medium">
+                            <p className="text-xs text-status-rejected font-medium">
                               Please provide a note so the student knows what to do.
                             </p>
                           )}
@@ -1207,8 +1206,8 @@ export const Moderation: React.FC = () => {
                       {/* Approval Note (Optional, For Approve) */}
                       {action === 'approve' && (
                         <div className="space-y-1.5 animate-fade-in">
-                          <label htmlFor="moderation-approval-note" className="label text-label-sm font-bold flex items-center justify-between">
-                            <span>Approval Note</span>
+                          <label htmlFor="moderation-approval-note" className="label text-sm font-semibold flex items-center justify-between">
+                            <span>Note to student</span>
                             <span className="text-ink-muted font-normal">Optional</span>
                           </label>
                           <textarea
@@ -1216,8 +1215,8 @@ export const Moderation: React.FC = () => {
                             value={approvalNote}
                             onChange={(e) => setApprovalNote(e.target.value)}
                             rows={2}
-                            placeholder="Why this passed review (visible to the student as feedback)... "
-                            className="textarea text-body-sm w-full"
+                            placeholder="Why this passed review (visible to the student as feedback)…"
+                            className="textarea text-sm w-full"
                           />
                         </div>
                       )}
@@ -1232,8 +1231,8 @@ export const Moderation: React.FC = () => {
                             className="mt-0.5 w-4 h-4 rounded border-edge text-brand focus:ring-brand focus:ring-2 cursor-pointer"
                           />
                           <span className="text-label-sm text-status-approved leading-relaxed">
-                            <span className="font-bold">Publish to student's public profile.</span> Visitors can view this
-                            verified item on the public showcase.
+                            <span className="font-semibold">Show on public profile.</span> Visitors can view this
+                            item on the public showcase.
                           </span>
                         </label>
                       )}
@@ -1244,17 +1243,17 @@ export const Moderation: React.FC = () => {
                           type="button"
                           onClick={handleDecision}
                           disabled={submitting || ((action === 'reject' || action === 'changes') && !reason.trim())}
-                          className="btn btn-primary w-full py-2.5 text-body-sm font-bold shadow-xs cursor-pointer"
+                          className="btn btn-primary w-full py-2.5 text-sm font-semibold shadow-xs cursor-pointer"
                           aria-busy={submitting}
                         >
                           {submitting ? (
                             <>
                               <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                              <span>Processing...</span>
+                              <span>Saving…</span>
                             </>
                           ) : (
                             <span>
-                              Confirm {action === 'approve' ? 'Approval' : action === 'reject' ? 'Rejection' : action === 'changes' ? 'Change Request' : 'Hide'}
+                              {action === 'approve' ? 'Approve' : action === 'reject' ? 'Reject' : action === 'changes' ? 'Send change request' : 'Unpublish'}
                             </span>
                           )}
                         </button>
@@ -1264,8 +1263,8 @@ export const Moderation: React.FC = () => {
                     {/* Previous Note / Feedback (if available) */}
                     {(selectedItem.reviewNote || selectedItem.changeRequestNote) && (
                       <div className="surface-sunken p-4 rounded-xl border border-edge space-y-1">
-                        <span className="text-label-sm font-bold text-ink-secondary">Previous Feedback History:</span>
-                        <p className="text-body-sm text-ink-muted leading-relaxed">
+                        <span className="text-xs font-semibold text-ink-secondary">Previous feedback history</span>
+                        <p className="text-sm text-ink-muted leading-relaxed">
                           {selectedItem.changeRequestNote || selectedItem.reviewNote}
                         </p>
                       </div>
@@ -1273,8 +1272,8 @@ export const Moderation: React.FC = () => {
 
                     {/* Post-Decision Controls: visibility, re-upload request, delete */}
                     <div className="space-y-3 pt-3 border-t border-edge">
-                      <h3 className="text-label-md font-extrabold text-ink uppercase tracking-wider">
-                        Publication &amp; Files
+                      <h3 className="text-sm font-semibold text-ink">
+                        Publication &amp; files
                       </h3>
 
                       {/* Publish / unpublish — only meaningful once APPROVED. */}
@@ -1287,7 +1286,7 @@ export const Moderation: React.FC = () => {
                             ? 'Only approved items can be published'
                             : undefined
                         }
-                        className="btn btn-secondary w-full py-2.5 text-body-sm font-bold inline-flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="btn btn-secondary w-full py-2.5 text-sm font-semibold inline-flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {visibilityBusy ? (
                           <Loader2 className="w-4 h-4 animate-spin" />
@@ -1297,7 +1296,7 @@ export const Moderation: React.FC = () => {
                           <Eye className="w-4 h-4 text-brand" />
                         )}
                         <span>
-                          {selectedItem.isPublic ? 'Unpublish from Public Page' : 'Publish to Public Page'}
+                          {selectedItem.isPublic ? 'Hide from public profile' : 'Show on public profile'}
                         </span>
                       </button>
 
@@ -1306,14 +1305,14 @@ export const Moderation: React.FC = () => {
                         type="button"
                         onClick={handleRequestChanges}
                         disabled={actionBusy}
-                        className="btn btn-secondary w-full py-2.5 text-body-sm font-bold inline-flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                        className="btn btn-secondary w-full py-2.5 text-sm font-semibold inline-flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                       >
                         {actionBusy ? (
                           <Loader2 className="w-4 h-4 animate-spin" />
                         ) : (
-                          <Upload className="w-4 h-4 text-amber-500" />
+                          <Upload className="w-4 h-4 text-status-changes" />
                         )}
-                        <span>Request Re-upload</span>
+                        <span>Request new upload</span>
                       </button>
 
                       {/* Destructive: removes the file and asks for a replacement. */}
@@ -1321,26 +1320,26 @@ export const Moderation: React.FC = () => {
                         type="button"
                         onClick={handleDeleteItem}
                         disabled={deleteBusy}
-                        className="btn btn-danger w-full py-2.5 text-body-sm font-bold inline-flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                        className="btn btn-danger w-full py-2.5 text-sm font-semibold inline-flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                       >
                         {deleteBusy ? (
                           <Loader2 className="w-4 h-4 animate-spin" />
                         ) : (
                           <Trash2 className="w-4 h-4" />
                         )}
-                        <span>Delete &amp; Ask for Replacement</span>
+                        <span>Delete file</span>
                       </button>
                     </div>
 
                     {/* Keyboard Shortcuts Hint */}
-                    <div className="p-3 surface-sunken rounded-xl border border-edge text-[11px] text-ink-muted space-y-1">
-                      <div className="font-bold uppercase tracking-wider text-ink-secondary">Hotkeys</div>
+                    <div className="p-3 surface-sunken rounded-lg border border-edge text-xs text-ink-muted space-y-1">
+                      <div className="font-semibold text-ink-secondary">Hotkeys</div>
                       <div className="flex flex-wrap gap-2">
-                        <span><kbd className="px-1.5 py-0.5 rounded bg-surface border border-edge font-mono font-bold">A</kbd> Approve</span>
-                        <span><kbd className="px-1.5 py-0.5 rounded bg-surface border border-edge font-mono font-bold">R</kbd> Reject</span>
-                        <span><kbd className="px-1.5 py-0.5 rounded bg-surface border border-edge font-mono font-bold">C</kbd> Changes</span>
-                        <span><kbd className="px-1.5 py-0.5 rounded bg-surface border border-edge font-mono font-bold">←/→</kbd> Navigate</span>
-                        <span><kbd className="px-1.5 py-0.5 rounded bg-surface border border-edge font-mono font-bold">Esc</kbd> Close</span>
+                        <span><kbd className="px-1.5 py-0.5 rounded bg-surface border border-edge font-mono font-semibold">A</kbd> Approve</span>
+                        <span><kbd className="px-1.5 py-0.5 rounded bg-surface border border-edge font-mono font-semibold">R</kbd> Reject</span>
+                        <span><kbd className="px-1.5 py-0.5 rounded bg-surface border border-edge font-mono font-semibold">C</kbd> Changes</span>
+                        <span><kbd className="px-1.5 py-0.5 rounded bg-surface border border-edge font-mono font-semibold">←/→</kbd> Navigate</span>
+                        <span><kbd className="px-1.5 py-0.5 rounded bg-surface border border-edge font-mono font-semibold">Esc</kbd> Close</span>
                       </div>
                     </div>
                   </div>

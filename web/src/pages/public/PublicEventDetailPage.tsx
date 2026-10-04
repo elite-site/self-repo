@@ -206,7 +206,7 @@ export const PublicEventDetailPage: React.FC<PublicEventDetailPageProps> = ({ se
           <div>
             <h2 className="text-body-sm font-bold text-ink font-heading">Want to register?</h2>
             <p className="text-label-md text-ink-secondary mt-1">
-              Registration is tied to your student account so coordinators can track your entry.
+              Registration is tied to your student account so faculty can track your entry.
             </p>
           </div>
           <button

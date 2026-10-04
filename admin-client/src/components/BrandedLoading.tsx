@@ -44,9 +44,9 @@ export const BrandedLoading: React.FC<BrandedLoadingProps> = ({
         </div>
       </div>
 
-      {/* Uppercase message label */}
+      {/* Loading message label */}
       <div className="flex flex-col items-center gap-1.5">
-        <span className="font-heading text-[11px] font-bold uppercase tracking-widest text-ink-secondary">
+        <span className="font-heading text-xs font-semibold text-ink-secondary">
           {message}
         </span>
       </div>

@@ -257,7 +257,7 @@ export const SubmissionsTable: React.FC<SubmissionsTableProps> = ({
                 navigation, which this does not implement. */}
             <table className="w-full border-collapse text-left text-body-sm" aria-label="Video submissions">
               <thead>
-                <tr className="sticky top-0 z-raised border-b border-edge bg-surface-inset text-label-sm uppercase tracking-wider text-ink-secondary">
+                <tr className="sticky top-0 z-raised border-b border-edge bg-surface-inset text-label-sm font-semibold text-ink-secondary">
                   <th className="py-3.5 px-5" scope="col">Student</th>
                   <th className="py-3.5 px-4" scope="col">Roll Number</th>
                   <th className="py-3.5 px-4" scope="col">Section & Year</th>

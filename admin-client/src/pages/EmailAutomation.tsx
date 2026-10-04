@@ -117,7 +117,7 @@ export const EmailAutomation: React.FC = () => {
       setIsModalOpen(false);
       setNewName('');
       setNewDesc('');
-      setActionSuccess('New email automation workflow created successfully.');
+      setActionSuccess('Created email automation workflow.');
       await loadData(true);
     } catch (err: any) {
       console.error('Failed to create automation:', err);
@@ -197,26 +197,26 @@ export const EmailAutomation: React.FC = () => {
       {/* KPI bar */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="p-4 bg-surface border border-edge rounded-xl shadow-sm">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted block mb-1">
+          <span className="text-xs font-semibold text-ink-muted block mb-1">
             Total Workflows
           </span>
-          <div className="text-2xl font-extrabold text-ink">
+          <div className="text-2xl font-semibold text-ink">
             {automations.length}
           </div>
         </div>
         <div className="p-4 bg-surface border border-edge rounded-xl shadow-sm">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted block mb-1">
+          <span className="text-xs font-semibold text-ink-muted block mb-1">
             Active Pipelines
           </span>
-          <div className="text-2xl font-extrabold text-status-approved">
+          <div className="text-2xl font-semibold text-status-approved">
             {activeCount} Active
           </div>
         </div>
         <div className="p-4 bg-surface border border-edge rounded-xl shadow-sm">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted block mb-1">
+          <span className="text-xs font-semibold text-ink-muted block mb-1">
             Prepared Email Templates
           </span>
-          <div className="text-2xl font-extrabold text-ink">
+          <div className="text-2xl font-semibold text-ink">
             {templates.length} Templates
           </div>
         </div>
@@ -244,7 +244,7 @@ export const EmailAutomation: React.FC = () => {
                 <div className="flex-1">
                   <div className="flex flex-wrap items-center gap-2 mb-2">
                     <span
-                      className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                      className={`text-xs font-bold px-2 py-0.5 rounded-full ${
                         isActive
                           ? 'bg-status-bg-approved text-status-approved border border-edge'
                           : 'bg-surface-sunken text-ink-muted border border-edge'
@@ -252,11 +252,11 @@ export const EmailAutomation: React.FC = () => {
                     >
                       {auto.status}
                     </span>
-                    <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-status-bg-approved text-status-approved border border-edge">
+                    <span className="text-xs font-mono px-2 py-0.5 rounded bg-status-bg-approved text-status-approved border border-edge">
                       Trigger: {auto.trigger}
                     </span>
                     {auto.targetAll && (
-                      <span className="text-[10px] text-ink-muted flex items-center gap-1">
+                      <span className="text-xs text-ink-muted flex items-center gap-1">
                         <Users className="w-3 h-3" /> All Students
                       </span>
                     )}
@@ -316,8 +316,8 @@ export const EmailAutomation: React.FC = () => {
 
       {/* Create Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-scrim backdrop-blur-sm">
-          <div className="bg-surface text-ink border border-edge rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-scrim">
+          <div className="bg-surface text-ink border border-edge rounded-lg w-full max-w-lg shadow-2xl overflow-hidden">
             <div className="p-5 border-b border-edge flex items-center justify-between">
               <h2 className="text-base font-bold text-ink flex items-center gap-2">
                 <Zap className="w-5 h-5 text-ink-brand" />
@@ -333,7 +333,7 @@ export const EmailAutomation: React.FC = () => {
 
             <form onSubmit={handleCreate} className="p-6 space-y-4">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-ink-secondary mb-1">
+                <label className="block text-xs font-semibold text-ink-secondary mb-1">
                   Workflow Name *
                 </label>
                 <input
@@ -347,7 +347,7 @@ export const EmailAutomation: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-ink-secondary mb-1">
+                <label className="block text-xs font-semibold text-ink-secondary mb-1">
                   Trigger Event Type *
                 </label>
                 <select
@@ -363,7 +363,7 @@ export const EmailAutomation: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-ink-secondary mb-1">
+                <label className="block text-xs font-semibold text-ink-secondary mb-1">
                   Email Template Dispatch *
                 </label>
                 <select
@@ -380,7 +380,7 @@ export const EmailAutomation: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-ink-secondary mb-1">
+                <label className="block text-xs font-semibold text-ink-secondary mb-1">
                   Operational Description
                 </label>
                 <textarea

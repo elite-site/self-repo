@@ -59,7 +59,7 @@ export const EmailTemplateEditor: React.FC = () => {
               }`}
             >
               <div className="text-xs font-bold truncate">{tpl.name}</div>
-              <div className="text-[11px] text-ink-muted truncate mt-1">{tpl.subject}</div>
+              <div className="text-xs text-ink-muted truncate mt-1">{tpl.subject}</div>
             </button>
           ))}
         </div>
@@ -68,15 +68,15 @@ export const EmailTemplateEditor: React.FC = () => {
           {selectedTemplate ? (
             <div className="bg-surface border border-edge rounded-xl p-6 shadow-sm space-y-4">
               <div>
-                <span className="text-[11px] uppercase tracking-wider font-semibold text-ink-muted">Subject Line</span>
+                <span className="text-xs font-semibold text-ink-muted">Subject Line</span>
                 <h3 className="text-base font-bold text-ink mt-0.5">{selectedTemplate.subject}</h3>
               </div>
 
               <div>
-                <span className="text-[11px] uppercase tracking-wider font-semibold text-ink-muted">Available Merge Variables</span>
+                <span className="text-xs font-semibold text-ink-muted">Available Merge Variables</span>
                 <div className="flex flex-wrap gap-1.5 mt-1.5">
                   {(selectedTemplate.variables || []).map((v) => (
-                    <span key={v} className="px-2 py-0.5 font-mono text-[11px] bg-surface-sunken text-ink rounded border border-edge">
+                    <span key={v} className="px-2 py-0.5 font-mono text-xs bg-surface-sunken text-ink rounded border border-edge">
                       {v}
                     </span>
                   ))}
@@ -84,7 +84,7 @@ export const EmailTemplateEditor: React.FC = () => {
               </div>
 
               <div>
-                <span className="text-[11px] uppercase tracking-wider font-semibold text-ink-muted">Message Body Content</span>
+                <span className="text-xs font-semibold text-ink-muted">Message Body Content</span>
                 <pre className="mt-1.5 p-4 rounded-lg bg-surface-sunken border border-edge text-xs font-mono text-ink whitespace-pre-wrap leading-relaxed">
                   {selectedTemplate.body}
                 </pre>

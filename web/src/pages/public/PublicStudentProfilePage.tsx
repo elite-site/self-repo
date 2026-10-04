@@ -696,7 +696,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
                     <VideoIcon size={28} className="text-slate-600 mx-auto" />
                     <h4 className="text-xs font-semibold text-slate-300">No introduction video published yet</h4>
                     <p className="text-xs text-slate-500 max-w-xs mx-auto">
-                      A video preview appears here once verified by department coordinators.
+                      A video preview appears here once faculty approve it.
                     </p>
                   </div>
                 )}

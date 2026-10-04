@@ -31,10 +31,13 @@ const statusBadge = (status: string) => {
   switch (status) {
     case 'APPROVED':
       return <span className="badge badge-approved">Approved</span>;
+    case 'CHANGES_REQUESTED':
+      return <span className="badge badge-changes">Changes requested</span>;
     case 'REJECTED':
       return <span className="badge badge-rejected">Rejected</span>;
     case 'PENDING':
-      return <span className="badge badge-pending">Pending review</span>;
+    case 'SUBMITTED':
+      return <span className="badge badge-pending">Under review</span>;
     default:
       return <span className="badge badge-draft">{status}</span>;
   }
@@ -209,16 +212,18 @@ export const ProjectsTab: React.FC = () => {
             What you built, what you built it with, and where to see it.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={handleOpenCreateModal}
-          disabled={atLimit}
-          className="btn btn-primary shrink-0"
-          aria-label={atLimit ? `Maximum of ${MAX_PROJECTS} projects reached` : 'Add project'}
-        >
-          <Plus size={16} strokeWidth={2} aria-hidden="true" />
-          <span>Add project</span>
-        </button>
+        {projects.length > 0 && (
+          <button
+            type="button"
+            onClick={handleOpenCreateModal}
+            disabled={atLimit}
+            className="btn btn-primary shrink-0"
+            aria-label={atLimit ? `Maximum of ${MAX_PROJECTS} projects reached` : 'Add project'}
+          >
+            <Plus size={16} strokeWidth={2} aria-hidden="true" />
+            <span>Add project</span>
+          </button>
+        )}
       </div>
 
       {error && <ErrorState message={error} onRetry={loadProjects} />}
@@ -457,7 +462,7 @@ export const ProjectsTab: React.FC = () => {
             </button>
             <button type="submit" disabled={saving} className="btn btn-primary" aria-busy={saving}>
               {saving && <Loader2 size={14} className="animate-spin" aria-hidden="true" />}
-              <span>{saving ? 'Saving…' : editingProject ? 'Save changes' : 'Save project'}</span>
+              <span>{saving ? 'Saving…' : 'Save project'}</span>
             </button>
           </div>
         </form>

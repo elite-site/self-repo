@@ -152,7 +152,7 @@ export const ActivityLogView: React.FC<ActivityLogViewProps> = ({
     };
     const cls = map[category] || 'badge badge-draft';
     return (
-      <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase border ${cls}`}>
+      <span className={`inline-block px-2 py-0.5 rounded text-xs font-mono font-bold uppercase border ${cls}`}>
         {category}
       </span>
     );
@@ -163,10 +163,10 @@ export const ActivityLogView: React.FC<ActivityLogViewProps> = ({
       {/* 1. HEADER */}
       <div className="border-b border-edge pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <div className="text-xs font-mono font-bold tracking-widest text-ink-brand uppercase">
+          <div className="text-xs font-mono font-semibold text-ink-brand">
             System & Security Audit
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-ink tracking-tight mt-0.5 flex items-center gap-2.5">
+          <h1 className="text-2xl sm:text-3xl font-semibold text-ink tracking-tight mt-0.5 flex items-center gap-2.5">
             <Activity className="w-7 h-7 text-ink-brand" />
             <span>Activity Audit Log</span>
           </h1>
@@ -181,7 +181,7 @@ export const ActivityLogView: React.FC<ActivityLogViewProps> = ({
           className="btn btn-secondary self-start sm:self-auto"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-ink-brand' : ''}`} />
-          <span>Refresh Logs</span>
+          <span>Refresh</span>
         </button>
       </div>
 
@@ -189,50 +189,50 @@ export const ActivityLogView: React.FC<ActivityLogViewProps> = ({
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3.5">
         <div className="surface p-4 shadow-sm space-y-1">
           <div className="flex items-center justify-between text-ink-secondary">
-            <span className="text-[10px] font-bold uppercase tracking-wider">Total Recorded</span>
+            <span className="text-xs font-bold ">Total Recorded</span>
             <Server className="w-4 h-4 text-ink-muted" />
           </div>
-          <div className="text-2xl font-extrabold text-ink">
+          <div className="text-2xl font-semibold text-ink">
             {stats.totalActivities}
           </div>
         </div>
 
         <div className="surface p-4 shadow-sm space-y-1">
           <div className="flex items-center justify-between text-ink-secondary">
-            <span className="text-[10px] font-bold uppercase tracking-wider">Apps Today</span>
+            <span className="text-xs font-bold ">Apps Today</span>
             <Zap className="w-4 h-4 text-ink-brand" />
           </div>
-          <div className="text-2xl font-extrabold text-ink-brand">
+          <div className="text-2xl font-semibold text-ink-brand">
             {stats.applicationsToday}
           </div>
         </div>
 
         <div className="surface p-4 shadow-sm space-y-1">
           <div className="flex items-center justify-between text-ink-secondary">
-            <span className="text-[10px] font-bold uppercase tracking-wider">Admin Operations</span>
+            <span className="text-xs font-bold ">Admin Operations</span>
             <ShieldCheck className="w-4 h-4 text-ink-brand" />
           </div>
-          <div className="text-2xl font-extrabold text-ink-brand">
+          <div className="text-2xl font-semibold text-ink-brand">
             {stats.adminActions}
           </div>
         </div>
 
         <div className="surface p-4 shadow-sm space-y-1">
           <div className="flex items-center justify-between text-ink-secondary">
-            <span className="text-[10px] font-bold uppercase tracking-wider">Errors Recorded</span>
+            <span className="text-xs font-bold ">Errors Recorded</span>
             <XCircle className="w-4 h-4 text-status-rejected" />
           </div>
-          <div className="text-2xl font-extrabold text-status-rejected">
+          <div className="text-2xl font-semibold text-status-rejected">
             {stats.errorsCount}
           </div>
         </div>
 
         <div className="surface p-4 shadow-sm space-y-1 col-span-2 sm:col-span-1">
           <div className="flex items-center justify-between text-ink-secondary">
-            <span className="text-[10px] font-bold uppercase tracking-wider">System Health</span>
+            <span className="text-xs font-bold ">System Health</span>
             <CheckCircle2 className="w-4 h-4 text-status-approved" />
           </div>
-          <div className="text-2xl font-extrabold text-status-approved">
+          <div className="text-2xl font-semibold text-status-approved">
             {stats.successRate}%
           </div>
         </div>
@@ -241,7 +241,7 @@ export const ActivityLogView: React.FC<ActivityLogViewProps> = ({
       {/* 3. FILTER BAR */}
       <div className="surface p-4 shadow-sm space-y-3">
         <div className="flex items-center justify-between pb-2 border-b border-edge">
-          <div className="flex items-center gap-2 text-xs font-bold text-ink-secondary uppercase tracking-wider">
+          <div className="flex items-center gap-2 text-xs font-bold text-ink-secondary ">
             <Filter className="w-3.5 h-3.5 text-ink-brand" />
             <span>Filter Audit Trail</span>
           </div>
@@ -303,7 +303,7 @@ export const ActivityLogView: React.FC<ActivityLogViewProps> = ({
             <div className="relative">
               <input
                 type="text"
-                placeholder="Action, details, applicant..."
+                placeholder="Action, details, applicant…"
                 value={searchQuery}
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
@@ -322,7 +322,7 @@ export const ActivityLogView: React.FC<ActivityLogViewProps> = ({
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse" role="grid" aria-label="Activity logs">
             <thead>
-              <tr className="bg-surface-inset border-b border-edge text-[11px] font-bold text-ink-secondary uppercase tracking-wider">
+              <tr className="bg-surface-inset border-b border-edge text-xs font-bold text-ink-secondary ">
                 <th className="py-3 px-4" scope="col">Status</th>
                 <th className="py-3 px-4" scope="col">Category</th>
                 <th className="py-3 px-4" scope="col">Timestamp</th>
@@ -336,7 +336,7 @@ export const ActivityLogView: React.FC<ActivityLogViewProps> = ({
                 <tr>
                   <td colSpan={6} className="py-12 text-center text-ink-muted font-mono">
                     <RefreshCw className="w-6 h-6 animate-spin mx-auto text-ink-brand mb-2" />
-                    Loading activity audit logs...
+                    Loading activity audit logs…
                   </td>
                 </tr>
               ) : logs.length === 0 ? (
@@ -359,26 +359,26 @@ export const ActivityLogView: React.FC<ActivityLogViewProps> = ({
                     </td>
 
                     {/* Timestamp */}
-                    <td className="py-3.5 px-4 whitespace-nowrap font-mono text-[11px] text-ink-secondary">
+                    <td className="py-3.5 px-4 whitespace-nowrap font-mono text-xs text-ink-secondary">
                       <div className="flex items-center gap-1.5">
                         <Clock className="w-3 h-3 text-ink-muted" />
                         <span>{new Date(log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
                       </div>
-                      <div className="text-[10px] text-ink-muted">{new Date(log.createdAt).toLocaleDateString()}</div>
+                      <div className="text-xs text-ink-muted">{new Date(log.createdAt).toLocaleDateString()}</div>
                     </td>
 
                     {/* Action */}
                     <td className="py-3.5 px-4 font-bold text-ink max-w-xs">
                       <div>{log.action}</div>
                       {log.errorMessage && (
-                        <div className="text-[10px] font-mono text-status-rejected bg-status-bg-rejected p-1 rounded mt-1 border border-status-bg-rejected/50">
+                        <div className="text-xs font-mono text-status-rejected bg-status-bg-rejected p-1 rounded mt-1 border border-status-bg-rejected/50">
                           {log.errorMessage}
                         </div>
                       )}
                     </td>
 
                     {/* Details */}
-                    <td className="py-3.5 px-4 text-ink-secondary font-mono text-[11px] max-w-sm truncate">
+                    <td className="py-3.5 px-4 text-ink-secondary font-mono text-xs max-w-sm truncate">
                       {log.details || '-'}
                     </td>
 
@@ -390,9 +390,9 @@ export const ActivityLogView: React.FC<ActivityLogViewProps> = ({
                           <span>{log.applicantName}</span>
                         </div>
                       ) : log.userEmail ? (
-                        <div className="text-ink-secondary text-[11px] font-mono">{log.userEmail}</div>
+                        <div className="text-ink-secondary text-xs font-mono">{log.userEmail}</div>
                       ) : (
-                        <span className="text-ink-muted font-mono text-[10px]">System</span>
+                        <span className="text-ink-muted font-mono text-xs">System</span>
                       )}
                     </td>
                   </tr>

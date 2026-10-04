@@ -65,7 +65,7 @@ const navGroups: NavGroup[] = [
   {
     label: 'Students',
     items: [
-      { id: 'students', label: 'All Students', icon: Users },
+      { id: 'students', label: 'Students', icon: Users },
       { id: 'moderation', label: 'Moderation Queue', icon: ShieldCheck },
     ],
   },
@@ -125,11 +125,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab, onLogo
             <UserRound strokeWidth={1.75} className="w-4 h-4" />
           </div>
           <div>
-            <div className="flex items-center gap-1 font-heading text-sm font-extrabold tracking-tight leading-tight">
+            <div className="flex items-center gap-1 font-heading text-sm font-semibold tracking-tight leading-tight">
               <span className="text-brand">ELITE</span>
               <span className="text-ink">Portal</span>
             </div>
-            <div className="text-[10px] text-ink-muted font-semibold uppercase tracking-wider">Admin Control</div>
+            <div className="text-xs text-ink-muted font-semibold">Admin Control</div>
           </div>
         </div>
 
@@ -145,7 +145,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab, onLogo
               <div key={group.label} className="mb-2">
                 <button
                   onClick={() => toggle(group.label)}
-                  className="w-full flex items-center justify-between px-2.5 py-1.5 font-heading text-[10px] font-bold text-ink-muted uppercase tracking-widest hover:text-ink-secondary transition-colors cursor-pointer"
+                  className="w-full flex items-center justify-between px-2.5 py-1.5 font-heading text-xs font-semibold text-ink-muted hover:text-ink-secondary transition-colors cursor-pointer"
                   aria-expanded={isOpen}
                   aria-controls={`nav-group-${group.label.replace(/\s+/g, '-').toLowerCase()}`}
                 >
@@ -193,7 +193,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab, onLogo
             className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-ink-secondary hover:text-brand hover:bg-brand-soft rounded-lg transition-colors cursor-pointer"
           >
             <LogOut strokeWidth={1.75} className="w-3.5 h-3.5" aria-hidden="true" />
-            <span>Logout</span>
+            <span>Sign out</span>
           </button>
         </div>
       </div>

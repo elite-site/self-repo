@@ -1,23 +1,25 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { api, resolveMediaUrl } from '../../services/api';
 import { Certificate } from '../../types';
-import { UploadCloud, Loader2, FileText, Trash2, ExternalLink, Globe, EyeOff } from 'lucide-react';
+import { Plus, Loader2, FileText, Trash2, ExternalLink, Globe, EyeOff } from 'lucide-react';
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ui/ConfirmDialog';
 import { Modal } from '../../components/ui/Modal';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { ErrorState } from '../../components/ui/ErrorState';
+import { FileField } from '../../components/ui/FileField';
 
 const statusBadge = (status: string) => {
   switch (status) {
     case 'APPROVED':
       return <span className="badge badge-approved">Approved</span>;
     case 'CHANGES_REQUESTED':
-      return <span className="badge badge-changes">Revision requested</span>;
+      return <span className="badge badge-changes">Changes requested</span>;
     case 'REJECTED':
       return <span className="badge badge-rejected">Rejected</span>;
     case 'PENDING':
-      return <span className="badge badge-pending">Pending review</span>;
+    case 'SUBMITTED':
+      return <span className="badge badge-pending">Under review</span>;
     default:
       return <span className="badge badge-draft">{status}</span>;
   }
@@ -161,10 +163,12 @@ export const CertificatesTab: React.FC = () => {
             Course completions, professional licences and workshop credentials.
           </p>
         </div>
-        <button type="button" onClick={handleOpenModal} className="btn btn-primary shrink-0">
-          <UploadCloud size={16} strokeWidth={2} aria-hidden="true" />
-          <span>Upload certificate</span>
-        </button>
+        {certificates.length > 0 && (
+          <button type="button" onClick={handleOpenModal} className="btn btn-primary shrink-0">
+            <Plus size={16} strokeWidth={2} aria-hidden="true" />
+            <span>Add certificate</span>
+          </button>
+        )}
       </div>
 
       {error && <ErrorState message={error} onRetry={loadCertificates} />}
@@ -191,8 +195,8 @@ export const CertificatesTab: React.FC = () => {
           description="Add course completions, professional licences and exam scorecards. A PDF or image is optional — a title and issuer are enough to start."
           action={
             <button type="button" onClick={handleOpenModal} className="btn btn-primary">
-              <UploadCloud size={16} strokeWidth={2} aria-hidden="true" />
-              <span>Upload certificate</span>
+              <Plus size={16} strokeWidth={2} aria-hidden="true" />
+              <span>Add certificate</span>
             </button>
           }
         />
@@ -292,9 +296,7 @@ export const CertificatesTab: React.FC = () => {
                     <span>View file</span>
                     <ExternalLink size={12} strokeWidth={2} aria-hidden="true" />
                   </a>
-                ) : (
-                  <span className="text-label-md text-ink-muted">Verified record</span>
-                )}
+                ) : null}
               </div>
             </li>
           ))}
@@ -304,7 +306,7 @@ export const CertificatesTab: React.FC = () => {
       <Modal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
-        title="Upload certificate"
+        title="Add certificate"
         description="A title and document are required. The issuer is optional."
         initialFocusRef={firstInputRef}
       >
@@ -367,22 +369,19 @@ export const CertificatesTab: React.FC = () => {
           </FormSection>
 
           <FormSection title="Document">
-            <div>
-              <label htmlFor="certificate-file" className="label">
-                PDF or image <span className="text-status-rejected">*</span>
-              </label>
-              <input
-                id="certificate-file"
-                type="file"
-                accept=".pdf,image/jpeg,image/png,image/webp"
-                onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-                className="w-full cursor-pointer text-label-sm text-ink-secondary file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-brand-soft file:px-3 file:py-2 file:text-label-md file:font-semibold file:text-brand"
-                aria-describedby="certificate-file-hint"
-              />
-              <p id="certificate-file-hint" className="hint">
-                Accepted formats: PDF, JPEG, PNG or WebP.
-              </p>
-            </div>
+            <FileField
+              id="certificate-file"
+              label="Document"
+              required
+              accept=".pdf,image/jpeg,image/png"
+              hint="PDF, JPG or PNG, up to 10 MB"
+              selectedFile={selectedFile}
+              onFileSelect={(file) => {
+                setSelectedFile(file);
+                setModalError(null);
+              }}
+              disabled={uploading}
+            />
           </FormSection>
 
           <div className="flex flex-wrap justify-end gap-3 border-t border-edge pt-4">
@@ -391,7 +390,7 @@ export const CertificatesTab: React.FC = () => {
             </button>
             <button type="submit" disabled={uploading} className="btn btn-primary" aria-busy={uploading}>
               {uploading && <Loader2 size={14} className="animate-spin" aria-hidden="true" />}
-              <span>{uploading ? 'Uploading…' : 'Save certificate'}</span>
+              <span>{uploading ? 'Saving…' : 'Save certificate'}</span>
             </button>
           </div>
         </form>

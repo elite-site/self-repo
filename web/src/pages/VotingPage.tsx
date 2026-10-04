@@ -195,7 +195,7 @@ export const VotingPage: React.FC = () => {
               {voteSuccess ? (
                 <div className="py-8 text-center space-y-3" role="status" aria-live="polite">
                   <CheckCircle2 className="w-12 h-12 text-status-approved mx-auto" aria-hidden="true" />
-                  <h4 className="text-body-md font-bold text-ink font-heading">Your Ballot Has Been Cast!</h4>
+                  <h4 className="text-body-md font-bold text-ink font-heading">Your ballot has been cast</h4>
                   <p className="text-body-sm text-ink-secondary">Your vote is securely recorded in the department ledger.</p>
                 </div>
               ) : (

@@ -7,22 +7,20 @@ import { useConfirm } from '../components/ui/ConfirmDialog';
 import { ProgressSteps } from '../components/ui/ProgressSteps';
 import { useReducedMotion } from '../hooks/useReducedMotion';
 import { selectVariantsByName } from '../lib/motion';
+import { formatSubmittedAt } from '../utils/formatDate';
 import {
   UploadCloud,
   AlertCircle,
   CheckCircle2,
   Clock,
   Video as VideoIcon,
-  RotateCcw,
   XCircle,
   FileVideo,
   Loader2,
   ThumbsUp,
   ThumbsDown,
   RefreshCw,
-  Zap,
   X,
-  Gauge,
   Info,
   Globe,
   EyeOff,
@@ -141,8 +139,8 @@ export const VideoPage: React.FC = () => {
     } catch {
       if (seq !== loadSeq.current) return;
       if (isInitial) {
-        setError('Could not load introduction video status.');
-        showToast('Could not load introduction video status.', 'error');
+        setError("Couldn't load your video status.");
+        showToast("Couldn't load your video status.", 'error');
       }
     } finally {
       if (seq === loadSeq.current) setLoading(false);
@@ -380,8 +378,7 @@ export const VideoPage: React.FC = () => {
     setUploading(false);
     setUploadProgress(0);
     setUploadStats(null);
-    setError('Upload cancelled.');
-    showToast('Upload cancelled.', 'info');
+    showToast('Upload cancelled. Your current video is unchanged.', 'info');
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -390,8 +387,8 @@ export const VideoPage: React.FC = () => {
     if (!file) return;
 
     if (!file.type.startsWith('video/')) {
-      setError('Please select a valid video file (MP4, WebM, MOV).');
-      showToast('Please select a valid video file (MP4, WebM, MOV).', 'error');
+      setError('Choose an MP4, WebM or MOV video.');
+      showToast('Choose an MP4, WebM or MOV video.', 'error');
       // Reset the input so re-picking the same file fires `change` again. The
       // value is only cleared in the upload's `finally`, which a validation
       // rejection never reaches, so without this the student's second attempt
@@ -405,8 +402,8 @@ export const VideoPage: React.FC = () => {
       // least expect: the file picker shows no size, so the inline error below
       // the button is easy to miss while the page is scrolled to the recorder
       // tips. Toast it, and name the actual size so the gap is obvious.
-      const message = `Video file must be under ${maxVideoSizeMb}MB (yours is ${(file.size / (1024 * 1024)).toFixed(1)}MB).`;
-      setError(`Video file must be under ${maxVideoSizeMb}MB.`);
+      const message = `This video is ${(file.size / (1024 * 1024)).toFixed(1)} MB. The limit is ${maxVideoSizeMb} MB.`;
+      setError(message);
       showToast(message, 'error');
       e.target.value = '';
       return;
@@ -516,7 +513,7 @@ export const VideoPage: React.FC = () => {
         reviewedAt: null,
       }));
       setUploadSuccess(true);
-      showToast(res.message || 'Your introduction video has been submitted for review.');
+      showToast(res.message || 'Video uploaded. Faculty will review it next.');
       const newDriveId = res.driveFileId || (res as any)?.data?.driveFileId;
       setVideo((prev) => ({
         ...(prev || {}),
@@ -543,7 +540,7 @@ export const VideoPage: React.FC = () => {
     } catch (err: any) {
       URL.revokeObjectURL(localUrl); // clean up unused preview URL on error
       if (err.name === 'AbortError' || err.message?.includes('cancelled')) {
-        setError('Upload cancelled.');
+        // cancel handler already showed a toast
       } else {
         const notice = err.message || 'Failed to upload video. Please try again.';
         setError(notice);
@@ -562,19 +559,6 @@ export const VideoPage: React.FC = () => {
     return <SkeletonPage label="Loading video submission" cards={2} rows={2} />;
   }
 
-  const formatSubmittedAt = (iso: string | null | undefined): string => {
-    if (!iso) return 'To be announced';
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return 'To be announced';
-    return d.toLocaleString(undefined, {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'APPROVED':
@@ -587,13 +571,13 @@ export const VideoPage: React.FC = () => {
       case 'PENDING':
         return (
           <span className="badge badge-pending">
-            <Clock className="w-3.5 h-3.5" /> Under Review
+            <Clock className="w-3.5 h-3.5" /> Under review
           </span>
         );
       case 'CHANGES_REQUESTED':
         return (
           <span className="badge badge-changes">
-            <AlertCircle className="w-3.5 h-3.5" /> Re-upload Requested
+            <AlertCircle className="w-3.5 h-3.5" /> Changes requested
           </span>
         );
       case 'REJECTED':
@@ -605,7 +589,7 @@ export const VideoPage: React.FC = () => {
       default:
         return (
           <span className="badge badge-draft">
-            Draft
+            Not submitted
           </span>
         );
     }
@@ -619,11 +603,11 @@ export const VideoPage: React.FC = () => {
   const lifecycleSteps = [
     {
       label: 'Uploaded',
-      detail: submission?.submittedAt ? formatSubmittedAt(submission.submittedAt) : 'MP4 or WebM',
+      detail: submission?.submittedAt ? formatSubmittedAt(submission.submittedAt) : 'Waiting for upload',
     },
-    { label: 'Under review', detail: 'Faculty moderation' },
+    { label: 'Under review', detail: 'Faculty check it' },
     { label: 'Approved', detail: 'Faculty sign-off' },
-    { label: 'Published', detail: 'Visible on your profile' },
+    { label: 'Published', detail: 'Shown on your profile' },
   ];
 
   const videoStatus = video?.status || submission?.status || 'DRAFT';
@@ -643,9 +627,9 @@ export const VideoPage: React.FC = () => {
       {/* HEADER */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-extrabold text-ink font-heading">Introduction Video</h1>
+          <h1 className="text-xl sm:text-2xl font-extrabold text-ink font-heading">Introduction video</h1>
           <p className="text-xs text-ink-secondary">
-            Your 60–90 second professional department self-introduction video
+            Introduce yourself in 60 to 90 seconds.
           </p>
         </div>
         {submission && (
@@ -661,9 +645,9 @@ export const VideoPage: React.FC = () => {
         <h2 className="font-heading text-headline-sm text-ink">Video status</h2>
         <p className="mt-0.5 text-body-sm text-ink-secondary">
           {lifecycle.current >= lifecycleSteps.length
-            ? 'Your approved introduction video is published.'
+            ? 'Your approved video is published.'
             : lifecycle.current === 0 && submission?.videoUploaded
-              ? 'Faculty asked for a new take. Uploading replaces the current video.'
+              ? 'Faculty asked for changes. Upload a replacement.'
               : 'Your video moves through these steps after each upload.'}
         </p>
         <div className="mt-5">
@@ -683,12 +667,6 @@ export const VideoPage: React.FC = () => {
         </div>
       )}
 
-      {uploadSuccess && (
-        <div className="p-4 bg-status-bg-approved border border-status-approved rounded-lg text-status-approved text-xs flex items-center gap-2" role="status">
-          <CheckCircle2 className="w-4 h-4 shrink-0" />
-          <span>Video uploaded successfully and submitted for faculty moderation!</span>
-        </div>
-      )}
 
       {deleteNotice && (
         <div className="p-4 bg-surface-canvas border border-edge rounded-lg text-ink-secondary text-xs flex items-center gap-2">
@@ -697,25 +675,17 @@ export const VideoPage: React.FC = () => {
         </div>
       )}
 
-      {/* ADMIN REQUESTED A NEW TAKE */}
+      {/* FACULTY ASKED FOR A NEW VIDEO */}
       {video?.changeRequestedAt && (
         <div className="p-4 bg-status-bg-changes border border-status-changes rounded-lg text-status-changes text-xs space-y-2">
           <div className="flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0" />
-            <span className="font-bold">A new introduction video has been requested</span>
+            <span className="font-bold">Faculty asked for a new video</span>
           </div>
           <p className="leading-relaxed">
             {video.changeRequestNote ||
-              'Faculty asked you to record a new version of your introduction video. Uploading it will replace your current video and the old file will be removed.'}
+              'Upload a new version. It replaces your current video, and the old file is deleted once the new one finishes.'}
           </p>
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
-            className="btn btn-primary min-h-[44px]"
-          >
-            <UploadCloud className="w-3.5 h-3.5" />
-            <span>Upload New Video</span>
-          </button>
         </div>
       )}
 
@@ -760,7 +730,7 @@ export const VideoPage: React.FC = () => {
               ) : (
                 <Globe className="w-3.5 h-3.5" />
               )}
-              <span>{video?.isPublic ? 'Hide from Profile' : 'Show on Profile'}</span>
+              <span>{video?.isPublic ? 'Hide from profile' : 'Show on profile'}</span>
             </button>
           </div>
 
@@ -779,7 +749,7 @@ export const VideoPage: React.FC = () => {
         <div className="lg:col-span-8 space-y-6">
           <div className="surface p-6 space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-bold text-ink font-heading">Video Playback & Media</h2>
+              <h2 className="text-sm font-bold text-ink font-heading">Your video</h2>
               <input
                 type="file"
                 ref={fileInputRef}
@@ -787,59 +757,56 @@ export const VideoPage: React.FC = () => {
                 onChange={handleFileSelect}
                 className="hidden"
               />
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={uploading}
-                  className="btn btn-primary min-h-[44px]"
-                >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  <span>{submission?.videoUploaded ? 'Upload New Take' : 'Upload Video'}</span>
-                </button>
-                {submission?.videoUploaded && (
+              {submission?.videoUploaded && !uploading && (
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className={`btn ${video?.changeRequestedAt || video?.status === 'REJECTED' ? 'btn-primary' : 'btn-secondary'} min-h-[44px]`}
+                  >
+                    <UploadCloud className="w-3.5 h-3.5" />
+                    <span>Replace video</span>
+                  </button>
                   <button
                     type="button"
                     onClick={handleDelete}
-                    disabled={deleting || uploading}
+                    disabled={deleting}
                     title="Delete your submitted video"
-                    className="btn btn-ghost min-h-[44px]"
+                    className="btn btn-ghost min-h-[44px] text-status-rejected hover:bg-status-bg-rejected hover:border-status-rejected"
                   >
                     {deleting ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
                     ) : (
                       <Trash2 className="w-3.5 h-3.5" />
                     )}
-                    <span>Delete Video</span>
+                    <span>Delete video</span>
                   </button>
-                )}
-              </div>
+                </div>
+              )}
             </div>
 
             {uploading ? (
               <div className="border border-dashed border-edge-strong/40 bg-brand-soft/20 rounded-lg p-8 sm:p-12 text-center space-y-4">
-                <div className="relative w-16 h-16 mx-auto flex items-center justify-center">
-                  <div className="w-16 h-16 rounded-full border-4 border-brand-soft border-t-brand animate-spin" />
-                  <span className="absolute text-xs font-black text-ink">{uploadProgress}%</span>
-                </div>
-
                 <div>
                   <h3 className="text-sm font-bold text-ink font-heading">
                     {uploadStats?.phase === 'confirming'
-                      ? 'Finalizing submission with Google Drive...'
-                      : 'Streaming video to Google Drive...'}
+                      ? 'Almost done. Saving your video'
+                      : 'Uploading your video'}
                   </h3>
                   <p className="text-xs text-ink-secondary mt-0.5">
-                    Zero server buffering • Direct parallel pipeline to cloud storage
+                    Keep this tab open until it finishes.
                   </p>
                 </div>
 
-                {/* Progress Bar */}
+                {/* Progress Bar with percent beside bar */}
                 <div className="w-80 max-w-full mx-auto space-y-2">
-                  <div className="w-full bg-brand-soft rounded-full h-2 overflow-hidden">
-                    <div
-                      className="bg-brand h-full rounded-full transition-transform duration-base ease-standard"
-                      style={{ width: `${uploadProgress}%` }}
-                    />
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 bg-brand-soft rounded-full h-2 overflow-hidden">
+                      <div
+                        className="bg-brand h-full rounded-full transition-transform duration-base ease-standard"
+                        style={{ width: `${uploadProgress}%` }}
+                      />
+                    </div>
+                    <span className="text-xs font-bold text-ink shrink-0">{uploadProgress}%</span>
                   </div>
 
                   {/* Live Metrics Row */}
@@ -885,16 +852,6 @@ export const VideoPage: React.FC = () => {
                   </div>
                 )}
 
-                {/* Wi-Fi Optimization Notice if file is large */}
-                {videoMeta?.isLarge && (
-                  <div className="max-w-md mx-auto p-2.5 bg-status-bg-pending border border-status-pending rounded-lg text-xs text-status-pending text-left flex items-start gap-2">
-                    <Zap className="w-4 h-4 shrink-0 mt-0.5" />
-                    <span>
-                      <strong>Fast Upload Tip:</strong> This video is {videoMeta.sizeMb} MB. Recording at 720p HD (~8–12 MB) uploads up to 2× faster on campus Wi-Fi!
-                    </span>
-                  </div>
-                )}
-
                 {/* Cancel Button */}
                 <div className="pt-2">
                   <button
@@ -902,7 +859,7 @@ export const VideoPage: React.FC = () => {
                     onClick={handleCancelUpload}
                     className="text-xs font-semibold text-ink-muted hover:text-status-rejected transition-colors inline-flex items-center gap-1 cursor-pointer min-h-[44px] min-w-[44px]"
                   >
-                    <X className="w-3.5 h-3.5" /> Cancel Upload
+                    <X className="w-3.5 h-3.5" /> Cancel upload
                   </button>
                 </div>
               </div>
@@ -911,9 +868,9 @@ export const VideoPage: React.FC = () => {
                 <div className="mx-auto max-w-2xl min-h-[220px] aspect-video bg-surface-canvas rounded-lg border border-status-rejected/30 flex flex-col items-center justify-center p-6 text-center space-y-3">
                   <AlertCircle className="w-8 h-8 text-status-rejected" />
                   <div>
-                    <p className="text-sm font-semibold text-ink">Unable to play video</p>
+                    <p className="text-sm font-semibold text-ink">This video won't play right now.</p>
                     <p className="text-xs text-ink-muted mt-1 max-w-md">
-                      Could not load your recording from Google Drive or the streaming server.
+                      Check your connection and try again.
                     </p>
                   </div>
                   <button
@@ -921,7 +878,7 @@ export const VideoPage: React.FC = () => {
                     onClick={handleRetryPlayback}
                     className="btn btn-secondary min-h-[44px] text-xs font-semibold inline-flex items-center gap-2"
                   >
-                    <RefreshCw className="w-3.5 h-3.5" /> Retry Playback
+                    <RefreshCw className="w-3.5 h-3.5" /> Try again
                   </button>
                 </div>
               ) : (
@@ -962,14 +919,17 @@ export const VideoPage: React.FC = () => {
                   <FileVideo className="w-8 h-8 text-brand" />
                 </div>
                 <h3 className="font-bold text-base text-ink font-heading">Upload your self-introduction video</h3>
-                <p className="text-xs text-ink-secondary max-w-sm mt-1.5 mb-6">
-                  Recommended: MP4 or WebM, 720p/1080p, 60–90 seconds, under {maxVideoSizeMb}MB. Introduce your name, branch, interests, and career ambitions.
+                <p className="text-xs text-ink-secondary max-w-sm mt-1.5 mb-2">
+                  MP4, WebM or MOV, up to {maxVideoSizeMb} MB. Aim for 60 to 90 seconds.
+                </p>
+                <p className="text-xs text-ink-muted max-w-sm mb-6">
+                  A 720p video is smaller and uploads faster.
                 </p>
                 <button
                   type="button"
                   className="btn btn-primary min-h-[44px]"
                 >
-                  Select Video File
+                  Upload video
                 </button>
               </div>
             )}
@@ -996,18 +956,6 @@ export const VideoPage: React.FC = () => {
                   </span>
                   <span className="ml-auto">{getStatusBadge(video.status)}</span>
                 </div>
-                {/* Replacing is always available, not only when faculty has asked
-                    for a new take. A new upload overwrites the previous file and
-                    sends the video back through moderation. */}
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={uploading}
-                  className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-edge bg-surface text-ink-secondary hover:border-edge-strong hover:text-brand font-bold text-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer min-h-[44px]"
-                >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  <span>Record a replacement</span>
-                </button>
               </div>
             )}
           </div>
@@ -1067,15 +1015,15 @@ export const VideoPage: React.FC = () => {
 
           {/* RECORDING GUIDELINES */}
           <div className="surface p-6 space-y-4 text-xs">
-            <h2 className="text-sm font-bold text-ink font-heading">Recording Guidelines</h2>
+            <h2 className="text-sm font-bold text-ink font-heading">Recording guidelines</h2>
             <ul className="space-y-2.5 text-ink-secondary">
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="w-4 h-4 text-status-approved shrink-0 mt-0.5" />
                 <span><strong>Duration:</strong> Between 60 and 90 seconds.</span>
               </li>
               <li className="flex items-start gap-2">
-                <Zap className="w-4 h-4 text-status-pending shrink-0 mt-0.5" />
-                <span><strong>Speed Tip:</strong> Record in <strong>720p (HD) at 30fps</strong> for the fastest upload. A 90s video will be only ~8–12 MB and upload in under 20 seconds!</span>
+                <CheckCircle2 className="w-4 h-4 text-status-approved shrink-0 mt-0.5" />
+                <span><strong>Quality:</strong> 720p at 30 fps is enough.</span>
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="w-4 h-4 text-status-approved shrink-0 mt-0.5" />
@@ -1087,7 +1035,7 @@ export const VideoPage: React.FC = () => {
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="w-4 h-4 text-status-approved shrink-0 mt-0.5" />
-                <span><strong>Structure:</strong> Full Name & Roll Number → Technical Areas → Major Project → Career Ambitions.</span>
+                <span><strong>Structure:</strong> Name and roll number, technical areas, major project, career goals.</span>
               </li>
             </ul>
           </div>

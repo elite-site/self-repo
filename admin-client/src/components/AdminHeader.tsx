@@ -123,7 +123,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
         )}
 
         <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-surface-sunken border border-edge rounded-lg text-xs font-mono text-ink-muted">
-          <span className="w-2 h-2 rounded-full bg-status-approved animate-pulse" aria-hidden="true" />
+          <span className="w-2 h-2 rounded-full bg-status-approved" aria-hidden="true" />
           <span>{timeString || 'May 23, 2026 2:01:07 PM'}</span>
         </div>
       </div>
@@ -211,7 +211,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
           >
             <Bell strokeWidth={1.75} className="w-5 h-5" aria-hidden="true" />
             {hasAlerts && (
-              <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-brand rounded-full ring-2 ring-surface animate-pulse" aria-label={`${pendingModeration} pending moderation items`} />
+              <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-brand rounded-full ring-2 ring-surface" aria-label={`${pendingModeration} pending moderation items`} />
             )}
           </button>
 
@@ -223,18 +223,18 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
             >
               <div className="px-4 py-3 border-b border-edge flex items-center justify-between bg-surface-sunken">
                 <div className="flex items-center gap-2">
-                  <span className="font-heading text-xs font-bold text-ink uppercase tracking-wider">
-                    Admin Alerts
+                  <span className="font-heading text-xs font-semibold text-ink">
+                    Admin alerts
                   </span>
                   {pendingModeration > 0 && (
-                    <span className="text-[10px] font-bold bg-brand-soft text-brand-soft-text px-2 py-0.5 rounded-full">
+                    <span className="text-xs font-semibold bg-brand-soft text-brand-soft-text px-2 py-0.5 rounded-full">
                       {pendingModeration} pending
                     </span>
                   )}
                 </div>
                 <button
                   onClick={() => setNotifDropdownOpen(false)}
-                  className="text-[11px] font-bold text-ink-muted hover:text-ink cursor-pointer"
+                  className="text-xs font-semibold text-ink-muted hover:text-ink cursor-pointer"
                 >
                   Dismiss
                 </button>
@@ -259,7 +259,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
                       <h4 className="text-xs font-bold text-ink">
                         Moderation Queue Required
                       </h4>
-                      <p className="text-[11px] text-ink-muted mt-0.5 leading-snug">
+                      <p className="text-xs text-ink-muted mt-0.5 leading-snug">
                         {pendingModeration} student submission{pendingModeration > 1 ? 's' : ''} awaiting review. Click to process.
                       </p>
                     </div>
@@ -274,7 +274,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
                     <h4 className="text-xs font-bold text-ink">
                       System Operational
                     </h4>
-                    <p className="text-[11px] text-ink-muted mt-0.5 leading-snug">
+                    <p className="text-xs text-ink-muted mt-0.5 leading-snug">
                       Database pool, Google Drive OAuth, and background queues running normally.
                     </p>
                   </div>
@@ -284,7 +284,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
                   <div className="py-6 px-4 text-center">
                     <Inbox className="w-8 h-8 text-ink-muted mx-auto mb-2" aria-hidden="true" />
                     <div className="text-xs font-bold text-ink">You're all caught up.</div>
-                    <div className="text-[11px] text-ink-muted mt-0.5">
+                    <div className="text-xs text-ink-muted mt-0.5">
                       No pending moderation requests at this time.
                     </div>
                   </div>
@@ -322,7 +322,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
               <div className="font-heading text-xs font-bold text-ink truncate max-w-[130px]">
                 {user?.username || (user?.email ? user.email.split('@')[0] : 'Admin User')}
               </div>
-              <div className="text-[10px] text-ink-muted font-medium">Super Admin</div>
+              <div className="text-xs text-ink-muted font-medium">Super Admin</div>
             </div>
             <ChevronDown className="w-3.5 h-3.5 text-ink-muted hidden sm:block" aria-hidden="true" />
           </button>
@@ -337,7 +337,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
                 <div className="font-heading text-xs font-bold text-ink truncate">
                   {user?.username || 'Admin User'}
                 </div>
-                <div className="text-[10px] text-ink-muted truncate">
+                <div className="text-xs text-ink-muted truncate">
                   {user?.email || 'admin@sasi.ac.in'}
                 </div>
               </div>
@@ -378,7 +378,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
                     className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-semibold text-status-rejected hover:bg-status-bg-rejected transition-colors cursor-pointer"
                   >
                     <LogOut strokeWidth={1.75} className="w-4 h-4" aria-hidden="true" />
-                    <span>Sign Out</span>
+                    <span>Sign out</span>
                   </button>
                 </div>
               )}

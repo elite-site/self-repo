@@ -284,7 +284,7 @@ export const NotificationsPage: React.FC = () => {
             ) : (
               <ChevronRight className="w-3.5 h-3.5 rotate-90" aria-hidden="true" />
             )}
-            <span>{loadingMore ? 'Loading...' : 'Load More'}</span>
+            <span>{loadingMore ? 'Loading…' : 'Load more'}</span>
           </button>
         </div>
       )}

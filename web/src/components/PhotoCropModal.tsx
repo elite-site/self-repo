@@ -16,6 +16,7 @@ export interface PhotoCropModalProps {
   onSavePosition?: (position: { photoOffsetX: number; photoOffsetY: number; photoZoom: number }) => Promise<void> | void;
   onCropSave?: (croppedBlob: Blob) => Promise<void> | void;
   isSaving?: boolean;
+  onChooseDifferent?: () => void;
 }
 
 export const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
@@ -26,6 +27,7 @@ export const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
   onSavePosition,
   onCropSave,
   isSaving = false,
+  onChooseDifferent,
 }) => {
   const [crop, setCrop] = useState<Point>({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
@@ -141,7 +143,7 @@ export const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
             </div>
             <div>
               <h3 id="photo-crop-title" className="text-body-lg font-bold text-ink">
-                Crop & Reposition Photo
+                Crop and reposition photo
               </h3>
               <p className="text-label-sm text-ink-muted">
                 Drag to center your face and adjust zoom for your profile card
@@ -246,7 +248,7 @@ export const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
         </div>
 
         {/* Footer Actions */}
-        <div className="flex items-center justify-end gap-3 pt-2 border-t border-edge">
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-edge">
           <button
             type="button"
             onClick={onClose}
@@ -255,24 +257,36 @@ export const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
           >
             Cancel
           </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={isBusy || !croppedArea}
-            className="btn btn-primary min-h-[44px]"
-          >
-            {isBusy ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span>{isSaving ? 'Uploading...' : 'Processing...'}</span>
-              </>
-            ) : (
-              <>
-                <Check className="w-4 h-4" />
-                <span>Save Photo</span>
-              </>
+          <div className="flex items-center gap-2">
+            {onChooseDifferent && (
+              <button
+                type="button"
+                onClick={onChooseDifferent}
+                disabled={isBusy}
+                className="btn btn-secondary min-h-[44px]"
+              >
+                Choose a different photo
+              </button>
             )}
-          </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={isBusy || !croppedArea}
+              className="btn btn-primary min-h-[44px]"
+            >
+              {isBusy ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>{isSaving ? 'Uploading…' : 'Processing…'}</span>
+                </>
+              ) : (
+                <>
+                  <Check className="w-4 h-4" />
+                  <span>Use photo</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
     </div>,

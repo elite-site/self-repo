@@ -7,7 +7,7 @@ import {
   AlertCircle,
   Download,
   Loader2,
-  RotateCcw,
+  UploadCloud,
   Trash2
 } from 'lucide-react';
 import { SkeletonPage } from '../components/ui/Skeleton';
@@ -15,6 +15,7 @@ import { useToast } from '../components/Toast';
 import { useConfirm } from '../components/ui/ConfirmDialog';
 import { useReducedMotion } from '../hooks/useReducedMotion';
 import { selectVariantsByName } from '../lib/motion';
+import { formatSubmittedAt } from '../utils/formatDate';
 
 export const ResumePage: React.FC = () => {
   const { showToast } = useToast();
@@ -48,7 +49,7 @@ export const ResumePage: React.FC = () => {
       setError(null);
       // Show a transient notice by reloading (will show empty state)
       await loadResume();
-      showToast('Your resume has been deleted.');
+      showToast('Resume deleted.');
     } catch (err: any) {
       const notice = err?.response?.data?.message || 'Could not delete your resume. Please try again.';
       setError(notice);
@@ -69,8 +70,8 @@ export const ResumePage: React.FC = () => {
         setResumeData(data);
       }
     } catch {
-      setError('Could not load resume document status.');
-      showToast('Could not load resume document status.', 'error');
+      setError("Couldn't load your resume status.");
+      showToast("Couldn't load your resume status.", 'error');
     } finally {
       setLoading(false);
     }
@@ -87,8 +88,8 @@ export const ResumePage: React.FC = () => {
     if (file.type !== 'application/pdf') {
       // Must return, not just set the error: without it a non-PDF falls through
       // to the upload and the student watches a rejected file upload anyway.
-      setError('Only PDF documents are accepted for resumes.');
-      showToast('Only PDF documents are accepted for resumes.', 'error');
+      setError('Choose a PDF file.');
+      showToast('Choose a PDF file.', 'error');
       // Reset the input so re-picking the same file fires `change` again. The
       // value is only cleared in the upload's `finally`, which a validation
       // rejection never reaches.
@@ -114,7 +115,7 @@ export const ResumePage: React.FC = () => {
     try {
       await api.uploadResume(formData);
       setUploadSuccess(true);
-      showToast('Resume uploaded successfully!');
+      showToast('Resume uploaded.');
       await loadResume();
     } catch (err: any) {
       const notice = err.response?.data?.message || 'Failed to upload resume document.';
@@ -171,21 +172,34 @@ export const ResumePage: React.FC = () => {
 
   const getStatusLabel = (status?: string) => {
     switch (status) {
-      case 'CHANGES_REQUESTED': return 'Revision Requested';
+      case 'CHANGES_REQUESTED': return 'Changes requested';
       case 'REJECTED': return 'Rejected';
       case 'APPROVED': return 'Approved';
-      default: return status || 'Under Review';
+      case 'PENDING':
+      case 'SUBMITTED':
+      case 'REVIEW':
+        return 'Under review';
+      default: return 'Not submitted';
     }
   };
 
   return (
     <div className="space-y-6 text-left page-enter">
+      {/* SINGLE FILE INPUT */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        accept="application/pdf"
+        onChange={handleFileSelect}
+        className="hidden"
+      />
+
       {/* HEADER */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-black text-ink font-heading">Professional Resume</h1>
+          <h1 className="text-xl sm:text-2xl font-black text-ink font-heading">Resume</h1>
           <p className="text-xs text-ink-secondary">
-            One-page curriculum vitae rendered for campus recruiters and department records
+            One page works best for campus placements.
           </p>
         </div>
 
@@ -196,21 +210,14 @@ export const ResumePage: React.FC = () => {
               <span>{getStatusLabel(resumeData.status)}</span>
             </span>
 
-            <input
-              type="file"
-              ref={fileInputRef}
-              accept="application/pdf"
-              onChange={handleFileSelect}
-              className="hidden"
-            />
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
-              className="btn btn-secondary text-xs sm:text-sm px-3 py-1.5 sm:px-4 sm:py-2"
+              className={`btn ${resumeData.status === 'CHANGES_REQUESTED' || resumeData.status === 'REJECTED' ? 'btn-primary' : 'btn-secondary'} text-xs sm:text-sm px-3 py-1.5 sm:px-4 sm:py-2`}
               aria-label="Replace your resume PDF"
             >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>{resumeData.status === 'CHANGES_REQUESTED' ? 'Re-upload Resume' : 'Replace Resume'}</span>
+              <UploadCloud className="w-3.5 h-3.5" />
+              <span>Replace resume</span>
             </button>
             <button
               onClick={handleDelete}
@@ -223,38 +230,34 @@ export const ResumePage: React.FC = () => {
               ) : (
                 <Trash2 className="w-3.5 h-3.5" />
               )}
-              <span>Delete Resume</span>
+              <span>Delete resume</span>
             </button>
           </div>
         )}
       </div>
 
       {resumeData && resumeData.status === 'CHANGES_REQUESTED' && (
-        <div className="p-4 bg-status-bg-changes border border-status-changes rounded-lg text-status-changes text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-start gap-2.5">
-            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-            <div>
-              <span className="font-bold">Faculty Revision Requested: </span>
-              <span>{resumeData.reviewNote || 'The admin requested updates on your resume. Please upload a revised copy.'}</span>
-            </div>
+        <div className="p-4 bg-status-bg-changes border border-status-changes rounded-lg text-status-changes text-xs flex items-start gap-2.5">
+          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+          <div>
+            <span>
+              {resumeData.reviewNote
+                ? `Faculty asked for changes: ${resumeData.reviewNote}`
+                : 'Faculty asked for changes. Upload a new PDF.'}
+            </span>
           </div>
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="btn btn-primary text-xs shrink-0"
-          >
-            Upload Revision
-          </button>
         </div>
       )}
 
       {resumeData && resumeData.status === 'REJECTED' && (
-        <div className="p-4 bg-status-bg-rejected border border-status-rejected rounded-lg text-status-rejected text-xs flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0" />
-            <div>
-              <span className="font-bold">Resume Returned by Administrator: </span>
-              <span>{resumeData.reviewNote || 'Please upload a revised, single-page PDF document.'}</span>
-            </div>
+        <div className="p-4 bg-status-bg-rejected border border-status-rejected rounded-lg text-status-rejected text-xs flex items-start gap-2.5">
+          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+          <div>
+            <span>
+              {resumeData.reviewNote
+                ? `Faculty returned your resume: ${resumeData.reviewNote}`
+                : 'Faculty returned your resume. Upload a new PDF.'}
+            </span>
           </div>
         </div>
       )}
@@ -271,39 +274,25 @@ export const ResumePage: React.FC = () => {
         </div>
       )}
 
-      {uploadSuccess && (
-        <div className="p-4 bg-status-bg-approved border border-status-approved rounded-lg text-status-approved text-xs flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4 shrink-0" />
-          <span>Resume uploaded successfully!</span>
-        </div>
-      )}
-
       {/* VIEWER OR UPLOADER */}
       {!hasValidFile ? (
         <div
           onClick={() => fileInputRef.current?.click()}
           className="surface border-2 border-dashed border-edge hover:border-brand bg-surface p-6 sm:p-12 md:p-16 flex flex-col items-center text-center justify-center min-h-[350px] transition-colors cursor-pointer shadow-card"
         >
-          <input
-            type="file"
-            ref={fileInputRef}
-            accept="application/pdf"
-            onChange={handleFileSelect}
-            className="hidden"
-          />
           <div className="w-16 h-16 rounded-lg bg-brand-soft text-brand-soft-text flex items-center justify-center mb-4 group-hover:scale-105 transition-transform shadow-card">
             <FileText className="w-8 h-8" />
           </div>
-          <h3 className="font-bold text-base text-ink font-heading">Upload your Curriculum Vitae / Resume</h3>
+          <h3 className="font-bold text-base text-ink font-heading">Upload your resume</h3>
           <p className="text-xs text-ink-secondary max-w-sm mt-1.5 mb-6">
-            PDF documents only (max 10MB). Clean ATS-friendly single-page format is recommended for technical placements.
+            PDF only, up to 10 MB. One page works best for placements.
           </p>
           <button
             type="button"
             disabled={uploading}
             className="btn btn-primary"
           >
-            {uploading ? 'Uploading...' : 'Upload Resume'}
+            {uploading ? 'Uploading…' : 'Upload resume'}
           </button>
         </div>
       ) : (
@@ -328,7 +317,7 @@ export const ResumePage: React.FC = () => {
               <div>
                 <h4 className="font-bold text-xs text-ink font-heading">{resumeData.filename || 'resume.pdf'}</h4>
                 <span className="text-xs text-ink-secondary">
-                  Submitted {resumeData.submittedAt ? new Date(resumeData.submittedAt).toLocaleDateString() : 'Recently'}
+                  Submitted {formatSubmittedAt(resumeData.submittedAt)}
                 </span>
               </div>
             </div>

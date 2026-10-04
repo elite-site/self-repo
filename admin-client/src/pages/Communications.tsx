@@ -52,24 +52,24 @@ const ComposeDialog: React.FC<{ onClose: () => void; onPublished: () => void }> 
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-scrim backdrop-blur-xs flex items-center justify-center p-4">
-      <div className="bg-surface text-ink rounded-2xl shadow-2xl border border-edge w-full max-w-xl flex flex-col overflow-hidden max-h-[90vh]">
+    <div className="fixed inset-0 z-50 bg-scrim flex items-center justify-center p-4">
+      <div className="bg-surface text-ink rounded-lg shadow-2xl border border-edge w-full max-w-xl flex flex-col overflow-hidden max-h-[90vh]">
         <div className="flex items-center justify-between p-5 border-b border-edge">
-          <h2 className="text-base font-extrabold text-ink">New Announcement</h2>
+          <h2 className="text-base font-semibold text-ink">New Announcement</h2>
           <button onClick={onClose} className="text-ink-muted hover:text-ink cursor-pointer"><X className="w-5 h-5" /></button>
         </div>
         <div className="flex-1 overflow-y-auto p-5 space-y-4">
           {error && <div className="bg-status-bg-rejected border border-edge text-status-rejected text-xs rounded-lg p-3">{error}</div>}
           <label className="block">
-            <span className="text-xs font-bold text-ink-secondary uppercase tracking-wide">Title *</span>
+            <span className="text-xs font-bold text-ink-secondary ">Title *</span>
             <input value={form.title} onChange={e => update('title', e.target.value)} className="mt-1 w-full text-sm bg-surface text-ink border border-edge rounded-lg px-3 py-2 focus:outline-none focus:border-status-rejected" placeholder="Announcement title" />
           </label>
           <label className="block">
-            <span className="text-xs font-bold text-ink-secondary uppercase tracking-wide">Body *</span>
-            <textarea value={form.body} onChange={e => update('body', e.target.value)} rows={6} className="mt-1 w-full text-sm bg-surface text-ink border border-edge rounded-lg px-3 py-2 focus:outline-none focus:border-status-rejected resize-none" placeholder="Write your announcement here..." />
+            <span className="text-xs font-bold text-ink-secondary ">Body *</span>
+            <textarea value={form.body} onChange={e => update('body', e.target.value)} rows={6} className="mt-1 w-full text-sm bg-surface text-ink border border-edge rounded-lg px-3 py-2 focus:outline-none focus:border-status-rejected resize-none" placeholder="Write your announcement here…" />
           </label>
           <label className="block">
-            <span className="text-xs font-bold text-ink-secondary uppercase tracking-wide">Audience</span>
+            <span className="text-xs font-bold text-ink-secondary ">Audience</span>
             <select value={form.audience} onChange={e => update('audience', e.target.value)} className="mt-1 w-full text-sm bg-surface text-ink border border-edge rounded-lg px-3 py-2 focus:outline-none focus:border-status-rejected">
               <option value="ALL">All Students</option>
               <option value="YEAR_1">Year 1 only</option>
@@ -85,9 +85,9 @@ const ComposeDialog: React.FC<{ onClose: () => void; onPublished: () => void }> 
             </div>
           )}
           <label className="block">
-            <span className="text-xs font-bold text-ink-secondary uppercase tracking-wide">Schedule (optional)</span>
+            <span className="text-xs font-bold text-ink-secondary ">Schedule (optional)</span>
             <input type="datetime-local" value={form.scheduledAt} onChange={e => update('scheduledAt', e.target.value)} className="mt-1 w-full text-sm bg-surface text-ink border border-edge rounded-lg px-3 py-2 focus:outline-none focus:border-status-rejected" />
-            <p className="text-[10px] text-ink-muted mt-1">Leave blank to publish immediately.</p>
+            <p className="text-xs text-ink-muted mt-1">Leave blank to publish immediately.</p>
           </label>
         </div>
         <div className="flex gap-3 p-5 border-t border-edge">
@@ -149,7 +149,7 @@ export const Communications: React.FC = () => {
         <div className="flex items-center gap-3">
           <Megaphone className="w-6 h-6 text-status-rejected" />
           <div>
-            <h1 className="text-xl font-extrabold text-ink">Announcements</h1>
+            <h1 className="text-xl font-semibold text-ink">Announcements</h1>
             <p className="text-xs text-ink-muted">Send messages to all or specific groups of students</p>
           </div>
         </div>
@@ -159,17 +159,17 @@ export const Communications: React.FC = () => {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center h-48 bg-surface rounded-2xl border border-edge">
+        <div className="flex items-center justify-center h-48 bg-surface rounded-lg border border-edge">
           <Loader2 className="w-7 h-7 animate-spin text-status-rejected" />
         </div>
       ) : error ? (
-        <div className="flex flex-col items-center gap-2 h-48 justify-center bg-surface rounded-2xl border border-edge">
+        <div className="flex flex-col items-center gap-2 h-48 justify-center bg-surface rounded-lg border border-edge">
           <AlertCircle className="w-8 h-8 text-status-rejected" />
           <p className="text-sm text-ink-muted">{error}</p>
           <button onClick={fetchAnnouncements} className="text-xs text-status-rejected font-semibold hover:underline cursor-pointer">Retry</button>
         </div>
       ) : announcements.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-48 bg-surface rounded-2xl border border-edge gap-3">
+        <div className="flex flex-col items-center justify-center h-48 bg-surface rounded-lg border border-edge gap-3">
           <Inbox className="w-10 h-10 text-ink-muted" />
           <p className="text-sm font-semibold text-ink-muted">No announcements yet</p>
           <button onClick={() => setShowCompose(true)} className="text-xs text-status-rejected font-semibold hover:underline cursor-pointer">Write the first one</button>
@@ -177,7 +177,7 @@ export const Communications: React.FC = () => {
       ) : (
         <div className="space-y-3">
           {announcements.map((a) => (
-            <div key={a.id} className="bg-surface rounded-2xl border border-edge p-5 shadow-xs transition-colors">
+            <div key={a.id} className="bg-surface rounded-lg border border-edge p-5 shadow-xs transition-colors">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <h3 className="font-bold text-ink text-sm truncate">{a.title}</h3>
@@ -204,10 +204,10 @@ export const Communications: React.FC = () => {
                 </div>
               </div>
               <div className="flex items-center gap-4 mt-3 pt-3 border-t border-edge">
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase text-ink-muted">
+                <span className="inline-flex items-center gap-1 text-xs font-semibold text-ink-muted">
                   <Clock className="w-3 h-3" /> {a.createdByName || a.createdBy || 'Admin'}
                 </span>
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border bg-surface-canvas text-ink-secondary border-edge">
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold border bg-surface-canvas text-ink-secondary border-edge">
                   {formatAudience(a)}
                 </span>
               </div>

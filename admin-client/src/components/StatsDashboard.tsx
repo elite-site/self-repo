@@ -171,7 +171,7 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
             className="surface cursor-pointer p-5 text-left transition-colors duration-fast hover:border-edge-strong hover:bg-surface-inset"
           >
             <span className="flex items-center justify-between gap-2 text-label-md text-ink-muted">
-              <span className="uppercase tracking-wide">{kpi.label}</span>
+              <span>{kpi.label}</span>
               <kpi.icon size={16} strokeWidth={1.75} className="shrink-0 text-brand" aria-hidden="true" />
             </span>
             <span className="mt-2 block font-heading text-headline-xl tabular-nums text-ink">
@@ -223,7 +223,7 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
           </div>
 
           <div className="mt-5 space-y-3">
-            <h3 className="text-label-sm uppercase tracking-wider text-ink-muted">Submissions by section</h3>
+            <h3 className="text-label-sm font-semibold text-ink-muted">Submissions by section</h3>
             {stats.bySection.length === 0 ? (
               <p className="py-3 text-body-sm text-ink-muted">No video submissions recorded yet.</p>
             ) : (
@@ -249,7 +249,7 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
 
           {hasRatings && (
             <div className="mt-5 border-t border-edge pt-4">
-              <h3 className="text-label-sm uppercase tracking-wider text-ink-muted">
+              <h3 className="text-label-sm font-semibold text-ink-muted">
                 Evaluation ratings
               </h3>
               <dl className="mt-3 grid grid-cols-3 gap-3">

@@ -455,7 +455,7 @@ export const VideoPlayer = React.forwardRef<HTMLDivElement, VideoPlayerProps>(fu
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
           <Loader2 size={36} className="animate-spin text-on-brand" aria-hidden="true" />
           <p role="status" className="sr-only">
-            Buffering video
+            Loading video
           </p>
         </div>
       )}

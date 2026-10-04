@@ -23,10 +23,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
       if (res.success) {
         onLoginSuccess(res.user);
       } else {
-        setError('Login failed. Please check your credentials.');
+        setError('Wrong email or password.');
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Invalid username or password.');
+      setError('Wrong email or password.');
     } finally {
       setLoading(false);
     }
@@ -52,10 +52,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
             />
           </picture>
           <div>
-            <h1 className="text-xl font-extrabold text-ink font-heading tracking-tight">
-              <span className="text-brand">ELITE </span>ADMIN PORTAL
+            <h1 className="text-xl font-semibold text-ink font-heading tracking-tight">
+              Admin sign in
             </h1>
-            <p className="text-[11px] font-semibold text-ink-muted uppercase tracking-wider mt-0.5">
+            <p className="text-xs font-semibold text-ink-muted mt-0.5">
               Dept. of Information Technology • Organizer Console
             </p>
           </div>
@@ -129,7 +129,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           </button>
         </form>
 
-        <div className="mt-8 pt-4 border-t border-edge text-center text-[11px] text-ink-muted">
+        <div className="mt-8 pt-4 border-t border-edge text-center text-xs text-ink-muted">
           SASI Institute of Technology & Engineering
         </div>
       </div>

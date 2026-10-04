@@ -328,7 +328,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
   return ReactDOM.createPortal(
     <>
       <div
-        className="fixed inset-0 z-modal bg-scrim backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 md:p-6 animate-fade-in"
+        className="fixed inset-0 z-modal bg-scrim flex items-center justify-center p-3 sm:p-4 md:p-6 animate-fade-in"
         onClick={(e) => {
           if (e.target === e.currentTarget) onClose();
         }}
@@ -345,7 +345,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
           {/* 1. STICKY MODAL HEADER */}
           <div className="p-4 sm:p-5 border-b border-edge bg-surface-sunken flex items-center justify-between flex-none shrink-0">
             <div className="flex items-center gap-3 min-w-0 pr-2">
-              <div className="w-11 h-11 rounded-xl bg-brand text-on-primary flex items-center justify-center text-base font-extrabold shrink-0">
+              <div className="w-11 h-11 rounded-xl bg-brand text-on-primary flex items-center justify-center text-base font-semibold shrink-0">
                 {initials || <UserRound className="w-5 h-5" />}
               </div>
               <div className="min-w-0">
@@ -354,13 +354,13 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                     {submission.name}
                   </h2>
                   {activeRating ? (
-                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-[11px] sm:text-xs font-bold uppercase tracking-wide shrink-0 ${activeRating.value === 'GOOD' ? 'badge badge-approved' : activeRating.value === 'AVERAGE' ? 'badge badge-pending' : 'badge badge-rejected'}`}>
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-xs font-semibold shrink-0 ${activeRating.value === 'GOOD' ? 'badge badge-approved' : activeRating.value === 'AVERAGE' ? 'badge badge-pending' : 'badge badge-rejected'}`}>
                       <span className={`w-2 h-2 rounded-full ${activeRating.dotClass}`} />
                       {activeRating.label}
                     </span>
                   ) : (
                     <span className="badge badge-draft shrink-0">
-                      NOT RATED
+                      Not rated
                     </span>
                   )}
                 </div>
@@ -390,7 +390,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                   <span>{actionError}</span>
                 </div>
                 <button onClick={() => setActionError(null)} className="font-bold underline cursor-pointer shrink-0">
-                  Dismiss
+                  Close
                 </button>
               </div>
             )}
@@ -398,35 +398,35 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
             <div className="surface p-4 sm:p-5">
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 text-xs items-start">
                 <div className="min-w-0">
-                  <div className="text-ink-muted uppercase text-[10px] font-semibold tracking-wider">Roll Number</div>
+                  <div className="text-ink-muted text-xs font-semibold">Roll number</div>
                   <div className="text-ink font-mono font-bold mt-0.5 truncate">{submission.rollNo}</div>
                 </div>
                 <div className="min-w-0">
-                  <div className="text-ink-muted uppercase text-[10px] font-semibold tracking-wider">Section & Year</div>
+                  <div className="text-ink-muted text-xs font-semibold">Section &amp; year</div>
                   <div className="text-ink font-semibold mt-0.5 truncate">{submission.branch}-{submission.section} • Year {submission.year}</div>
                 </div>
                 <div className="min-w-0">
-                  <div className="text-ink-muted uppercase text-[10px] font-semibold tracking-wider flex items-center gap-1">
+                  <div className="text-ink-muted text-xs font-semibold flex items-center gap-1">
                     <Mail className="w-3 h-3" /> Email
                   </div>
                   <div className="text-ink mt-0.5 break-all">{submission.email}</div>
                 </div>
                 <div className="min-w-0">
-                  <div className="text-ink-muted uppercase text-[10px] font-semibold tracking-wider flex items-center gap-1">
+                  <div className="text-ink-muted text-xs font-semibold flex items-center gap-1">
                     <Phone className="w-3 h-3" /> Phone
                   </div>
                   <div className="text-ink font-mono font-semibold mt-0.5">{submission.phoneNo || 'To be announced'}</div>
                 </div>
                 <div className="min-w-0">
-                  <div className="text-ink-muted uppercase text-[10px] font-semibold tracking-wider flex items-center gap-1">
-                    <ShieldCheck className="w-3 h-3" /> Video Status
+                  <div className="text-ink-muted text-xs font-semibold flex items-center gap-1">
+                    <ShieldCheck className="w-3 h-3" /> Video status
                   </div>
-                  <div className={`font-bold uppercase mt-0.5 text-[11px] ${hasVideo ? 'text-status-approved' : 'text-status-rejected'}`}>
+                  <div className={`font-semibold mt-0.5 text-xs ${hasVideo ? 'text-status-approved' : 'text-status-rejected'}`}>
                     {hasVideo ? 'Available' : 'No video'}
                   </div>
                 </div>
               </div>
-              <div className="mt-4 pt-3 border-t border-edge flex items-center gap-1.5 text-[11px] text-ink-secondary font-mono min-w-0">
+              <div className="mt-4 pt-3 border-t border-edge flex items-center gap-1.5 text-xs text-ink-secondary font-mono min-w-0">
                 <Folder className="w-3 h-3 text-ink-muted shrink-0" />
                 <span className="truncate">{submission.driveFolderPath}</span>
               </div>
@@ -440,10 +440,10 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                     <Film className="w-4 h-4" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-ink tracking-tight">
-                      Submitted Self-Introduction
+                    <h3 className="text-sm font-semibold text-ink tracking-tight">
+                      Introduction video
                     </h3>
-                    <p className="text-[11px] text-ink-secondary">
+                    <p className="text-xs text-ink-secondary">
                       Review the student's introduction clip below.
                     </p>
                   </div>
@@ -489,7 +489,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                       <p className="text-xs font-bold text-ink">
                         {introVideo?.isPublic ? 'Visible on the public page' : 'Not published publicly'}
                       </p>
-                      <p className="text-[11px] text-ink-secondary mt-0.5 leading-relaxed">
+                      <p className="text-xs text-ink-secondary mt-0.5 leading-relaxed">
                         {introVideo?.status === 'APPROVED'
                           ? 'Published videos are watchable by anyone on the public home page, without logging in.'
                           : 'Only an approved video can be published to the public page.'}
@@ -503,7 +503,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                       onClick={handleTogglePublic}
                       disabled={!introVideo || togglingPublic || introVideo.status !== 'APPROVED'}
                       title={introVideo?.status === 'APPROVED' ? undefined : 'Only approved videos can be published'}
-                      className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-[11px] font-bold uppercase tracking-wide transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
+                      className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
                         introVideo?.isPublic
                           ? 'btn btn-ghost'
                           : 'btn btn-primary'
@@ -516,7 +516,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                       ) : (
                         <Globe className="w-3.5 h-3.5" />
                       )}
-                      {introVideo?.isPublic ? 'Unpublish' : 'Publish'}
+                      {introVideo?.isPublic ? 'Hide from public profile' : 'Show on public profile'}
                     </button>
 
                     <button
@@ -525,14 +525,14 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                       className="btn btn-ghost text-status-changes hover:bg-status-bg-changes hover:text-status-changes border border-status-bg-changes"
                     >
                       <RefreshCw className="w-3.5 h-3.5" />
-                      Request New Video
+                      Request new upload
                     </button>
                   </div>
                 </div>
 
                 {showRequestForm && (
                   <div className="space-y-2 p-3 rounded-xl border border-status-bg-changes bg-status-bg-changes/50">
-                    <label className="block text-[11px] font-bold uppercase tracking-wide text-status-changes">
+                    <label className="block text-xs font-semibold text-status-changes">
                       What should the student change? <span className="font-normal normal-case">(optional)</span>
                     </label>
                     <textarea
@@ -542,7 +542,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                       placeholder="e.g. The audio is not clear in the second half, please re-record."
                       className="textarea"
                     />
-                    <p className="text-[11px] text-status-changes/80 leading-relaxed">
+                    <p className="text-xs text-status-changes/80 leading-relaxed">
                       The student gets a notification. Their current video stays live until they upload the
                       replacement, which then overrides it and removes the old file.
                     </p>
@@ -561,14 +561,14 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                         className="btn btn-primary"
                       >
                         {requestingVideo ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <MessageSquare className="w-3.5 h-3.5" />}
-                        Notify Student
+                        Send to student
                       </button>
                     </div>
                   </div>
                 )}
 
                 {videoNotice && (
-                  <p className="text-[11px] text-ink-secondary flex items-center gap-1.5">
+                  <p className="text-xs text-ink-secondary flex items-center gap-1.5">
                     <ShieldCheck className="w-3 h-3 shrink-0" />
                     {videoNotice}
                   </p>
@@ -585,10 +585,10 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                     <Circle className="w-4 h-4" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-ink tracking-tight uppercase">
-                      Introduction Rating
+                    <h3 className="text-sm font-semibold text-ink tracking-tight">
+                      Introduction rating
                     </h3>
-                    <p className="text-[11px] text-ink-secondary">Assess the delivery and clarity.</p>
+                    <p className="text-xs text-ink-secondary">Assess the delivery and clarity.</p>
                   </div>
                 </div>
 
@@ -609,10 +609,10 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                       >
                         <Circle className={`w-4 h-4 mt-0.5 shrink-0 ${isActive ? 'text-on-primary' : 'text-ink-muted'}`} />
                         <div className="min-w-0">
-                          <div className={`font-bold text-xs uppercase tracking-wider ${isActive ? 'text-on-primary' : 'text-ink'}`}>
+                          <div className={`font-semibold text-xs ${isActive ? 'text-on-primary' : 'text-ink'}`}>
                             {opt.label}
                           </div>
-                          <div className={`text-[11px] mt-0.5 ${isActive ? 'text-on-primary/80' : 'text-ink-secondary'}`}>
+                          <div className={`text-xs mt-0.5 ${isActive ? 'text-on-primary/80' : 'text-ink-secondary'}`}>
                             {opt.description}
                           </div>
                         </div>
@@ -621,7 +621,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                   })}
 
                   {updating && (
-                    <div className="text-[11px] text-ink-muted font-mono pt-1">Saving rating...</div>
+                    <div className="text-xs text-ink-muted font-mono pt-1">Saving rating…</div>
                   )}
                 </div>
               </div>
@@ -633,10 +633,10 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                     <MessageSquare className="w-4 h-4" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-ink tracking-tight uppercase">
-                      Send Response to Student
+                    <h3 className="text-sm font-semibold text-ink tracking-tight">
+                      Send to student
                     </h3>
-                    <p className="text-[11px] text-ink-secondary">
+                    <p className="text-xs text-ink-secondary">
                       Text feedback plus hashtag keywords the student sees after submitting.
                     </p>
                   </div>
@@ -652,7 +652,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
 
                 <div className="space-y-3">
                   <div>
-                    <div className="text-[10px] font-bold uppercase tracking-wider text-status-approved mb-1.5">
+                    <div className="text-xs font-semibold text-status-approved mb-1.5">
                       Pros, select keywords
                     </div>
                     <div className="flex flex-wrap gap-1.5">
@@ -663,7 +663,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                             key={tag}
                             type="button"
                             onClick={() => togglePros(tag)}
-                            className={`px-2.5 py-1 rounded-full border text-[11px] font-semibold transition-colors cursor-pointer ${
+                            className={`px-2.5 py-1 rounded-full border text-xs font-semibold transition-colors cursor-pointer ${
                               on
                                 ? 'bg-status-approved text-on-primary border-status-approved'
                                 : 'badge badge-approved hover:border-status-approved'
@@ -676,7 +676,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                     </div>
                   </div>
                   <div>
-                    <div className="text-[10px] font-bold uppercase tracking-wider text-status-rejected mb-1.5">
+                    <div className="text-xs font-semibold text-status-rejected mb-1.5">
                       Cons, select keywords
                     </div>
                     <div className="flex flex-wrap gap-1.5">
@@ -687,7 +687,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                             key={tag}
                             type="button"
                             onClick={() => toggleCons(tag)}
-                            className={`px-2.5 py-1 rounded-full border text-[11px] font-semibold transition-colors cursor-pointer ${
+                            className={`px-2.5 py-1 rounded-full border text-xs font-semibold transition-colors cursor-pointer ${
                               on
                                 ? 'bg-status-rejected text-on-primary border-status-rejected'
                                 : 'badge badge-rejected hover:border-status-rejected'
@@ -709,7 +709,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                     className="flex-1 btn btn-primary"
                   >
                     <Send className="w-3.5 h-3.5" />
-                    <span>{sendingReview ? 'Sending...' : 'Send Response'}</span>
+                    <span>{sendingReview ? 'Sending…' : 'Send to student'}</span>
                   </button>
                   <button
                     type="button"
@@ -728,10 +728,10 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
             {/* MANAGE ACTIONS */}
             <div className="surface p-5 shadow-sm flex flex-col sm:flex-row items-stretch sm:items-center gap-3 justify-between">
               <div>
-                <h3 className="text-sm font-bold text-ink tracking-tight uppercase">
-                  Manage Video & Record
+                <h3 className="text-sm font-semibold text-ink tracking-tight">
+                  Open student
                 </h3>
-                <p className="text-[11px] text-ink-secondary mt-0.5">
+                <p className="text-xs text-ink-secondary mt-0.5">
                   Deleting the video lets the student upload a replacement. Removing the record is permanent.
                 </p>
               </div>
@@ -740,10 +740,10 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                   type="button"
                   disabled={updating || deleting || deletingVideo || !hasVideo}
                   onClick={handleDeleteVideo}
-                  className="btn btn-ghost text-status-pending hover:bg-status-bg-pending hover:text-status-pending border border-status-bg-pending disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="btn btn-danger disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <VideoOff className="w-4 h-4" />
-                  <span>{deletingVideo ? 'Deleting Video...' : 'Delete Video & Allow Re-upload'}</span>
+                  <span>{deletingVideo ? 'Deleting…' : 'Delete file'}</span>
                 </button>
                 <button
                   type="button"
@@ -752,7 +752,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                   className="btn btn-danger"
                 >
                   <Trash2 className="w-4 h-4" />
-                  <span>{deleting ? 'Deleting Record...' : 'Delete Record & Files'}</span>
+                  <span>{deleting ? 'Deleting…' : 'Delete record'}</span>
                 </button>
               </div>
             </div>

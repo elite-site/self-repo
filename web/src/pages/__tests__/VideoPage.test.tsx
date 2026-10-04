@@ -97,19 +97,19 @@ describe('VideoPage video playback and proxy fallback', () => {
 
     // Player should now be replaced with error notice and Retry button
     await waitFor(() => {
-      expect(screen.getByText(/Unable to play video/i)).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /Retry Playback/i })).toBeInTheDocument();
+      expect(screen.getByText(/This video won't play right now/i)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Try again/i })).toBeInTheDocument();
     }, { timeout: 4000 });
 
     // Clicking Retry resets the error and attempts playback again without proxy
-    const retryButton = screen.getByRole('button', { name: /Retry Playback/i });
+    const retryButton = screen.getByRole('button', { name: /Try again/i });
     fireEvent.click(retryButton);
 
     await waitFor(() => {
       const retriedVideo = container.querySelector('video');
       expect(retriedVideo).toBeInTheDocument();
       expect(retriedVideo?.getAttribute('src')).not.toContain('&proxy=1');
-      expect(screen.queryByText(/Unable to play video/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/This video won't play right now/i)).not.toBeInTheDocument();
     }, { timeout: 4000 });
   });
 });

@@ -56,7 +56,7 @@ const ItemStatusBadge = ({ status }: { status: string }) => {
     cls: 'bg-surface-canvas text-ink-secondary border-edge',
   };
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold border ${s.cls}`}>
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold border ${s.cls}`}>
       {s.label}
     </span>
   );
@@ -116,7 +116,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
     e.preventDefault();
     if (!requestModal || !student) return;
     if (!requestNote.trim()) {
-      showToast('Please provide a note explaining what needs to be changed.');
+      showToast('Add a note explaining what to change.');
       return;
     }
     setActionLoading(true);
@@ -127,7 +127,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
         requestModal.itemId,
         requestNote.trim()
       );
-      showToast('Change request sent to student successfully.');
+      showToast('Change request sent.');
       setRequestModal(null);
       setRequestNote('');
       await loadStudent();
@@ -150,7 +150,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
         deleteModal.itemId,
         deleteReason.trim() || undefined
       );
-      showToast(`${deleteModal.title} deleted successfully.`);
+      showToast(`Deleted ${deleteModal.title}.`);
       setDeleteModal(null);
       setDeleteReason('');
       await loadStudent();
@@ -166,9 +166,9 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
       <div className="space-y-6" aria-busy="true">
         <span className="sr-only" role="status">Loading student profile</span>
         <div className="skeleton h-9 w-56" />
-        <div className="bg-surface border border-edge rounded-2xl p-6 space-y-4">
+        <div className="bg-surface border border-edge rounded-lg p-6 space-y-4">
           <div className="flex items-center gap-4">
-            <div className="skeleton h-16 w-16 rounded-2xl" />
+            <div className="skeleton h-16 w-16 rounded-lg" />
             <div className="space-y-2">
               <div className="skeleton h-6 w-48" />
               <div className="skeleton h-4 w-64" />
@@ -177,8 +177,8 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
           <div className="skeleton h-12 w-full" />
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="skeleton h-56 w-full rounded-2xl" />
-          <div className="skeleton h-56 w-full rounded-2xl" />
+          <div className="skeleton h-56 w-full rounded-lg" />
+          <div className="skeleton h-56 w-full rounded-lg" />
         </div>
       </div>
     );
@@ -186,7 +186,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
 
   if (error || !student) {
     return (
-      <div className="p-8 text-center bg-surface border border-edge rounded-2xl max-w-lg mx-auto my-12">
+      <div className="p-8 text-center bg-surface border border-edge rounded-lg max-w-lg mx-auto my-12">
         <AlertTriangle className="w-10 h-10 text-status-rejected mx-auto mb-3" />
         <h3 className="text-base font-bold text-ink">Student Not Found</h3>
         <p className="text-xs text-ink-muted mt-1 mb-5">{error || 'Unable to retrieve student profile.'}</p>
@@ -301,10 +301,10 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
       </div>
 
       {/* Student Profile Header Card */}
-      <div className="bg-surface border border-edge rounded-2xl p-6 shadow-xs">
+      <div className="bg-surface border border-edge rounded-lg p-6 shadow-xs">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="flex items-center gap-4">
-            <div className="relative w-16 h-16 rounded-2xl bg-status-bg-rejected text-ink-brand flex items-center justify-center text-2xl font-black border border-edge overflow-hidden shadow-xs shrink-0">
+            <div className="relative w-16 h-16 rounded-lg bg-status-bg-rejected text-ink-brand flex items-center justify-center text-2xl font-semibold border border-edge overflow-hidden shadow-xs shrink-0">
               <span>{student.name?.charAt(0) || 'S'}</span>
               {profile.photoUrl && (
                 <img
@@ -320,7 +320,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
             </div>
             <div>
               <div className="flex items-center gap-2.5 flex-wrap">
-                <h1 className="text-xl sm:text-2xl font-black text-ink font-display">
+                <h1 className="text-xl sm:text-2xl font-semibold text-ink font-display">
                   {student.name}
                 </h1>
                 <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-surface-sunken text-ink-secondary">
@@ -396,20 +396,20 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
         {(profile.biography || skillsList.length > 0) && (
           <div className="mt-5 pt-5 border-t border-edge grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="md:col-span-2">
-              <h4 className="text-[11px] font-bold uppercase tracking-wider text-ink-muted mb-1">Biography</h4>
+              <h4 className="text-xs font-bold  text-ink-muted mb-1">Biography</h4>
               <p className="text-xs text-ink-secondary leading-relaxed">
                 {profile.biography || 'No biography written yet.'}
               </p>
             </div>
             <div>
-              <h4 className="text-[11px] font-bold uppercase tracking-wider text-ink-muted mb-1.5">
+              <h4 className="text-xs font-bold  text-ink-muted mb-1.5">
                 Skills ({skillsList.length})
               </h4>
               <div className="flex flex-wrap gap-1.5">
                 {skillsList.map((s: any) => (
                   <span
                     key={s.id || s.skill?.id}
-                    className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-surface-sunken text-ink-secondary"
+                    className="px-2 py-0.5 rounded-md text-xs font-bold bg-surface-sunken text-ink-secondary"
                   >
                     {s.skill?.name || s.name}
                   </span>
@@ -444,7 +444,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
           >
             {tab.label}
             {tab.id === 'overview' && pendingChanges.length > 0 && (
-              <span className="ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-status-bg-changes text-status-changes text-[10px] font-bold">
+              <span className="ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-status-bg-changes text-status-changes text-xs font-bold">
                 {pendingChanges.length}
               </span>
             )}
@@ -456,10 +456,10 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
         <div className="space-y-6">
       {/* Pending Revisions Banner (if any item was flagged with CHANGES_REQUESTED) */}
       {pendingChanges.length > 0 && (
-        <div className="p-4 bg-status-bg-changes/80 border border-edge rounded-2xl flex items-start gap-3">
+        <div className="p-4 bg-status-bg-changes/80 border border-edge rounded-lg flex items-start gap-3">
           <AlertTriangle className="w-5 h-5 text-status-changes shrink-0 mt-0.5" />
           <div className="text-xs space-y-1">
-            <p className="font-extrabold text-ink">
+            <p className="font-semibold text-ink">
               {pendingChanges.length} Revision Request{pendingChanges.length > 1 ? 's' : ''} Pending on Student
             </p>
             <div className="space-y-1 pt-1">
@@ -482,9 +482,9 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
               { label: 'Intro Video', value: introVideo ? introVideo.status.replace(/_/g, ' ') : 'Not uploaded' },
               { label: 'Resume', value: resume ? resume.status.replace(/_/g, ' ') : 'Not uploaded' },
             ].map((stat) => (
-              <div key={stat.label} className="bg-surface border border-edge rounded-2xl p-4">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-ink-muted">{stat.label}</p>
-                <p className="text-sm font-black text-ink mt-1 capitalize">{stat.value}</p>
+              <div key={stat.label} className="bg-surface border border-edge rounded-lg p-4">
+                <p className="text-xs font-bold  text-ink-muted">{stat.label}</p>
+                <p className="text-sm font-semibold text-ink mt-1 capitalize">{stat.value}</p>
               </div>
             ))}
           </div>
@@ -495,17 +495,17 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
       {activeTab === 'media' && (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* 1. INTRODUCTION VIDEO CARD */}
-        <div className="bg-surface border border-edge rounded-2xl p-5 shadow-xs flex flex-col justify-between">
+        <div className="bg-surface border border-edge rounded-lg p-5 shadow-xs flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between pb-3 border-b border-edge mb-4">
               <div className="flex items-center gap-2">
                 <Film className="w-4 h-4 text-ink-brand" />
-                <h3 className="font-extrabold text-sm text-ink">Introduction Video</h3>
+                <h3 className="font-semibold text-sm text-ink">Introduction Video</h3>
               </div>
               {introVideo ? (
                 <ItemStatusBadge status={introVideo.status} />
               ) : (
-                <span className="text-[11px] font-semibold text-ink-muted">Not Uploaded</span>
+                <span className="text-xs font-semibold text-ink-muted">Not submitted</span>
               )}
             </div>
 
@@ -522,7 +522,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
                   ) : (
                     <div className="text-ink-muted text-xs flex flex-col items-center gap-2">
                       <Film className="w-8 h-8 opacity-40" />
-                      <span>Video uploaded to Drive</span>
+                      <span>Video uploaded</span>
                     </div>
                   )}
                 </div>
@@ -541,7 +541,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
                         rel="noreferrer"
                         className="text-status-approved hover:underline font-bold text-xs inline-flex items-center gap-1"
                       >
-                        <span>Drive</span>
+                        <span>Open in Drive</span>
                         <ExternalLink className="w-3 h-3" />
                       </a>
                     )}
@@ -579,7 +579,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-edge bg-status-bg-changes hover:bg-status-bg-changes text-status-changes text-xs font-bold transition-colors cursor-pointer"
               >
                 <MessageSquare className="w-3.5 h-3.5" />
-                <span>Request Revision</span>
+                <span>Request new upload</span>
               </button>
               <button
                 onClick={() => {
@@ -594,24 +594,24 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-edge bg-status-bg-rejected hover:bg-status-bg-rejected text-status-rejected text-xs font-bold transition-colors cursor-pointer"
               >
                 <Trash2 className="w-3.5 h-3.5" />
-                <span>Delete Video</span>
+                <span>Delete file</span>
               </button>
             </div>
           )}
         </div>
 
         {/* 2. RESUME CARD */}
-        <div className="bg-surface border border-edge rounded-2xl p-5 shadow-xs flex flex-col justify-between">
+        <div className="bg-surface border border-edge rounded-lg p-5 shadow-xs flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between pb-3 border-b border-edge mb-4">
               <div className="flex items-center gap-2">
                 <FileText className="w-4 h-4 text-ink-brand" />
-                <h3 className="font-extrabold text-sm text-ink">Professional Resume</h3>
+                <h3 className="font-semibold text-sm text-ink">Professional Resume</h3>
               </div>
               {resume ? (
                 <ItemStatusBadge status={resume.status} />
               ) : (
-                <span className="text-[11px] font-semibold text-ink-muted">Not Uploaded</span>
+                <span className="text-xs font-semibold text-ink-muted">Not submitted</span>
               )}
             </div>
 
@@ -627,7 +627,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
                       <p className="text-xs font-bold text-ink truncate" title={resume.filename}>
                         {resume.filename || 'Student_Resume.pdf'}
                       </p>
-                      <p className="text-[11px] text-ink-muted mt-0.5">
+                      <p className="text-xs text-ink-muted mt-0.5">
                         {resume.sizeMb ? `${resume.sizeMb} MB` : 'PDF'} • Submitted{' '}
                         {new Date(resume.submittedAt).toLocaleDateString()}
                       </p>
@@ -689,7 +689,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-edge bg-status-bg-changes hover:bg-status-bg-changes text-status-changes text-xs font-bold transition-colors cursor-pointer"
               >
                 <MessageSquare className="w-3.5 h-3.5" />
-                <span>Request Revision</span>
+                <span>Request new upload</span>
               </button>
               <button
                 onClick={() => {
@@ -704,7 +704,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-edge bg-status-bg-rejected hover:bg-status-bg-rejected text-status-rejected text-xs font-bold transition-colors cursor-pointer"
               >
                 <Trash2 className="w-3.5 h-3.5" />
-                <span>Delete Resume</span>
+                <span>Delete file</span>
               </button>
             </div>
           )}
@@ -715,11 +715,11 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
       {/* 3. ACHIEVEMENTS SECTION */}
       {activeTab === 'portfolio' && (
         <>
-      <div className="bg-surface border border-edge rounded-2xl p-5 shadow-xs">
+      <div className="bg-surface border border-edge rounded-lg p-5 shadow-xs">
         <div className="flex items-center justify-between pb-3 border-b border-edge mb-4">
           <div className="flex items-center gap-2">
             <Trophy className="w-4 h-4 text-status-pending" />
-            <h3 className="font-extrabold text-sm text-ink">
+            <h3 className="font-semibold text-sm text-ink">
               Honors & Achievements ({achievements.length})
             </h3>
           </div>
@@ -737,7 +737,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
                     <h4 className="font-bold text-xs sm:text-sm text-ink">{a.title}</h4>
                     <ItemStatusBadge status={a.status} />
                     {a.category && (
-                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-surface-inset text-ink-secondary">
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-surface-inset text-ink-secondary">
                         {a.category.name}
                       </span>
                     )}
@@ -745,7 +745,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
                   {a.description && (
                     <p className="text-xs text-ink-secondary leading-relaxed">{a.description}</p>
                   )}
-                  <div className="flex flex-wrap items-center gap-3 text-[11px] text-ink-muted pt-1">
+                  <div className="flex flex-wrap items-center gap-3 text-xs text-ink-muted pt-1">
                     <span>{a.organization || 'Department / Institution'}</span>
                     {a.achievedAt && (
                       <>
@@ -779,7 +779,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
                     className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-edge bg-status-bg-changes hover:bg-status-bg-changes text-status-changes text-xs font-bold cursor-pointer"
                   >
                     <MessageSquare className="w-3.5 h-3.5" />
-                    <span>Request Revision</span>
+                    <span>Request new upload</span>
                   </button>
                   <button
                     onClick={() => {
@@ -792,7 +792,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
                       setDeleteReason('');
                     }}
                     className="p-1.5 rounded-lg border border-edge bg-status-bg-rejected hover:bg-status-bg-rejected text-status-rejected cursor-pointer"
-                    title="Delete Achievement"
+                    title="Delete file"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -808,11 +808,11 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
       </div>
 
       {/* 4. CERTIFICATES SECTION */}
-      <div className="bg-surface border border-edge rounded-2xl p-5 shadow-xs">
+      <div className="bg-surface border border-edge rounded-lg p-5 shadow-xs">
         <div className="flex items-center justify-between pb-3 border-b border-edge mb-4">
           <div className="flex items-center gap-2">
             <Award className="w-4 h-4 text-ink-brand" />
-            <h3 className="font-extrabold text-sm text-ink">
+            <h3 className="font-semibold text-sm text-ink">
               Certifications & Credentials ({certificates.length})
             </h3>
           </div>
@@ -829,7 +829,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
                   <div className="flex items-center justify-between gap-2 mb-2">
                     <ItemStatusBadge status={c.status} />
                     {c.issuedAt && (
-                      <span className="text-[10px] text-ink-muted">
+                      <span className="text-xs text-ink-muted">
                         {new Date(c.issuedAt).toLocaleDateString()}
                       </span>
                     )}
@@ -837,7 +837,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
                   <h4 className="font-bold text-xs text-ink line-clamp-2" title={c.title}>
                     {c.title}
                   </h4>
-                  <p className="text-[11px] text-ink-muted mt-1">{c.issuer || 'Credential Issuer'}</p>
+                  <p className="text-xs text-ink-muted mt-1">{c.issuer || 'Credential Issuer'}</p>
 
                   {/* Certificate Link */}
                   {(c.fileUrl || c.watchUrl) && (
@@ -847,7 +847,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
                           href={c.fileUrl}
                           target="_blank"
                           rel="noreferrer"
-                          className="inline-flex items-center gap-1 text-[11px] font-bold text-status-rejected hover:underline"
+                          className="inline-flex items-center gap-1 text-xs font-bold text-status-rejected hover:underline"
                         >
                           <span>View Certificate</span>
                           <ExternalLink className="w-3 h-3" />
@@ -858,9 +858,9 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
                           href={c.watchUrl}
                           target="_blank"
                           rel="noreferrer"
-                          className="inline-flex items-center gap-1 text-[11px] font-bold text-status-approved hover:underline"
+                          className="inline-flex items-center gap-1 text-xs font-bold text-status-approved hover:underline"
                         >
-                          <span>Drive File</span>
+                          <span>File</span>
                           <ExternalLink className="w-3 h-3" />
                         </a>
                       )}
@@ -868,7 +868,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
                   )}
 
                   {c.status === 'CHANGES_REQUESTED' && (
-                    <div className="mt-3 p-2 bg-status-bg-changes border border-edge rounded-lg text-[11px] text-ink">
+                    <div className="mt-3 p-2 bg-status-bg-changes border border-edge rounded-lg text-xs text-ink">
                       <strong>Revision Note:</strong> {c.reviewNote || 'Student was asked to revise this certificate.'}
                     </div>
                   )}
@@ -888,7 +888,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
                     className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-edge bg-status-bg-changes hover:bg-status-bg-changes text-status-changes text-xs font-bold cursor-pointer"
                   >
                     <MessageSquare className="w-3.5 h-3.5" />
-                    <span>Request Revision</span>
+                    <span>Request new upload</span>
                   </button>
                   <button
                     onClick={() => {
@@ -901,7 +901,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
                       setDeleteReason('');
                     }}
                     className="p-1 rounded-lg border border-edge bg-status-bg-rejected hover:bg-status-bg-rejected text-status-rejected cursor-pointer"
-                    title="Delete Certificate"
+                    title="Delete file"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -917,11 +917,11 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
       </div>
 
       {/* 5. PROJECTS SECTION */}
-      <div className="bg-surface border border-edge rounded-2xl p-5 shadow-xs">
+      <div className="bg-surface border border-edge rounded-lg p-5 shadow-xs">
         <div className="flex items-center justify-between pb-3 border-b border-edge mb-4">
           <div className="flex items-center gap-2">
             <Code2 className="w-4 h-4 text-status-approved" />
-            <h3 className="font-extrabold text-sm text-ink">
+            <h3 className="font-semibold text-sm text-ink">
               Projects ({projects.length})
             </h3>
           </div>
@@ -947,7 +947,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
                       {p.technologies.map((t: string, idx: number) => (
                         <span
                           key={idx}
-                          className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-surface-inset text-ink-secondary"
+                          className="px-1.5 py-0.5 rounded text-xs font-semibold bg-surface-inset text-ink-secondary"
                         >
                           {t}
                         </span>
@@ -999,7 +999,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
                     className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-edge bg-status-bg-changes hover:bg-status-bg-changes text-status-changes text-xs font-bold cursor-pointer"
                   >
                     <MessageSquare className="w-3.5 h-3.5" />
-                    <span>Request Revision</span>
+                    <span>Request new upload</span>
                   </button>
                   <button
                     onClick={() => {
@@ -1012,7 +1012,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
                       setDeleteReason('');
                     }}
                     className="p-1 rounded-lg border border-edge bg-status-bg-rejected hover:bg-status-bg-rejected text-status-rejected cursor-pointer"
-                    title="Delete Project"
+                    title="Delete file"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -1032,13 +1032,13 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
 
       {/* ── MODAL: REQUEST CHANGES ── */}
       {requestModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-scrim backdrop-blur-xs">
-          <div className="bg-surface text-ink rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-edge text-left animate-scale-in duration-fast">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-scrim">
+          <div className="bg-surface text-ink rounded-lg max-w-lg w-full p-6 shadow-2xl border border-edge text-left animate-scale-in duration-fast">
             <div className="flex items-center justify-between pb-3 border-b border-edge">
               <div className="flex items-center gap-2">
                 <MessageSquare className="w-5 h-5 text-status-changes" />
-                <h3 className="text-base font-extrabold text-ink">
-                  Request Revision
+                <h3 className="text-base font-semibold text-ink">
+                  Request new upload
                 </h3>
               </div>
               <button
@@ -1060,7 +1060,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
 
                 {/* Quick preset suggestions */}
                 <div className="mb-3 space-y-1">
-                  <span className="text-[11px] font-bold text-ink-muted uppercase tracking-wide">Quick suggestions:</span>
+                  <span className="text-xs font-bold text-ink-muted ">Quick suggestions:</span>
                   <div className="flex flex-wrap gap-1.5 pt-1">
                     {[
                       'Please upload a clearer, high-resolution copy',
@@ -1072,7 +1072,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
                         type="button"
                         key={idx}
                         onClick={() => setRequestNote(preset)}
-                        className="text-[11px] px-2.5 py-1 rounded-lg bg-surface-sunken hover:bg-surface-inset text-ink-secondary font-medium transition-colors cursor-pointer"
+                        className="text-xs px-2.5 py-1 rounded-lg bg-surface-sunken hover:bg-surface-inset text-ink-secondary font-medium transition-colors cursor-pointer"
                       >
                         {preset}
                       </button>
@@ -1117,12 +1117,12 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
 
       {/* ── MODAL: DELETE ITEM ── */}
       {deleteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-scrim backdrop-blur-xs">
-          <div className="bg-surface text-ink rounded-2xl max-w-md w-full p-6 shadow-2xl border border-edge text-left animate-scale-in duration-fast">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-scrim">
+          <div className="bg-surface text-ink rounded-lg max-w-md w-full p-6 shadow-2xl border border-edge text-left animate-scale-in duration-fast">
             <div className="flex items-center justify-between pb-3 border-b border-edge">
               <div className="flex items-center gap-2 text-status-rejected">
                 <Trash2 className="w-5 h-5" />
-                <h3 className="text-base font-extrabold">Delete {deleteModal.title}?</h3>
+                <h3 className="text-base font-semibold">Delete {deleteModal.title}?</h3>
               </div>
               <button
                 onClick={() => setDeleteModal(null)}
@@ -1134,7 +1134,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
 
             <form onSubmit={handleDeleteSubmit} className="space-y-4 pt-4">
               <div className="p-3 bg-status-bg-rejected border border-edge rounded-xl text-xs text-ink leading-relaxed">
-                <strong>Warning:</strong> This permanently deletes the database entry and removes any associated file from Google Drive storage. This action cannot be undone.
+                This permanently deletes the record and its file. It can't be undone.
               </div>
 
               <div>
@@ -1164,7 +1164,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
                   className="inline-flex items-center gap-2 px-4 py-2 bg-brand hover:bg-brand disabled:opacity-50 text-on-primary text-xs font-bold rounded-xl transition-colors cursor-pointer"
                 >
                   {actionLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
-                  <span>Delete Permanently</span>
+                  <span>Delete file</span>
                 </button>
               </div>
             </form>

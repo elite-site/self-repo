@@ -515,6 +515,10 @@ export const api = {
     const res = await client.post('/student/profile/photo', formData, { onUploadProgress: onProgress });
     return res.data;
   },
+  async deleteProfilePhoto(): Promise<{ success: boolean; message: string }> {
+    const res = await client.delete('/student/profile/photo');
+    return res.data;
+  },
   async submitChangeRequest(data: any) {
     const res = await client.post('/student/profile/change-request', data);
     return res.data;

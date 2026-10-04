@@ -227,11 +227,6 @@ export const ProfilePage: React.FC = () => {
       <div className="surface overflow-hidden rounded-2xl border border-edge shadow-card">
         {/* Cover banner */}
         <div className="h-28 sm:h-36 bg-gradient-to-br from-red-950 via-red-900/80 to-slate-900 relative px-6 sm:px-8 flex items-end">
-          <div className="absolute top-4 right-4 flex items-center gap-2">
-            <span className="text-xs sm:text-xs font-extrabold uppercase tracking-wider text-ink-inverse bg-on-primary/10 backdrop-blur-sm px-2.5 py-1 rounded-lg border border-on-primary/20">
-              Verified Student Account
-            </span>
-          </div>
         </div>
 
         {/* Profile Details Container */}
@@ -394,7 +389,7 @@ export const ProfilePage: React.FC = () => {
               to="/intro-video"
               className="btn btn-secondary px-3 py-1.5 text-xs"
             >
-              <span>{profile?.submission?.videoUploaded || video?.hasFile ? 'Manage Video' : 'Upload Video'}</span>
+              <span>Go to video</span>
               <ChevronRight className="w-3.5 h-3.5" />
             </Link>
           </div>
@@ -414,9 +409,9 @@ export const ProfilePage: React.FC = () => {
             <div className="w-full rounded-xl border border-status-rejected/30 bg-surface-canvas p-6 flex flex-col items-center justify-center text-center aspect-video space-y-3 shadow-card">
               <AlertCircle className="w-8 h-8 text-status-rejected" />
               <div>
-                <p className="text-sm font-semibold text-ink">Unable to play video</p>
+                <p className="text-sm font-semibold text-ink">This video won't play right now.</p>
                 <p className="text-xs text-ink-muted mt-1 max-w-sm">
-                  Could not load your recording from Google Drive or the streaming server.
+                  Check your connection and try again.
                 </p>
               </div>
               <button
@@ -424,7 +419,7 @@ export const ProfilePage: React.FC = () => {
                 onClick={handleRetryVideoPlayback}
                 className="btn btn-secondary min-h-[44px] text-xs font-semibold inline-flex items-center gap-2"
               >
-                <RefreshCw className="w-3.5 h-3.5" /> Retry Playback
+                <RefreshCw className="w-3.5 h-3.5" /> Try again
               </button>
             </div>
           ) : (
@@ -583,7 +578,7 @@ export const ProfilePage: React.FC = () => {
             <Award className="w-5 h-5 text-brand-soft-text" />
             <div>
               <h2 className="text-base font-bold text-ink font-heading">Honors & Certifications</h2>
-              <p className="text-xs text-ink-secondary">Verified credentials & awards</p>
+              <p className="text-xs text-ink-secondary">Credentials and awards</p>
             </div>
           </div>
           <Link
@@ -706,7 +701,7 @@ export const ProfilePage: React.FC = () => {
                 to="/resume"
                 className="btn btn-secondary px-3 py-1.5 text-xs"
               >
-                {(resume?.fileUrl || resume?.driveFileId) ? 'View / Replace' : 'Upload'}
+                Go to resume
               </Link>
             </div>
           </div>
@@ -776,9 +771,9 @@ export const ProfilePage: React.FC = () => {
               {reqSuccess ? (
                 <div className="py-8 text-center space-y-3">
                   <CheckCircle2 className="w-12 h-12 text-status-approved mx-auto" />
-                  <h4 className="text-base font-bold text-ink font-heading">Request Submitted Successfully!</h4>
+                  <h4 className="text-base font-bold text-ink font-heading">Request submitted</h4>
                   <p className="text-xs text-ink-secondary max-w-xs mx-auto">
-                    Your request has been routed to department administrators for verification.
+                    Your request has been routed to faculty for review.
                   </p>
                 </div>
               ) : (

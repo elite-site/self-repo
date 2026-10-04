@@ -117,7 +117,7 @@ export const Analytics: React.FC = () => {
         {/* Total Students */}
         <div className="p-5 bg-surface border border-edge rounded-xl shadow-sm hover:border-edge-strong transition-colors">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">
+            <span className="text-xs font-semibold  text-ink-muted">
               Enrolled Students
             </span>
             <div className="w-9 h-9 rounded-lg bg-status-bg-approved text-status-approved flex items-center justify-center">
@@ -125,7 +125,7 @@ export const Analytics: React.FC = () => {
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold text-ink">
+            <span className="text-3xl font-semibold text-ink">
               {summary.totalStudents.toLocaleString()}
             </span>
             <span className="text-xs font-medium text-status-approved">
@@ -140,7 +140,7 @@ export const Analytics: React.FC = () => {
         {/* Submissions & Rated */}
         <div className="p-5 bg-surface border border-edge rounded-xl shadow-sm hover:border-edge-strong transition-colors">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">
+            <span className="text-xs font-semibold  text-ink-muted">
               Submissions Received
             </span>
             <div className="w-9 h-9 rounded-lg bg-status-bg-approved text-status-approved flex items-center justify-center">
@@ -148,7 +148,7 @@ export const Analytics: React.FC = () => {
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold text-ink">
+            <span className="text-3xl font-semibold text-ink">
               {summary.totalSubmissions.toLocaleString()}
             </span>
             <span className="text-xs font-medium text-status-approved">
@@ -163,7 +163,7 @@ export const Analytics: React.FC = () => {
         {/* Events & Registrations */}
         <div className="p-5 bg-surface border border-edge rounded-xl shadow-sm hover:border-edge-strong transition-colors">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">
+            <span className="text-xs font-semibold  text-ink-muted">
               Event Participation
             </span>
             <div className="w-9 h-9 rounded-lg bg-status-bg-review text-status-review flex items-center justify-center">
@@ -171,7 +171,7 @@ export const Analytics: React.FC = () => {
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold text-ink">
+            <span className="text-3xl font-semibold text-ink">
               {summary.totalRegistrations.toLocaleString()}
             </span>
             <span className="text-xs font-medium text-status-review">
@@ -186,7 +186,7 @@ export const Analytics: React.FC = () => {
         {/* Portfolio Assets & Moderation */}
         <div className="p-5 bg-surface border border-edge rounded-xl shadow-sm hover:border-edge-strong transition-colors">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">
+            <span className="text-xs font-semibold  text-ink-muted">
               Portfolio Assets
             </span>
             <div className="w-9 h-9 rounded-lg bg-status-bg-pending text-status-pending flex items-center justify-center">
@@ -194,11 +194,11 @@ export const Analytics: React.FC = () => {
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold text-ink">
+            <span className="text-3xl font-semibold text-ink">
               {(summary.totalProjects + summary.totalAchievements + summary.totalCertificates).toLocaleString()}
             </span>
             {summary.pendingModeration > 0 ? (
-              <span className="px-2 py-0.5 text-xs font-bold bg-status-bg-pending text-ink rounded-full animate-pulse">
+              <span className="px-2 py-0.5 text-xs font-bold bg-status-bg-pending text-ink rounded-full">
                 {summary.pendingModeration} pending
               </span>
             ) : (

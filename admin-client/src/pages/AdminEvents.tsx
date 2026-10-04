@@ -134,11 +134,11 @@ const EventWizard: React.FC<{
   };
 
   return (
-    <div className="fixed inset-0 z-modal bg-scrim backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in" role="dialog" aria-modal="true" aria-labelledby="wizard-title">
+    <div className="fixed inset-0 z-modal bg-scrim flex items-center justify-center p-4 animate-fade-in" role="dialog" aria-modal="true" aria-labelledby="wizard-title">
       <div className="surface bg-surface text-ink w-full max-w-2xl max-h-[90dvh] overflow-hidden flex flex-col shadow-modal animate-scale-in">
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-edge">
-          <h2 id="wizard-title" className="text-headline-sm font-extrabold text-ink">{existing ? 'Edit Event' : 'Create Event'}</h2>
+          <h2 id="wizard-title" className="text-headline-sm font-semibold text-ink">{existing ? 'Edit Event' : 'Create Event'}</h2>
           <button onClick={onClose} className="btn btn-ghost p-2" aria-label="Close wizard">
             <X className="w-5 h-5" aria-hidden="true" />
           </button>
@@ -293,10 +293,10 @@ const EventWizard: React.FC<{
 };
 
 const EventDetail: React.FC<{ event: EventItem; onClose: () => void }> = ({ event, onClose }) => (
-  <div className="fixed inset-0 z-modal bg-scrim backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in" role="dialog" aria-modal="true" aria-labelledby="detail-title">
+  <div className="fixed inset-0 z-modal bg-scrim flex items-center justify-center p-4 animate-fade-in" role="dialog" aria-modal="true" aria-labelledby="detail-title">
     <div className="surface bg-surface text-ink w-full max-w-lg max-h-[90dvh] overflow-hidden flex flex-col shadow-modal animate-scale-in">
       <div className="flex items-center justify-between p-5 border-b border-edge">
-        <h2 id="detail-title" className="text-headline-sm font-extrabold text-ink">{event.name}</h2>
+        <h2 id="detail-title" className="text-headline-sm font-semibold text-ink">{event.name}</h2>
         <button onClick={onClose} className="btn btn-ghost p-2" aria-label="Close details">
           <X className="w-5 h-5" aria-hidden="true" />
         </button>
@@ -450,7 +450,7 @@ export const AdminEvents: React.FC = () => {
             <CalendarDays className="w-6 h-6" aria-hidden="true" />
           </div>
           <div>
-            <h1 className="text-headline-md font-extrabold text-ink">Events</h1>
+            <h1 className="text-headline-md font-semibold text-ink">Events</h1>
             <p className="text-body-sm text-ink-muted">Manage all department events</p>
           </div>
         </div>
@@ -483,7 +483,7 @@ export const AdminEvents: React.FC = () => {
               <thead className="bg-surface-inset border-b border-edge">
                 <tr>
                   {['Event', 'Type', 'Event Date', 'Registration', 'Registrations', 'Status', 'Actions'].map(h => (
-                    <th key={h} scope="col" className="text-left px-4 py-3 text-label-sm font-bold text-ink-muted uppercase tracking-wide">{h}</th>
+                    <th key={h} scope="col" className="text-left px-4 py-3 text-label-sm font-bold text-ink-muted ">{h}</th>
                   ))}
                 </tr>
               </thead>

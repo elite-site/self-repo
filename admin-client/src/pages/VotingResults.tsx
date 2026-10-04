@@ -74,14 +74,14 @@ export const VotingResults: React.FC = () => {
     <div className="space-y-6">
       {/* Finalize Confirm Dialog */}
       {showFinalizeConfirm && (
-        <div className="fixed inset-0 z-50 bg-scrim backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-surface text-ink border border-edge rounded-2xl shadow-2xl p-6 max-w-md w-full space-y-4">
+        <div className="fixed inset-0 z-50 bg-scrim flex items-center justify-center p-4">
+          <div className="bg-surface text-ink border border-edge rounded-lg shadow-2xl p-6 max-w-md w-full space-y-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-status-bg-rejected flex items-center justify-center">
                 <AlertTriangle className="w-5 h-5 text-status-rejected" />
               </div>
               <div>
-                <h3 className="font-extrabold text-ink text-base">Finalize Results?</h3>
+                <h3 className="font-semibold text-ink text-base">Finalize Results?</h3>
                 <p className="text-xs text-ink-muted mt-0.5">This action is irreversible.</p>
               </div>
             </div>
@@ -105,7 +105,7 @@ export const VotingResults: React.FC = () => {
         <div className="flex items-center gap-3">
           <BarChart3 className="w-6 h-6 text-status-rejected" />
           <div>
-            <h1 className="text-xl font-extrabold text-ink">Voting Results</h1>
+            <h1 className="text-xl font-semibold text-ink">Voting Results</h1>
             <p className="text-xs text-ink-muted">Live and final vote tallies</p>
           </div>
         </div>
@@ -118,11 +118,11 @@ export const VotingResults: React.FC = () => {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center h-64 bg-surface rounded-2xl border border-edge">
+        <div className="flex items-center justify-center h-64 bg-surface rounded-lg border border-edge">
           <Loader2 className="w-8 h-8 animate-spin text-status-rejected" />
         </div>
       ) : !result ? (
-        <div className="flex flex-col items-center justify-center h-64 bg-surface rounded-2xl border border-edge gap-3">
+        <div className="flex flex-col items-center justify-center h-64 bg-surface rounded-lg border border-edge gap-3">
           <BarChart3 className="w-10 h-10 text-ink-muted" />
           <p className="text-sm text-ink-muted">No results to display</p>
         </div>
@@ -135,12 +135,12 @@ export const VotingResults: React.FC = () => {
               { label: 'Eligible Voters', value: result.totalEligible, icon: Users },
               { label: 'Participation Rate', value: `${Math.round(result.participationRate)}%`, icon: BarChart3 },
             ].map(({ label, value, icon: Icon }) => (
-              <div key={label} className="bg-surface rounded-2xl border border-edge p-4 flex items-center gap-4 shadow-sm">
+              <div key={label} className="bg-surface rounded-lg border border-edge p-4 flex items-center gap-4 shadow-sm">
                 <div className="w-10 h-10 rounded-xl bg-status-bg-rejected text-status-rejected flex items-center justify-center">
                   <Icon className="w-5 h-5" />
                 </div>
                 <div>
-                  <div className="text-2xl font-extrabold text-ink">{value}</div>
+                  <div className="text-2xl font-semibold text-ink">{value}</div>
                   <div className="text-xs text-ink-muted">{label}</div>
                 </div>
               </div>
@@ -148,9 +148,9 @@ export const VotingResults: React.FC = () => {
           </div>
 
           {/* Results bars */}
-          <div className="bg-surface rounded-2xl border border-edge p-6 space-y-4 shadow-sm">
+          <div className="bg-surface rounded-lg border border-edge p-6 space-y-4 shadow-sm">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-extrabold text-ink uppercase tracking-wide">Candidate Results</h3>
+              <h3 className="text-sm font-semibold text-ink ">Candidate Results</h3>
               <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${result.status === 'FINALIZED' ? 'bg-status-bg-approved text-status-approved' : result.status === 'ACTIVE' ? 'bg-status-bg-approved text-status-approved' : 'bg-status-bg-pending text-status-pending'}`}>
                 {result.status === 'FINALIZED' ? '✓ Finalized' : result.status === 'ACTIVE' ? '● Live' : result.status}
               </span>
@@ -170,7 +170,7 @@ export const VotingResults: React.FC = () => {
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-sm font-extrabold text-ink">{c.votes}</div>
+                      <div className="text-sm font-semibold text-ink">{c.votes}</div>
                       <div className="text-xs text-ink-muted">{c.percentage.toFixed(1)}%</div>
                     </div>
                   </div>
@@ -186,7 +186,7 @@ export const VotingResults: React.FC = () => {
 
           {/* Finalize button */}
           {result.status === 'CLOSED' && (
-            <div className="bg-status-bg-pending border border-edge rounded-2xl p-5 flex items-center justify-between">
+            <div className="bg-status-bg-pending border border-edge rounded-lg p-5 flex items-center justify-between">
               <div>
                 <p className="text-sm font-bold text-ink">Campaign closed. Ready to finalize?</p>
                 <p className="text-xs text-status-pending mt-0.5">Finalizing will permanently lock and publish the results.</p>
@@ -197,7 +197,7 @@ export const VotingResults: React.FC = () => {
             </div>
           )}
           {result.status === 'FINALIZED' && (
-            <div className="bg-status-bg-approved border border-edge rounded-2xl p-4 flex items-center gap-3">
+            <div className="bg-status-bg-approved border border-edge rounded-lg p-4 flex items-center gap-3">
               <CheckCircle className="w-5 h-5 text-status-approved" />
               <p className="text-sm font-semibold text-ink">Results have been finalized and are now official.</p>
             </div>

@@ -7,17 +7,19 @@ import { useConfirm } from '../../components/ui/ConfirmDialog';
 import { Modal } from '../../components/ui/Modal';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { ErrorState } from '../../components/ui/ErrorState';
+import { FileField } from '../../components/ui/FileField';
 
 const statusBadge = (status: string) => {
   switch (status) {
     case 'APPROVED':
       return <span className="badge badge-approved">Approved</span>;
     case 'CHANGES_REQUESTED':
-      return <span className="badge badge-changes">Revision requested</span>;
+      return <span className="badge badge-changes">Changes requested</span>;
     case 'REJECTED':
       return <span className="badge badge-rejected">Rejected</span>;
     case 'PENDING':
-      return <span className="badge badge-pending">Pending review</span>;
+    case 'SUBMITTED':
+      return <span className="badge badge-pending">Under review</span>;
     case 'DRAFT':
       return <span className="badge badge-draft">Draft</span>;
     default:
@@ -170,10 +172,12 @@ export const AchievementsTab: React.FC = () => {
             Hackathon results, competition ranks and academic distinctions.
           </p>
         </div>
-        <button type="button" onClick={handleOpenCreateModal} className="btn btn-primary shrink-0">
-          <Plus size={16} strokeWidth={2} aria-hidden="true" />
-          <span>Add achievement</span>
-        </button>
+        {achievements.length > 0 && (
+          <button type="button" onClick={handleOpenCreateModal} className="btn btn-primary shrink-0">
+            <Plus size={16} strokeWidth={2} aria-hidden="true" />
+            <span>Add achievement</span>
+          </button>
+        )}
       </div>
 
       {error && <ErrorState message={error} onRetry={loadAchievements} />}
@@ -353,21 +357,23 @@ export const AchievementsTab: React.FC = () => {
           </FormSection>
 
           <FormSection title="Verification & proof">
-            <div>
-              <label htmlFor="achievement-file" className="label">
-                Certificate or proof document <span className="font-normal text-ink-muted">(optional)</span>
-              </label>
-              <input
-                id="achievement-file"
-                type="file"
-                accept=".pdf,image/png,image/jpeg"
-                onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-                className="input"
-              />
-              <p className="mt-1 text-label-sm text-ink-muted">
-                Award letter, certificate, or score screenshot (PDF, PNG, JPG).
-              </p>
-            </div>
+            <FileField
+              id="achievement-file"
+              label="Certificate or proof document"
+              accept=".pdf,image/png,image/jpeg,image/webp"
+              hint="PDF, JPG, PNG or WebP, up to 15 MB"
+              selectedFile={selectedFile}
+              onFileSelect={(file) => setSelectedFile(file)}
+              existingFileUrl={editingAchievement ? ((editingAchievement as any).viewUrl || editingAchievement.proofUrl) : null}
+              onRemoveExisting={() => {
+                setProofUrl('');
+                if (editingAchievement) {
+                  (editingAchievement as any).viewUrl = undefined;
+                  editingAchievement.proofUrl = undefined;
+                }
+              }}
+              disabled={saving}
+            />
             <div>
               <label htmlFor="achievement-proof-url" className="label">
                 Credential or verification URL <span className="font-normal text-ink-muted">(optional)</span>
@@ -389,7 +395,7 @@ export const AchievementsTab: React.FC = () => {
             </button>
             <button type="submit" disabled={saving} className="btn btn-primary" aria-busy={saving}>
               {saving && <Loader2 size={14} className="animate-spin" aria-hidden="true" />}
-              <span>{saving ? 'Saving…' : editingAchievement ? 'Save changes' : 'Save achievement'}</span>
+              <span>{saving ? 'Saving…' : 'Save achievement'}</span>
             </button>
           </div>
         </form>

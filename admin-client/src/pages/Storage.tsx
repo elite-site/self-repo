@@ -58,7 +58,7 @@ export const Storage: React.FC = () => {
     setCacheMessage(null);
     try {
       const res = await adminApi.clearStorageCache();
-      setCacheMessage(res.message || 'Drive folder cache cleared successfully.');
+      setCacheMessage(res.message || 'Drive folder cache cleared.');
       await loadStorage(true);
     } catch (err: any) {
       console.error('Failed to clear cache:', err);
@@ -97,7 +97,7 @@ export const Storage: React.FC = () => {
     return (
       <div className="flex flex-col items-center justify-center min-h-[450px]">
         <div className="w-10 h-10 border-3 border-brand border-t-transparent rounded-full animate-spin mb-4" />
-        <p className="text-sm font-medium text-ink-muted">Inspecting Google Drive & file inventory...</p>
+        <p className="text-sm font-medium text-ink-muted">Inspecting Google Drive & file inventory…</p>
       </div>
     );
   }
@@ -173,7 +173,7 @@ export const Storage: React.FC = () => {
                   Google Drive API Connector
                 </h2>
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-status-bg-approved text-status-approved border border-edge">
-                  <span className="w-2 h-2 rounded-full bg-status-approved animate-pulse" />
+                  <span className="w-2 h-2 rounded-full bg-status-approved" />
                   {drive.status}
                 </span>
               </div>
@@ -191,7 +191,7 @@ export const Storage: React.FC = () => {
               title="Grant reader/viewer permissions across all files and folders on Drive"
             >
               <Eye className="w-3.5 h-3.5" />
-              {syncingPermissions ? 'Syncing...' : 'Sync Viewer Access'}
+              {syncingPermissions ? 'Syncing…' : 'Sync Viewer Access'}
             </button>
             <button
               onClick={handleClearCache}
@@ -199,7 +199,7 @@ export const Storage: React.FC = () => {
               className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-status-rejected bg-status-bg-rejected border border-edge rounded-lg hover:bg-status-bg-rejected transition-colors disabled:opacity-50 cursor-pointer"
             >
               <Trash2 className="w-3.5 h-3.5" />
-              {clearingCache ? 'Purging...' : 'Purge Folder Cache'}
+              {clearingCache ? 'Purging…' : 'Purge Folder Cache'}
             </button>
           </div>
         </div>
@@ -207,42 +207,42 @@ export const Storage: React.FC = () => {
         {/* Drive Info Sub-Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-6">
           <div className="p-4 rounded-lg bg-surface-sunken border border-edge/60">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted block mb-1">
+            <span className="text-xs font-semibold  text-ink-muted block mb-1">
               Root Directory Anchor
             </span>
             <span className="text-sm font-mono font-bold text-ink truncate block">
               {drive.rootFolder}
             </span>
-            <span className="text-[11px] text-ink-muted mt-1 block">
+            <span className="text-xs text-ink-muted mt-1 block">
               Departmental workspace base folder
             </span>
           </div>
 
           <div className="p-4 rounded-lg bg-surface-sunken border border-edge/60">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted block mb-1">
+            <span className="text-xs font-semibold  text-ink-muted block mb-1">
               Folder Cache Depth
             </span>
             <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-extrabold text-ink">
+              <span className="text-2xl font-semibold text-ink">
                 {drive.cacheEntriesCount}
               </span>
               <span className="text-xs text-ink-muted">cached nodes</span>
             </div>
-            <span className="text-[11px] text-ink-muted mt-1 block">
+            <span className="text-xs text-ink-muted mt-1 block">
               Reduces Drive API rate limits by ~94%
             </span>
           </div>
 
           <div className="p-4 rounded-lg bg-surface-sunken border border-edge/60">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted block mb-1">
+            <span className="text-xs font-semibold  text-ink-muted block mb-1">
               Backend Uptime
             </span>
             <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-extrabold text-ink">
+              <span className="text-2xl font-semibold text-ink">
                 {formatUptime(system.uptimeSeconds)}
               </span>
             </div>
-            <span className="text-[11px] text-ink-muted mt-1 block">
+            <span className="text-xs text-ink-muted mt-1 block">
               Node.js memory RSS: {system.memoryUsedMb} MB
             </span>
           </div>
@@ -261,7 +261,7 @@ export const Storage: React.FC = () => {
             <div className="w-8 h-8 rounded-lg bg-status-bg-rejected text-status-rejected flex items-center justify-center mb-3">
               <FileVideo className="w-4 h-4" />
             </div>
-            <div className="text-2xl font-extrabold text-ink">
+            <div className="text-2xl font-semibold text-ink">
               {inventory.submissionVideos}
             </div>
             <div className="text-xs font-medium text-ink-muted mt-0.5">
@@ -274,7 +274,7 @@ export const Storage: React.FC = () => {
             <div className="w-8 h-8 rounded-lg bg-status-bg-review text-status-review flex items-center justify-center mb-3">
               <FileVideo className="w-4 h-4" />
             </div>
-            <div className="text-2xl font-extrabold text-ink">
+            <div className="text-2xl font-semibold text-ink">
               {inventory.introVideos}
             </div>
             <div className="text-xs font-medium text-ink-muted mt-0.5">
@@ -287,7 +287,7 @@ export const Storage: React.FC = () => {
             <div className="w-8 h-8 rounded-lg bg-status-bg-approved text-status-approved flex items-center justify-center mb-3">
               <FileText className="w-4 h-4" />
             </div>
-            <div className="text-2xl font-extrabold text-ink">
+            <div className="text-2xl font-semibold text-ink">
               {inventory.resumes}
             </div>
             <div className="text-xs font-medium text-ink-muted mt-0.5">
@@ -300,7 +300,7 @@ export const Storage: React.FC = () => {
             <div className="w-8 h-8 rounded-lg bg-status-bg-approved text-status-approved flex items-center justify-center mb-3">
               <Award className="w-4 h-4" />
             </div>
-            <div className="text-2xl font-extrabold text-ink">
+            <div className="text-2xl font-semibold text-ink">
               {inventory.certificates}
             </div>
             <div className="text-xs font-medium text-ink-muted mt-0.5">
@@ -313,7 +313,7 @@ export const Storage: React.FC = () => {
             <div className="w-8 h-8 rounded-lg bg-status-bg-pending text-status-pending flex items-center justify-center mb-3">
               <Award className="w-4 h-4" />
             </div>
-            <div className="text-2xl font-extrabold text-ink">
+            <div className="text-2xl font-semibold text-ink">
               {inventory.achievementProofs}
             </div>
             <div className="text-xs font-medium text-ink-muted mt-0.5">
@@ -326,7 +326,7 @@ export const Storage: React.FC = () => {
             <div className="w-8 h-8 rounded-lg bg-brand-soft text-ink-brand flex items-center justify-center mb-3">
               <ImageIcon className="w-4 h-4" />
             </div>
-            <div className="text-2xl font-extrabold text-ink">
+            <div className="text-2xl font-semibold text-ink">
               {inventory.profilePhotos}
             </div>
             <div className="text-xs font-medium text-ink-muted mt-0.5">
@@ -359,7 +359,7 @@ export const Storage: React.FC = () => {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-surface-sunken text-ink-secondary uppercase font-semibold border-b border-edge">
+              <thead className="bg-surface-sunken text-ink-secondary font-semibold border-b border-edge">
                 <tr>
                   <th className="px-5 py-3">Folder Path Key</th>
                   <th className="px-5 py-3">Google Drive Folder ID</th>

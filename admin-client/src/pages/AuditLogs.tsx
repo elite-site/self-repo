@@ -108,46 +108,46 @@ export const AuditLogs: React.FC = () => {
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <div className="p-4 bg-surface border border-edge rounded-xl shadow-sm">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted block mb-1">
+          <span className="text-xs font-semibold  text-ink-muted block mb-1">
             Total Logged Events
           </span>
-          <div className="text-2xl font-extrabold text-ink">
+          <div className="text-2xl font-semibold text-ink">
             {stats.totalActivities.toLocaleString()}
           </div>
         </div>
 
         <div className="p-4 bg-surface border border-edge rounded-xl shadow-sm">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted block mb-1">
+          <span className="text-xs font-semibold  text-ink-muted block mb-1">
             Admin Operations
           </span>
-          <div className="text-2xl font-extrabold text-status-approved">
+          <div className="text-2xl font-semibold text-status-approved">
             {stats.adminActions} Actions
           </div>
         </div>
 
         <div className="p-4 bg-surface border border-edge rounded-xl shadow-sm">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted block mb-1">
+          <span className="text-xs font-semibold  text-ink-muted block mb-1">
             System Reliability
           </span>
-          <div className="text-2xl font-extrabold text-status-approved">
+          <div className="text-2xl font-semibold text-status-approved">
             {stats.successRate}% Success
           </div>
         </div>
 
         <div className="p-4 bg-surface border border-edge rounded-xl shadow-sm">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted block mb-1">
+          <span className="text-xs font-semibold  text-ink-muted block mb-1">
             Errors / Anomalies
           </span>
-          <div className="text-2xl font-extrabold text-status-rejected">
+          <div className="text-2xl font-semibold text-status-rejected">
             {stats.errorsCount} Recorded
           </div>
         </div>
 
         <div className="p-4 bg-surface border border-edge rounded-xl shadow-sm">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted block mb-1">
+          <span className="text-xs font-semibold  text-ink-muted block mb-1">
             Applications Today
           </span>
-          <div className="text-2xl font-extrabold text-status-review">
+          <div className="text-2xl font-semibold text-status-review">
             {stats.applicationsToday} Received
           </div>
         </div>
@@ -159,7 +159,7 @@ export const AuditLogs: React.FC = () => {
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" />
           <input
             type="text"
-            placeholder="Search by action, administrator email, student name, or details..."
+            placeholder="Search by action, administrator email, student name, or details…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-9 pr-3 py-2 text-xs rounded-lg border border-edge-strong bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-brand"
@@ -204,7 +204,7 @@ export const AuditLogs: React.FC = () => {
         {loading ? (
           <div className="flex flex-col items-center justify-center p-12">
             <div className="w-8 h-8 border-2 border-brand border-t-transparent rounded-full animate-spin mb-3" />
-            <p className="text-xs text-ink-muted">Querying security records...</p>
+            <p className="text-xs text-ink-muted">Querying security records…</p>
           </div>
         ) : logs.length === 0 ? (
           <div className="p-12 text-center text-xs text-ink-muted">
@@ -213,7 +213,7 @@ export const AuditLogs: React.FC = () => {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-surface-sunken text-ink-secondary uppercase font-semibold border-b border-edge">
+              <thead className="bg-surface-sunken text-ink-secondary font-semibold border-b border-edge">
                 <tr>
                   <th className="px-5 py-3">Timestamp</th>
                   <th className="px-5 py-3">Category</th>
@@ -230,7 +230,7 @@ export const AuditLogs: React.FC = () => {
                       {new Date(log.createdAt).toLocaleString()}
                     </td>
                     <td className="px-5 py-3.5">
-                      <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded bg-surface-sunken text-ink border border-edge">
+                      <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-surface-sunken text-ink border border-edge">
                         {log.category}
                       </span>
                     </td>
@@ -248,17 +248,17 @@ export const AuditLogs: React.FC = () => {
                     </td>
                     <td className="px-5 py-3.5">
                       {log.status === 'SUCCESS' ? (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-status-bg-approved text-status-approved">
+                        <span className="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full bg-status-bg-approved text-status-approved">
                           <CheckCircle2 className="w-3 h-3" />
                           SUCCESS
                         </span>
                       ) : log.status === 'WARNING' ? (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-status-bg-pending text-status-pending">
+                        <span className="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full bg-status-bg-pending text-status-pending">
                           <AlertTriangle className="w-3 h-3" />
                           WARN
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-status-bg-rejected text-status-rejected">
+                        <span className="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full bg-status-bg-rejected text-status-rejected">
                           <XCircle className="w-3 h-3" />
                           ERROR
                         </span>

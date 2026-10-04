@@ -215,7 +215,7 @@ const ProtectedLayout: React.FC = () => {
       return (
         <div className="min-h-[100dvh] bg-surface-canvas flex items-center justify-center p-6">
           <div className="max-w-md text-center surface p-8">
-            <h1 className="text-lg font-black text-ink mb-2">Unable to verify your session</h1>
+            <h1 className="text-lg font-semibold text-ink mb-2">Unable to verify your session</h1>
             <p className="text-sm text-ink-muted mb-6">{authError}</p>
             <button
               type="button"

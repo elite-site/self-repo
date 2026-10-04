@@ -158,7 +158,7 @@ export const EventDetailPage: React.FC = () => {
 
     try {
       await api.createTeam({ name: teamName.trim(), eventId: id });
-      setTeamSuccess(`Team "${teamName.trim()}" created successfully!`);
+      setTeamSuccess(`Team "${teamName.trim()}" created successfully.`);
       setTimeout(() => {
         setTeamModalOpen(false);
         setTeamName('');
@@ -301,7 +301,7 @@ export const EventDetailPage: React.FC = () => {
                     <div className="p-3.5 bg-status-bg-approved border border-edge-strong rounded-lg text-status-approved text-body-sm flex items-center gap-2.5">
                       <CheckCircle2 className="w-5 h-5 text-status-approved shrink-0" aria-hidden="true" />
                       <div>
-                        <span className="font-bold block">You are registered!</span>
+                        <span className="font-bold block">You are registered</span>
                         <span className="text-label-xs text-status-approved">Participation slot confirmed</span>
                       </div>
                     </div>
@@ -312,7 +312,7 @@ export const EventDetailPage: React.FC = () => {
                       className="btn btn-ghost w-full border-status-rejected text-status-rejected hover:bg-status-bg-rejected"
                     >
                       {cancelling ? <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" /> : <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />}
-                      <span>Cancel Registration</span>
+                      <span>Cancel registration</span>
                     </button>
                   </div>
                 ) : (
@@ -324,7 +324,7 @@ export const EventDetailPage: React.FC = () => {
                     }}
                     className="btn btn-primary w-full"
                   >
-                    <span>Register Now</span>
+                    <span>Register now</span>
                   </button>
                 )}
               </div>
@@ -362,7 +362,7 @@ export const EventDetailPage: React.FC = () => {
                 className="btn btn-secondary w-full"
               >
                 <Plus className="w-4 h-4" aria-hidden="true" />
-                <span>Create Team for This Event</span>
+                <span>Create team for this event</span>
               </button>
 
               <div className="text-center">
@@ -392,7 +392,7 @@ export const EventDetailPage: React.FC = () => {
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between pb-3 border-b border-edge">
-                <h3 id="registration-modal-title" className="text-body-md font-bold text-ink font-heading">Confirm Event Registration</h3>
+                <h3 id="registration-modal-title" className="text-body-md font-bold text-ink font-heading">Confirm event registration</h3>
                 <button
                   onClick={() => setModalOpen(false)}
                   className="p-1 text-ink-muted hover:text-ink rounded-lg cursor-pointer transition-colors"
@@ -499,9 +499,9 @@ export const EventDetailPage: React.FC = () => {
               {teamSuccess ? (
                 <div className="py-8 text-center space-y-2">
                   <CheckCircle2 className="w-10 h-10 text-status-approved mx-auto" aria-hidden="true" />
-                  <h4 className="text-body-sm font-bold text-ink font-heading">Team Created!</h4>
+                  <h4 className="text-body-sm font-bold text-ink font-heading">Team created</h4>
                   <p className="text-body-sm text-ink-secondary">{teamSuccess}</p>
-                  <p className="text-label-sm text-ink-muted">Redirecting to your teams...</p>
+                  <p className="text-label-sm text-ink-muted">Redirecting to your teams…</p>
                 </div>
               ) : (
                 <form onSubmit={handleCreateTeam} className="space-y-4 pt-4">

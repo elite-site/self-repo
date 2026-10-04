@@ -68,7 +68,7 @@ export const Settings: React.FC = () => {
     try {
       await adminApi.updateSettings(settings);
       setOriginalSettings(settings);
-      setSuccess('Portal configuration updated and applied successfully.');
+      setSuccess('Portal configuration updated.');
     } catch (err: any) {
       console.error('Failed to save settings:', err);
       setError(err?.response?.data?.message || 'Failed to commit settings to database');
@@ -83,7 +83,7 @@ export const Settings: React.FC = () => {
     return (
       <div className="flex flex-col items-center justify-center min-h-[450px]">
         <div className="w-10 h-10 border-3 border-brand border-t-transparent rounded-full animate-spin mb-4" />
-        <p className="text-sm font-medium text-ink-muted">Loading portal configuration...</p>
+        <p className="text-sm font-medium text-ink-muted">Loading portal configuration…</p>
       </div>
     );
   }
@@ -116,7 +116,7 @@ export const Settings: React.FC = () => {
             className="inline-flex items-center gap-2 px-4 py-2 bg-brand text-on-primary text-xs font-bold rounded-lg hover:bg-brand-hover transition-colors shadow-sm disabled:opacity-50"
           >
             <Save className="w-3.5 h-3.5" />
-            {saving ? 'Committing...' : hasUnsavedChanges ? 'Save Changes' : 'Saved'}
+            {saving ? 'Saving…' : hasUnsavedChanges ? 'Save changes' : 'Saved'}
           </button>
         </div>
       </div>
@@ -164,7 +164,7 @@ export const Settings: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-ink-secondary mb-1.5">
+              <label className="block text-xs font-semibold text-ink-secondary mb-1.5">
                 Portal Display Title
               </label>
               <input
@@ -176,7 +176,7 @@ export const Settings: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-ink-secondary mb-1.5">
+              <label className="block text-xs font-semibold text-ink-secondary mb-1.5">
                 Academic Year
               </label>
               <input
@@ -188,7 +188,7 @@ export const Settings: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-ink-secondary mb-1.5">
+              <label className="block text-xs font-semibold text-ink-secondary mb-1.5">
                 Institution Name
               </label>
               <input
@@ -200,7 +200,7 @@ export const Settings: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-ink-secondary mb-1.5">
+              <label className="block text-xs font-semibold text-ink-secondary mb-1.5">
                 Department Name
               </label>
               <input
@@ -220,12 +220,12 @@ export const Settings: React.FC = () => {
             Media Upload & Storage Thresholds
           </h2>
           <p className="text-xs text-ink-muted mb-6">
-            Upper-bound file size constraints enforced during direct uploads to Google Drive.
+            Upper-bound file size constraints enforced during direct uploads.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-ink-secondary mb-1.5">
+              <label className="block text-xs font-semibold text-ink-secondary mb-1.5">
                 Max Video Submission Size (MB)
               </label>
               <input
@@ -234,13 +234,13 @@ export const Settings: React.FC = () => {
                 onChange={(e) => handleChange('max_video_size_mb', e.target.value)}
                 className="w-full px-3.5 py-2 text-xs rounded-lg border border-edge-strong bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-brand font-mono"
               />
-              <span className="text-[11px] text-ink-muted mt-1 block">
+              <span className="text-xs text-ink-muted mt-1 block">
                 Standard self-introduction MP4/WebM ceiling. Applied to every upload; capped at 100&nbsp;MB.
               </span>
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-ink-secondary mb-1.5">
+              <label className="block text-xs font-semibold text-ink-secondary mb-1.5">
                 Max Photo / Document Size (MB)
               </label>
               <input
@@ -249,7 +249,7 @@ export const Settings: React.FC = () => {
                 onChange={(e) => handleChange('max_photo_size_mb', e.target.value)}
                 className="w-full px-3.5 py-2 text-xs rounded-lg border border-edge-strong bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-brand font-mono"
               />
-              <span className="text-[11px] text-ink-muted mt-1 block">
+              <span className="text-xs text-ink-muted mt-1 block">
                 Headshot photos, certificate proofs, and resumes (Default: 10 MB)
               </span>
             </div>
@@ -268,7 +268,7 @@ export const Settings: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-ink-secondary mb-1.5">
+              <label className="block text-xs font-semibold text-ink-secondary mb-1.5">
                 Institutional Domain Whitelist
               </label>
               <div className="relative">
@@ -280,13 +280,13 @@ export const Settings: React.FC = () => {
                   className="w-full pl-8 pr-3.5 py-2 text-xs rounded-lg border border-edge-strong bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-brand font-mono"
                 />
               </div>
-              <span className="text-[11px] text-ink-muted mt-1 block">
+              <span className="text-xs text-ink-muted mt-1 block">
                 Google SSO logins will reject accounts outside this domain
               </span>
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-ink-secondary mb-1.5">
+              <label className="block text-xs font-semibold text-ink-secondary mb-1.5">
                 Auto-Approve Portfolio Projects
               </label>
               <select
@@ -297,7 +297,7 @@ export const Settings: React.FC = () => {
                 <option value="true">Enabled (Bypass moderation queue)</option>
                 <option value="false">Disabled (Require moderator approval)</option>
               </select>
-              <span className="text-[11px] text-ink-muted mt-1 block">
+              <span className="text-xs text-ink-muted mt-1 block">
                 Whether student project portfolios publish immediately
               </span>
             </div>
