@@ -180,7 +180,7 @@ export const PublicEventsPage: React.FC<PublicEventsPageProps> = ({ session, onL
 
                       <span className="min-w-0 flex-1">
                         <span className="flex flex-wrap items-center gap-2">
-                          <span className="truncate font-heading text-headline-sm text-ink">
+                          <span className="line-clamp-2 break-words font-heading text-headline-sm text-ink">
                             {evt.title}
                           </span>
                           <span className={isOpen ? 'badge badge-approved' : 'badge badge-draft'}>
@@ -197,7 +197,7 @@ export const PublicEventsPage: React.FC<PublicEventsPageProps> = ({ session, onL
                             {evt.description}
                           </span>
                         )}
-                        <span className="mt-1 block truncate text-label-md text-ink-muted">
+                        <span className="mt-1 block line-clamp-2 text-label-md text-ink-muted">
                           {[evt.type || 'Event', date?.full, evt.eligibility || 'All students']
                             .filter(Boolean)
                             .join(' · ')}

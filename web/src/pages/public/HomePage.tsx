@@ -138,10 +138,10 @@ export const HomePage: React.FC<HomePageProps> = ({ session, onLogout }) => {
                             )}
                           </div>
                           <div className="min-w-0">
-                            <p className="truncate font-heading text-label-lg font-semibold text-ink">
+                            <p className="line-clamp-2 break-words font-heading text-label-lg font-semibold text-ink">
                               {st.name}
                             </p>
-                            <p className="truncate text-label-sm text-ink-muted">
+                            <p className="line-clamp-2 text-label-sm text-ink-muted">
                               {st.rollNo} · Year {st.year} ({st.section})
                             </p>
                           </div>

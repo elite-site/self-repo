@@ -525,14 +525,14 @@ export const StudentDirectoryPage: React.FC<StudentDirectoryProps> = ({ session,
 
                           <span className="min-w-0 flex-1">
                             <span className="flex items-center gap-2">
-                              <span className="truncate font-heading text-label-lg font-semibold text-ink">
+                              <span className="line-clamp-2 break-words font-heading text-label-lg font-semibold text-ink">
                                 {name}
                               </span>
                               {student.status === 'GRADUATED' && (
                                 <span className="badge badge-draft">Alumni</span>
                               )}
                             </span>
-                            <span className="mt-0.5 block truncate text-body-sm text-ink-muted">
+                            <span className="mt-0.5 block line-clamp-2 text-body-sm text-ink-muted">
                               {student.rollNo} · Year {student.year || 1} · Section{' '}
                               {student.section || 'A'}
                             </span>
