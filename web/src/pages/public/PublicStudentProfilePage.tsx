@@ -178,6 +178,18 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Close mobile menu on Escape
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setMobileMenuOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [mobileMenuOpen]);
+
   const handleShare = async () => {
     if (!navigator.clipboard?.writeText) {
       toast('Copy this page URL from your address bar to share.', { variant: 'info' });
@@ -290,11 +302,9 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
   const resumeDownloadHref = safeUrl(rawResumeHref) || null;
 
   const currentYearNum = student.year || 1;
-  const graduationEndYear = 2024 + 4;
-  const graduationStartYear = 2024;
 
   return (
-    <div className="min-h-[100dvh] bg-[#070B16] text-slate-100 font-sans selection:bg-rose-500 selection:text-white antialiased overflow-x-clip scroll-smooth print:bg-white print:text-black">
+    <div className="min-h-[100dvh] bg-[#070B16] text-slate-100 font-sans selection:bg-rose-500 selection:text-white antialiased overflow-x-clip scroll-smooth print:bg-white print:text-slate-900 print:[&_*]:!text-slate-900 print:[&_*]:!bg-transparent print:[&_*]:!border-slate-300 print:[&_*]:!shadow-none">
       {/* Background ambient lighting */}
       <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(ellipse_80%_60%_at_50%_-20%,rgba(225,29,72,0.14),rgba(255,255,255,0))] print:hidden" />
       <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(ellipse_60%_50%_at_80%_100%,rgba(59,130,246,0.08),rgba(0,0,0,0))] print:hidden" />
@@ -382,6 +392,8 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="lg:hidden min-h-[44px] min-w-[44px] flex items-center justify-center p-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800"
               aria-label="Toggle navigation menu"
+              aria-expanded={mobileMenuOpen}
+              aria-controls="mobile-nav-menu"
             >
               {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
@@ -390,7 +402,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
 
         {/* Mobile dropdown menu */}
         {mobileMenuOpen && (
-          <div className="lg:hidden border-b border-slate-800 bg-[#070B16]/95 backdrop-blur-xl px-4 py-4 space-y-1">
+          <div id="mobile-nav-menu" className="lg:hidden border-b border-slate-800 bg-[#070B16]/95 backdrop-blur-xl px-4 py-4 space-y-1">
             {navLinks.map((item) => (
               <a
                 key={item.id}
@@ -443,11 +455,11 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
                 {student.branch || DEPARTMENT} Student
               </p>
 
-              <p className="mt-3 text-sm sm:text-base text-slate-300 leading-relaxed max-w-prose mx-auto lg:mx-0">
-                {bio
-                  ? taglineOf(bio)
-                  : "I'm a passionate learner and developer interested in building real-world projects, solving problems, and exploring new technologies."}
-              </p>
+              {bio ? (
+                <p className="mt-3 text-sm sm:text-base text-slate-300 leading-relaxed max-w-prose mx-auto lg:mx-0">
+                  {taglineOf(bio)}
+                </p>
+              ) : null}
 
               {/* Action Buttons */}
               <div className="mt-6 flex flex-wrap items-center justify-center lg:justify-start gap-3">
@@ -563,7 +575,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
 
               <div className="mt-3.5 inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-400 backdrop-blur-sm">
                 <span className="size-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span>{student.status === 'GRADUATED' ? 'Alumni' : 'Open to Opportunities'}</span>
+                <span>{student.status === 'GRADUATED' ? 'Alumni' : 'Active Student'}</span>
               </div>
             </div>
 
@@ -589,11 +601,6 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
                   <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Institution</span>
                   <p className="text-xs font-medium text-slate-300 mt-0.5 leading-snug">SASI Institute of Technology & Engineering</p>
                 </div>
-
-                <div className="pt-2 border-t border-slate-800/80">
-                  <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Current Focus</span>
-                  <p className="text-xs font-semibold text-rose-300 mt-0.5">Full Stack & Software Engineering</p>
-                </div>
               </div>
             </div>
           </div>
@@ -612,8 +619,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
               <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 p-6 backdrop-blur-sm space-y-3">
                 <h3 className="font-heading text-base font-bold text-white">About Me</h3>
                 <p className="text-sm sm:text-base text-slate-300 leading-relaxed whitespace-pre-line">
-                  {bio ||
-                    "I am an enthusiastic Information Technology student dedicated to building innovative software solutions, solving problems, and mastering modern full-stack development. I enjoy taking ideas from concept to deployed systems while learning continuously."}
+                  {bio || <span className="text-slate-500 italic">No biography provided yet.</span>}
                 </p>
               </div>
 
@@ -813,13 +819,9 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
                   </p>
                 </div>
               </div>
-
-              <span className="self-start sm:self-auto inline-flex items-center px-3 py-1 rounded-full border border-rose-500/30 bg-rose-500/10 text-xs font-bold text-rose-300">
-                {graduationStartYear} — {graduationEndYear}
-              </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
               <div className="rounded-xl border border-slate-800/80 bg-slate-950/50 p-3.5">
                 <span className="text-slate-400 uppercase font-semibold text-xs tracking-wider">Current Year</span>
                 <p className="text-sm font-bold text-white mt-1">Year {student.year || 1} (Section {student.section || 'A'})</p>
@@ -828,11 +830,6 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
               <div className="rounded-xl border border-slate-800/80 bg-slate-950/50 p-3.5">
                 <span className="text-slate-400 uppercase font-semibold text-xs tracking-wider">Department</span>
                 <p className="text-sm font-bold text-white mt-1">{student.branch || DEPARTMENT}</p>
-              </div>
-
-              <div className="rounded-xl border border-slate-800/80 bg-slate-950/50 p-3.5">
-                <span className="text-slate-400 uppercase font-semibold text-xs tracking-wider">Core Focus</span>
-                <p className="text-sm font-bold text-white mt-1">Software Engineering & Tools</p>
               </div>
             </div>
           </div>
@@ -893,56 +890,98 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Email Card */}
-            <a
-              href={student.email ? safeUrl(`mailto:${student.email}`) : undefined}
-              className="rounded-2xl border border-slate-800/80 bg-slate-900/60 p-5 backdrop-blur-sm hover:border-rose-500/40 hover:-translate-y-0.5 transition-all block space-y-2 group"
-            >
-              <div className="p-2 rounded-xl bg-rose-500/10 text-rose-400 w-fit group-hover:bg-rose-500/20 transition-colors">
-                <Mail size={18} />
+            {student.email && safeUrl(`mailto:${student.email}`) ? (
+              <a
+                href={safeUrl(`mailto:${student.email}`)}
+                className="rounded-2xl border border-slate-800/80 bg-slate-900/60 p-5 backdrop-blur-sm hover:border-rose-500/40 hover:-translate-y-0.5 transition-all block space-y-2 group"
+              >
+                <div className="p-2 rounded-xl bg-rose-500/10 text-rose-400 w-fit group-hover:bg-rose-500/20 transition-colors">
+                  <Mail size={18} />
+                </div>
+                <div>
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Email</span>
+                  <p className="text-xs font-semibold text-white truncate mt-0.5">
+                    {student.email}
+                  </p>
+                </div>
+              </a>
+            ) : (
+              <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 p-5 backdrop-blur-sm space-y-2">
+                <div className="p-2 rounded-xl bg-rose-500/10 text-rose-400 w-fit">
+                  <Mail size={18} />
+                </div>
+                <div>
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Email</span>
+                  <p className="text-xs font-semibold text-white truncate mt-0.5">
+                    {student.email || 'Contact via portal'}
+                  </p>
+                </div>
               </div>
-              <div>
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Email</span>
-                <p className="text-xs font-semibold text-white truncate mt-0.5">
-                  {student.email || 'Contact via portal'}
-                </p>
-              </div>
-            </a>
+            )}
 
             {/* LinkedIn Card */}
-            <a
-              href={safeUrl(profile.linkedinUrl)}
-              target={safeUrl(profile.linkedinUrl) ? '_blank' : undefined}
-              rel="noreferrer"
-              className="rounded-2xl border border-slate-800/80 bg-slate-900/60 p-5 backdrop-blur-sm hover:border-rose-500/40 hover:-translate-y-0.5 transition-all block space-y-2 group"
-            >
-              <div className="p-2 rounded-xl bg-pink-500/10 text-pink-400 w-fit group-hover:bg-pink-500/20 transition-colors">
-                <Linkedin size={18} />
+            {safeUrl(profile.linkedinUrl) ? (
+              <a
+                href={safeUrl(profile.linkedinUrl)}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-2xl border border-slate-800/80 bg-slate-900/60 p-5 backdrop-blur-sm hover:border-rose-500/40 hover:-translate-y-0.5 transition-all block space-y-2 group"
+              >
+                <div className="p-2 rounded-xl bg-pink-500/10 text-pink-400 w-fit group-hover:bg-pink-500/20 transition-colors">
+                  <Linkedin size={18} />
+                </div>
+                <div>
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400">LinkedIn</span>
+                  <p className="text-xs font-semibold text-white truncate mt-0.5">
+                    Connect on LinkedIn
+                  </p>
+                </div>
+              </a>
+            ) : (
+              <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 p-5 backdrop-blur-sm space-y-2">
+                <div className="p-2 rounded-xl bg-pink-500/10 text-pink-400 w-fit">
+                  <Linkedin size={18} />
+                </div>
+                <div>
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400">LinkedIn</span>
+                  <p className="text-xs font-semibold text-white truncate mt-0.5">
+                    Profile not linked
+                  </p>
+                </div>
               </div>
-              <div>
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">LinkedIn</span>
-                <p className="text-xs font-semibold text-white truncate mt-0.5">
-                  {profile.linkedinUrl ? 'Connect on LinkedIn' : 'Profile not linked'}
-                </p>
-              </div>
-            </a>
+            )}
 
             {/* GitHub Card */}
-            <a
-              href={safeUrl(profile.githubUrl)}
-              target={safeUrl(profile.githubUrl) ? '_blank' : undefined}
-              rel="noreferrer"
-              className="rounded-2xl border border-slate-800/80 bg-slate-900/60 p-5 backdrop-blur-sm hover:border-rose-500/40 hover:-translate-y-0.5 transition-all block space-y-2 group"
-            >
-              <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-400 w-fit group-hover:bg-indigo-500/20 transition-colors">
-                <Github size={18} />
+            {safeUrl(profile.githubUrl) ? (
+              <a
+                href={safeUrl(profile.githubUrl)}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-2xl border border-slate-800/80 bg-slate-900/60 p-5 backdrop-blur-sm hover:border-rose-500/40 hover:-translate-y-0.5 transition-all block space-y-2 group"
+              >
+                <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-400 w-fit group-hover:bg-indigo-500/20 transition-colors">
+                  <Github size={18} />
+                </div>
+                <div>
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400">GitHub</span>
+                  <p className="text-xs font-semibold text-white truncate mt-0.5">
+                    Explore Repositories
+                  </p>
+                </div>
+              </a>
+            ) : (
+              <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 p-5 backdrop-blur-sm space-y-2">
+                <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-400 w-fit">
+                  <Github size={18} />
+                </div>
+                <div>
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400">GitHub</span>
+                  <p className="text-xs font-semibold text-white truncate mt-0.5">
+                    Profile not linked
+                  </p>
+                </div>
               </div>
-              <div>
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">GitHub</span>
-                <p className="text-xs font-semibold text-white truncate mt-0.5">
-                  {profile.githubUrl ? 'Explore Repositories' : 'Profile not linked'}
-                </p>
-              </div>
-            </a>
+            )}
 
             {/* Location Card */}
             <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 p-5 backdrop-blur-sm space-y-2">
@@ -974,6 +1013,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
           type="button"
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
           className="fixed bottom-6 right-6 z-40 min-h-[44px] min-w-[44px] flex items-center justify-center p-3 rounded-full bg-rose-500 text-white shadow-lg shadow-rose-950/50 hover:bg-rose-600 transition-all duration-200 print:hidden"
+          style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}
           aria-label="Scroll to top"
         >
           <ChevronUp size={18} />
