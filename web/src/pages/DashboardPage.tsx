@@ -216,8 +216,8 @@ const DashboardSkeleton: React.FC = () => (
       </div>
     </div>
 
-    <div className="grid gap-6 lg:grid-cols-3">
-      <div className="space-y-6 lg:col-span-2">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <div className="space-y-6 lg:col-span-2 min-w-0">
         <DashboardTaskBoardSkeleton />
         <div className="surface p-5 sm:p-6">
           <Skeleton className="h-5 w-40" />
@@ -589,8 +589,8 @@ export const DashboardPage: React.FC = () => {
       </motion.section>
 
       {/* 3. MAIN + SIDEBAR */}
-      <motion.div variants={staggerItem} className="grid gap-6 lg:grid-cols-3 xl:grid-cols-4">
-        <div className="space-y-6 lg:col-span-2 xl:col-span-3">
+      <motion.div variants={staggerItem} className="grid grid-cols-1 gap-6 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="space-y-6 lg:col-span-2 xl:col-span-3 min-w-0">
           {/* PROFILE COMPLETION */}
           <Card
             variant="brand"
@@ -764,7 +764,7 @@ export const DashboardPage: React.FC = () => {
         {/* 5. CONTEXTUAL SIDEBAR. §6.2 puts the streak tracker here; there is
               no streak in the API, so what remains is events, quick actions
               and the open votes. */}
-        <div className="space-y-6">
+        <div className="space-y-6 min-w-0">
           {/* §6.2 (7) */}
           <section className="surface p-4 sm:p-5 lg:p-6" aria-labelledby="events-heading">
             <div className="flex items-center justify-between gap-3">

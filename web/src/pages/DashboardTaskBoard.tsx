@@ -212,7 +212,7 @@ export const DashboardTaskBoard: React.FC<DashboardTaskBoardProps> = ({ tasks })
 export const DashboardTaskBoardSkeleton: React.FC = () => (
   <div className="surface p-5 sm:p-6" aria-hidden="true">
     <Skeleton className="h-5 w-32" />
-    <div className="mt-4 grid gap-4 sm:grid-cols-3">
+    <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
       {[0, 1, 2].map((column) => (
         <div key={column}>
           <Skeleton className="h-4 w-24" />

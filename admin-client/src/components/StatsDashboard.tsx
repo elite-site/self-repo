@@ -48,9 +48,9 @@ const DashboardSkeleton: React.FC = () => (
         <div key={i} className="skeleton h-28" />
       ))}
     </div>
-    <div className="grid gap-4 lg:grid-cols-12">
-      <div className="skeleton h-72 lg:col-span-7" />
-      <div className="skeleton h-72 lg:col-span-5" />
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+      <div className="skeleton h-72 lg:col-span-7 min-w-0" />
+      <div className="skeleton h-72 lg:col-span-5 min-w-0" />
     </div>
   </div>
 );
@@ -185,9 +185,9 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
         ))}
       </div>
 
-      <div className="grid items-start gap-4 lg:grid-cols-12">
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-12">
         {/* 3. CAMPAIGN AND MODERATION PROGRESS */}
-        <section className="surface p-5 sm:p-6 lg:col-span-7" aria-labelledby="campaign-heading">
+        <section className="surface p-5 sm:p-6 lg:col-span-7 min-w-0" aria-labelledby="campaign-heading">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="flex items-start gap-2.5">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-soft text-brand-soft-text">
@@ -273,7 +273,7 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
         </section>
 
         {/* 4. IMPORTANT ACTIONS */}
-        <section className="surface p-5 sm:p-6 lg:col-span-5" aria-labelledby="shortcuts-heading">
+        <section className="surface p-5 sm:p-6 lg:col-span-5 min-w-0" aria-labelledby="shortcuts-heading">
           <h2 id="shortcuts-heading" className="font-heading text-headline-sm text-ink">
             Jump to
           </h2>
