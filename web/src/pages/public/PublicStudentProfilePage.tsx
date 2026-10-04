@@ -292,7 +292,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
   const graduationStartYear = 2024;
 
   return (
-    <div className="min-h-[100dvh] bg-[#070B16] text-slate-100 font-sans selection:bg-rose-500 selection:text-white antialiased overflow-x-hidden scroll-smooth print:bg-white print:text-black">
+    <div className="min-h-[100dvh] bg-[#070B16] text-slate-100 font-sans selection:bg-rose-500 selection:text-white antialiased overflow-x-clip scroll-smooth print:bg-white print:text-black">
       {/* Background ambient lighting */}
       <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(ellipse_80%_60%_at_50%_-20%,rgba(225,29,72,0.14),rgba(255,255,255,0))] print:hidden" />
       <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(ellipse_60%_50%_at_80%_100%,rgba(59,130,246,0.08),rgba(0,0,0,0))] print:hidden" />
