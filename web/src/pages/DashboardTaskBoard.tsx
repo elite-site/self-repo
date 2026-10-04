@@ -145,10 +145,9 @@ export interface DashboardTaskBoardProps {
 }
 
 /**
- * Three columns: equal thirds on `sm` and up, one card-width per screen with
- * `snap-mandatory` below it. The scroll container carries `tabIndex` because a
- * region that scrolls has to be reachable from the keyboard — at `sm` and up
- * nothing overflows, so the extra tab stop is inert there.
+ * Three columns: equal thirds on `sm` and up, stacked in one column below it.
+ * It used to be a horizontal swipe list on phones, which hid two of the three
+ * columns off-screen with no visible hint that they existed.
  */
 export const DashboardTaskBoard: React.FC<DashboardTaskBoardProps> = ({ tasks }) => {
   const doneCount = tasks.filter((task) => task.state === 'done').length;
@@ -164,12 +163,7 @@ export const DashboardTaskBoard: React.FC<DashboardTaskBoardProps> = ({ tasks })
         </p>
       </div>
 
-      <div
-        role="region"
-        aria-label="Task board"
-        tabIndex={0}
-        className="-mx-4 sm:mx-0 mt-4 flex snap-x snap-mandatory gap-3 sm:gap-4 overflow-x-auto px-4 sm:px-0 pb-2 sm:pb-0 sm:grid sm:grid-cols-3 sm:overflow-x-visible"
-      >
+      <div className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-3 sm:gap-4">
         {COLUMNS.map((column) => {
           const columnTasks = tasks.filter((task) => task.state === column.id);
 
@@ -178,7 +172,7 @@ export const DashboardTaskBoard: React.FC<DashboardTaskBoardProps> = ({ tasks })
               key={column.id}
               role="group"
               aria-label={`${column.title} tasks`}
-              className="min-w-[82vw] xs:min-w-[280px] snap-start sm:min-w-0"
+              className="min-w-0"
             >
               <div className="flex items-center gap-2">
                 <h3 className="font-heading text-headline-sm text-ink">{column.title}</h3>

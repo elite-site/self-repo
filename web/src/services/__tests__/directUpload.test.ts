@@ -25,8 +25,8 @@ describe('Direct-to-Drive uploadDirectToDrive', () => {
     const setHeaderSpy = vi.fn();
     const sendSpy = vi.fn();
 
-    const originalXHR = global.XMLHttpRequest;
-    (global as any).XMLHttpRequest = vi.fn(function (this: any) {
+    const originalXHR = window.XMLHttpRequest;
+    (window as any).XMLHttpRequest = vi.fn(function (this: any) {
       this.upload = { addEventListener: vi.fn() };
       this.open = openSpy;
       this.setRequestHeader = setHeaderSpy;
@@ -49,7 +49,7 @@ describe('Direct-to-Drive uploadDirectToDrive', () => {
       expect(setHeaderSpy).toHaveBeenCalledWith('Content-Range', `bytes 0-${1024 * 1024 - 1}/${1024 * 1024}`);
       expect(result.driveFileId).toBe('drive_file_completed_123');
     } finally {
-      global.XMLHttpRequest = originalXHR;
+      window.XMLHttpRequest = originalXHR;
     }
   });
 
@@ -62,7 +62,7 @@ describe('Direct-to-Drive uploadDirectToDrive', () => {
     abortController.abort(); // already aborted
 
     const fetchMock = vi.fn().mockResolvedValue({ ok: true });
-    global.fetch = fetchMock;
+    window.fetch = fetchMock;
 
     await expect(
       uploadDirectToDrive({
