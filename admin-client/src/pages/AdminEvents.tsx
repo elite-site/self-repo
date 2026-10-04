@@ -1,27 +1,210 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import {
   CalendarDays, Plus, Pencil, Copy, Archive, Eye, Users, Trash2,
-  AlertCircle, Loader2, CheckCircle, X, ChevronLeft, ChevronRight
+  AlertCircle, Loader2, CheckCircle, X
 } from 'lucide-react';
 import { adminApi } from '../services/api';
-import { EventItem, EventPayload } from '../types';
-import { useConfirm } from '../components/ui/ConfirmDialog';
+
+interface EventItem {
+  id: string;
+  title: string;
+  type: string;
+  status: string;
+  registrationStart: string;
+  registrationEnd: string;
+  eventDate: string;
+  registrationCount: number;
+  eligibility?: string;
+  description?: string;
+}
 
 const StatusBadge = ({ status }: { status: string }) => {
-  const map: Record<string, { label: string; cls: string }> = {
-    DRAFT: { label: 'Draft', cls: 'badge badge-draft' },
-    OPEN: { label: 'Open', cls: 'badge badge-approved' },
-    CLOSED: { label: 'Closed', cls: 'badge badge-draft' },
-    ARCHIVED: { label: 'Archived', cls: 'badge badge-draft' },
+  const map: Record<string, string> = {
+    DRAFT: 'bg-slate-50 dark:bg-slate-900/50 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800',
+    PUBLISHED: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800',
+    OPEN: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800',
+    CLOSED: 'bg-slate-50 dark:bg-slate-900/50 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-800',
+    ARCHIVED: 'bg-neutral-50 dark:bg-neutral-900/50 text-neutral-400 dark:text-neutral-500 border-neutral-200 dark:border-neutral-800',
   };
-  const s = map[status] ?? { label: status, cls: 'badge badge-draft' };
-  return <span className={s.cls}>{s.label}</span>;
+  return (
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${map[status] ?? 'bg-slate-50 text-slate-600 border-slate-200'}`}>
+      {status}
+    </span>
+  );
 };
 
 const steps = ['Basics', 'Dates', 'Eligibility', 'Form', 'Teams', 'Notifications', 'Review'];
 
-const EVENT_TYPES = ['HACKATHON', 'WORKSHOP', 'COMPETITION', 'SEMINAR', 'OTHER'];
+const CreateEventWizard: React.FC<{ onClose: () => void; onCreated: () => void }> = ({ onClose, onCreated }) => {
+  const [step, setStep] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
+  const [form, setForm] = useState({
+    title: '', description: '', type: 'HACKATHON',
+    registrationStart: '', registrationEnd: '', eventDate: '',
+    eligibilityYears: [] as string[], minCompletion: 0,
+    teamEnabled: false, teamMin: 1, teamMax: 4,
+    notifyOnOpen: true, notifyReminder: true,
+  });
+
+  const update = (k: string, v: unknown) => setForm((f) => ({ ...f, [k]: v }));
+
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    try {
+      await adminApi.createEvent?.(form);
+      onCreated();
+      onClose();
+    } catch {
+      // handle
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between p-5 border-b border-[#E2E8F0]">
+          <h2 className="text-base font-extrabold text-[#0B192C]">Create Event</h2>
+          <button onClick={onClose} className="text-neutral-400 hover:text-[#0B192C] cursor-pointer"><X className="w-5 h-5" /></button>
+        </div>
+
+        {/* Step indicator */}
+        <div className="flex px-5 pt-4 gap-1 overflow-x-auto">
+          {steps.map((s, i) => (
+            <div key={s} className="flex items-center gap-1 shrink-0">
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                i < step ? 'bg-emerald-500 text-white' : i === step ? 'bg-[#DC2626] text-white' : 'bg-neutral-200 text-neutral-500'
+              }`}>
+                {i < step ? <CheckCircle className="w-3.5 h-3.5" /> : i + 1}
+              </div>
+              <span className={`text-[10px] font-semibold ${i === step ? 'text-[#0B192C]' : 'text-neutral-400'}`}>{s}</span>
+              {i < steps.length - 1 && <div className={`w-4 h-px ${i < step ? 'bg-emerald-300' : 'bg-neutral-200'}`} />}
+            </div>
+          ))}
+        </div>
+
+        {/* Step content */}
+        <div className="flex-1 overflow-y-auto p-5 space-y-4">
+          {step === 0 && (
+            <>
+              <label className="block">
+                <span className="text-xs font-bold text-neutral-700 uppercase tracking-wide">Title *</span>
+                <input value={form.title} onChange={e => update('title', e.target.value)} placeholder="Event title" className="mt-1 w-full text-sm border border-[#E2E8F0] rounded-lg px-3 py-2 focus:outline-none focus:border-[#DC2626]" />
+              </label>
+              <label className="block">
+                <span className="text-xs font-bold text-neutral-700 uppercase tracking-wide">Description</span>
+                <textarea value={form.description} onChange={e => update('description', e.target.value)} rows={4} className="mt-1 w-full text-sm border border-[#E2E8F0] rounded-lg px-3 py-2 focus:outline-none focus:border-[#DC2626] resize-none" />
+              </label>
+              <label className="block">
+                <span className="text-xs font-bold text-neutral-700 uppercase tracking-wide">Event Type</span>
+                <select value={form.type} onChange={e => update('type', e.target.value)} className="mt-1 w-full text-sm border border-[#E2E8F0] rounded-lg px-3 py-2 focus:outline-none focus:border-[#DC2626]">
+                  {['HACKATHON', 'WORKSHOP', 'COMPETITION', 'SEMINAR', 'OTHER'].map(t => <option key={t}>{t}</option>)}
+                </select>
+              </label>
+            </>
+          )}
+          {step === 1 && (
+            <>
+              {(['registrationStart', 'registrationEnd', 'eventDate'] as const).map((field) => (
+                <label key={field} className="block">
+                  <span className="text-xs font-bold text-neutral-700 uppercase tracking-wide">{field.replace(/([A-Z])/g, ' $1').trim()}</span>
+                  <input type="datetime-local" value={form[field]} onChange={e => update(field, e.target.value)} className="mt-1 w-full text-sm border border-[#E2E8F0] rounded-lg px-3 py-2 focus:outline-none focus:border-[#DC2626]" />
+                </label>
+              ))}
+            </>
+          )}
+          {step === 2 && (
+            <>
+              <div>
+                <span className="text-xs font-bold text-neutral-700 uppercase tracking-wide">Eligible Years</span>
+                <div className="flex gap-2 mt-2 flex-wrap">
+                  {['1', '2', '3', '4'].map(y => (
+                    <button key={y} onClick={() => update('eligibilityYears', form.eligibilityYears.includes(y) ? form.eligibilityYears.filter(e => e !== y) : [...form.eligibilityYears, y])}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold border cursor-pointer ${form.eligibilityYears.includes(y) ? 'bg-[#DC2626] text-white border-[#DC2626]' : 'border-[#E2E8F0] text-neutral-500'}`}>
+                      Year {y}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <label className="block">
+                <span className="text-xs font-bold text-neutral-700 uppercase tracking-wide">Min Profile Completion %</span>
+                <input type="number" min={0} max={100} value={form.minCompletion} onChange={e => update('minCompletion', +e.target.value)} className="mt-1 w-full text-sm border border-[#E2E8F0] rounded-lg px-3 py-2 focus:outline-none focus:border-[#DC2626]" />
+              </label>
+            </>
+          )}
+          {step === 3 && (
+            <div className="text-center py-8 text-neutral-400">
+              <p className="text-sm">Registration form builder (drag-and-drop fields) would appear here in full implementation.</p>
+            </div>
+          )}
+          {step === 4 && (
+            <>
+              <label className="flex items-center gap-3">
+                <input type="checkbox" checked={form.teamEnabled} onChange={e => update('teamEnabled', e.target.checked)} className="w-4 h-4 rounded accent-[#DC2626]" />
+                <span className="text-sm font-semibold text-[#0B192C]">Enable Team Registration</span>
+              </label>
+              {form.teamEnabled && (
+                <div className="grid grid-cols-2 gap-4">
+                  <label className="block">
+                    <span className="text-xs font-bold text-neutral-700">Min Members</span>
+                    <input type="number" min={1} value={form.teamMin} onChange={e => update('teamMin', +e.target.value)} className="mt-1 w-full text-sm border border-[#E2E8F0] rounded-lg px-3 py-2 focus:outline-none focus:border-[#DC2626]" />
+                  </label>
+                  <label className="block">
+                    <span className="text-xs font-bold text-neutral-700">Max Members</span>
+                    <input type="number" min={1} value={form.teamMax} onChange={e => update('teamMax', +e.target.value)} className="mt-1 w-full text-sm border border-[#E2E8F0] rounded-lg px-3 py-2 focus:outline-none focus:border-[#DC2626]" />
+                  </label>
+                </div>
+              )}
+            </>
+          )}
+          {step === 5 && (
+            <>
+              <label className="flex items-center gap-3">
+                <input type="checkbox" checked={form.notifyOnOpen} onChange={e => update('notifyOnOpen', e.target.checked)} className="w-4 h-4 rounded accent-[#DC2626]" />
+                <span className="text-sm font-semibold text-[#0B192C]">Notify students when registration opens</span>
+              </label>
+              <label className="flex items-center gap-3">
+                <input type="checkbox" checked={form.notifyReminder} onChange={e => update('notifyReminder', e.target.checked)} className="w-4 h-4 rounded accent-[#DC2626]" />
+                <span className="text-sm font-semibold text-[#0B192C]">Send reminder before deadline</span>
+              </label>
+            </>
+          )}
+          {step === 6 && (
+            <div className="space-y-3">
+              <h3 className="text-sm font-bold text-[#0B192C]">Review</h3>
+              <div className="bg-[#F8FAFC] rounded-xl p-4 space-y-2 text-sm">
+                <div><span className="font-semibold">Title:</span> {form.title || '—'}</div>
+                <div><span className="font-semibold">Type:</span> {form.type}</div>
+                <div><span className="font-semibold">Event Date:</span> {form.eventDate || '—'}</div>
+                <div><span className="font-semibold">Registration:</span> {form.registrationStart || '—'} → {form.registrationEnd || '—'}</div>
+                <div><span className="font-semibold">Teams:</span> {form.teamEnabled ? `Yes (${form.teamMin}–${form.teamMax})` : 'No'}</div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between p-5 border-t border-[#E2E8F0]">
+          <button onClick={() => setStep(Math.max(0, step - 1))} disabled={step === 0} className="px-4 py-2 text-xs font-bold text-neutral-500 hover:text-[#0B192C] disabled:opacity-30 cursor-pointer">
+            ← Back
+          </button>
+          {step < steps.length - 1 ? (
+            <button onClick={() => setStep(step + 1)} className="px-5 py-2 bg-[#0B192C] text-white rounded-lg text-xs font-bold hover:bg-[#0B192C]/90 cursor-pointer">
+              Next →
+            </button>
+          ) : (
+            <button onClick={handleSubmit} disabled={submitting || !form.title} className="px-5 py-2 bg-[#DC2626] text-white rounded-lg text-xs font-bold hover:bg-red-700 disabled:opacity-50 flex items-center gap-2 cursor-pointer">
+              {submitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+              Publish Event
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const DEPENDENT_LABELS: Record<string, string> = {
   registrations: 'Registrations',
@@ -32,324 +215,189 @@ const DEPENDENT_LABELS: Record<string, string> = {
   emailLogs: 'Email log entries',
 };
 
-/** ISO timestamp -> the `YYYY-MM-DDTHH:mm` string a `datetime-local` input needs. */
-const toLocalInput = (iso?: string | null) => {
-  if (!iso) return '';
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '';
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-};
+/**
+ * Two-step delete matching the API contract: the first call omits `force`, so the
+ * server answers 409 with a per-table tally instead of destroying anything. Only
+ * once the admin sees that tally does the second call pass force: true.
+ */
+const DeleteEventDialog: React.FC<{ event: EventItem; onClose: () => void; onDeleted: () => void }> = ({ event, onClose, onDeleted }) => {
+  const [counts, setCounts] = useState<Record<string, number> | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-const formatDate = (iso?: string | null) => (iso ? new Date(iso).toLocaleDateString() : 'To be announced');
-
-interface FormState {
-  name: string;
-  description: string;
-  type: string;
-  year: number;
-  registrationStart: string;
-  registrationEnd: string;
-  eventDate: string;
-  eligibilityYears: string[];
-  minCompletion: number;
-  teamEnabled: boolean;
-  teamMin: number;
-  teamMax: number;
-  notifyOnOpen: boolean;
-  notifyReminder: boolean;
-}
-
-const emptyForm: FormState = {
-  name: '', description: '', type: 'HACKATHON', year: new Date().getFullYear(),
-  registrationStart: '', registrationEnd: '', eventDate: '',
-  eligibilityYears: [], minCompletion: 0,
-  teamEnabled: false, teamMin: 1, teamMax: 4,
-  notifyOnOpen: true, notifyReminder: true,
-};
-
-const fromEvent = (e: EventItem): FormState => ({
-  name: e.name,
-  description: e.description ?? '',
-  // Preserve whatever the event already is, including the 'GENERAL' default.
-  // Mapping GENERAL onto a specific type here silently rewrote the type of
-  // every default event the moment an admin opened Edit and hit Save.
-  type: e.type || 'GENERAL',
-  year: e.year ?? new Date().getFullYear(),
-  registrationStart: toLocalInput(e.registrationStart),
-  registrationEnd: toLocalInput(e.registrationEnd),
-  eventDate: toLocalInput(e.eventDate),
-  eligibilityYears: (e.eligibilityYears ?? []).map(String),
-  minCompletion: e.minCompletion ?? 0,
-  teamEnabled: e.teamEnabled ?? false,
-  teamMin: e.teamMin ?? 1,
-  teamMax: e.teamMax ?? 4,
-  notifyOnOpen: e.notifyOnOpen ?? true,
-  notifyReminder: e.notifyReminder ?? true,
-});
-
-const EventWizard: React.FC<{
-  onClose: () => void;
-  onSaved: () => void;
-  existing?: EventItem;
-  notify: (message: string, type?: 'success' | 'error') => void;
-}> = ({ onClose, onSaved, existing, notify }) => {
-  const [step, setStep] = useState(0);
-  const [submitting, setSubmitting] = useState(false);
-  const [form, setForm] = useState<FormState>(existing ? fromEvent(existing) : emptyForm);
-
-  const update = (k: keyof FormState, v: unknown) => setForm((f) => ({ ...f, [k]: v }));
-
-  const handleSubmit = async () => {
-    setSubmitting(true);
-    const payload: EventPayload = {
-      name: form.name.trim(),
-      description: form.description.trim(),
-      type: form.type,
-      year: form.year,
-      // New events start as DRAFT, matching handleDuplicate and the existence of a
-      // separate publish action. Creating straight to OPEN made the event
-      // student-visible the instant the wizard finished, before an admin had
-      // reviewed or published it.
-      status: existing ? existing.status : 'DRAFT',
-      registrationStart: form.registrationStart || null,
-      registrationEnd: form.registrationEnd || null,
-      eventDate: form.eventDate || null,
-      eligibilityYears: form.eligibilityYears.map(Number),
-      minCompletion: form.minCompletion,
-      teamEnabled: form.teamEnabled,
-      teamMin: form.teamMin,
-      teamMax: form.teamMax,
-      notifyOnOpen: form.notifyOnOpen,
-      notifyReminder: form.notifyReminder,
-    };
+  const runDelete = async (force: boolean) => {
+    setBusy(true);
+    setError(null);
     try {
-      if (existing) {
-        await adminApi.updateEvent(existing.id, payload);
-        notify('Event saved.');
-      } else {
-        await adminApi.createEvent(payload);
-        notify(`${payload.name} created.`);
-      }
-      onSaved();
+      await adminApi.deleteEvent(event.id, force);
+      onDeleted();
       onClose();
     } catch (err: any) {
-      // Previously swallowed by an empty catch, so a failed create looked
-      // exactly like a successful one: the wizard closed and nothing appeared.
-      notify(err?.response?.data?.message || 'Could not save the event.', 'error');
-    } finally {
-      setSubmitting(false);
+      const data = err?.response?.data;
+      if (data?.error === 'CONFIRMATION_REQUIRED') {
+        setCounts(data.dependents || {});
+      } else {
+        setError(data?.message || 'Could not delete this event.');
+      }
+      setBusy(false);
     }
   };
 
+  const listed = counts
+    ? Object.entries(counts).filter(([, n]) => n > 0)
+    : [];
+
   return (
-    <div className="fixed inset-0 z-modal bg-scrim flex items-center justify-center p-4 animate-fade-in" role="dialog" aria-modal="true" aria-labelledby="wizard-title">
-      <div className="surface bg-surface text-ink w-full max-w-2xl max-h-[90dvh] overflow-hidden flex flex-col shadow-modal animate-scale-in">
-        {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b border-edge">
-          <h2 id="wizard-title" className="text-headline-sm font-semibold text-ink">{existing ? 'Edit Event' : 'Create Event'}</h2>
-          <button onClick={onClose} className="btn btn-ghost p-2" aria-label="Close wizard">
-            <X className="w-5 h-5" aria-hidden="true" />
+    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col">
+        <div className="flex items-center justify-between p-5 border-b border-[#E2E8F0]">
+          <h2 className="text-base font-extrabold text-[#0B192C]">Delete Event</h2>
+          <button onClick={onClose} disabled={busy} className="text-neutral-400 hover:text-[#0B192C] disabled:opacity-40 cursor-pointer">
+            <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Step indicator */}
-        <div className="flex px-5 pt-4 gap-1 overflow-x-auto border-b border-edge bg-surface-sunken" role="navigation" aria-label="Wizard steps">
-          {steps.map((s, i) => (
-            <div key={s} className="flex items-center gap-1 shrink-0">
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-label-sm font-bold ${
-                i < step ? 'bg-status-approved text-on-primary' : i === step ? 'bg-brand text-on-primary' : 'bg-surface-sunken text-ink-muted border border-edge'
-              }`}>
-                {i < step ? <CheckCircle className="w-3.5 h-3.5" aria-hidden="true" /> : i + 1}
-              </div>
-              <span className={`text-label-sm font-semibold ${i === step ? 'text-ink' : 'text-ink-muted'}`}>{s}</span>
-              {i < steps.length - 1 && <div className={`w-4 h-px ${i < step ? 'bg-status-approved' : 'border-edge'}`} />}
-            </div>
-          ))}
-        </div>
+        <div className="p-5 space-y-4">
+          <p className="text-sm text-neutral-700">
+            Permanently delete <span className="font-bold text-[#0B192C]">{event.title}</span>?
+          </p>
 
-        {/* Step content */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-4">
-          {step === 0 && (
-            <>
-              <label htmlFor="event-title" className="block">
-                <span className="label">Title *</span>
-                <input id="event-title" value={form.name} onChange={e => update('name', e.target.value)} placeholder="Event title" className="input" aria-required="true" />
-              </label>
-              <label htmlFor="event-description" className="block">
-                <span className="label">Description</span>
-                <textarea id="event-description" value={form.description} onChange={e => update('description', e.target.value)} rows={4} className="textarea resize-none" />
-              </label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <label htmlFor="event-type" className="block">
-                  <span className="label">Event Type</span>
-                  <select id="event-type" value={form.type} onChange={e => update('type', e.target.value)} className="select">
-                    {EVENT_TYPES.map(t => <option key={t}>{t}</option>)}
-                  </select>
-                </label>
-                <label htmlFor="event-year" className="block">
-                  <span className="label">Year</span>
-                  <input type="number" id="event-year" min={2000} max={2100} value={form.year} onChange={e => update('year', +e.target.value)} className="input" />
-                </label>
-              </div>
-            </>
-          )}
-          {step === 1 && (
-            <>
-              {(['registrationStart', 'registrationEnd', 'eventDate'] as const).map((field) => (
-                <label key={field} htmlFor={field} className="block">
-                  <span className="label">{field.replace(/([A-Z])/g, ' $1').trim()}</span>
-                  <input type="datetime-local" id={field} value={form[field]} onChange={e => update(field, e.target.value)} className="input" />
-                </label>
-              ))}
-            </>
-          )}
-          {step === 2 && (
-            <>
-              <div>
-                <span className="label">Eligible Years</span>
-                <div className="flex gap-2 mt-2 flex-wrap" role="group" aria-label="Eligible years">
-                  {['1', '2', '3', '4'].map(y => (
-                    <button key={y} onClick={() => update('eligibilityYears', form.eligibilityYears.includes(y) ? form.eligibilityYears.filter(e => e !== y) : [...form.eligibilityYears, y])}
-                      className={`btn ${form.eligibilityYears.includes(y) ? 'btn-primary' : 'btn-secondary'} text-label-sm`}
-                      aria-pressed={form.eligibilityYears.includes(y)}
-                    >
-                      Year {y}
-                    </button>
-                  ))}
-                </div>
-                <p className="text-label-sm text-ink-muted mt-2">Leave all unselected to allow every year.</p>
-              </div>
-              <label htmlFor="min-completion" className="block">
-                <span className="label">Min Profile Completion %</span>
-                <input type="number" id="min-completion" min={0} max={100} value={form.minCompletion} onChange={e => update('minCompletion', +e.target.value)} className="input" />
-              </label>
-            </>
-          )}
-          {step === 3 && (
-            <>
-              <p className="text-body-sm text-ink-secondary">
-                Registration questions can be added after the event is created, from the event detail view.
+          {counts && (
+            <div className="rounded-xl border border-red-200 bg-red-50 p-4 space-y-2">
+              <p className="text-xs font-bold text-red-700">
+                This will also permanently delete the following:
               </p>
-            </>
+              <ul className="space-y-1">
+                {listed.map(([key, n]) => (
+                  <li key={key} className="flex items-center justify-between text-xs text-red-800">
+                    <span>{DEPENDENT_LABELS[key] ?? key}</span>
+                    <span className="font-bold">{n}</span>
+                  </li>
+                ))}
+              </ul>
+              <p className="text-[11px] text-red-700 pt-1 border-t border-red-200">
+                This cannot be undone.
+              </p>
+            </div>
           )}
-          {step === 4 && (
-            <>
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input type="checkbox" checked={form.teamEnabled} onChange={e => update('teamEnabled', e.target.checked)} className="w-4 h-4 rounded border-edge text-brand focus:ring-brand" />
-                <span className="text-body-md font-semibold text-ink">Enable Team Registration</span>
-              </label>
-              {form.teamEnabled && (
-                <div className="grid grid-cols-2 gap-4">
-                  <label htmlFor="team-min" className="block">
-                    <span className="label">Min Members</span>
-                    <input type="number" id="team-min" min={1} max={20} value={form.teamMin} onChange={e => update('teamMin', +e.target.value)} className="input" />
-                  </label>
-                  <label htmlFor="team-max" className="block">
-                    <span className="label">Max Members</span>
-                    <input type="number" id="team-max" min={1} max={20} value={form.teamMax} onChange={e => update('teamMax', +e.target.value)} className="input" />
-                  </label>
-                </div>
-              )}
-            </>
-          )}
-          {step === 5 && (
-            <>
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input type="checkbox" checked={form.notifyOnOpen} onChange={e => update('notifyOnOpen', e.target.checked)} className="w-4 h-4 rounded border-edge text-brand focus:ring-brand" />
-                <span className="text-body-md font-semibold text-ink">Notify students when registration opens</span>
-              </label>
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input type="checkbox" checked={form.notifyReminder} onChange={e => update('notifyReminder', e.target.checked)} className="w-4 h-4 rounded border-edge text-brand focus:ring-brand" />
-                <span className="text-body-md font-semibold text-ink">Send reminder before deadline</span>
-              </label>
-            </>
-          )}
-          {step === 6 && (
-            <div className="space-y-3">
-              <h3 className="text-label-md font-bold text-ink">Review</h3>
-              <div className="surface-sunken rounded-lg p-4 space-y-2 text-body-sm">
-                <div><span className="font-semibold text-ink-secondary">Title:</span> <span className="text-ink ml-2">{form.name || 'To be announced'}</span></div>
-                <div><span className="font-semibold text-ink-secondary">Type:</span> <span className="text-ink ml-2">{form.type}</span></div>
-                <div><span className="font-semibold text-ink-secondary">Event Date:</span> <span className="text-ink ml-2">{form.eventDate || 'To be announced'}</span></div>
-                <div><span className="font-semibold text-ink-secondary">Registration:</span> <span className="text-ink ml-2">{form.registrationStart || 'To be announced'} to {form.registrationEnd || 'To be announced'}</span></div>
-                <div><span className="font-semibold text-ink-secondary">Eligible years:</span> <span className="text-ink ml-2">{form.eligibilityYears.length ? form.eligibilityYears.join(', ') : 'All years'}</span></div>
-                <div><span className="font-semibold text-ink-secondary">Teams:</span> <span className="text-ink ml-2">{form.teamEnabled ? `Yes (${form.teamMin}-${form.teamMax})` : 'No'}</span></div>
-              </div>
+
+          {error && (
+            <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3">
+              <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+              <p className="text-xs text-red-700">{error}</p>
             </div>
           )}
         </div>
 
-        {/* Footer */}
-        <div className="flex items-center justify-between p-5 border-t border-edge bg-surface-sunken">
-          <button onClick={() => setStep(Math.max(0, step - 1))} disabled={step === 0} className="btn btn-ghost text-label-sm" aria-label="Previous step" aria-disabled={step === 0}>
-            <ChevronLeft className="w-4 h-4" aria-hidden="true" /> Back
+        <div className="flex items-center justify-end gap-3 p-5 border-t border-[#E2E8F0]">
+          <button onClick={onClose} disabled={busy} className="px-4 py-2 text-xs font-bold text-neutral-500 hover:text-[#0B192C] disabled:opacity-40 cursor-pointer">
+            Cancel
           </button>
-          {step < steps.length - 1 ? (
-            <button onClick={() => setStep(step + 1)} className="btn btn-secondary text-label-sm">
-              Next <ChevronRight className="w-4 h-4" aria-hidden="true" />
-            </button>
-          ) : (
-            <button onClick={handleSubmit} disabled={submitting || !form.name.trim()} className="btn btn-primary text-label-sm" aria-busy={submitting}>
-              {submitting && <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />}
-              {existing ? 'Save Changes' : 'Create Event'}
-            </button>
-          )}
+          <button
+            onClick={() => runDelete(counts !== null)}
+            disabled={busy}
+            className="px-5 py-2 bg-[#DC2626] text-white rounded-lg text-xs font-bold hover:bg-red-700 disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+          >
+            {busy && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+            {counts ? 'Delete anyway' : 'Delete event'}
+          </button>
         </div>
       </div>
     </div>
   );
 };
 
-const EventDetail: React.FC<{ event: EventItem; onClose: () => void }> = ({ event, onClose }) => (
-  <div className="fixed inset-0 z-modal bg-scrim flex items-center justify-center p-4 animate-fade-in" role="dialog" aria-modal="true" aria-labelledby="detail-title">
-    <div className="surface bg-surface text-ink w-full max-w-lg max-h-[90dvh] overflow-hidden flex flex-col shadow-modal animate-scale-in">
-      <div className="flex items-center justify-between p-5 border-b border-edge">
-        <h2 id="detail-title" className="text-headline-sm font-semibold text-ink">{event.name}</h2>
-        <button onClick={onClose} className="btn btn-ghost p-2" aria-label="Close details">
-          <X className="w-5 h-5" aria-hidden="true" />
-        </button>
-      </div>
-      <div className="flex-1 overflow-y-auto p-5 space-y-3 text-body-sm">
-        {event.description && <p className="text-ink-secondary">{event.description}</p>}
-        <div className="surface-sunken rounded-lg p-4 space-y-2">
-          <div><span className="font-semibold text-ink-secondary">Status:</span> <span className="text-ink ml-2"><StatusBadge status={event.status} /></span></div>
-          <div><span className="font-semibold text-ink-secondary">Type:</span> <span className="text-ink ml-2">{event.type || 'GENERAL'}</span></div>
-          <div><span className="font-semibold text-ink-secondary">Year:</span> <span className="text-ink ml-2">{event.year}</span></div>
-          <div><span className="font-semibold text-ink-secondary">Event date:</span> <span className="text-ink ml-2">{formatDate(event.eventDate)}</span></div>
-          <div><span className="font-semibold text-ink-secondary">Registration:</span> <span className="text-ink ml-2">{formatDate(event.registrationStart)} to {formatDate(event.registrationEnd)}</span></div>
-          <div><span className="font-semibold text-ink-secondary">Eligible years:</span> <span className="text-ink ml-2">{event.eligibilityYears?.length ? event.eligibilityYears.join(', ') : 'All years'}</span></div>
-          <div><span className="font-semibold text-ink-secondary">Min completion:</span> <span className="text-ink ml-2">{event.minCompletion ?? 0}%</span></div>
-          <div><span className="font-semibold text-ink-secondary">Teams:</span> <span className="text-ink ml-2">{event.teamEnabled ? `${event.teamMin ?? 1}-${event.teamMax ?? 4} members` : 'Disabled'}</span></div>
-          <div><span className="font-semibold text-ink-secondary">Notifications:</span> <span className="text-ink ml-2">{event.notifyOnOpen ? 'On open' : 'No open notice'}, {event.notifyReminder ? 'reminder on' : 'no reminder'}</span></div>
-          <div><span className="font-semibold text-ink-secondary">Registrations:</span> <span className="text-ink ml-2">{event.registrationCount ?? 0}</span></div>
+/**
+ * Archive is a status flip, not a destruction — it leaves registrations,
+ * submissions and teams untouched. The confirmation exists because ARCHIVED is
+ * currently a one-way state in the UI, so an accidental click hides the event
+ * from day-to-day use with no button on this page to bring it back.
+ */
+const ArchiveEventDialog: React.FC<{ event: EventItem; onClose: () => void; onArchived: () => void }> = ({ event, onClose, onArchived }) => {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const confirm = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      await adminApi.archiveEvent(event.id);
+      onArchived();
+      onClose();
+    } catch (err: any) {
+      setError(err?.response?.data?.message || 'Could not archive this event.');
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+        <div className="flex items-center justify-between p-5 border-b border-[#E2E8F0]">
+          <h2 className="text-base font-extrabold text-[#0B192C]">Archive Event</h2>
+          <button onClick={onClose} disabled={busy} className="text-neutral-400 hover:text-[#0B192C] disabled:opacity-40 cursor-pointer">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="p-5 space-y-3">
+          <p className="text-sm text-neutral-700">
+            Archive <span className="font-bold text-[#0B192C]">{event.title}</span>?
+          </p>
+          <p className="text-xs text-neutral-500">
+            Registration closes and the event stops appearing to students. All registrations,
+            submissions and teams are kept — nothing is deleted.
+          </p>
+          {error && (
+            <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3">
+              <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+              <p className="text-xs text-red-700">{error}</p>
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center justify-end gap-3 p-5 border-t border-[#E2E8F0]">
+          <button onClick={onClose} disabled={busy} className="px-4 py-2 text-xs font-bold text-neutral-500 hover:text-[#0B192C] disabled:opacity-40 cursor-pointer">
+            Cancel
+          </button>
+          <button
+            onClick={confirm}
+            disabled={busy}
+            className="px-5 py-2 bg-[#0B192C] text-white rounded-lg text-xs font-bold hover:bg-[#0B192C]/90 disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+          >
+            {busy && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+            Archive event
+          </button>
         </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 export const AdminEvents: React.FC = () => {
-  const confirm = useConfirm();
   const [events, setEvents] = useState<EventItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [editing, setEditing] = useState<EventItem | null | undefined>(undefined);
-  const [viewing, setViewing] = useState<EventItem | null>(null);
-  const [busyId, setBusyId] = useState<string | null>(null);
-  const [toast, setToast] = useState<{ message: string; type?: 'success' | 'error' } | null>(null);
-
-  const notify = (message: string, type: 'success' | 'error' = 'success') => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 3500);
-  };
+  const [showCreate, setShowCreate] = useState(false);
+  const [deleting, setDeleting] = useState<EventItem | null>(null);
+  const [archiving, setArchiving] = useState<EventItem | null>(null);
 
   const fetchEvents = async () => {
     setLoading(true);
     setError(null);
     try {
       const res = await adminApi.getEvents();
-      setEvents(res.events || []);
+      const mapped: EventItem[] = (res.events || []).map((e: any) => ({
+        id: e.id,
+        title: e.name || e.title || 'Untitled Event',
+        type: e.type || 'GENERAL',
+        status: e.status || 'OPEN',
+        registrationStart: e.createdAt,
+        registrationEnd: e.createdAt,
+        eventDate: e.createdAt,
+        registrationCount: e.registrationCount || 0,
+      }));
+      setEvents(mapped);
     } catch {
       setError('Failed to load events.');
     } finally {
@@ -359,244 +407,105 @@ export const AdminEvents: React.FC = () => {
 
   useEffect(() => { fetchEvents(); }, []);
 
-  const handleDuplicate = async (ev: EventItem) => {
-    setBusyId(ev.id);
-    try {
-      await adminApi.createEvent({
-        ...fromEvent(ev),
-        name: `${ev.name} (Copy)`,
-        // The dates were read back out of datetime-local inputs, so they are
-        // already in the `YYYY-MM-DDTHH:mm` shape the create endpoint parses.
-        registrationStart: toLocalInput(ev.registrationStart) || null,
-        registrationEnd: toLocalInput(ev.registrationEnd) || null,
-        eventDate: toLocalInput(ev.eventDate) || null,
-        eligibilityYears: ev.eligibilityYears ?? [],
-        description: ev.description ?? undefined,
-        status: 'DRAFT',
-      } as EventPayload);
-      notify(`Duplicated "${ev.name}".`);
-      await fetchEvents();
-    } catch (err: any) {
-      notify(err?.response?.data?.message || 'Could not duplicate the event.', 'error');
-    } finally {
-      setBusyId(null);
-    }
-  };
-
-  const handleArchive = async (ev: EventItem) => {
-    const confirmed = await confirm({
-      title: `Archive “${ev.name}”?`,
-      description: 'Students will no longer be able to register for this event. Existing registrations, submissions and teams are kept.',
-      confirmLabel: 'Archive event',
-    });
-    if (!confirmed) return;
-    setBusyId(ev.id);
-    try {
-      await adminApi.archiveEvent(ev.id);
-      notify(`Archived "${ev.name}".`);
-      await fetchEvents();
-    } catch (err: any) {
-      notify(err?.response?.data?.message || 'Could not archive the event.', 'error');
-    } finally {
-      setBusyId(null);
-    }
-  };
-
-  const handleDelete = async (ev: EventItem) => {
-    setBusyId(ev.id);
-    try {
-      await adminApi.deleteEvent(ev.id, false);
-      notify(`Deleted "${ev.name}".`);
-      await fetchEvents();
-    } catch (err: any) {
-      const data = err?.response?.data;
-      if (data?.error === 'CONFIRMATION_REQUIRED') {
-        const dependents = data.dependents || {};
-        const countSummary = Object.entries(dependents)
-          .filter(([, count]) => (count as number) > 0)
-          .map(([k, count]) => `${count} ${DEPENDENT_LABELS[k] || k}`)
-          .join(', ');
-
-        const forceConfirmed = await confirm({
-          title: `Delete “${ev.name}”?`,
-          description: `This event has associated records (${countSummary || 'dependent data'}). Deleting it will permanently delete all of them. This cannot be undone.`,
-          confirmLabel: 'Delete anyway',
-          tone: 'danger',
-        });
-        if (!forceConfirmed) {
-          setBusyId(null);
-          return;
-        }
-        try {
-          await adminApi.deleteEvent(ev.id, true);
-          notify(`Deleted "${ev.name}".`);
-          await fetchEvents();
-        } catch (forceErr: any) {
-          notify(forceErr?.response?.data?.message || 'Could not delete the event.', 'error');
-        }
-      } else {
-        notify(data?.message || 'Could not delete the event.', 'error');
-      }
-    } finally {
-      setBusyId(null);
-    }
-  };
-
   return (
-    <div className="space-y-6 page-enter">
-      {/* Toast Notification */}
-      {toast && (
-        <div
-          className={`fixed top-5 right-5 z-toast text-xs font-semibold px-4 py-3 rounded-lg shadow-modal animate-fade-in flex items-center gap-2 ${
-            toast.type === 'error'
-              ? 'bg-status-bg-rejected text-status-rejected border border-status-rejected/30'
-              : 'bg-surface-inverse text-ink-inverse'
-          }`}
-          role="alert"
-          aria-live="polite"
-        >
-          {toast.type === 'error'
-            ? <AlertCircle className="w-4 h-4 shrink-0" aria-hidden="true" />
-            : <CheckCircle className="w-4 h-4 shrink-0 text-emerald-400" aria-hidden="true" />}
-          <span>{toast.message}</span>
-        </div>
-      )}
-
-      {/* `undefined` means closed, `null` means creating, an item means editing. */}
-      {editing !== undefined && (
-        <EventWizard
-          existing={editing ?? undefined}
-          onClose={() => setEditing(undefined)}
-          onSaved={fetchEvents}
-          notify={notify}
+    <div className="space-y-6">
+      {showCreate && <CreateEventWizard onClose={() => setShowCreate(false)} onCreated={fetchEvents} />}
+      {deleting && (
+        <DeleteEventDialog
+          event={deleting}
+          onClose={() => setDeleting(null)}
+          onDeleted={fetchEvents}
         />
       )}
-      {viewing && <EventDetail event={viewing} onClose={() => setViewing(null)} />}
+      {archiving && (
+        <ArchiveEventDialog
+          event={archiving}
+          onClose={() => setArchiving(null)}
+          onArchived={fetchEvents}
+        />
+      )}
 
-      <div className="flex items-center justify-between pb-2 border-b border-edge">
+      <div className="flex items-center justify-between pb-2 border-b border-neutral-200 dark:border-neutral-800">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-brand-soft text-brand flex items-center justify-center">
-            <CalendarDays className="w-6 h-6" aria-hidden="true" />
-          </div>
+          <CalendarDays className="w-6 h-6 text-[#DC2626]" />
           <div>
-            <h1 className="text-headline-md font-semibold text-ink">Events</h1>
-            <p className="text-body-sm text-ink-muted">Manage all department events</p>
+            <h1 className="text-xl font-extrabold text-[#0B192C] dark:text-white">Events</h1>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400">Manage all department events</p>
           </div>
         </div>
-        <button onClick={() => setEditing(null)} className="btn btn-primary">
-          <Plus className="w-4 h-4" aria-hidden="true" /> Create Event
+        <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 px-4 py-2 bg-[#DC2626] text-white rounded-lg text-xs font-bold hover:bg-red-700 cursor-pointer">
+          <Plus className="w-4 h-4" /> Create Event
         </button>
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center h-48 surface-sunken">
-          <Loader2 className="w-7 h-7 animate-spin text-brand" aria-hidden="true" />
-          <span className="sr-only">Loading events</span>
+        <div className="flex items-center justify-center h-48 bg-white dark:bg-neutral-900 rounded-2xl border border-[#E2E8F0] dark:border-neutral-800">
+          <Loader2 className="w-7 h-7 animate-spin text-[#DC2626]" />
         </div>
       ) : error ? (
-        <div className="flex flex-col items-center justify-center h-48 surface-sunken gap-3 text-center" role="alert">
-          <AlertCircle className="w-8 h-8 text-status-rejected" aria-hidden="true" />
-          <p className="text-body-sm text-ink-muted">{error}</p>
-          <button onClick={fetchEvents} className="text-body-sm font-semibold text-brand hover:underline cursor-pointer">Retry</button>
+        <div className="flex flex-col items-center justify-center h-48 bg-white dark:bg-neutral-900 rounded-2xl border border-red-200 dark:border-red-900/50 gap-3">
+          <AlertCircle className="w-8 h-8 text-red-400" />
+          <p className="text-sm text-neutral-500 dark:text-neutral-400">{error}</p>
+          <button onClick={fetchEvents} className="text-xs text-[#DC2626] font-semibold hover:underline cursor-pointer">Retry</button>
         </div>
       ) : events.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-48 surface-sunken gap-3 text-center">
-          <CalendarDays className="w-10 h-10 text-ink-muted" aria-hidden="true" />
-          <p className="text-body-md font-semibold text-ink-secondary">No events yet</p>
-          <button onClick={() => setEditing(null)} className="btn btn-ghost text-body-sm">Create your first event</button>
+        <div className="flex flex-col items-center justify-center h-48 bg-white dark:bg-neutral-900 rounded-2xl border border-[#E2E8F0] dark:border-neutral-800 gap-3">
+          <CalendarDays className="w-10 h-10 text-neutral-200 dark:text-neutral-700" />
+          <p className="text-sm font-semibold text-neutral-500 dark:text-neutral-400">No events yet</p>
+          <button onClick={() => setShowCreate(true)} className="text-xs text-[#DC2626] font-semibold hover:underline cursor-pointer">Create your first event</button>
         </div>
       ) : (
-        <div className="surface overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm" role="grid">
-              <thead className="bg-surface-inset border-b border-edge">
-                <tr>
-                  {['Event', 'Type', 'Event Date', 'Registration', 'Registrations', 'Status', 'Actions'].map(h => (
-                    <th key={h} scope="col" className="text-left px-4 py-3 text-label-sm font-bold text-ink-muted ">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-edge">
-                {events.map((ev) => (
-                  <tr key={ev.id} className="hover:bg-surface-sunken transition-colors">
-                    <td className="px-4 py-3 font-semibold text-ink">{ev.name}</td>
-                    <td className="px-4 py-3 text-label-sm text-ink-muted">{ev.type || 'GENERAL'}</td>
-                    <td className="px-4 py-3 text-label-sm text-ink-secondary">{formatDate(ev.eventDate)}</td>
-                    <td className="px-4 py-3 text-label-sm text-ink-secondary">
-                      {formatDate(ev.registrationStart)} to {formatDate(ev.registrationEnd)}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1 text-label-sm font-semibold text-ink-secondary">
-                        <Users className="w-3.5 h-3.5 text-ink-muted" aria-hidden="true" />
-                        {ev.registrationCount ?? 0}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3"><StatusBadge status={ev.status} /></td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1" role="group" aria-label={`Actions for ${ev.name}`}>
-                        <Link
-                          to={`/admin/event-registrations?eventId=${ev.id}`}
-                          title="Registrations"
-                          className="btn btn-ghost p-2 text-brand hover:bg-brand-soft"
-                          aria-label={`Registrations for ${ev.name}`}
-                        >
-                          <Users className="w-3.5 h-3.5" aria-hidden="true" />
-                        </Link>
-                        <button
-                          onClick={() => setEditing(ev)}
-                          disabled={busyId === ev.id}
-                          title="Edit"
-                          className="btn btn-ghost p-2"
-                          aria-label={`Edit ${ev.name}`}
-                        >
-                          <Pencil className="w-3.5 h-3.5" aria-hidden="true" />
-                        </button>
-                        <button
-                          onClick={() => handleDuplicate(ev)}
-                          disabled={busyId === ev.id}
-                          title="Duplicate"
-                          className="btn btn-ghost p-2"
-                          aria-label={`Duplicate ${ev.name}`}
-                        >
-                          <Copy className="w-3.5 h-3.5" aria-hidden="true" />
-                        </button>
-                        <button
-                          onClick={() => setViewing(ev)}
-                          title="View"
-                          className="btn btn-ghost p-2"
-                          aria-label={`View ${ev.name}`}
-                        >
-                          <Eye className="w-3.5 h-3.5" aria-hidden="true" />
-                        </button>
-                        <button
-                          onClick={() => handleArchive(ev)}
-                          disabled={busyId === ev.id || ev.status === 'ARCHIVED'}
-                          title="Archive"
-                          className="btn btn-ghost p-2"
-                          aria-label={`Archive ${ev.name}`}
-                        >
-                          {busyId === ev.id
-                            ? <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />
-                            : <Archive className="w-3.5 h-3.5" aria-hidden="true" />}
-                        </button>
-                        <button
-                          onClick={() => handleDelete(ev)}
-                          disabled={busyId === ev.id}
-                          title="Delete"
-                          className="btn btn-ghost p-2 text-status-rejected hover:bg-status-bg-rejected"
-                          aria-label={`Delete ${ev.name}`}
-                        >
-                          {busyId === ev.id
-                            ? <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />
-                            : <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+        <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-[#E2E8F0] dark:border-neutral-800 overflow-hidden shadow-sm">
+          <table className="w-full text-sm">
+            <thead className="bg-[#F8FAFC] dark:bg-neutral-800/80 border-b border-[#E2E8F0] dark:border-neutral-700">
+              <tr>
+                {['Event', 'Type', 'Event Date', 'Registration', 'Registrations', 'Status', 'Actions'].map(h => (
+                  <th key={h} className="text-left px-4 py-3 text-xs font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wide">{h}</th>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#E2E8F0] dark:divide-neutral-800">
+              {events.map((ev) => (
+                <tr key={ev.id} className="hover:bg-[#F8FAFC] dark:hover:bg-neutral-800/50 transition-colors">
+                  <td className="px-4 py-3 font-semibold text-[#0B192C] dark:text-white">{ev.title}</td>
+                  <td className="px-4 py-3 text-xs text-neutral-500 dark:text-neutral-400">{ev.type}</td>
+                  <td className="px-4 py-3 text-xs text-neutral-600 dark:text-neutral-300">{ev.eventDate ? new Date(ev.eventDate).toLocaleDateString() : '—'}</td>
+                  <td className="px-4 py-3 text-xs text-neutral-600 dark:text-neutral-300">
+                    {ev.registrationStart ? new Date(ev.registrationStart).toLocaleDateString() : '—'} →{' '}
+                    {ev.registrationEnd ? new Date(ev.registrationEnd).toLocaleDateString() : '—'}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-1 text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                      <Users className="w-3.5 h-3.5 text-neutral-400" />
+                      {ev.registrationCount}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3"><StatusBadge status={ev.status} /></td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-1">
+                      <button title="Edit" className="p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg cursor-pointer"><Pencil className="w-3.5 h-3.5 text-neutral-400" /></button>
+                      <button title="Duplicate" className="p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg cursor-pointer"><Copy className="w-3.5 h-3.5 text-neutral-400" /></button>
+                      <button title="View" className="p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg cursor-pointer"><Eye className="w-3.5 h-3.5 text-neutral-400" /></button>
+                      <button
+                        title="Archive"
+                        onClick={() => setArchiving(ev)}
+                        className="p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg cursor-pointer"
+                      >
+                        <Archive className="w-3.5 h-3.5 text-neutral-400" />
+                      </button>
+                      <button
+                        title="Delete"
+                        onClick={() => setDeleting(ev)}
+                        className="p-1.5 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5 text-red-400" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
     </div>

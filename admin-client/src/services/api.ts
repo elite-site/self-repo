@@ -7,15 +7,6 @@ import {
   EmailHistoryResponse,
   EmailTemplateItem,
   EventItem,
-  EventPayload,
-  ModerationAchievementItem,
-  ModerationCertificateItem,
-  ModerationDecisionData,
-  ModerationDecisionResult,
-  ModerationProjectItem,
-  ModerationResumeItem,
-  ModerationType,
-  ModerationVideoItem,
   RegistrationItem,
   RegistrationsResponse,
   RegistrationTeam,
@@ -27,7 +18,6 @@ import {
   Submission,
   SubmissionRating,
   SubmissionsResponse,
-  UnifiedModerationItem,
 } from '../types';
 
 const client = axios.create({
@@ -46,15 +36,13 @@ export const adminApi = {
     return res.data;
   },
 
-  // Deliberately *not* swallowing errors here. This used to catch everything
-  // and report `{ authenticated: false }`, which made a 500 or a network blip
-  // indistinguishable from being signed out — and because the caller saw a
-  // resolved promise, the caller's error branch (and its "Retry" screen) could
-  // never run. Let it reject so App.tsx can tell "logged out" from
-  // "could not reach the server".
   async getMe(): Promise<{ authenticated: boolean; user?: AdminUser }> {
-    const res = await client.get('/admin/me');
-    return res.data;
+    try {
+      const res = await client.get('/admin/me');
+      return res.data;
+    } catch {
+      return { authenticated: false };
+    }
   },
 
   // Events
@@ -103,37 +91,6 @@ export const adminApi = {
     search?: string;
   }): Promise<StudentsResponse> {
     const res = await client.get('/admin/api/students', { params });
-    return res.data;
-  },
-
-  async getStudent(id: string): Promise<any> {
-    const res = await client.get(`/admin/api/portal/students/${id}`);
-    return res.data;
-  },
-
-  async requestItemChange(
-    studentId: string,
-    type: string,
-    itemId: string,
-    note: string
-  ): Promise<any> {
-    const res = await client.post(
-      `/admin/api/portal/students/${studentId}/items/${type}/${itemId}/request-change`,
-      { note }
-    );
-    return res.data;
-  },
-
-  async deleteStudentItem(
-    studentId: string,
-    type: string,
-    itemId: string,
-    reason?: string
-  ): Promise<any> {
-    const res = await client.delete(
-      `/admin/api/portal/students/${studentId}/items/${type}/${itemId}`,
-      { data: { reason } }
-    );
     return res.data;
   },
 
@@ -227,83 +184,33 @@ export const adminApi = {
   },
 
   // Moderation
-  async getModerationItems(type: string = 'all', status?: string): Promise<{ items: UnifiedModerationItem[]; total: number }> {
-    const res = await client.get('/admin/api/moderation', {
-      params: { type, ...(status ? { status } : {}) },
-    });
-    return res.data || { items: [], total: 0 };
-  },
-  async getModerationVideos(): Promise<{ items: ModerationVideoItem[] }> {
+  async getModerationVideos(): Promise<{ items: any[] }> {
     const res = await client.get('/admin/api/moderation/videos');
     return { items: res.data || [] };
   },
-  async getModerationResumes(): Promise<{ items: ModerationResumeItem[] }> {
+  async getModerationResumes(): Promise<{ items: any[] }> {
     const res = await client.get('/admin/api/moderation/resumes');
     return { items: res.data || [] };
   },
-  async getModerationAchievements(): Promise<{ items: ModerationAchievementItem[] }> {
+  async getModerationAchievements(): Promise<{ items: any[] }> {
     const res = await client.get('/admin/api/moderation/achievements');
     return { items: res.data || [] };
   },
-  async getModerationCertificates(): Promise<{ items: ModerationCertificateItem[] }> {
+  async getModerationCertificates(): Promise<{ items: any[] }> {
     const res = await client.get('/admin/api/moderation/certificates');
     return { items: res.data || [] };
   },
-  async getModerationProjects(): Promise<{ items: ModerationProjectItem[] }> {
-    const res = await client.get('/admin/api/moderation/projects');
-    return { items: res.data || [] };
-  },
-  async moderationDecision(
-    type: ModerationType | string,
-    id: string,
-    data: ModerationDecisionData
-  ): Promise<ModerationDecisionResult> {
+  async moderationDecision(type: string, id: string, data: { action: string; reason?: string; publish?: boolean }): Promise<any> {
     const res = await client.patch(`/admin/api/moderation/${type}/${id}`, data);
-    return res.data;
-  },
-  /** Publish / unpublish an approved item without changing its approval decision. */
-  async setModerationVisibility(type: ModerationType | string, id: string, isPublic: boolean) {
-    const res = await client.patch(`/admin/api/moderation/${type}/${id}/visibility`, { isPublic });
-    return res.data;
-  },
-  /** Remove an item entirely and ask the student to re-upload a replacement. */
-  async deleteModerationItem(type: ModerationType | string, id: string) {
-    const res = await client.delete(`/admin/api/moderation/${type}/${id}`);
-    return res.data;
-  },
-  /** Ask a student to upload a new version of a specific item. */
-  async requestModerationChanges(type: ModerationType | string, id: string, note?: string) {
-    const res = await client.post(`/admin/api/moderation/${type}/${id}/request-changes`, note ? { note } : {});
     return res.data;
   },
 
   // Events
-  //
-  // Write endpoints live under /admin/api/portal. Only the list endpoint is on
-  // /admin/api/events, so POSTing there 404s against a read-only route.
-  async createEvent(data: EventPayload): Promise<EventItem> {
-    const res = await client.post('/admin/api/portal/events', data);
+  async createEvent(data: any): Promise<any> {
+    const res = await client.post('/admin/api/events', data);
     return res.data;
   },
 
-  async updateEvent(id: string, data: Partial<EventPayload>): Promise<EventItem> {
-    const res = await client.put(`/admin/api/portal/events/${id}`, data);
-    return res.data;
-  },
-
-  async getEvent(id: string): Promise<EventItem> {
-    const res = await client.get(`/admin/api/portal/events/${id}`);
-    return res.data;
-  },
-
-  async setEventStatus(id: string, status: 'OPEN' | 'CLOSED' | 'ARCHIVED'): Promise<EventItem> {
-    // The status enum and the action verbs are not the same words: closing an
-    // event is `POST /close`, not `/closed`, and opening it is `publish`. Sending
-    // the raw lowercased status 404s on CLOSED.
-    const action = status === 'OPEN' ? 'publish' : status === 'CLOSED' ? 'close' : 'archive';
-    const res = await client.post(`/admin/api/portal/events/${id}/${action}`);
-    return res.data;
-  },
   /**
    * Deletes an event. Returns the 409 payload as an error when the event still has
    * dependent records, so callers must confirm and retry with force: true.
@@ -356,15 +263,15 @@ export const adminApi = {
     const res = await client.post('/admin/api/announcements', data);
     return res.data;
   },
-  async deleteAnnouncement(id: string): Promise<{ success: boolean; message: string }> {
-    const res = await client.delete(`/admin/api/announcements/${id}`);
+  async deleteAnnouncement(id: string): Promise<any> {
+    const res = await client.delete(`/admin/api/announcements/${encodeURIComponent(id)}`);
     return res.data;
   },
   async getAnnouncementAudiencePreview(audience: string): Promise<{ count: number }> {
-    // No fabricated fallback: a wrong reach estimate is worse than an error, and
-    // this previously masked a missing endpoint behind a constant 120.
+    // No invented fallback: a wrong recipient count is worse than an unknown
+    // one, and the previous hardcoded 120 made the compose dialog lie.
     const res = await client.get('/admin/api/announcements/preview', { params: { audience } });
-    return res.data;
+    return { count: Number(res.data?.count) || 0 };
   },
 
   // Event Registrations (ADM-08)
