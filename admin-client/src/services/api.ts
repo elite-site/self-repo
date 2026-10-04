@@ -304,8 +304,20 @@ export const adminApi = {
     const res = await client.post(`/admin/api/portal/events/${id}/${action}`);
     return res.data;
   },
-  async deleteEvent(id: string): Promise<{ success: boolean; message: string }> {
-    const res = await client.delete(`/admin/api/portal/events/${id}`);
+  /**
+   * Deletes an event. Returns the 409 payload as an error when the event still has
+   * dependent records, so callers must confirm and retry with force: true.
+   */
+  async deleteEvent(id: string, force = false): Promise<any> {
+    const res = await client.delete(`/admin/api/portal/events/${encodeURIComponent(id)}`, {
+      data: { force },
+    });
+    return res.data;
+  },
+
+  /** Flips an event to ARCHIVED. Non-destructive — no dependent rows are touched. */
+  async archiveEvent(id: string): Promise<any> {
+    const res = await client.post(`/admin/api/portal/events/${encodeURIComponent(id)}/archive`);
     return res.data;
   },
 

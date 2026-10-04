@@ -23,6 +23,15 @@ const steps = ['Basics', 'Dates', 'Eligibility', 'Form', 'Teams', 'Notifications
 
 const EVENT_TYPES = ['HACKATHON', 'WORKSHOP', 'COMPETITION', 'SEMINAR', 'OTHER'];
 
+const DEPENDENT_LABELS: Record<string, string> = {
+  registrations: 'Registrations',
+  submissions: 'Submissions',
+  formFields: 'Registration form fields',
+  teams: 'Teams',
+  votes: 'Votes cast',
+  emailLogs: 'Email log entries',
+};
+
 /** ISO timestamp -> the `YYYY-MM-DDTHH:mm` string a `datetime-local` input needs. */
 const toLocalInput = (iso?: string | null) => {
   if (!iso) return '';
@@ -377,13 +386,13 @@ export const AdminEvents: React.FC = () => {
   const handleArchive = async (ev: EventItem) => {
     const confirmed = await confirm({
       title: `Archive “${ev.name}”?`,
-      description: 'Students will no longer be able to register for this event. Existing registrations are kept.',
+      description: 'Students will no longer be able to register for this event. Existing registrations, submissions and teams are kept.',
       confirmLabel: 'Archive event',
     });
     if (!confirmed) return;
     setBusyId(ev.id);
     try {
-      await adminApi.setEventStatus(ev.id, 'ARCHIVED');
+      await adminApi.archiveEvent(ev.id);
       notify(`Archived "${ev.name}".`);
       await fetchEvents();
     } catch (err: any) {
@@ -394,20 +403,40 @@ export const AdminEvents: React.FC = () => {
   };
 
   const handleDelete = async (ev: EventItem) => {
-    const confirmed = await confirm({
-      title: `Delete “${ev.name}”?`,
-      description: 'Are you sure you want to permanently delete this event and all its associated registrations? This action cannot be undone.',
-      confirmLabel: 'Delete event',
-      tone: 'danger',
-    });
-    if (!confirmed) return;
     setBusyId(ev.id);
     try {
-      await adminApi.deleteEvent(ev.id);
+      await adminApi.deleteEvent(ev.id, false);
       notify(`Deleted "${ev.name}".`);
       await fetchEvents();
     } catch (err: any) {
-      notify(err?.response?.data?.message || 'Could not delete the event.', 'error');
+      const data = err?.response?.data;
+      if (data?.error === 'CONFIRMATION_REQUIRED') {
+        const dependents = data.dependents || {};
+        const countSummary = Object.entries(dependents)
+          .filter(([, count]) => (count as number) > 0)
+          .map(([k, count]) => `${count} ${DEPENDENT_LABELS[k] || k}`)
+          .join(', ');
+
+        const forceConfirmed = await confirm({
+          title: `Delete “${ev.name}”?`,
+          description: `This event has associated records (${countSummary || 'dependent data'}). Deleting it will permanently delete all of them. This cannot be undone.`,
+          confirmLabel: 'Delete anyway',
+          tone: 'danger',
+        });
+        if (!forceConfirmed) {
+          setBusyId(null);
+          return;
+        }
+        try {
+          await adminApi.deleteEvent(ev.id, true);
+          notify(`Deleted "${ev.name}".`);
+          await fetchEvents();
+        } catch (forceErr: any) {
+          notify(forceErr?.response?.data?.message || 'Could not delete the event.', 'error');
+        }
+      } else {
+        notify(data?.message || 'Could not delete the event.', 'error');
+      }
     } finally {
       setBusyId(null);
     }
