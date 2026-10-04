@@ -68,8 +68,8 @@ export const HomePage: React.FC<HomePageProps> = ({ session, onLogout }) => {
       <main className="flex-1">
         {/* ── HERO: copy left, real featured content right ────────────────── */}
         <section className="border-b border-edge bg-surface">
-          <div className="mx-auto grid max-w-canvas items-center gap-12 px-6 pb-16 pt-14 sm:px-10 sm:pb-20 sm:pt-20 lg:grid-cols-12 lg:gap-16">
-            <div className="lg:col-span-6">
+          <div className="mx-auto grid grid-cols-1 max-w-canvas items-center gap-12 px-6 pb-16 pt-14 sm:px-10 sm:pb-20 sm:pt-20 lg:grid-cols-12 lg:gap-16">
+            <div className="min-w-0 lg:col-span-6">
               <p className="text-label-sm uppercase tracking-widest text-ink-brand">
                 Department of Information Technology
               </p>
@@ -96,7 +96,7 @@ export const HomePage: React.FC<HomePageProps> = ({ session, onLogout }) => {
               </p>
             </div>
 
-            <div className="lg:col-span-6">
+            <div className="min-w-0 lg:col-span-6">
               <div className="rounded-xl border border-edge bg-surface p-5 shadow-card sm:p-6">
                 <div className="flex items-center justify-between gap-3 border-b border-edge pb-4">
                   <div className="flex min-w-0 items-center gap-2.5">
@@ -123,8 +123,8 @@ export const HomePage: React.FC<HomePageProps> = ({ session, onLogout }) => {
                 ) : featuredStudents.length > 0 ? (
                   <div className="divide-y divide-edge pt-2">
                     {featuredStudents.map((st) => (
-                      <div key={st.id} className="flex items-center justify-between gap-3 py-3">
-                        <div className="flex min-w-0 items-center gap-3">
+                      <div key={st.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
+                        <div className="flex min-w-0 flex-1 items-center gap-3">
                           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand-soft font-semibold text-brand-soft-text overflow-hidden">
                             {st.profile?.photoUrl ? (
                               <img
@@ -196,8 +196,8 @@ export const HomePage: React.FC<HomePageProps> = ({ session, onLogout }) => {
         {/* ── SEARCH BAND: its own section, not a box inside the hero ─────── */}
         <section aria-labelledby="directory-search-title" className="border-b border-edge">
           <div className="mx-auto max-w-canvas px-6 py-14 sm:px-10 sm:py-16">
-            <div className="grid items-start gap-8 lg:grid-cols-12 lg:gap-12">
-              <div className="lg:col-span-5">
+            <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-12 lg:gap-12">
+              <div className="min-w-0 lg:col-span-5">
                 <h2
                   id="directory-search-title"
                   className="font-heading text-headline-lg-mobile font-extrabold tracking-tight text-ink sm:text-headline-lg"
@@ -210,7 +210,7 @@ export const HomePage: React.FC<HomePageProps> = ({ session, onLogout }) => {
                 </p>
               </div>
 
-              <form onSubmit={handleSearch} className="lg:col-span-7">
+              <form onSubmit={handleSearch} className="min-w-0 lg:col-span-7">
                 <label htmlFor="directory-search" className="label">
                   Search students
                 </label>
