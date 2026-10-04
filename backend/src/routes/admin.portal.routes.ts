@@ -974,6 +974,8 @@ router.post('/events/:id/archive', (req: Request, res: Response) => setEventStat
 router.delete('/events/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+
+    // Guard the internal self-introduction event (Submission.eventId defaults to this).
     if (id === env.ACTIVE_EVENT_ID) {
       return res.status(400).json({
         error: 'PROTECTED_EVENT',
@@ -986,10 +988,25 @@ router.delete('/events/:id', async (req: Request, res: Response) => {
       select: { id: true, name: true },
     });
     if (!existing) {
-      return res.status(404).json({ error: 'NOT_FOUND', message: 'Event not found.' });
+      return res.status(404).json({ error: 'NOT_FOUND', message: 'Event not found' });
     }
 
+    // Tally dependents for the audit log.
+    const [registrations, submissions, formFields, teams, votes, emailLogs] = await Promise.all([
+      prisma.eventRegistration.count({ where: { eventId: id } }),
+      prisma.submission.count({ where: { eventId: id } }),
+      prisma.registrationFormField.count({ where: { eventId: id } }),
+      prisma.team.count({ where: { eventId: id } }),
+      prisma.vote.count({ where: { campaign: { eventId: id } } }),
+      prisma.emailLog.count({ where: { eventId: id } }),
+    ]);
+
+    const dependents = { registrations, submissions, formFields, teams, votes, emailLogs };
+    const totalDependents = Object.values(dependents).reduce((sum, n) => sum + n, 0);
+
+    // Child-first cascade so ON DELETE RESTRICT never fires.
     await prisma.$transaction(async (tx) => {
+      // Answers hang off both registrations and form fields.
       await tx.registrationAnswer.deleteMany({
         where: {
           OR: [
@@ -999,41 +1016,24 @@ router.delete('/events/:id', async (req: Request, res: Response) => {
         },
       });
 
-      await tx.eventRegistration.deleteMany({
-        where: { eventId: id },
-      });
+      // Team members & invitations before teams.
+      await tx.teamMember.deleteMany({ where: { team: { eventId: id } } });
+      await tx.teamInvitation.deleteMany({ where: { team: { eventId: id } } });
 
-      await tx.teamMember.deleteMany({
-        where: { team: { eventId: id } },
-      });
-      await tx.teamInvitation.deleteMany({
-        where: { team: { eventId: id } },
-      });
+      // Votes → candidates → campaigns.
+      await tx.vote.deleteMany({ where: { campaign: { eventId: id } } });
+      await tx.votingCandidate.deleteMany({ where: { campaign: { eventId: id } } });
+      await tx.votingCampaign.deleteMany({ where: { eventId: id } });
 
-      await tx.team.deleteMany({
-        where: { eventId: id },
-      });
+      // Direct children of Event.
+      await tx.eventRegistration.deleteMany({ where: { eventId: id } });
+      await tx.registrationFormField.deleteMany({ where: { eventId: id } });
+      await tx.team.deleteMany({ where: { eventId: id } });
+      await tx.submission.deleteMany({ where: { eventId: id } });
+      await tx.emailLog.deleteMany({ where: { eventId: id } });
 
-      await tx.registrationFormField.deleteMany({
-        where: { eventId: id },
-      });
-
-      await tx.emailLog.deleteMany({
-        where: { eventId: id },
-      });
-
-      await tx.submission.deleteMany({
-        where: { eventId: id },
-      });
-
-      await tx.votingCampaign.updateMany({
-        where: { eventId: id },
-        data: { eventId: null },
-      });
-
-      await tx.event.delete({
-        where: { id },
-      });
+      // Finally the event itself.
+      await tx.event.delete({ where: { id } });
     });
 
     invalidateStudentEventsCache();
@@ -1041,8 +1041,8 @@ router.delete('/events/:id', async (req: Request, res: Response) => {
     await ActivityService.log({
       category: 'ADMIN',
       action: 'EVENT_DELETE',
-      details: `Admin deleted event "${existing.name}" (${id})`,
-      userEmail: (req as any).user?.email || 'admin',
+      details: `Deleted event "${existing.name}" (${id}) plus ${totalDependents} dependent records: ${JSON.stringify(dependents)}`,
+      userEmail: (req as any).user?.email || req.adminUser?.email || 'admin',
     });
 
     res.json({ success: true, message: `Event "${existing.name}" deleted successfully.` });
@@ -1357,19 +1357,30 @@ router.post('/announcements/:id/publish', async (req: Request, res: Response) =>
       return res.json(existing);
     }
 
-    const announcement = await prisma.announcement.update({
-      where: { id: req.params.id },
+    // Claim the transition atomically, mirroring
+    // admin.api.routes.ts (the surface the admin client actually calls). Kept in
+    // step so this duplicate route cannot become a double-delivery trap if it is
+    // ever wired up. Only the caller that wins the claim fans out notifications.
+    const claimed = await prisma.announcement.updateMany({
+      where: { id: req.params.id, status: { not: 'PUBLISHED' } },
       data: { status: 'PUBLISHED', publishedAt: new Date() },
     });
 
-    await deliverAnnouncementNotifications({
-      id: announcement.id,
-      title: announcement.title,
-      message: announcement.message,
-      targetAll: announcement.targetAll,
-      targetYear: announcement.targetYear,
-      targetSection: announcement.targetSection,
-    });
+    const announcement =
+      claimed.count > 0
+        ? await prisma.announcement.findUnique({ where: { id: req.params.id } })
+        : existing;
+
+    if (claimed.count > 0 && announcement) {
+      await deliverAnnouncementNotifications({
+        id: announcement.id,
+        title: announcement.title,
+        message: announcement.message,
+        targetAll: announcement.targetAll,
+        targetYear: announcement.targetYear,
+        targetSection: announcement.targetSection,
+      });
+    }
 
     res.json(announcement);
   } catch (err: any) {

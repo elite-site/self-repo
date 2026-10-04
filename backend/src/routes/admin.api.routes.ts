@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import type { Prisma } from '@prisma/client';
 import ExcelJS from 'exceljs';
 import { requireAdminAuth } from '../middleware/auth';
 import { httpError } from "../middleware/apiError";
@@ -28,104 +29,30 @@ router.use(requireAdminAuth);
 // ==========================================
 router.get('/events', async (_req: Request, res: Response): Promise<Response | void> => {
   try {
+    // The admin Events table renders a Registrations column from registrationCount.
+    // Without this _count the client falls back to 0 and every event looks empty.
     const events = await prisma.event.findMany({
       // `registrationCount` is a Prisma aggregate, not a stored column, so it
       // arrives as `_count.registrations`. The admin table reads it, so expose
       // it under the name the client expects rather than making the client know
       // about the aggregate shape.
-      include: { _count: { select: { registrations: true } } },
+      include: {
+        _count: {
+          select: { registrations: true, submissions: true },
+        },
+      },
       orderBy: { createdAt: 'asc' },
     });
     res.json({
-      events: events.map(({ _count, ...event }) => ({
-        ...event,
-        registrationCount: _count.registrations,
+      events: events.map((e) => ({
+        ...e,
+        registrationCount: e._count.registrations,
+        submissionCount: e._count.submissions,
       })),
     });
   } catch (err: any) {
     console.error('Error fetching events list:', err);
     return httpError(res, 500, err, "FAILED_TO_FETCH_EVENTS");
-  }
-});
-
-router.delete('/events/:id', async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    if (id === ACTIVE_EVENT_ID) {
-      return res.status(400).json({
-        error: 'PROTECTED_EVENT',
-        message: 'The active self-introduction event cannot be deleted.',
-      });
-    }
-
-    const existing = await prisma.event.findUnique({
-      where: { id },
-      select: { id: true, name: true },
-    });
-    if (!existing) {
-      return res.status(404).json({ error: 'NOT_FOUND', message: 'Event not found.' });
-    }
-
-    await prisma.$transaction(async (tx) => {
-      await tx.registrationAnswer.deleteMany({
-        where: {
-          OR: [
-            { registration: { eventId: id } },
-            { field: { eventId: id } },
-          ],
-        },
-      });
-
-      await tx.eventRegistration.deleteMany({
-        where: { eventId: id },
-      });
-
-      await tx.teamMember.deleteMany({
-        where: { team: { eventId: id } },
-      });
-      await tx.teamInvitation.deleteMany({
-        where: { team: { eventId: id } },
-      });
-
-      await tx.team.deleteMany({
-        where: { eventId: id },
-      });
-
-      await tx.registrationFormField.deleteMany({
-        where: { eventId: id },
-      });
-
-      await tx.emailLog.deleteMany({
-        where: { eventId: id },
-      });
-
-      await tx.submission.deleteMany({
-        where: { eventId: id },
-      });
-
-      await tx.votingCampaign.updateMany({
-        where: { eventId: id },
-        data: { eventId: null },
-      });
-
-      await tx.event.delete({
-        where: { id },
-      });
-    });
-
-    invalidateStudentEventsCache();
-
-    await ActivityService.log({
-      category: 'ADMIN',
-      action: 'EVENT_DELETE',
-      details: `Admin deleted event "${existing.name}" (${id})`,
-      userEmail: (req as any).user?.email || 'admin',
-    });
-
-    res.json({ success: true, message: `Event "${existing.name}" deleted successfully.` });
-  } catch (err: any) {
-    console.error(`Error deleting event ${req.params.id}:`, err);
-    res.status(500).json({ error: 'SERVER_ERROR', message: 'Could not delete the event.' });
   }
 });
 
@@ -2532,23 +2459,54 @@ router.post('/announcements/:id/publish', async (req, res) => {
       return res.json(existing);
     }
 
-    const announcement = await prisma.announcement.update({
-      where: { id: req.params.id },
+    // Claim the transition atomically instead of read-then-write.
+    //
+    // The scheduler (jobs/announcementScheduler.ts) claims the same rows, so a
+    // manual publish landing in the same tick used to let both callers flip the
+    // status and both fan out a full set of notifications. `updateMany` applies
+    // its WHERE clause as part of the write, so only the caller that actually
+    // moves the row out of a non-PUBLISHED state gets count === 1, and only that
+    // caller delivers. Losers return the already-published row untouched.
+    const claimed = await prisma.announcement.updateMany({
+      where: { id: req.params.id, status: { not: 'PUBLISHED' } },
       data: { status: 'PUBLISHED', publishedAt: new Date() },
     });
 
-    await deliverAnnouncementNotifications({
-      id: announcement.id,
-      title: announcement.title,
-      message: announcement.message,
-      targetAll: announcement.targetAll,
-      targetYear: announcement.targetYear,
-      targetSection: announcement.targetSection,
-    });
+    const announcement =
+      claimed.count > 0
+        ? await prisma.announcement.findUnique({ where: { id: req.params.id } })
+        : existing;
+
+    if (claimed.count > 0 && announcement) {
+      await deliverAnnouncementNotifications({
+        id: announcement.id,
+        title: announcement.title,
+        message: announcement.message,
+        targetAll: announcement.targetAll,
+        targetYear: announcement.targetYear,
+        targetSection: announcement.targetSection,
+      });
+    }
 
     res.json(announcement);
   } catch (err: any) {
     res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+  }
+});
+
+router.delete('/announcements/:id', async (req, res) => {
+  try {
+    const existing = await prisma.announcement.findUnique({
+      where: { id: req.params.id },
+      select: { id: true },
+    });
+    if (!existing) {
+      return res.status(404).json({ error: 'NOT_FOUND', message: 'Announcement not found.' });
+    }
+    await prisma.announcement.delete({ where: { id: req.params.id } });
+    res.json({ success: true, message: 'Announcement deleted successfully.' });
+  } catch (err: any) {
+    return httpError(res, 500, err, "SERVER_ERROR");
   }
 });
 
