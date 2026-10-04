@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
-import { api, resolveMediaUrl, UploadProgressInfo } from '../services/api';
+import { api, resolveMediaUrl, UploadProgressInfo, pauseNotificationPolling, resumeNotificationPolling } from '../services/api';
 import { StudentIntroVideo, StudentSubmission } from '../types';
 import { useSession } from '../context/SessionContext';
 import { useToast } from '../components/Toast';
@@ -432,6 +432,9 @@ export const VideoPage: React.FC = () => {
     setUploadStats(null);
     setUploadSuccess(false);
 
+    // Pause notification polling during upload
+    pauseNotificationPolling();
+
     // Inspect file resolution & duration in browser
     const meta = await inspectVideoFile(file);
     setVideoMeta(meta);
@@ -442,37 +445,78 @@ export const VideoPage: React.FC = () => {
     abortControllerRef.current = new AbortController();
 
     try {
-      // Stream the raw file directly to the backend — no FormData wrapper.
-      // The backend pipes it straight to Google Drive with zero RAM buffering.
-      const res = await api.submitVideoStream(
-        file,
-        (info: UploadProgressInfo) => {
-          setUploadProgress(info.pct);
-          const loadedMb = parseFloat((info.loaded / (1024 * 1024)).toFixed(1));
-          const totalMb = parseFloat((info.total / (1024 * 1024)).toFixed(1));
-          const speedMb = info.speedBytesPerSec / (1024 * 1024);
-          const speedFormatted =
-            speedMb >= 0.1
-              ? `${speedMb.toFixed(1)} MB/s`
-              : `${Math.max(1, Math.round(info.speedBytesPerSec / 1024))} KB/s`;
+      const onProgressStats = (info: UploadProgressInfo) => {
+        setUploadProgress(info.pct);
+        const loadedMb = parseFloat((info.loaded / (1024 * 1024)).toFixed(1));
+        const totalMb = parseFloat((info.total / (1024 * 1024)).toFixed(1));
+        const speedMb = info.speedBytesPerSec / (1024 * 1024);
+        const speedFormatted =
+          speedMb >= 0.1
+            ? `${speedMb.toFixed(1)} MB/s`
+            : `${Math.max(1, Math.round(info.speedBytesPerSec / 1024))} KB/s`;
 
-          const etaFormatted =
-            info.estimatedRemainingSec !== null
-              ? info.estimatedRemainingSec > 60
-                ? `~${Math.ceil(info.estimatedRemainingSec / 60)} min left`
-                : `~${info.estimatedRemainingSec}s left`
-              : null;
+        const etaFormatted =
+          info.estimatedRemainingSec !== null
+            ? info.estimatedRemainingSec > 60
+              ? `~${Math.ceil(info.estimatedRemainingSec / 60)} min left`
+              : `~${info.estimatedRemainingSec}s left`
+            : null;
 
-          setUploadStats({
-            loadedMb,
-            totalMb,
-            speedFormatted,
-            etaFormatted,
-            phase: info.pct >= 100 ? 'confirming' : 'uploading',
+        setUploadStats({
+          loadedMb,
+          totalMb,
+          speedFormatted,
+          etaFormatted,
+          phase: info.pct >= 100 ? 'confirming' : 'uploading',
+        });
+      };
+
+      let res: { success: boolean; id: string; driveFileId?: string | null; previewUrl?: string | null; message?: string };
+      let directUploadFailed = false;
+
+      // 1. Attempt Direct-to-Drive upload session
+      let session: { sessionUrl: string | null; chunkSize: number } | null = null;
+      try {
+        session = await api.createVideoUploadSession({
+          fileName: file.name,
+          fileSize: file.size,
+          mimeType: file.type || 'video/mp4',
+        });
+      } catch (sessionErr: any) {
+        // Mock mode (501) or session error -> fall back cleanly to video-stream
+        directUploadFailed = true;
+      }
+
+      if (session?.sessionUrl && !directUploadFailed) {
+        try {
+          const { driveFileId } = await api.uploadDirectToDrive({
+            sessionUrl: session.sessionUrl,
+            file,
+            chunkSize: session.chunkSize,
+            onProgress: onProgressStats,
+            signal: abortControllerRef.current.signal,
           });
-        },
-        abortControllerRef.current.signal,
-      );
+
+          res = await api.completeVideoUpload({ driveFileId });
+        } catch (uploadErr: any) {
+          if (abortControllerRef.current?.signal.aborted || uploadErr.message?.includes('cancelled')) {
+            throw uploadErr;
+          }
+          console.warn('[VideoPage] Direct-to-Drive upload failed, falling back to video-stream:', uploadErr);
+          res = await api.submitVideoStream(
+            file,
+            onProgressStats,
+            abortControllerRef.current.signal,
+          );
+        }
+      } else {
+        // Fallback: stream through Render backend
+        res = await api.submitVideoStream(
+          file,
+          onProgressStats,
+          abortControllerRef.current.signal,
+        );
+      }
 
       setUploadSuccess(true);
       setSubmission((prev) => ({
@@ -520,6 +564,7 @@ export const VideoPage: React.FC = () => {
         showToast(notice, 'error');
       }
     } finally {
+      resumeNotificationPolling();
       setUploading(false);
       abortControllerRef.current = null;
       // Reset file input so the same file can be re-selected after an error

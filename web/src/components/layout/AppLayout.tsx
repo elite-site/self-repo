@@ -2,7 +2,7 @@ import React, { Suspense, useCallback, useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { SkeletonPage } from '../ui/Skeleton';
 import { useCommandPalette } from '../../hooks/useCommandPalette';
-import { api } from '../../services/api';
+import { api, isNotificationPollingPaused } from '../../services/api';
 import type { StudentSession } from '../../types';
 import { CommandPalette, recordRecentRoute } from '../navigation/CommandPalette';
 import { BottomTabBar } from './BottomTabBar';
@@ -143,8 +143,9 @@ function useUnreadCount(pathname: string): number {
   const [unreadCount, setUnreadCount] = useState(0);
 
   const refresh = useCallback(() => {
+    if (isNotificationPollingPaused()) return;
     api
-      .getNotifications({ limit: 10 })
+      .getNotifications({ limit: 10, isBackgroundPoll: true })
       .then((data: unknown) => {
         const summary = data as { unreadCount?: number } | null;
         setUnreadCount(typeof summary?.unreadCount === 'number' ? summary.unreadCount : 0);

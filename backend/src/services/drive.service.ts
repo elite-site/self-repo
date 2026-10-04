@@ -751,6 +751,7 @@ export class DriveService {
     mimeType: string,
     fileSize: number,
     parentFolderId: string,
+    clientOrigin?: string,
   ): Promise<string | null> {
     if (this.isMock || !this.drive) return null;
 
@@ -800,14 +801,19 @@ export class DriveService {
       `https://www.googleapis.com/upload/drive/v3/files` +
       `?uploadType=resumable&supportsAllDrives=true&fields=id,name,mimeType`;
 
+    const headers: Record<string, string> = {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json; charset=UTF-8',
+      'X-Upload-Content-Type': mimeType,
+      'X-Upload-Content-Length': String(fileSize),
+    };
+    if (clientOrigin) {
+      headers['Origin'] = clientOrigin;
+    }
+
     const resp = await fetch(initUrl, {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json; charset=UTF-8',
-        'X-Upload-Content-Type': mimeType,
-        'X-Upload-Content-Length': String(fileSize),
-      },
+      headers,
       body: JSON.stringify({
         name: fileName,
         parents: [parentFolderId],
@@ -944,6 +950,100 @@ export class DriveService {
         }
       });
     });
+  }
+
+  /**
+   * Verifies an uploaded video file directly in Google Drive before recording a student submission.
+   * Ensures:
+   * 1. File exists and is not trashed
+   * 2. File resides inside the designated student folder (parent folder match)
+   * 3. File size is within configured bounds (> 0 and <= maxSizeBytes)
+   * 4. MIME type is an allowed video format
+   * 5. File extension is an allowed video extension
+   */
+  public async verifyUploadedVideoFile(
+    driveFileId: string,
+    expectedFolderId: string,
+    maxSizeBytes: number,
+  ): Promise<{
+    valid: boolean;
+    error?: string;
+    fileMeta?: { name: string; size: number; mimeType: string };
+  }> {
+    if (!driveFileId || typeof driveFileId !== 'string') {
+      return { valid: false, error: 'driveFileId is required' };
+    }
+
+    if (this.isMock || !this.drive || driveFileId.startsWith('mock_')) {
+      return {
+        valid: true,
+        fileMeta: {
+          name: `${driveFileId}.mp4`,
+          size: 1024 * 1024,
+          mimeType: 'video/mp4',
+        },
+      };
+    }
+
+    try {
+      const res = await this.drive.files.get({
+        fileId: driveFileId,
+        fields: 'id, name, size, mimeType, parents, trashed, owners',
+        supportsAllDrives: true,
+      });
+
+      const file = res.data;
+      if (!file || !file.id || file.trashed) {
+        return { valid: false, error: 'Uploaded video file was not found or is trashed in Drive.' };
+      }
+
+      if (!file.parents || !file.parents.includes(expectedFolderId)) {
+        return { valid: false, error: 'File parent directory does not match expected student folder.' };
+      }
+
+      const size = parseInt(file.size ?? '0', 10);
+      if (!size || size <= 0) {
+        return { valid: false, error: 'Uploaded file is empty.' };
+      }
+      if (size > maxSizeBytes) {
+        return {
+          valid: false,
+          error: `Video file exceeds maximum allowed size of ${(maxSizeBytes / 1024 / 1024).toFixed(0)} MB.`,
+        };
+      }
+
+      const mime = (file.mimeType || '').toLowerCase();
+      const ALLOWED_MIMES = [
+        'video/mp4',
+        'video/quicktime',
+        'video/webm',
+        'video/x-matroska',
+        'video/matroska',
+      ];
+      if (!mime.startsWith('video/') && !ALLOWED_MIMES.includes(mime)) {
+        return { valid: false, error: 'Uploaded file is not a supported video MIME type.' };
+      }
+
+      const ext = path.extname(file.name || '').toLowerCase().replace(/^\./, '');
+      const ALLOWED_EXTS = ['mp4', 'mov', 'webm', 'mkv'];
+      if (ext && !ALLOWED_EXTS.includes(ext)) {
+        return { valid: false, error: 'Unsupported file extension.' };
+      }
+
+      this.setViewerPermission(driveFileId).catch(() => {});
+
+      return {
+        valid: true,
+        fileMeta: {
+          name: file.name || `${driveFileId}.mp4`,
+          size,
+          mimeType: mime,
+        },
+      };
+    } catch (err: any) {
+      console.error('[Drive] Error verifying uploaded video file:', err);
+      return { valid: false, error: `Failed to verify file in Drive: ${err?.message || err}` };
+    }
   }
 
   /**
