@@ -48,6 +48,8 @@ export const PublicResumeViewerPage: React.FC<PublicResumeViewerProps> = ({ sess
       });
   }, [rollNo]);
 
+  const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+
   return (
     <div className="min-h-[100dvh] bg-surface-canvas flex flex-col">
       <Navbar session={session} onLogout={onLogout} />
@@ -90,24 +92,50 @@ export const PublicResumeViewerPage: React.FC<PublicResumeViewerProps> = ({ sess
         </div>
       </div>
 
-      <main className="flex-1 w-full bg-surface-inverse flex flex-col">
+      <main className="flex-1 w-full bg-surface-inverse flex flex-col min-h-0">
         {loading ? (
           <div className="flex-1 flex items-center justify-center min-h-[60dvh]">
             <Loader2 className="w-8 h-8 animate-spin text-ink-inverse" aria-hidden="true" />
           </div>
         ) : resumeUrl ? (
-          <div
-            className="w-full flex-1 flex flex-col"
-            style={{ minHeight: 'calc(100dvh - 140px)' }}
-          >
-            <iframe
-              src={resumeUrl}
-              className="w-full flex-1 border-0"
-              style={{ width: '100%', minHeight: 'calc(100dvh - 140px)', height: '100%' }}
-              title="Student Resume Document"
-              allow="autoplay"
-            />
-          </div>
+          isIOS ? (
+            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center min-h-[60dvh] text-ink-inverse/60 space-y-4">
+              <FileText className="w-12 h-12 text-ink-inverse/40" aria-hidden="true" />
+              <p className="text-body-sm text-ink-inverse/80 max-w-sm">
+                PDF preview is not supported directly in iOS Safari. Use the buttons below to open or download the document.
+              </p>
+              <div className="flex flex-wrap items-center justify-center gap-3">
+                <a
+                  href={safeUrl(resumeUrl)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-primary min-h-[44px]"
+                >
+                  <ExternalLink className="w-4 h-4" aria-hidden="true" />
+                  <span>Open PDF</span>
+                </a>
+                <a
+                  href={safeUrl(`${resumeUrl}${resumeUrl.includes('?') ? '&' : '?'}download=1`)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-secondary min-h-[44px]"
+                >
+                  <Download className="w-4 h-4" aria-hidden="true" />
+                  <span>Download PDF</span>
+                </a>
+              </div>
+            </div>
+          ) : (
+            <div className="w-full flex-1 flex flex-col min-h-[70dvh]">
+              <iframe
+                src={resumeUrl}
+                className="w-full flex-1 border-0 min-h-[70dvh]"
+                style={{ width: '100%', height: '100%' }}
+                title="Student Resume Document"
+                allow="autoplay"
+              />
+            </div>
+          )
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center p-8 text-center min-h-[60dvh] text-ink-inverse/60 space-y-3">
             <div className="w-14 h-14 rounded-lg bg-surface-raised flex items-center justify-center text-ink-inverse/40">
