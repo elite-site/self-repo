@@ -39,6 +39,10 @@ export const HomePage: React.FC<HomePageProps> = ({ session, onLogout }) => {
     };
   }, []);
 
+  useEffect(() => {
+    document.title = 'ELITE Student Portal — Department of IT, SASI';
+  }, []);
+
   if (session) {
     return <Navigate to="/dashboard" replace />;
   }

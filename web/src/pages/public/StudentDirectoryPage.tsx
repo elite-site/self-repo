@@ -234,6 +234,10 @@ export const StudentDirectoryPage: React.FC<StudentDirectoryProps> = ({ session,
     return () => clearTimeout(timer);
   }, [search]);
 
+  useEffect(() => {
+    document.title = 'Student Directory — ELITE Portal';
+  }, []);
+
   // Synchronize search state if the URL search query param changes
   useEffect(() => {
     const q = searchParams.get('search') || '';

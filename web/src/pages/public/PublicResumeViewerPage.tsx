@@ -48,11 +48,23 @@ export const PublicResumeViewerPage: React.FC<PublicResumeViewerProps> = ({ sess
       });
   }, [rollNo]);
 
+  useEffect(() => {
+    if (loading) {
+      document.title = 'Loading resume\u2026 — ELITE Portal';
+    } else if (studentName) {
+      document.title = `${studentName}'s Resume — ELITE Portal`;
+    } else {
+      document.title = 'Resume — ELITE Portal';
+    }
+  }, [loading, studentName]);
+
   const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
 
   return (
     <div className="min-h-[100dvh] bg-surface-canvas flex flex-col">
       <Navbar session={session} onLogout={onLogout} />
+
+      <h1 className="sr-only">{studentName ? `${studentName}'s Resume` : 'Student Resume'}</h1>
 
       <div className="bg-surface-inverse text-ink-inverse py-4 px-4 sm:px-10 flex flex-wrap items-center justify-between gap-3 border-b border-edge-inverse">
         <Link

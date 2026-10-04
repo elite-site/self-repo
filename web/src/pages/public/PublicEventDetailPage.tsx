@@ -72,6 +72,16 @@ export const PublicEventDetailPage: React.FC<PublicEventDetailPageProps> = ({ se
     };
   }, [id]);
 
+  useEffect(() => {
+    if (loading) {
+      document.title = 'Loading event… — ELITE Portal';
+    } else if (error || !event) {
+      document.title = 'Event not found — ELITE Portal';
+    } else {
+      document.title = `${event.title} — ELITE Portal`;
+    }
+  }, [loading, error, event]);
+
   const formatDate = (value?: string | null) => {
     if (!value) return 'To be announced';
     const d = new Date(value);
@@ -92,7 +102,7 @@ export const PublicEventDetailPage: React.FC<PublicEventDetailPageProps> = ({ se
       return (
         <div className="surface border border-status-rejected/20 p-10 text-center space-y-3" role="alert">
           <AlertCircle className="w-10 h-10 text-status-rejected mx-auto" aria-hidden="true" />
-          <h2 className="text-body-md font-bold text-ink font-heading">Event unavailable</h2>
+          <h1 className="text-body-md font-bold text-ink font-heading">Event unavailable</h1>
           <p className="text-label-md text-ink-secondary">{error ?? 'This event could not be found.'}</p>
           <Link
             to="/events"

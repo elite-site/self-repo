@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { StudentSession } from '../types';
 import { Button } from '../components/ui/Button';
@@ -17,6 +17,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   sessionError,
   onRetry,
 }) => {
+  useEffect(() => {
+    document.title = 'Sign In — ELITE Portal';
+  }, []);
+
   if (authChecking) {
     return null; // Loading state handled by parent RouteLoadingFallback
   }

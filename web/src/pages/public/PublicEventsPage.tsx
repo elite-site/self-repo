@@ -62,6 +62,10 @@ export const PublicEventsPage: React.FC<PublicEventsPageProps> = ({ session, onL
     loadEvents();
   }, []);
 
+  useEffect(() => {
+    document.title = 'Department Events — ELITE Portal';
+  }, []);
+
   const visibleEvents = useMemo(() => {
     const term = search.trim().toLowerCase();
     const matched = term

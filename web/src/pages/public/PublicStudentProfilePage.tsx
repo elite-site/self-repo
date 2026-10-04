@@ -157,6 +157,16 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
       .finally(() => setLoading(false));
   }, [rollNo]);
 
+  useEffect(() => {
+    if (loading) {
+      document.title = 'Loading profile\u2026 — ELITE Portal';
+    } else if (!student) {
+      document.title = 'Profile not found — ELITE Portal';
+    } else {
+      document.title = `${student.name || rollNo} — ELITE Portal`;
+    }
+  }, [loading, student, rollNo]);
+
   // Track active section and scroll top visibility
   useEffect(() => {
     const handleScroll = () => {
@@ -254,6 +264,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
   if (!student) {
     return (
       <div className="min-h-[100dvh] bg-[#070B16] text-slate-100 flex flex-col justify-center items-center px-4">
+        <h1 className="sr-only">Profile not found</h1>
         <div className="max-w-md w-full text-center space-y-6">
           <EmptyState
             icon={ShieldCheck}
