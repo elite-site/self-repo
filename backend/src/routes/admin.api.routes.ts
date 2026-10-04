@@ -3250,6 +3250,43 @@ router.post('/storage/ensure-viewer-permissions', async (_req: Request, res: Res
   }
 });
 
+router.post('/storage/clear-copy-protection', async (req: Request, res: Response): Promise<Response | void> => {
+  try {
+    const fileId = typeof req.body?.fileId === 'string' ? req.body.fileId.trim() : undefined;
+    if (fileId) {
+      const ok = await driveService.clearCopyRequiresWriterPermission(fileId);
+      await ActivityService.log({
+        eventId: 'photo-2026',
+        category: 'ADMIN',
+        action: 'Admin cleared copy protection for Drive file',
+        details: `File ID: ${fileId}, result: ${ok ? 'SUCCESS' : 'FAILED'}`,
+        status: ok ? 'SUCCESS' : 'ERROR',
+      });
+      return res.json({ success: ok, fileId });
+    }
+
+    const result = typeof driveService.clearAllFilesCopyProtection === 'function'
+      ? await driveService.clearAllFilesCopyProtection()
+      : { count: 0, failed: 0 };
+
+    await ActivityService.log({
+      eventId: 'photo-2026',
+      category: 'ADMIN',
+      action: 'Admin cleared copy protection for all Drive media files',
+      details: `Cleared copy protection on ${result.count} files (${result.failed} failed)`,
+      status: 'SUCCESS',
+    });
+
+    res.json({
+      success: true,
+      message: `Copy protection cleared for ${result.count} Drive media files.`,
+      ...result,
+    });
+  } catch (err: any) {
+    return httpError(res, 500, err, "SERVER_ERROR");
+  }
+});
+
 // ==========================================
 // EMAIL AUTOMATIONS & HISTORY
 // ==========================================

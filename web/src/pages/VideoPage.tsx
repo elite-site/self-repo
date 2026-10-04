@@ -73,6 +73,7 @@ export const VideoPage: React.FC = () => {
   const [deleteNotice, setDeleteNotice] = useState<string | null>(null);
   const [publishNotice, setPublishNotice] = useState<string | null>(null);
   const [previewError, setPreviewError] = useState(false);
+  const [useProxy, setUseProxy] = useState(false);
 
   const shouldReduce = useReducedMotion();
   const staggerContainer = selectVariantsByName(shouldReduce, 'staggerFastContainer');
@@ -165,8 +166,7 @@ export const VideoPage: React.FC = () => {
     if (!video?.hasFile) return null;
     // NOTE: the path must keep its `/api` prefix — `resolveMediaUrl` strips the
     // prefix from the configured baseURL and re-appends the path verbatim, so a
-    // bare `/student/...` would resolve to a 404 and silently push the player
-    // onto the slow whole-file blob fallback.
+    // bare `/student/...` would resolve to a 404.
     const base = resolveMediaUrl('/api/student/submission/media/video');
     const stamp = new Date(video.submittedAt || 0).getTime() || 0;
     // A <video src> cannot carry an Authorization header, so pass the session
@@ -174,56 +174,42 @@ export const VideoPage: React.FC = () => {
     // 401s whenever the browser withholds the cookie (cross-origin API).
     const token = localStorage.getItem('student_token');
     const tokenParam = token ? `&token=${encodeURIComponent(token)}` : '';
-    return `${base}?v=${encodeURIComponent(video.id)}-${stamp}${tokenParam}`;
-  }, [video?.id, video?.submittedAt, video?.hasFile]);
+    const proxyParam = useProxy ? '&proxy=1' : '';
+    return `${base}?v=${encodeURIComponent(video.id)}-${stamp}${tokenParam}${proxyParam}`;
+  }, [video?.id, video?.submittedAt, video?.hasFile, useProxy]);
 
   // Right after an upload, show the local file instantly; afterwards fall back
   // to the stored recording so the preview survives reloads and new sessions.
   const playbackUrl = localPreviewUrl ?? storedVideoUrl;
 
   /**
-   * A bare <video src> only carries the session cookie, not the Authorization
-   * header the rest of the app relies on. If the cookie is unavailable (or the
-   * browser refuses the credentialed subresource) the stream 401s, so retry
-   * once through the authenticated client and hold a blob in memory instead.
+   * Set the <video src> to the API URL directly. On playback failure (such as
+   * Google Drive returning 403 on direct redirect), retry once with `?proxy=1`
+   * which forces the backend to stream through the server. If both fail,
+   * display an error UI with a Retry button.
    */
   const handlePlaybackError = useCallback(() => {
     if (!storedVideoUrl || localPreviewUrl) return;
-    setPreviewError(true);
-    api
-      .getVideoBlobUrl()
-      .then((url) => {
-        setPreviewError(false);
-        setLocalPreview(url);
-      })
-      .catch(() => setPreviewError(true));
-  }, [storedVideoUrl, localPreviewUrl]);
+    if (!useProxy) {
+      setUseProxy(true);
+      setPreviewError(false);
+    } else {
+      setPreviewError(true);
+    }
+  }, [storedVideoUrl, localPreviewUrl, useProxy]);
 
-  /**
-   * Quick playback controls. `play()` returns a promise that rejects when the
-   * browser blocks autoplay or the stream is interrupted; on rejection we fall
-   * back to a blob buffer so a stalled stream never leaves the player dead.
-   */
-  const withBlobFallback = useCallback(
-    (action: () => Promise<void>) => {
-      action().catch((err) => {
-        console.warn('Video playback interrupted:', err);
-        if (playbackUrl && !playbackUrl.startsWith('blob:') && !localPreviewUrl) {
-          api
-            .getVideoBlobUrl()
-            .then((url) => {
-              if (url) setLocalPreview(url);
-            })
-            .catch(() => {});
-        }
-      });
-    },
-    [playbackUrl, localPreviewUrl],
-  );
+  const handleRetryPlayback = useCallback(() => {
+    setPreviewError(false);
+    setUseProxy(false);
+    if (videoRef.current) {
+      videoRef.current.load();
+    }
+  }, []);
 
   // A new take invalidates any previous fallback attempt.
   useEffect(() => {
     setPreviewError(false);
+    setUseProxy(false);
   }, [video?.id]);
 
   /** Publish / unpublish the approved video on the public showcase. */
@@ -921,38 +907,52 @@ export const VideoPage: React.FC = () => {
                 </div>
               </div>
             ) : playbackUrl ? (
-              <div className="mx-auto max-w-2xl max-h-[60dvh] bg-surface-inverse rounded-lg overflow-hidden aspect-video border border-edge-strong shadow-inner">
-                {playbackUrl ? (
-                  <video
-                    ref={videoRef}
-                    key={playbackUrl}
-                    src={playbackUrl}
-                    poster={video?.thumbnailUrl ? resolveMediaUrl(video.thumbnailUrl) : undefined}
-                    controls
-                    controlsList="nodownload"
-                    onContextMenu={(e) => e.preventDefault()}
-                    playsInline
-                    preload="metadata"
-                    crossOrigin="use-credentials"
-                    onError={handlePlaybackError}
-                    className="w-full h-full object-contain"
+              previewError ? (
+                <div className="mx-auto max-w-2xl min-h-[220px] aspect-video bg-surface-canvas rounded-lg border border-status-rejected/30 flex flex-col items-center justify-center p-6 text-center space-y-3">
+                  <AlertCircle className="w-8 h-8 text-status-rejected" />
+                  <div>
+                    <p className="text-sm font-semibold text-ink">Unable to play video</p>
+                    <p className="text-xs text-ink-muted mt-1 max-w-md">
+                      Could not load your recording from Google Drive or the streaming server.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleRetryPlayback}
+                    className="btn btn-secondary min-h-[44px] text-xs font-semibold inline-flex items-center gap-2"
                   >
-                    Your browser cannot play this video.
-                  </video>
-                ) : (video?.driveFileId || (submission as any)?.videoDriveId) && !(video?.driveFileId || (submission as any)?.videoDriveId)?.startsWith('mock_') ? (
-                  <iframe
-                    src={`https://drive.google.com/file/d/${video?.driveFileId || (submission as any)?.videoDriveId}/preview`}
-                    allow="autoplay; fullscreen"
-                    className="w-full h-full border-0 rounded-lg aspect-video"
-                    title="Introduction video preview"
-                  />
-                ) : null}
-                {previewError && (
-                  <p className="px-4 py-2 text-xs text-ink bg-status-bg-pending border-t border-edge" role="alert">
-                    Could not load your recording from the server. Refresh the page to try again.
-                  </p>
-                )}
-              </div>
+                    <RefreshCw className="w-3.5 h-3.5" /> Retry Playback
+                  </button>
+                </div>
+              ) : (
+                <div className="mx-auto max-w-2xl max-h-[60dvh] bg-surface-inverse rounded-lg overflow-hidden aspect-video border border-edge-strong shadow-inner">
+                  {playbackUrl ? (
+                    <video
+                      ref={videoRef}
+                      key={playbackUrl}
+                      src={playbackUrl}
+                      poster={video?.thumbnailUrl ? resolveMediaUrl(video.thumbnailUrl) : undefined}
+                      controls
+                      controlsList="nodownload"
+                      onContextMenu={(e) => e.preventDefault()}
+                      playsInline
+                      preload="metadata"
+                      crossOrigin="use-credentials"
+                      onError={handlePlaybackError}
+                      className="w-full h-full object-contain"
+                    >
+                      Your browser cannot play this video.
+                    </video>
+                  ) : (video?.driveFileId || (submission as any)?.videoDriveId) && !(video?.driveFileId || (submission as any)?.videoDriveId)?.startsWith('mock_') ? (
+                    <iframe
+                      src={`https://drive.google.com/file/d/${video?.driveFileId || (submission as any)?.videoDriveId}/preview`}
+                      allow="autoplay; fullscreen"
+                      className="w-full h-full border-0 rounded-lg aspect-video"
+                      title="Introduction video preview"
+                    />
+                  ) : null}
+                </div>
+              )
             ) : (
               <div
                 onClick={() => fileInputRef.current?.click()}

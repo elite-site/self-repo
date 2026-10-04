@@ -104,6 +104,8 @@ export class DriveService {
   private negativePermissionCache = new Map<string, number>();
   private folderMemoryCache = new Map<string, string>();
   private fileMetadataCache = new Map<string, { mimeType: string; size?: number; name?: string; cachedAt: number }>();
+  /** directLink/fileId -> expiry timestamp (cached for 60s) for verified accessible download links. */
+  private directLinkProbeCache = new Map<string, number>();
 
   constructor() {
     this.init();
@@ -356,7 +358,7 @@ export class DriveService {
       this.rememberAnyoneReadable(fileOrFolderId);
       this.drive.files.update({
         fileId: fileOrFolderId,
-        requestBody: { copyRequiresWriterPermission: true },
+        requestBody: { copyRequiresWriterPermission: false },
         supportsAllDrives: true,
       }).catch(() => {});
       console.log(`[Drive] Public viewer access ('anyone') granted to: ${fileOrFolderId}`);
@@ -611,7 +613,7 @@ export class DriveService {
       requestBody: {
         name: fileName,
         parents: [targetFolderId],
-        copyRequiresWriterPermission: true,
+        copyRequiresWriterPermission: false,
       },
       media,
       supportsAllDrives: true,
@@ -817,7 +819,7 @@ export class DriveService {
       body: JSON.stringify({
         name: fileName,
         parents: [parentFolderId],
-        copyRequiresWriterPermission: true,
+        copyRequiresWriterPermission: false,
       }),
     });
 
@@ -1248,6 +1250,123 @@ export class DriveService {
       if (oldest.done) break;
       this.anyoneReadableCache.delete(oldest.value);
     }
+  }
+
+  /**
+   * Probes a direct Google Drive download link using a ranged GET (bytes=0-0)
+   * to ensure anonymous readers can stream without 403/404 errors.
+   * Caches positive results for 60 seconds.
+   */
+  public async probeDirectLink(directLink: string, fileId?: string): Promise<boolean> {
+    if (!directLink) return false;
+    const cacheKey = fileId || directLink;
+    const expires = this.directLinkProbeCache.get(cacheKey);
+    if (expires && expires > Date.now()) {
+      return true;
+    }
+
+    try {
+      const resp = await fetch(directLink, {
+        method: 'GET',
+        headers: { Range: 'bytes=0-0' },
+        signal: AbortSignal.timeout(3000),
+      });
+
+      if (resp.body) {
+        await resp.body.cancel().catch(() => {});
+      }
+
+      if (resp.status === 200 || resp.status === 206) {
+        this.directLinkProbeCache.set(cacheKey, Date.now() + 60_000);
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  }
+
+  public clearProbeCache(key?: string): void {
+    if (key) {
+      this.directLinkProbeCache.delete(key);
+    } else {
+      this.directLinkProbeCache.clear();
+    }
+  }
+
+  /**
+   * Explicitly clears copyRequiresWriterPermission on a Drive file so that
+   * anonymous viewers can download and stream it via direct link.
+   */
+  public async clearCopyRequiresWriterPermission(fileId: string): Promise<boolean> {
+    if (this.isMock || !this.drive) return false;
+    try {
+      await this.drive.files.update({
+        fileId,
+        requestBody: { copyRequiresWriterPermission: false },
+        supportsAllDrives: true,
+      });
+      return true;
+    } catch (err) {
+      console.warn(`[Drive] Failed to clear copyRequiresWriterPermission for ${fileId}:`, err);
+      return false;
+    }
+  }
+
+  /**
+   * Iterates through all media files stored in the database and clears copyRequiresWriterPermission.
+   */
+  public async clearAllFilesCopyProtection(): Promise<{ count: number; failed: number }> {
+    if (this.isMock || !this.drive) return { count: 0, failed: 0 };
+    let count = 0;
+    let failed = 0;
+
+    const fileIds = new Set<string>();
+
+    try {
+      const introVideos = await prisma.introVideo.findMany({
+        where: { driveFileId: { not: null } },
+        select: { driveFileId: true },
+      });
+      introVideos.forEach((v) => v.driveFileId && fileIds.add(v.driveFileId));
+
+      const submissions = await prisma.submission.findMany({
+        select: { videoDriveId: true, photo1DriveId: true, photo2DriveId: true, photo3DriveId: true },
+      });
+      submissions.forEach((s) => {
+        if (s.videoDriveId) fileIds.add(s.videoDriveId);
+        if (s.photo1DriveId) fileIds.add(s.photo1DriveId);
+        if (s.photo2DriveId) fileIds.add(s.photo2DriveId);
+        if (s.photo3DriveId) fileIds.add(s.photo3DriveId);
+      });
+
+      const resumes = await prisma.resume.findMany({
+        where: { driveFileId: { not: null } },
+        select: { driveFileId: true },
+      });
+      resumes.forEach((r) => r.driveFileId && fileIds.add(r.driveFileId));
+
+      const certs = await prisma.certificate.findMany({
+        where: { fileDriveId: { not: null } },
+        select: { fileDriveId: true },
+      });
+      certs.forEach((c) => c.fileDriveId && fileIds.add(c.fileDriveId));
+
+      const achs = await prisma.achievement.findMany({
+        where: { proofDriveId: { not: null } },
+        select: { proofDriveId: true },
+      });
+      achs.forEach((a) => a.proofDriveId && fileIds.add(a.proofDriveId));
+    } catch (e) {
+      console.warn('[Drive] Error fetching files for copy protection clearing:', e);
+    }
+
+    for (const fileId of fileIds) {
+      const ok = await this.clearCopyRequiresWriterPermission(fileId);
+      if (ok) count++; else failed++;
+    }
+
+    return { count, failed };
   }
 
   /**

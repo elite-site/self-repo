@@ -670,14 +670,19 @@ router.get('/public/media/:type/:fileId', async (req: Request, res: Response): P
     // bogus id costs one `permissions.list` per window rather than one per
     // request. The pre-existing streaming path already spent outbound calls on
     // the same ids, so this does not widen the surface.
-    const forceStream = req.query.stream === '1' || req.query.stream === 'true' || req.query.proxy === 'true';
+    const forceStream = req.query.stream === '1' || req.query.stream === 'true' || req.query.proxy === 'true' || req.query.proxy === '1';
     if (!forceStream && REDIRECTABLE_TYPES.has(type) && driveService.canRedirectToDrive()) {
       const directLink = driveService.getDirectLink(targetDriveFileId);
       if (directLink && (await driveService.isPubliclyReadable(targetDriveFileId))) {
-        res.setHeader('Cache-Control', 'private, max-age=3600');
-        res.setHeader('ETag', etag);
-        res.redirect(302, directLink);
-        return;
+        const probeOk = await driveService.probeDirectLink(directLink, targetDriveFileId);
+        if (probeOk) {
+          res.setHeader('Cache-Control', 'private, max-age=3600');
+          res.setHeader('ETag', etag);
+          res.redirect(302, directLink);
+          return;
+        } else {
+          console.warn(`[PublicMedia] Direct link probe failed for ${targetDriveFileId} (${type}), falling back to proxy stream`);
+        }
       }
       // Not publicly readable (or a failed check): fall through to streaming,
       // which authenticates as the service account and still works.

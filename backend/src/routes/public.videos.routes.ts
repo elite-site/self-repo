@@ -142,12 +142,18 @@ router.get('/stream/:id', async (req: Request, res: Response): Promise<void> => 
     // Prefer the redirect. `<video>` ignores Content-Disposition, so Drive's
     // attachment response still plays inline, and Drive honours Range, so
     // seeking keeps working without this process parsing a single byte.
+    const forceStream = req.query.stream === '1' || req.query.stream === 'true' || req.query.proxy === 'true' || req.query.proxy === '1';
     const directLink = driveService.getDirectLink(fileId);
-    if (directLink && (await driveService.isPubliclyReadable(fileId))) {
-      res.setHeader('Cache-Control', 'public, max-age=300');
-      res.setHeader('ETag', etag);
-      res.redirect(302, directLink);
-      return;
+    if (!forceStream && directLink && (await driveService.isPubliclyReadable(fileId))) {
+      const probeOk = await driveService.probeDirectLink(directLink, fileId);
+      if (probeOk) {
+        res.setHeader('Cache-Control', 'public, max-age=300');
+        res.setHeader('ETag', etag);
+        res.redirect(302, directLink);
+        return;
+      } else {
+        console.warn(`[PublicVideos] Direct link probe failed for ${fileId}, falling back to proxy stream`);
+      }
     }
 
     const { stream, mimeType, size, contentRange } = await driveService.streamDriveFile(

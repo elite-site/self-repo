@@ -33,6 +33,8 @@ import { selectVariantsByName } from '../lib/motion';
 export const ProfilePage: React.FC = () => {
   const [profile, setProfile] = useState<StudentProfile | null>(null);
   const [video, setVideo] = useState<StudentIntroVideo | null>(null);
+  const [useVideoProxy, setUseVideoProxy] = useState(false);
+  const [videoPlaybackError, setVideoPlaybackError] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [resume, setResume] = useState<any | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -108,8 +110,23 @@ export const ProfilePage: React.FC = () => {
     const stamp = new Date(video.submittedAt || 0).getTime() || 0;
     const token = localStorage.getItem('student_token');
     const tokenParam = token ? `&token=${encodeURIComponent(token)}` : '';
-    return `${base}?v=${encodeURIComponent(video.id || '')}-${stamp}${tokenParam}`;
-  }, [video?.id, video?.submittedAt, video?.hasFile, video?.driveFileId]);
+    const proxyParam = useVideoProxy ? '&proxy=1' : '';
+    return `${base}?v=${encodeURIComponent(video.id || '')}-${stamp}${tokenParam}${proxyParam}`;
+  }, [video?.id, video?.submittedAt, video?.hasFile, video?.driveFileId, useVideoProxy]);
+
+  const handleVideoPlaybackError = () => {
+    if (!useVideoProxy) {
+      setUseVideoProxy(true);
+      setVideoPlaybackError(false);
+    } else {
+      setVideoPlaybackError(true);
+    }
+  };
+
+  const handleRetryVideoPlayback = () => {
+    setVideoPlaybackError(false);
+    setUseVideoProxy(false);
+  };
 
   useEffect(() => {
     fetchProfileData();
@@ -393,20 +410,41 @@ export const ProfilePage: React.FC = () => {
             />
           </div>
         ) : videoPlaybackUrl ? (
-          <div className="w-full overflow-hidden rounded-xl border border-edge bg-surface-inverse aspect-video shadow-card">
-            <video
-              src={videoPlaybackUrl}
-              poster={video?.thumbnailUrl ? resolveMediaUrl(video.thumbnailUrl) : undefined}
-              controls
-              controlsList="nodownload"
-              onContextMenu={(e) => e.preventDefault()}
-              preload="metadata"
-              playsInline
-              className="w-full h-full object-contain"
-            >
-              Your browser cannot play this video.
-            </video>
-          </div>
+          videoPlaybackError ? (
+            <div className="w-full rounded-xl border border-status-rejected/30 bg-surface-canvas p-6 flex flex-col items-center justify-center text-center aspect-video space-y-3 shadow-card">
+              <AlertCircle className="w-8 h-8 text-status-rejected" />
+              <div>
+                <p className="text-sm font-semibold text-ink">Unable to play video</p>
+                <p className="text-xs text-ink-muted mt-1 max-w-sm">
+                  Could not load your recording from Google Drive or the streaming server.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleRetryVideoPlayback}
+                className="btn btn-secondary min-h-[44px] text-xs font-semibold inline-flex items-center gap-2"
+              >
+                <RefreshCw className="w-3.5 h-3.5" /> Retry Playback
+              </button>
+            </div>
+          ) : (
+            <div className="w-full overflow-hidden rounded-xl border border-edge bg-surface-inverse aspect-video shadow-card">
+              <video
+                key={videoPlaybackUrl}
+                src={videoPlaybackUrl}
+                poster={video?.thumbnailUrl ? resolveMediaUrl(video.thumbnailUrl) : undefined}
+                controls
+                controlsList="nodownload"
+                onContextMenu={(e) => e.preventDefault()}
+                preload="metadata"
+                playsInline
+                onError={handleVideoPlaybackError}
+                className="w-full h-full object-contain"
+              >
+                Your browser cannot play this video.
+              </video>
+            </div>
+          )
         ) : (
           <div className="text-center py-8 px-4 bg-surface-sunken rounded-xl border border-dashed border-edge">
             <Video className="w-8 h-8 text-ink-muted mx-auto mb-2" />

@@ -642,10 +642,14 @@ router.get('/submission/media/video', requireStudentAuth, async (req: Request, r
       return;
     }
 
+    const forceStream = req.query.proxy === '1' || req.query.proxy === 'true' || req.query.stream === '1' || req.query.stream === 'true';
+
     // Direct Google Drive redirect: allows the browser's <video> element to stream
     // directly from Google's high-speed CDN with full byte-range seeking instead
     // of proxying heavy video streams through Render's single-core CPU.
-    if (driveService.canRedirectToDrive?.()) {
+    // When ?proxy=1 or ?stream=1 is present, or if direct-link probe fails, we fall through
+    // to proxy streaming.
+    if (!forceStream && driveService.canRedirectToDrive?.()) {
       const directLink = driveService.getDirectLink(driveFileId);
       if (directLink) {
         let isPublic = await driveService.isPubliclyReadable(driveFileId);
@@ -654,10 +658,15 @@ router.get('/submission/media/video', requireStudentAuth, async (req: Request, r
           isPublic = await driveService.isPubliclyReadable(driveFileId);
         }
         if (isPublic) {
-          res.setHeader('Cache-Control', 'private, max-age=3600');
-          res.setHeader('ETag', etag);
-          res.redirect(302, directLink);
-          return;
+          const probeOk = await driveService.probeDirectLink(directLink, driveFileId);
+          if (probeOk) {
+            res.setHeader('Cache-Control', 'private, max-age=3600');
+            res.setHeader('ETag', etag);
+            res.redirect(302, directLink);
+            return;
+          } else {
+            console.warn(`[StudentMedia] Direct link probe failed for ${driveFileId}, falling back to proxy stream`);
+          }
         }
       }
     }
