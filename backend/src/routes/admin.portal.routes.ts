@@ -1022,6 +1022,7 @@ router.delete('/events/:id', async (req: Request, res: Response) => {
       await tx.emailLog.deleteMany({ where: { eventId: id } });
       return tx.event.delete({ where: { id } });
     });
+    invalidateStudentEventsCache();
 
     await ActivityService.log({
       category: 'ADMIN',

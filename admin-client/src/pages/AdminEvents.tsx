@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  CalendarDays, Plus, Users,
+  CalendarDays, Plus, Users, Trash2,
   AlertCircle, Loader2, CheckCircle, X, ChevronLeft, ChevronRight, ChevronDown
 } from 'lucide-react';
 import { adminApi } from '../services/api';
@@ -62,6 +62,7 @@ interface FormState {
   description: string;
   type: string;
   year: number;
+  status: string;
   registrationStart: string;
   registrationEnd: string;
   eventDate: string;
@@ -76,6 +77,7 @@ interface FormState {
 
 const emptyForm: FormState = {
   name: '', description: '', type: 'HACKATHON', year: new Date().getFullYear(),
+  status: 'OPEN',
   registrationStart: '', registrationEnd: '', eventDate: '',
   eligibilityYears: [], minCompletion: 0,
   teamEnabled: false, teamMin: 1, teamMax: 4,
@@ -87,6 +89,7 @@ const fromEvent = (e: EventItem): FormState => ({
   description: e.description ?? '',
   type: e.type || 'GENERAL',
   year: e.year ?? new Date().getFullYear(),
+  status: e.status || 'OPEN',
   registrationStart: toLocalInput(e.registrationStart),
   registrationEnd: toLocalInput(e.registrationEnd),
   eventDate: toLocalInput(e.eventDate),
@@ -118,7 +121,7 @@ const EventWizard: React.FC<{
       description: form.description.trim(),
       type: form.type,
       year: form.year,
-      status: existing ? existing.status : 'DRAFT',
+      status: form.status || 'OPEN',
       registrationStart: form.registrationStart || null,
       registrationEnd: form.registrationEnd || null,
       eventDate: form.eventDate || null,
@@ -203,6 +206,18 @@ const EventWizard: React.FC<{
                   <input type="number" id="event-year" min={2000} max={2100} value={form.year} onChange={e => update('year', +e.target.value)} className="input" />
                 </label>
               </div>
+              <label htmlFor="event-status" className="block">
+                <span className="label">Status</span>
+                <select id="event-status" value={form.status} onChange={e => update('status', e.target.value)} className="select">
+                  <option value="OPEN">Open (Published & Visible to Students)</option>
+                  <option value="DRAFT">Draft (Hidden from Students)</option>
+                  <option value="CLOSED">Closed (Registration ended)</option>
+                  <option value="ARCHIVED">Archived</option>
+                </select>
+                <p className="text-label-sm text-ink-muted mt-1">
+                  Events set to "Open" appear in the Student Portal and send notifications to eligible students.
+                </p>
+              </label>
             </>
           )}
           {step === 1 && (
@@ -281,6 +296,7 @@ const EventWizard: React.FC<{
               <h3 className="text-label-md font-bold text-ink">Review</h3>
               <div className="surface-sunken rounded-lg p-4 space-y-2 text-body-sm">
                 <div><span className="font-semibold text-ink-secondary">Title:</span> <span className="text-ink ml-2">{form.name || '—'}</span></div>
+                <div><span className="font-semibold text-ink-secondary">Status:</span> <span className="ml-2"><StatusBadge status={form.status} /></span></div>
                 <div><span className="font-semibold text-ink-secondary">Type:</span> <span className="text-ink ml-2">{formatEventType(form.type)}</span></div>
                 <div><span className="font-semibold text-ink-secondary">Event Date:</span> <span className="text-ink ml-2">{formatDate(form.eventDate)}</span></div>
                 <div><span className="font-semibold text-ink-secondary">Registration:</span> <span className="text-ink ml-2">{formatRegistrationRange(form.registrationStart, form.registrationEnd)}</span></div>
@@ -749,7 +765,7 @@ export const AdminEvents: React.FC = () => {
                     </td>
                     <td className="px-4 py-3"><StatusBadge status={ev.status} /></td>
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-2" role="group" aria-label={`Actions for ${ev.name}`}>
+                      <div className="flex items-center gap-1.5" role="group" aria-label={`Actions for ${ev.name}`}>
                         <button
                           type="button"
                           onClick={() => setEditing(ev)}
@@ -758,11 +774,22 @@ export const AdminEvents: React.FC = () => {
                         >
                           Edit
                         </button>
+                        <button
+                          type="button"
+                          onClick={() => setDeleting(ev)}
+                          disabled={busyId === ev.id}
+                          className="btn btn-ghost px-2.5 py-1 text-xs font-semibold text-status-rejected hover:bg-status-bg-rejected transition-colors inline-flex items-center gap-1"
+                          title={`Delete ${ev.name}`}
+                          aria-label={`Delete ${ev.name}`}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
+                          <span>Delete</span>
+                        </button>
                         <div className="relative inline-block text-left" ref={menuOpenId === ev.id ? menuRef : undefined}>
                           <button
                             type="button"
                             onClick={() => setMenuOpenId(menuOpenId === ev.id ? null : ev.id)}
-                            className="btn btn-ghost px-2.5 py-1 text-xs font-semibold inline-flex items-center gap-1"
+                            className="btn btn-ghost px-2 py-1 text-xs font-semibold inline-flex items-center gap-0.5"
                             aria-haspopup="menu"
                             aria-expanded={menuOpenId === ev.id}
                           >
@@ -772,8 +799,53 @@ export const AdminEvents: React.FC = () => {
                           {menuOpenId === ev.id && (
                             <div
                               role="menu"
-                              className="absolute right-0 mt-1 w-36 bg-surface border border-edge rounded-lg shadow-raised z-raised py-1 text-left animate-scale-in"
+                              className="absolute right-0 mt-1 w-44 bg-surface border border-edge rounded-lg shadow-raised z-raised py-1 text-left animate-scale-in"
                             >
+                              {ev.status !== 'OPEN' ? (
+                                <button
+                                  type="button"
+                                  role="menuitem"
+                                  onClick={async () => {
+                                    setMenuOpenId(null);
+                                    setBusyId(ev.id);
+                                    try {
+                                      await adminApi.setEventStatus(ev.id, 'OPEN');
+                                      notify(`"${ev.name}" is now live and published to all students.`);
+                                      await fetchEvents();
+                                    } catch (err: any) {
+                                      notify(err?.response?.data?.message || 'Could not publish event', 'error');
+                                    } finally {
+                                      setBusyId(null);
+                                    }
+                                  }}
+                                  disabled={busyId === ev.id}
+                                  className="w-full text-left px-3 py-1.5 text-xs text-status-approved hover:bg-surface-sunken transition-colors cursor-pointer font-semibold"
+                                >
+                                  Publish to Students
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  role="menuitem"
+                                  onClick={async () => {
+                                    setMenuOpenId(null);
+                                    setBusyId(ev.id);
+                                    try {
+                                      await adminApi.setEventStatus(ev.id, 'CLOSED');
+                                      notify(`"${ev.name}" registration closed.`);
+                                      await fetchEvents();
+                                    } catch (err: any) {
+                                      notify(err?.response?.data?.message || 'Could not close event', 'error');
+                                    } finally {
+                                      setBusyId(null);
+                                    }
+                                  }}
+                                  disabled={busyId === ev.id}
+                                  className="w-full text-left px-3 py-1.5 text-xs text-ink hover:bg-surface-sunken transition-colors cursor-pointer"
+                                >
+                                  Close Registration
+                                </button>
+                              )}
                               <button
                                 type="button"
                                 role="menuitem"
@@ -807,9 +879,10 @@ export const AdminEvents: React.FC = () => {
                                 role="menuitem"
                                 onClick={() => { setMenuOpenId(null); setDeleting(ev); }}
                                 disabled={busyId === ev.id}
-                                className="w-full text-left px-3 py-1.5 text-xs text-status-rejected hover:bg-status-bg-rejected transition-colors cursor-pointer disabled:opacity-50"
+                                className="w-full text-left px-3 py-1.5 text-xs text-status-rejected hover:bg-status-bg-rejected transition-colors cursor-pointer disabled:opacity-50 inline-flex items-center gap-1.5"
                               >
-                                Delete
+                                <Trash2 className="w-3 h-3" />
+                                <span>Delete</span>
                               </button>
                             </div>
                           )}

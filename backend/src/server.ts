@@ -200,6 +200,7 @@ app.use('/admin/api', adminApiRoutes);
 
 // 4. Admin Portal Management routes — Phase 7 (moderation, events, voting, RBAC, settings …)
 app.use('/admin/api/portal', adminPortalRoutes);
+app.use('/admin/api', adminPortalRoutes);
 
 // 5. Admin Academic Year Promotion routes
 app.use('/admin/api/academic-year', adminAcademicYearRoutes);
