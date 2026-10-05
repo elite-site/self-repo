@@ -150,6 +150,98 @@ const DocumentOrImagePreview: React.FC<{
   );
 };
 
+const VideoPreviewPlayer: React.FC<{
+  url?: string | null;
+  driveFileId?: string | null;
+  id: string;
+  title: string;
+}> = ({ url, driveFileId, id, title }) => {
+  const [error, setError] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
+
+  useEffect(() => {
+    setError(false);
+  }, [url, id]);
+
+  const effectiveUrl = useMemo(() => {
+    const rawUrl = url || (driveFileId ? `/api/public/media/video/${driveFileId}?stream=true` : `/api/public/media/video/${id}?stream=true`);
+    if (!rawUrl) return null;
+    return retryKey > 0 ? `${rawUrl}${rawUrl.includes('?') ? '&' : '?'}retry=${retryKey}` : rawUrl;
+  }, [url, driveFileId, id, retryKey]);
+
+  const driveViewUrl = driveFileId ? `https://drive.google.com/file/d/${driveFileId}/view` : null;
+
+  if (!effectiveUrl) {
+    return (
+      <div className="text-center p-8 text-ink-muted">
+        <Film className="w-12 h-12 mx-auto mb-2 opacity-40" />
+        <p className="text-body-sm font-semibold">Video file not streamable</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="surface-sunken border border-edge-strong rounded-xl p-8 text-center max-w-md mx-auto space-y-4 my-4">
+        <AlertCircle className="w-10 h-10 text-status-changes mx-auto" />
+        <div>
+          <h4 className="text-sm font-bold text-ink">Video could not be played directly in browser</h4>
+          <p className="text-xs text-ink-secondary mt-1">
+            The media stream could not be decoded or loaded by your browser. You can retry or open it directly in Google Drive.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+          <button
+            type="button"
+            onClick={() => {
+              setError(false);
+              setRetryKey((k) => k + 1);
+            }}
+            className="btn btn-secondary text-xs inline-flex items-center gap-1.5"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>Retry Playback</span>
+          </button>
+          {driveViewUrl && (
+            <a
+              href={driveViewUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="btn btn-primary text-xs inline-flex items-center gap-1.5"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              <span>Watch on Google Drive</span>
+            </a>
+          )}
+          <a
+            href={`${effectiveUrl}${effectiveUrl.includes('?') ? '&' : '?'}download=1`}
+            className="btn btn-ghost text-xs inline-flex items-center gap-1.5"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Download</span>
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full flex flex-col items-center justify-center">
+      <video
+        key={`${id}-${retryKey}`}
+        src={effectiveUrl}
+        title={title}
+        aria-label={title}
+        controls
+        preload="metadata"
+        playsInline
+        onError={() => setError(true)}
+        className="max-h-[72vh] w-auto max-w-full mx-auto object-contain rounded-lg shadow-md bg-black"
+      />
+    </div>
+  );
+};
+
 export const Moderation: React.FC = () => {
   const confirm = useConfirm();
   const [items, setItems] = useState<UnifiedModerationItem[]>([]);
@@ -919,21 +1011,12 @@ export const Moderation: React.FC = () => {
                       {/* 1. INTRO VIDEO */}
                       {selectedItem.itemType === 'video' && (
                         <div className="w-full flex flex-col items-center justify-center">
-                          {selectedItem.fileUrl ? (
-                            <video
-                              key={selectedItem.id}
-                              src={selectedItem.fileUrl}
-                              controls
-                              preload="metadata"
-                              playsInline
-                              className="max-h-[72vh] w-auto max-w-full mx-auto object-contain rounded-lg shadow-md"
-                            />
-                          ) : (
-                            <div className="text-center p-8 text-ink-muted">
-                              <Film className="w-12 h-12 mx-auto mb-2 opacity-40" />
-                              <p className="text-sm font-semibold">This video can't be played here.</p>
-                            </div>
-                          )}
+                          <VideoPreviewPlayer
+                            url={selectedItem.fileUrl}
+                            driveFileId={selectedItem.driveFileId}
+                            id={selectedItem.id}
+                            title={selectedItem.title}
+                          />
                           <div className="w-full text-label-sm text-ink-muted flex items-center justify-between px-1 mt-3">
                             <span>Submitted: {new Date(selectedItem.submittedAt).toLocaleString()}</span>
                             {selectedItem.driveFileId && (

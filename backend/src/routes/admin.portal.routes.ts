@@ -74,7 +74,427 @@ router.get('/students/:id', async (req: Request, res: Response) => {
       where: { rollNo: student.rollNo },
       orderBy: { submittedAt: 'desc' },
     });
-    res.json({ ...student, submissions });
+
+
+    const introVideos = (student.introVideos || []).map((v) => {
+      const fileId = (v.driveFileId && v.driveFileId.trim()) ? v.driveFileId.trim() : v.id;
+      return {
+        ...v,
+        streamUrl: fileId ? `/api/public/media/video/${fileId}?stream=true` : null,
+        thumbnailUrl: (v.driveFileId && v.driveFileId.trim()) ? `/api/public/media/thumbnail/video/${v.id}?v=${encodeURIComponent(v.driveFileId.trim())}` : null,
+        watchUrl: typeof driveService.getWatchUrl === 'function' ? driveService.getWatchUrl(v.driveFileId) : null,
+        previewUrl: typeof driveService.getPreviewUrl === 'function' ? driveService.getPreviewUrl(v.driveFileId) : null,
+      };
+    });
+
+    if (introVideos.length === 0 && submissions[0]?.videoDriveId) {
+      const sub = submissions[0];
+      const subDriveId = (sub.videoDriveId || '').trim();
+      introVideos.push({
+        id: sub.id,
+        studentId: student.id,
+        driveFileId: subDriveId,
+        mimeType: 'video/mp4',
+        sizeMb: null,
+        filename: 'intro_video.mp4',
+        status: (sub.status === 'REJECTED' ? 'REJECTED' : sub.status === 'REVIEWED' ? 'APPROVED' : 'PENDING') as any,
+        reviewNote: sub.reviewText,
+        reviewedBy: sub.reviewedBy,
+        reviewedAt: sub.reviewedAt,
+        isActive: true,
+        submittedAt: sub.submittedAt,
+        updatedAt: sub.updatedAt,
+        isPublic: false,
+        publishedAt: null,
+        changeRequestedAt: null,
+        changeRequestNote: null,
+        streamUrl: `/api/public/media/video/${subDriveId}?stream=true`,
+        thumbnailUrl: `/api/public/media/thumbnail/video/${sub.id}?v=${encodeURIComponent(subDriveId)}`,
+        watchUrl: typeof driveService.getWatchUrl === 'function' ? driveService.getWatchUrl(subDriveId) : null,
+        previewUrl: typeof driveService.getPreviewUrl === 'function' ? driveService.getPreviewUrl(subDriveId) : null,
+      } as any);
+    }
+    const resumes = (student.resumes || []).map((r) => {
+      return {
+        ...r,
+        fileUrl: r.driveFileId ? `/api/public/media/resume/${r.id}` : null,
+        thumbnailUrl: r.driveFileId ? `/api/public/media/thumbnail/resume/${r.id}?v=${encodeURIComponent(r.driveFileId)}` : null,
+        previewUrl: typeof driveService.getPreviewUrl === 'function' ? driveService.getPreviewUrl(r.driveFileId) : null,
+        watchUrl: typeof driveService.getWatchUrl === 'function' ? driveService.getWatchUrl(r.driveFileId) : null,
+      };
+    });
+    const achievements = (student.achievements || []).map((a) => {
+      return {
+        ...a,
+        proofUrl: a.proofUrl || (a.proofDriveId ? `/api/public/media/achievement/${a.id}` : null),
+        thumbnailUrl: a.proofDriveId ? `/api/public/media/thumbnail/achievement/${a.id}?v=${encodeURIComponent(a.proofDriveId)}` : null,
+        watchUrl: typeof driveService.getWatchUrl === 'function' ? driveService.getWatchUrl(a.proofDriveId) : null,
+        previewUrl: typeof driveService.getPreviewUrl === 'function' ? driveService.getPreviewUrl(a.proofDriveId) : null,
+      };
+    });
+    const certificates = (student.certificates || []).map((c) => {
+      return {
+        ...c,
+        fileUrl: c.fileDriveId ? `/api/public/media/certificate/${c.id}` : null,
+        thumbnailUrl: c.fileDriveId ? `/api/public/media/thumbnail/certificate/${c.id}?v=${encodeURIComponent(c.fileDriveId)}` : null,
+        previewUrl: typeof driveService.getPreviewUrl === 'function' ? driveService.getPreviewUrl(c.fileDriveId) : null,
+        watchUrl: typeof driveService.getWatchUrl === 'function' ? driveService.getWatchUrl(c.fileDriveId) : null,
+      };
+    });
+
+    const photoUrl = (student.profile?.photoDriveId || student.profile?.photoUrl)
+      ? `/api/public/media/photo/${student.profile?.id || student.id}`
+      : student.profile?.photoUrl || null;
+
+    res.json({
+      ...student,
+      profile: student.profile
+        ? {
+            ...student.profile,
+            photoUrl: photoUrl || undefined,
+          }
+        : null,
+      introVideos,
+      resumes,
+      achievements,
+      certificates,
+      submissions,
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+  }
+});
+
+// ── Admin Item Management (Request Changes & Delete for Video, Resume, Achievement, Certificate, Project)
+router.post('/students/:studentId/items/:type/:itemId/request-change', async (req: Request, res: Response) => {
+  try {
+    const { studentId, type, itemId } = req.params;
+    const { note } = req.body;
+    const reasonText = (note || '').trim();
+
+    if (!reasonText) {
+      return res.status(400).json({ error: 'BAD_REQUEST', message: 'Change request note is required.' });
+    }
+
+    const student = await prisma.student.findFirst({
+      where: { OR: [{ id: studentId }, { rollNo: studentId }] },
+    });
+    if (!student) {
+      return res.status(404).json({ error: 'NOT_FOUND', message: 'Student not found.' });
+    }
+
+    const normalizedType = type.toLowerCase().replace(/_/g, '-');
+    const reviewerName = (req as any).user?.username || 'Admin';
+
+    if (normalizedType === 'video' || normalizedType === 'intro-video' || normalizedType === 'videos') {
+      const item = await prisma.introVideo.findUnique({ where: { id: itemId } });
+      if (!item || item.studentId !== student.id) {
+        return res.status(404).json({ error: 'NOT_FOUND', message: 'Video not found.' });
+      }
+      await prisma.introVideo.update({
+        where: { id: itemId },
+        data: {
+          status: 'CHANGES_REQUESTED',
+          reviewNote: reasonText,
+          changeRequestNote: reasonText,
+          changeRequestedAt: new Date(),
+          isPublic: false,
+          reviewedBy: reviewerName,
+          reviewedAt: new Date(),
+        },
+      });
+      await notifyVideoChangeRequested(student.id, reasonText);
+    } else if (normalizedType === 'resume' || normalizedType === 'resumes') {
+      const item = await prisma.resume.findUnique({ where: { id: itemId } });
+      if (!item || item.studentId !== student.id) {
+        return res.status(404).json({ error: 'NOT_FOUND', message: 'Resume not found.' });
+      }
+      await prisma.resume.update({
+        where: { id: itemId },
+        data: {
+          status: 'CHANGES_REQUESTED',
+          reviewNote: reasonText,
+          reviewedBy: reviewerName,
+          reviewedAt: new Date(),
+        },
+      });
+      await notifyStudent({
+        studentId: student.id,
+        title: 'Resume Revision Requested',
+        message: `Admin requested changes on your resume: "${reasonText}". Please upload an updated PDF.`,
+        actionUrl: '/resume',
+      });
+    } else if (normalizedType === 'achievement' || normalizedType === 'achievements') {
+      const item = await prisma.achievement.findUnique({ where: { id: itemId } });
+      if (!item || item.studentId !== student.id) {
+        return res.status(404).json({ error: 'NOT_FOUND', message: 'Achievement not found.' });
+      }
+      await prisma.achievement.update({
+        where: { id: itemId },
+        data: {
+          status: 'CHANGES_REQUESTED',
+          reviewNote: reasonText,
+          isPublic: false,
+          reviewedBy: reviewerName,
+          reviewedAt: new Date(),
+        },
+      });
+      await notifyStudent({
+        studentId: student.id,
+        title: 'Achievement Revision Requested',
+        message: `Admin requested changes on your achievement "${item.title}": "${reasonText}".`,
+        actionUrl: '/portfolio/achievements',
+      });
+    } else if (normalizedType === 'certificate' || normalizedType === 'certificates') {
+      const item = await prisma.certificate.findUnique({ where: { id: itemId } });
+      if (!item || item.studentId !== student.id) {
+        return res.status(404).json({ error: 'NOT_FOUND', message: 'Certificate not found.' });
+      }
+      await prisma.certificate.update({
+        where: { id: itemId },
+        data: {
+          status: 'CHANGES_REQUESTED',
+          reviewNote: reasonText,
+          isPublic: false,
+          reviewedBy: reviewerName,
+          reviewedAt: new Date(),
+        },
+      });
+      await notifyStudent({
+        studentId: student.id,
+        title: 'Certificate Revision Requested',
+        message: `Admin requested changes on your certificate "${item.title}": "${reasonText}".`,
+        actionUrl: '/portfolio/certificates',
+      });
+    } else if (normalizedType === 'project' || normalizedType === 'projects') {
+      const item = await prisma.project.findUnique({ where: { id: itemId } });
+      if (!item || item.studentId !== student.id) {
+        return res.status(404).json({ error: 'NOT_FOUND', message: 'Project not found.' });
+      }
+      await prisma.project.update({
+        where: { id: itemId },
+        data: {
+          status: 'CHANGES_REQUESTED',
+          reviewNote: reasonText,
+          isPublic: false,
+          reviewedBy: reviewerName,
+          reviewedAt: new Date(),
+        },
+      });
+      await notifyStudent({
+        studentId: student.id,
+        title: 'Project Revision Requested',
+        message: `Admin requested changes on your project "${item.title}": "${reasonText}".`,
+        actionUrl: '/portfolio/projects',
+      });
+    } else {
+      return res.status(400).json({ error: 'BAD_REQUEST', message: `Unknown item type: ${type}` });
+    }
+
+    await ActivityService.log({
+      category: 'ADMIN',
+      action: 'REQUEST_CHANGE',
+      details: `Admin requested changes for ${normalizedType} ${itemId} of student ${student.rollNo}: "${reasonText}"`,
+      userEmail: (req as any).user?.email || 'admin',
+    });
+
+    res.json({ success: true, message: 'Change requested successfully and student notified.' });
+  } catch (err: any) {
+    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+  }
+});
+
+router.delete('/students/:studentId/items/:type/:itemId', async (req: Request, res: Response) => {
+  try {
+    const { studentId, type, itemId } = req.params;
+    const reasonText = (req.body?.reason || (req.query as any)?.reason || '').trim();
+
+    const student = await prisma.student.findFirst({
+      where: { OR: [{ id: studentId }, { rollNo: studentId }] },
+    });
+    if (!student) {
+      return res.status(404).json({ error: 'NOT_FOUND', message: 'Student not found.' });
+    }
+
+    const normalizedType = type.toLowerCase().replace(/_/g, '-');
+
+    if (normalizedType === 'video' || normalizedType === 'intro-video' || normalizedType === 'videos') {
+      let item = await prisma.introVideo.findUnique({ where: { id: itemId } });
+      if (!item || item.studentId !== student.id) {
+        const fallback = await prisma.introVideo.findFirst({
+          where: {
+            OR: [
+              { id: itemId, studentId: student.id },
+              { id: itemId, student: { rollNo: student.rollNo } },
+              { studentId: student.id },
+              { student: { rollNo: student.rollNo } },
+            ],
+          },
+          orderBy: { submittedAt: 'desc' },
+        });
+        if (fallback) {
+          item = fallback;
+        }
+      }
+
+      const submissions = await prisma.submission.findMany({
+        where: {
+          OR: [
+            { rollNo: student.rollNo },
+            { id: student.id },
+            { rollNo: student.id },
+            { id: itemId },
+          ],
+        },
+      });
+
+      if (!item && !submissions.some((s) => Boolean(s.videoDriveId))) {
+        return res.status(404).json({ error: 'NOT_FOUND', message: 'Video not found.' });
+      }
+
+      // a) If item.driveFileId, delete it from Google Drive / mock storage via driveService.deleteFileById
+      if (item?.driveFileId) {
+        const cleanRollNo = student.rollNo.toUpperCase().replace(/[^a-zA-Z0-9]/g, '');
+        const studentRelativePath = `Students/${cleanRollNo}`;
+        await driveService.deleteFileById(item.driveFileId, studentRelativePath).catch(() => {});
+      }
+
+      // b) Reset all IntroVideo rows for this student: wipe Drive ID, thumbnail, and set status to CHANGES_REQUESTED
+      await prisma.introVideo.updateMany({
+        where: {
+          OR: [
+            { studentId: student.id },
+            { student: { rollNo: student.rollNo } },
+          ],
+        },
+        data: {
+          driveFileId: null,
+          thumbnail: null,
+          filename: null,
+          mimeType: null,
+          sizeMb: null,
+          status: 'CHANGES_REQUESTED',
+          reviewNote: reasonText || 'Video removed by administrator.',
+          isPublic: false,
+          publishedAt: null,
+          changeRequestedAt: new Date(),
+          changeRequestNote: reasonText || 'Your previous video was removed. Please upload a new one.',
+        },
+      });
+
+      // c) Also find any Submission row matching the student's rollNo or id. If submission.videoDriveId exists, delete that Drive file too, and update submission.videoDriveId = null.
+      for (const sub of submissions) {
+        if (sub.videoDriveId) {
+          if (!item || sub.videoDriveId !== item.driveFileId) {
+            await driveService.deleteFileById(sub.videoDriveId, sub.driveFolderPath).catch(() => {});
+          }
+          await prisma.submission.update({
+            where: { id: sub.id },
+            data: { videoDriveId: null },
+          });
+        }
+      }
+
+      // e) Add audit logging and student notification
+      await notifyStudent({
+        studentId: student.id,
+        title: 'Introduction Video Deleted',
+        message: reasonText
+          ? `Your introduction video was removed by administrator. Reason: "${reasonText}".`
+          : 'Your introduction video was removed by administrator.',
+        actionUrl: '/intro-video',
+      });
+
+      await ActivityService.log({
+        category: 'ADMIN',
+        action: 'DELETE_VIDEO',
+        details: `Admin deleted video (${itemId}) for student ${student.rollNo}${reasonText ? ` (Reason: ${reasonText})` : ''}`,
+        applicantName: student.name,
+        userEmail: (req as any).user?.email || 'admin',
+      });
+    } else if (normalizedType === 'resume' || normalizedType === 'resumes') {
+      const item = await prisma.resume.findUnique({ where: { id: itemId } });
+      if (!item || item.studentId !== student.id) {
+        return res.status(404).json({ error: 'NOT_FOUND', message: 'Resume not found.' });
+      }
+      const cleanRollNo = student.rollNo.toUpperCase().replace(/[^a-zA-Z0-9]/g, '');
+      const studentRelativePath = `Students/${cleanRollNo}`;
+      if (item.driveFileId) {
+        await driveService.deleteFileById(item.driveFileId, studentRelativePath).catch(() => {});
+      }
+      await prisma.resume.delete({ where: { id: itemId } });
+      await notifyStudent({
+        studentId: student.id,
+        title: 'Resume Deleted',
+        message: reasonText
+          ? `Your resume was removed by administrator. Reason: "${reasonText}".`
+          : 'Your resume was removed by administrator.',
+        actionUrl: '/resume',
+      });
+    } else if (normalizedType === 'achievement' || normalizedType === 'achievements') {
+      const item = await prisma.achievement.findUnique({ where: { id: itemId } });
+      if (!item || item.studentId !== student.id) {
+        return res.status(404).json({ error: 'NOT_FOUND', message: 'Achievement not found.' });
+      }
+      const cleanRollNo = student.rollNo.toUpperCase().replace(/[^a-zA-Z0-9]/g, '');
+      const studentRelativePath = `Students/${cleanRollNo}`;
+      if (item.proofDriveId) {
+        await driveService.deleteFileById(item.proofDriveId, studentRelativePath).catch(() => {});
+      }
+      await prisma.achievement.delete({ where: { id: itemId } });
+      await notifyStudent({
+        studentId: student.id,
+        title: 'Achievement Deleted',
+        message: reasonText
+          ? `Your achievement "${item.title}" was removed by administrator. Reason: "${reasonText}".`
+          : `Your achievement "${item.title}" was removed by administrator.`,
+        actionUrl: '/portfolio/achievements',
+      });
+    } else if (normalizedType === 'certificate' || normalizedType === 'certificates') {
+      const item = await prisma.certificate.findUnique({ where: { id: itemId } });
+      if (!item || item.studentId !== student.id) {
+        return res.status(404).json({ error: 'NOT_FOUND', message: 'Certificate not found.' });
+      }
+      const cleanRollNo = student.rollNo.toUpperCase().replace(/[^a-zA-Z0-9]/g, '');
+      const studentRelativePath = `Students/${cleanRollNo}`;
+      if (item.fileDriveId) {
+        await driveService.deleteFileById(item.fileDriveId, studentRelativePath).catch(() => {});
+      }
+      await prisma.certificate.delete({ where: { id: itemId } });
+      await notifyStudent({
+        studentId: student.id,
+        title: 'Certificate Deleted',
+        message: reasonText
+          ? `Your certificate "${item.title}" was removed by administrator. Reason: "${reasonText}".`
+          : `Your certificate "${item.title}" was removed by administrator.`,
+        actionUrl: '/portfolio/certificates',
+      });
+    } else if (normalizedType === 'project' || normalizedType === 'projects') {
+      const item = await prisma.project.findUnique({ where: { id: itemId } });
+      if (!item || item.studentId !== student.id) {
+        return res.status(404).json({ error: 'NOT_FOUND', message: 'Project not found.' });
+      }
+      await prisma.project.delete({ where: { id: itemId } });
+      await notifyStudent({
+        studentId: student.id,
+        title: 'Project Deleted',
+        message: reasonText
+          ? `Your project "${item.title}" was removed by administrator. Reason: "${reasonText}".`
+          : `Your project "${item.title}" was removed by administrator.`,
+        actionUrl: '/portfolio/projects',
+      });
+    } else {
+      return res.status(400).json({ error: 'BAD_REQUEST', message: `Unknown item type: ${type}` });
+    }
+
+    await ActivityService.log({
+      category: 'ADMIN',
+      action: 'DELETE_ITEM',
+      details: `Admin deleted ${normalizedType} ${itemId} for student ${student.rollNo}${reasonText ? ` (Reason: ${reasonText})` : ''}`,
+      userEmail: (req as any).user?.email || 'admin',
+    });
+
+    res.json({ success: true, message: 'Item deleted successfully.' });
   } catch (err: any) {
     res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
   }
@@ -127,7 +547,15 @@ router.get('/moderation', async (req: Request, res: Response) => {
         orderBy: { createdAt: 'desc' },
       }),
     ]);
-    res.json({ videos, resumes, achievements, certificates });
+    const mappedVideos = videos.map((v) => {
+      const fileId = (v.driveFileId && v.driveFileId.trim()) ? v.driveFileId.trim() : v.id;
+      return {
+        ...v,
+        fileUrl: fileId ? `/api/public/media/video/${fileId}?stream=true` : null,
+        thumbnailUrl: (v.driveFileId && v.driveFileId.trim()) ? `/api/public/media/thumbnail/video/${v.id}?v=${encodeURIComponent(v.driveFileId.trim())}` : null,
+      };
+    });
+    res.json({ videos: mappedVideos, resumes, achievements, certificates });
   } catch (err: any) {
     res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
   }

@@ -87,6 +87,8 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
 
   const [actionLoading, setActionLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'portfolio' | 'media'>('overview');
+  const [videoError, setVideoError] = useState(false);
+  const [videoRetryKey, setVideoRetryKey] = useState(0);
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -521,16 +523,62 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
               )}
             </div>
 
-            {introVideo ? (
+            {introVideo ? (() => {
+              const videoStreamUrl = introVideo.streamUrl || (introVideo.driveFileId ? `/api/public/media/video/${introVideo.driveFileId.trim()}?stream=true` : (introVideo.id ? `/api/public/media/video/${introVideo.id}?stream=true` : null));
+              const introDriveUrl = introVideo.watchUrl || (introVideo.driveFileId ? `https://drive.google.com/file/d/${introVideo.driveFileId}/view` : null);
+
+              return (
               <div className="space-y-3">
                 {/* Video embed / player */}
                 <div className="bg-surface-inverse rounded-xl overflow-hidden aspect-video relative flex items-center justify-center">
-                  {introVideo.streamUrl ? (
-                    <video
-                      src={introVideo.streamUrl}
-                      controls
-                      className="w-full h-full object-contain"
-                    />
+                  {videoStreamUrl ? (
+                    videoError ? (
+                      <div className="text-center p-6 space-y-3">
+                        <AlertTriangle className="w-8 h-8 text-status-changes mx-auto" />
+                        <p className="text-xs text-ink-muted">Video could not be played in browser directly.</p>
+                        <div className="flex flex-wrap items-center justify-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setVideoError(false);
+                              setVideoRetryKey((k) => k + 1);
+                            }}
+                            className="btn btn-secondary text-xs inline-flex items-center gap-1"
+                          >
+                            <RefreshCw className="w-3 h-3" />
+                            <span>Retry</span>
+                          </button>
+                          {introDriveUrl && (
+                            <a
+                              href={introDriveUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="btn btn-primary text-xs inline-flex items-center gap-1"
+                            >
+                              <ExternalLink className="w-3 h-3" />
+                              <span>Open in Drive</span>
+                            </a>
+                          )}
+                          <a
+                            href={`${videoStreamUrl}${videoStreamUrl.includes('?') ? '&' : '?'}download=1`}
+                            className="btn btn-ghost text-xs inline-flex items-center gap-1"
+                          >
+                            <Download className="w-3 h-3" />
+                            <span>Download</span>
+                          </a>
+                        </div>
+                      </div>
+                    ) : (
+                      <video
+                        key={`${introVideo.id}-${videoRetryKey}`}
+                        src={`${videoStreamUrl}${videoRetryKey > 0 ? (videoStreamUrl.includes('?') ? '&' : '?') + `retry=${videoRetryKey}` : ''}`}
+                        controls
+                        preload="metadata"
+                        playsInline
+                        onError={() => setVideoError(true)}
+                        className="w-full h-full object-contain bg-black"
+                      />
+                    )
                   ) : (
                     <div className="text-ink-muted text-xs flex flex-col items-center gap-2">
                       <Film className="w-8 h-8 opacity-40" />
@@ -568,7 +616,8 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
                   </div>
                 )}
               </div>
-            ) : (
+              );
+            })() : (
               <div className="py-12 text-center text-ink-muted text-xs italic">
                 No introduction video has been submitted by this student yet.
               </div>

@@ -626,13 +626,26 @@ router.get('/public/media/:type/:fileId', async (req: Request, res: Response): P
         if (prof?.photoDriveId) resolvedDriveId = prof.photoDriveId;
       } else if (type === 'video') {
         const vid = await prisma.introVideo.findFirst({
-          where: { OR: [{ id: fileId }, { studentId: fileId }] },
+          where: {
+            OR: [
+              { id: fileId },
+              { studentId: fileId },
+              { driveFileId: fileId },
+              { student: { rollNo: fileId } },
+            ],
+          },
         });
         if (vid?.driveFileId) {
           resolvedDriveId = vid.driveFileId;
         } else {
           const sub = await prisma.submission.findFirst({
-            where: { OR: [{ id: fileId }, { rollNo: fileId }] },
+            where: {
+              OR: [
+                { id: fileId },
+                { rollNo: fileId },
+                { videoDriveId: fileId },
+              ],
+            },
           });
           if (sub?.videoDriveId) resolvedDriveId = sub.videoDriveId;
         }
@@ -709,7 +722,11 @@ router.get('/public/media/:type/:fileId', async (req: Request, res: Response): P
       rangeHeader,
     );
 
-    res.setHeader('Content-Type', mimeType);
+    let responseMimeType = mimeType;
+    if (type === 'video' && (!responseMimeType || responseMimeType === 'application/octet-stream')) {
+      responseMimeType = 'video/mp4';
+    }
+    res.setHeader('Content-Type', responseMimeType);
     res.setHeader('Accept-Ranges', 'bytes');
     res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
     res.setHeader('ETag', etag);

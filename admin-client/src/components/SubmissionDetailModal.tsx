@@ -20,6 +20,7 @@ import {
   RefreshCw,
   Loader2,
   AlertCircle,
+  ExternalLink,
 } from 'lucide-react';
 import { IntroVideoState, Submission, SubmissionRating } from '../types';
 import { adminApi } from '../services/api';
@@ -106,6 +107,8 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
   const [reviewPros, setReviewPros] = useState<string[]>(submission?.reviewPros || []);
   const [reviewCons, setReviewCons] = useState<string[]>(submission?.reviewCons || []);
   const [sendingReview, setSendingReview] = useState(false);
+  const [videoError, setVideoError] = useState(false);
+  const [videoRetryKey, setVideoRetryKey] = useState(0);
 
   // Lock background body scroll and listen for Escape key
   useEffect(() => {
@@ -464,9 +467,53 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
               </div>
 
               {videoUrl ? (
-                <div className="bg-surface-inverse rounded-xl overflow-hidden shadow-md">
-                  <video src={videoUrl} controls className="w-full max-h-[420px]" />
-                </div>
+                videoError ? (
+                  <div className="surface-sunken border border-edge-strong rounded-xl p-8 text-center space-y-3">
+                    <VideoOff className="w-8 h-8 text-status-changes mx-auto" />
+                    <div>
+                      <p className="text-sm font-bold text-ink">Video player error</p>
+                      <p className="text-xs text-ink-secondary mt-0.5">Could not play video stream directly in the browser.</p>
+                    </div>
+                    <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setVideoError(false);
+                          setVideoRetryKey((k) => k + 1);
+                        }}
+                        className="btn btn-secondary text-xs inline-flex items-center gap-1.5"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        <span>Retry Playback</span>
+                      </button>
+                      {submission.videoDriveId && (
+                        <a
+                          href={`https://drive.google.com/file/d/${submission.videoDriveId.trim()}/view`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="btn btn-primary text-xs inline-flex items-center gap-1.5"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                          <span>Watch in Google Drive</span>
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-surface-inverse rounded-xl overflow-hidden shadow-md">
+                    <video
+                      key={`${submission.id}-${videoRetryKey}`}
+                      src={videoRetryKey > 0 && submission.videoDriveId
+                        ? `/api/public/media/video/${submission.videoDriveId.trim()}?stream=true&retry=${videoRetryKey}`
+                        : videoUrl}
+                      controls
+                      playsInline
+                      preload="metadata"
+                      onError={() => setVideoError(true)}
+                      className="w-full max-h-[420px] bg-black"
+                    />
+                  </div>
+                )
               ) : (
                 <div className="surface-sunken border border-edge-strong rounded-xl p-10 text-center space-y-2">
                   <VideoOff className="w-6 h-6 text-ink-muted mx-auto" />

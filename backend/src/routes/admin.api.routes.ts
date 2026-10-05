@@ -607,17 +607,34 @@ router.get('/submissions/:id/media/:fileKey', async (req: Request, res: Response
       return;
     }
 
-    const submission = await prisma.submission.findUnique({
-      where: { id },
+    let driveFileId: string | null = null;
+    let driveFolderPath: string | undefined = undefined;
+
+    const submission = await prisma.submission.findFirst({
+      where: { OR: [{ id }, { rollNo: id }] },
       select: { videoDriveId: true, driveFolderPath: true },
     });
 
-    if (!submission) {
-      res.status(404).json({ error: 'NOT_FOUND', message: 'Submission not found' });
-      return;
+    if (submission?.videoDriveId) {
+      driveFileId = submission.videoDriveId.trim();
+      driveFolderPath = submission.driveFolderPath;
+    } else {
+      const introVideo = await prisma.introVideo.findFirst({
+        where: {
+          OR: [
+            { id },
+            { studentId: id },
+            { driveFileId: id },
+            { student: { rollNo: id } },
+          ],
+        },
+        select: { driveFileId: true },
+      });
+      if (introVideo?.driveFileId) {
+        driveFileId = introVideo.driveFileId.trim();
+      }
     }
 
-    const driveFileId = submission.videoDriveId;
     if (!driveFileId) {
       res.status(404).json({ error: 'MEDIA_NOT_FOUND', message: `Media ${fileKey} not present for this submission.` });
       return;
@@ -636,11 +653,15 @@ router.get('/submissions/:id/media/:fileKey', async (req: Request, res: Response
     // the full file would break seeking in the admin player.
     const { stream, mimeType, size, contentRange } = await driveService.streamDriveFile(
       driveFileId,
-      submission.driveFolderPath,
+      driveFolderPath,
       rangeHeader,
     );
 
-    res.setHeader('Content-Type', mimeType);
+    let responseMimeType = mimeType;
+    if (!responseMimeType || responseMimeType === 'application/octet-stream') {
+      responseMimeType = 'video/mp4';
+    }
+    res.setHeader('Content-Type', responseMimeType);
     res.setHeader('Accept-Ranges', 'bytes');
     res.setHeader('Cache-Control', 'private, max-age=300');
     res.setHeader('ETag', etag);
@@ -1270,9 +1291,11 @@ router.get('/moderation', async (req: Request, res: Response) => {
       studentBranch: v.student?.branch,
       title: `${v.student?.name || 'Student'} (${v.student?.rollNo || 'Unknown'})`,
       description: null,
-      fileUrl: v.driveFileId ? `/api/public/media/video/${v.driveFileId}` : null,
+      fileUrl: (v.driveFileId && v.driveFileId.trim())
+        ? `/api/public/media/video/${v.driveFileId.trim()}?stream=true`
+        : (v.id ? `/api/public/media/video/${v.id}?stream=true` : null),
       thumbnailUrl: (v.driveFileId && v.driveFileId.trim()) ? `/api/public/media/thumbnail/video/${v.id}?v=${encodeURIComponent(v.driveFileId.trim())}` : null,
-      driveFileId: v.driveFileId,
+      driveFileId: v.driveFileId ? v.driveFileId.trim() : null,
       status: v.status,
       submittedAt: v.submittedAt?.toISOString() || (v as any).createdAt?.toISOString() || new Date().toISOString(),
       isPublic: Boolean(v.isPublic),
@@ -1407,7 +1430,10 @@ router.get('/moderation/videos', async (req, res) => {
       studentName: v.student?.name || 'Unknown',
       studentRoll: v.student?.rollNo || 'Unknown',
       title: `${v.student?.name} (${v.student?.rollNo})`,
-      fileUrl: v.driveFileId ? `/api/public/media/video/${v.driveFileId}` : null,
+      fileUrl: (v.driveFileId && v.driveFileId.trim())
+        ? `/api/public/media/video/${v.driveFileId.trim()}?stream=true`
+        : (v.id ? `/api/public/media/video/${v.id}?stream=true` : null),
+      thumbnailUrl: (v.driveFileId && v.driveFileId.trim()) ? `/api/public/media/thumbnail/video/${v.id}?v=${encodeURIComponent(v.driveFileId.trim())}` : null,
       isPublic: Boolean(v.isPublic),
       publicUrl: v.isPublic && v.status === 'APPROVED' ? `/api/public/videos/stream/${v.id}` : null,
     })));
@@ -1485,7 +1511,7 @@ router.patch('/moderation/videos/:id', async (req, res) => {
     const { action, reason, publish } = req.body;
     const video = await prisma.introVideo.findUnique({
       where: { id: req.params.id },
-      include: { student: { select: { id: true, name: true } } },
+      include: { student: { select: { id: true, name: true, rollNo: true } } },
     });
 
     if (!video) {
@@ -1525,6 +1551,13 @@ router.patch('/moderation/videos/:id', async (req, res) => {
       data,
     });
 
+    if (video.student?.rollNo) {
+      const subStatus = status === 'APPROVED' ? 'REVIEWED' : status === 'REJECTED' ? 'REJECTED' : 'UNDER_REVIEW';
+      await prisma.submission.updateMany({
+        where: { rollNo: video.student.rollNo },
+        data: { status: subStatus },
+      }).catch(() => {});
+    }
     // Keep the student informed about the decision on their video.
     if (video.student?.id) {
       if (status === 'CHANGES_REQUESTED') {
