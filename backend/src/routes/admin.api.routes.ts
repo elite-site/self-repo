@@ -1206,6 +1206,193 @@ router.get('/activity-logs', async (req: Request, res: Response): Promise<Respon
 // MODERATION, VOTING, ANNOUNCEMENTS, SETTINGS, SKILLS
 // ==========================================
 
+router.get('/moderation', async (req: Request, res: Response) => {
+  try {
+    const rawType = String(req.query.type || 'all').toLowerCase();
+    const rawStatus = String(req.query.status || 'ALL').toUpperCase();
+
+    const statusFilter =
+      rawStatus === 'PENDING_REVIEW'
+        ? { in: ['PENDING', 'UNDER_REVIEW'] }
+        : rawStatus === 'ALL'
+        ? undefined
+        : rawStatus;
+
+    const whereClause = statusFilter ? { status: statusFilter } : {};
+
+    const [videos, resumes, achievements, certificates, projects] = await Promise.all([
+      rawType === 'all' || rawType === 'videos'
+        ? prisma.introVideo.findMany({
+            where: whereClause as any,
+            include: { student: true },
+            orderBy: { submittedAt: 'desc' },
+          })
+        : Promise.resolve([]),
+      rawType === 'all' || rawType === 'resumes'
+        ? prisma.resume.findMany({
+            where: whereClause as any,
+            include: { student: true },
+            orderBy: { submittedAt: 'desc' },
+          })
+        : Promise.resolve([]),
+      rawType === 'all' || rawType === 'achievements'
+        ? prisma.achievement.findMany({
+            where: whereClause as any,
+            include: { student: true, category: true },
+            orderBy: { createdAt: 'desc' },
+          })
+        : Promise.resolve([]),
+      rawType === 'all' || rawType === 'certificates'
+        ? prisma.certificate.findMany({
+            where: whereClause as any,
+            include: { student: true },
+            orderBy: { createdAt: 'desc' },
+          })
+        : Promise.resolve([]),
+      rawType === 'all' || rawType === 'projects'
+        ? prisma.project.findMany({
+            where: whereClause as any,
+            include: { student: true },
+            orderBy: { createdAt: 'desc' },
+          })
+        : Promise.resolve([]),
+    ]);
+
+    const mappedVideos = videos.map((v) => ({
+      id: v.id,
+      type: 'videos' as const,
+      itemType: 'video' as const,
+      studentId: v.studentId,
+      studentName: v.student?.name || 'Unknown',
+      studentRoll: v.student?.rollNo || 'Unknown',
+      studentYear: v.student?.year,
+      studentSection: v.student?.section,
+      studentBranch: v.student?.branch,
+      title: `${v.student?.name || 'Student'} (${v.student?.rollNo || 'Unknown'})`,
+      description: null,
+      fileUrl: v.driveFileId ? `/api/public/media/video/${v.driveFileId}` : null,
+      thumbnailUrl: (v.driveFileId && v.driveFileId.trim()) ? `/api/public/media/thumbnail/video/${v.id}?v=${encodeURIComponent(v.driveFileId.trim())}` : null,
+      driveFileId: v.driveFileId,
+      status: v.status,
+      submittedAt: v.submittedAt?.toISOString() || (v as any).createdAt?.toISOString() || new Date().toISOString(),
+      isPublic: Boolean(v.isPublic),
+      publicUrl: v.isPublic && v.status === 'APPROVED' ? `/api/public/videos/stream/${v.id}` : null,
+      reviewNote: v.reviewNote,
+    }));
+
+    const mappedResumes = resumes.map((r) => ({
+      id: r.id,
+      type: 'resumes' as const,
+      itemType: 'resume' as const,
+      studentId: r.studentId,
+      studentName: r.student?.name || 'Unknown',
+      studentRoll: r.student?.rollNo || 'Unknown',
+      studentYear: r.student?.year,
+      studentSection: r.student?.section,
+      studentBranch: r.student?.branch,
+      title: `${r.student?.name || 'Student'} — Resume`,
+      description: null,
+      fileUrl: r.driveFileId ? `/api/public/media/resume/${r.id}` : null,
+      thumbnailUrl: r.driveFileId ? `/api/public/media/thumbnail/resume/${r.id}?v=${encodeURIComponent(r.driveFileId)}` : null,
+      driveFileId: r.driveFileId,
+      status: r.status,
+      submittedAt: r.submittedAt?.toISOString() || (r as any).createdAt?.toISOString() || new Date().toISOString(),
+      isPublic: Boolean(r.isPublic),
+      reviewNote: r.reviewNote,
+    }));
+
+    const mappedAchievements = achievements.map((a) => {
+      const proofUrl = a.proofUrl || (a.proofDriveId ? `/api/public/media/achievement/${a.id}` : null);
+      const thumbnailUrl = a.proofDriveId ? `/api/public/media/thumbnail/achievement/${a.id}?v=${encodeURIComponent(a.proofDriveId)}` : null;
+      return {
+        id: a.id,
+        type: 'achievements' as const,
+        itemType: 'achievement' as const,
+        studentId: a.studentId,
+        studentName: a.student?.name || 'Unknown',
+        studentRoll: a.student?.rollNo || 'Unknown',
+        studentYear: a.student?.year,
+        studentSection: a.student?.section,
+        studentBranch: a.student?.branch,
+        title: a.title,
+        description: a.description,
+        organization: a.organization,
+        category: a.category?.name || 'Achievement',
+        proofUrl,
+        fileUrl: proofUrl,
+        thumbnailUrl,
+        proofDriveId: a.proofDriveId,
+        status: a.status,
+        submittedAt: (a as any).createdAt?.toISOString() || new Date().toISOString(),
+        isPublic: Boolean(a.isPublic),
+        reviewNote: a.reviewNote,
+      };
+    });
+
+    const mappedCertificates = certificates.map((c) => ({
+      id: c.id,
+      type: 'certificates' as const,
+      itemType: 'certificate' as const,
+      studentId: c.studentId,
+      studentName: c.student?.name || 'Unknown',
+      studentRoll: c.student?.rollNo || 'Unknown',
+      studentYear: c.student?.year,
+      studentSection: c.student?.section,
+      studentBranch: c.student?.branch,
+      title: c.title,
+      description: c.issuer || null,
+      fileUrl: c.fileDriveId ? `/api/public/media/certificate/${c.id}` : null,
+      thumbnailUrl: c.fileDriveId ? `/api/public/media/thumbnail/certificate/${c.id}?v=${encodeURIComponent(c.fileDriveId)}` : null,
+      fileDriveId: c.fileDriveId,
+      status: c.status,
+      submittedAt: (c as any).createdAt?.toISOString() || new Date().toISOString(),
+      isPublic: Boolean(c.isPublic),
+      reviewNote: c.reviewNote,
+    }));
+
+    const mappedProjects = projects.map((p) => ({
+      id: p.id,
+      type: 'projects' as const,
+      itemType: 'project' as const,
+      studentId: p.studentId,
+      studentName: p.student?.name || 'Unknown',
+      studentRoll: p.student?.rollNo || 'Unknown',
+      studentYear: p.student?.year,
+      studentSection: p.student?.section,
+      studentBranch: p.student?.branch,
+      title: p.title,
+      description: p.description,
+      organization: null,
+      category: 'Project',
+      proofUrl: p.githubUrl,
+      fileUrl: p.driveVideoUrl || p.githubUrl,
+      githubUrl: p.githubUrl,
+      driveVideoUrl: p.driveVideoUrl,
+      status: p.status,
+      submittedAt: (p as any).createdAt?.toISOString() || new Date().toISOString(),
+      isPublic: Boolean(p.isPublic),
+      reviewNote: p.reviewNote,
+    }));
+
+    const allItems = [
+      ...mappedVideos,
+      ...mappedResumes,
+      ...mappedCertificates,
+      ...mappedProjects,
+      ...mappedAchievements,
+    ];
+
+    allItems.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+
+    res.json({
+      items: allItems,
+      total: allItems.length,
+    });
+  } catch (err: any) {
+    return httpError(res, 500, err, 'SERVER_ERROR');
+  }
+});
+
 router.get('/moderation/videos', async (req, res) => {
   try {
     // Only videos still awaiting a decision belong in the queue. Approved

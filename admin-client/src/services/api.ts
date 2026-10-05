@@ -231,7 +231,10 @@ export const adminApi = {
     const res = await client.get('/admin/api/moderation', {
       params: { type, ...(status ? { status } : {}) },
     });
-    return res.data || { items: [], total: 0 };
+    if (res.data && typeof res.data === 'object' && Array.isArray(res.data.items)) {
+      return res.data;
+    }
+    return { items: [], total: 0 };
   },
   async getModerationVideos(): Promise<{ items: ModerationVideoItem[] }> {
     const res = await client.get('/admin/api/moderation/videos');
