@@ -5,21 +5,15 @@ import { requireAdminAuth } from '../middleware/auth';
 import { httpError } from "../middleware/apiError";
 import { prisma } from '../lib/prisma';
 import { driveService } from '../services/drive.service';
-import { RATINGS, RATING_LABELS, SUBMISSION_STATUSES, EXCLUDE_INTERNAL_EVENT, isInternalEvent } from '../config/constants';
+import { RATINGS, RATING_LABELS, SUBMISSION_STATUSES, EXCLUDE_INTERNAL_EVENT, isInternalEvent, INTERNAL_EVENT_ID } from '../config/constants';
 import { ActivityService } from '../services/activity.service';
-import {
-  countAnnouncementAudience,
-  deliverAnnouncementNotifications,
-  resolveAnnouncementTarget,
-} from '../services/announcement.service';
+import { announcementActionUrl, deliverAnnouncementNotifications } from '../services/announcement.service';
 import { notifyStudent, notifyVideoChangeRequested } from '../services/notification.service';
 import { resolveContentRange } from '../utils/rangeParser';
-import { invalidateStudentEventsCache } from './student.events.routes';
-import { env } from '../config/env';
 
 const router = Router();
 
-const ACTIVE_EVENT_ID = env.ACTIVE_EVENT_ID;
+const ACTIVE_EVENT_ID = INTERNAL_EVENT_ID;
 
 // Protect all /admin/api routes with JWT authentication
 router.use(requireAdminAuth);
@@ -33,12 +27,12 @@ router.get('/events', async (_req: Request, res: Response): Promise<Response | v
     // Without this _count the client falls back to 0 and every event looks empty.
     const events = await prisma.event.findMany({
       where: EXCLUDE_INTERNAL_EVENT,
+      orderBy: { createdAt: 'asc' },
       include: {
         _count: {
           select: { registrations: true, submissions: true },
         },
       },
-      orderBy: { createdAt: 'asc' },
     });
     res.json({
       events: events.map((e) => ({
@@ -919,11 +913,7 @@ router.delete('/submissions/:id/video', async (req: Request, res: Response): Pro
       return;
     }
 
-    const videoDriveIdToDelete = submission.videoDriveId;
-    if (videoDriveIdToDelete) {
-      await driveService.deleteVideo(submission).catch(() => {});
-      await driveService.deleteFileById(videoDriveIdToDelete, submission.driveFolderPath).catch(() => {});
-    }
+    await driveService.deleteVideo(submission);
 
     const updated = await prisma.submission.update({
       where: { id },
@@ -937,48 +927,11 @@ router.delete('/submissions/:id/video', async (req: Request, res: Response): Pro
       select: { id: true },
     });
 
-    // Also nullify videoDriveId across any other submission entries for this student
-    await prisma.submission.updateMany({
-      where: {
-        OR: [
-          { rollNo: submission.rollNo },
-          ...(student?.id ? [{ id: student.id }] : []),
-        ],
-      },
-      data: {
-        videoDriveId: null,
-      },
-    });
-
     try {
-      const introVideos = await prisma.introVideo.findMany({
-        where: {
-          OR: [
-            { student: { rollNo: submission.rollNo } },
-            ...(student?.id ? [{ studentId: student.id }] : []),
-          ],
-        },
-      });
-      const cleanRollNo = (submission?.rollNo || '').toUpperCase().replace(/[^a-zA-Z0-9]/g, '');
-      const studentRelativePath = submission.driveFolderPath || (cleanRollNo ? `Students/${cleanRollNo}` : undefined);
-      for (const iv of introVideos) {
-        if (iv.driveFileId) {
-          await driveService.deleteFileById(iv.driveFileId, studentRelativePath).catch(() => {});
-        }
-      }
       await prisma.introVideo.updateMany({
-        where: {
-          OR: [
-            { student: { rollNo: submission.rollNo } },
-            ...(student?.id ? [{ studentId: student.id }] : []),
-          ],
-        },
+        where: { student: { rollNo: submission.rollNo } },
         data: {
           driveFileId: null,
-          thumbnail: null,
-          filename: null,
-          mimeType: null,
-          sizeMb: null,
           status: 'CHANGES_REQUESTED',
           reviewNote: 'Video removed by administrator.',
           // Removed videos must disappear from the public showcase too.
@@ -1120,35 +1073,6 @@ router.delete('/submissions/:id', async (req: Request, res: Response): Promise<R
       return;
     }
 
-    // Find and delete associated IntroVideo rows, thumbnails, and drive files
-    const student = await prisma.student.findFirst({
-      where: { rollNo: submission.rollNo },
-      select: { id: true, rollNo: true },
-    });
-
-    const introVideos = await prisma.introVideo.findMany({
-      where: {
-        OR: [
-          { student: { rollNo: submission.rollNo } },
-          ...(student?.id ? [{ studentId: student.id }] : []),
-        ],
-      },
-    });
-
-    const cleanRollNo = (submission?.rollNo || student?.rollNo || '').toUpperCase().replace(/[^a-zA-Z0-9]/g, '');
-    const studentRelativePath = submission.driveFolderPath || (cleanRollNo ? `Students/${cleanRollNo}` : undefined);
-    for (const iv of introVideos) {
-      if (iv.driveFileId) {
-        await driveService.deleteFileById(iv.driveFileId, studentRelativePath).catch(() => {});
-      }
-    }
-
-    if (introVideos.length > 0) {
-      await prisma.introVideo.deleteMany({
-        where: { id: { in: introVideos.map((v) => v.id) } },
-      });
-    }
-
     // 1. Delete associated files and folder from Google Drive or mock storage
     await driveService.deleteSubmissionFiles(submission);
 
@@ -1282,265 +1206,24 @@ router.get('/activity-logs', async (req: Request, res: Response): Promise<Respon
 // MODERATION, VOTING, ANNOUNCEMENTS, SETTINGS, SKILLS
 // ==========================================
 
-// Unified Moderation Queue (All submission artifacts: Intro Video, Resume, Certificate, Project, Achievement)
-router.get(['/moderation', '/moderation/items'], async (req: Request, res: Response): Promise<Response | void> => {
-  try {
-    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
-
-    const requestedType = String(req.query.type || 'all').toLowerCase();
-    const statusQuery = req.query.status as string | undefined;
-    const statuses = statusQuery && statusQuery !== 'ALL' && statusQuery !== 'all'
-      ? statusQuery.split(',').map((s) => s.trim())
-      : ['PENDING', 'UNDER_REVIEW', 'CHANGES_REQUESTED', 'APPROVED', 'REJECTED', 'HIDDEN'];
-
-    const items: any[] = [];
-    const studentSelect = {
-      select: {
-        name: true,
-        rollNo: true,
-        year: true,
-        section: true,
-        branch: true,
-      },
-    };
-
-    const shouldFetchVideos = requestedType === 'all' || requestedType === 'videos' || requestedType === 'video';
-    const shouldFetchResumes = requestedType === 'all' || requestedType === 'resumes' || requestedType === 'resume';
-    const shouldFetchCerts = requestedType === 'all' || requestedType === 'certificates' || requestedType === 'certificate';
-    const shouldFetchProjects = requestedType === 'all' || requestedType === 'projects' || requestedType === 'project';
-    const shouldFetchAchievements = requestedType === 'all' || requestedType === 'achievements' || requestedType === 'achievement';
-
-    const [videos, resumes, certs, projs, achs] = await Promise.all([
-      shouldFetchVideos
-        ? prisma.introVideo.findMany({
-            where: {
-              status: { in: statuses as any },
-              driveFileId: { not: null },
-            },
-            include: { student: studentSelect },
-            orderBy: { submittedAt: 'desc' },
-          })
-        : Promise.resolve([]),
-      shouldFetchResumes
-        ? prisma.resume.findMany({
-            where: {
-              status: { in: statuses as any },
-            },
-            include: { student: studentSelect },
-            orderBy: { submittedAt: 'desc' },
-          })
-        : Promise.resolve([]),
-      shouldFetchCerts
-        ? prisma.certificate.findMany({
-            where: {
-              status: { in: statuses as any },
-            },
-            include: { student: studentSelect },
-            orderBy: { createdAt: 'desc' },
-          })
-        : Promise.resolve([]),
-      shouldFetchProjects
-        ? prisma.project.findMany({
-            where: { status: { in: statuses as any } },
-            include: { student: studentSelect },
-            orderBy: { createdAt: 'desc' },
-          })
-        : Promise.resolve([]),
-      shouldFetchAchievements
-        ? prisma.achievement.findMany({
-            where: { status: { in: statuses as any } },
-            include: { student: studentSelect, category: true },
-            orderBy: { createdAt: 'desc' },
-          })
-        : Promise.resolve([]),
-    ]);
-
-    for (const v of videos) {
-      items.push({
-        id: v.id,
-        type: 'videos',
-        itemType: 'video',
-        studentId: v.studentId,
-        studentName: v.student?.name || 'Unknown',
-        studentRoll: v.student?.rollNo || 'Unknown',
-        studentYear: v.student?.year,
-        studentSection: v.student?.section,
-        studentBranch: v.student?.branch || 'IT',
-        title: `Intro Video - ${v.student?.name || v.student?.rollNo}`,
-        description: v.reviewNote || null,
-        reviewNote: v.reviewNote || null,
-        reviewedBy: v.reviewedBy || null,
-        reviewedAt: v.reviewedAt || null,
-        changeRequestedAt: v.changeRequestedAt || null,
-        changeRequestNote: v.changeRequestNote || null,
-        fileUrl: (v.driveFileId && v.driveFileId.trim()) ? `/api/public/media/video/${v.driveFileId}?stream=true` : null,
-        driveFileId: v.driveFileId,
-        thumbnailUrl: (v.driveFileId && v.driveFileId.trim()) ? `/api/public/media/thumbnail/video/${v.id}?v=${encodeURIComponent(v.driveFileId.trim())}` : null,
-        status: v.status,
-        submittedAt: v.submittedAt,
-        isPublic: Boolean(v.isPublic),
-        publicUrl: v.isPublic && v.status === 'APPROVED' ? `/api/public/videos/stream/${v.id}` : null,
-      });
-    }
-
-    for (const r of resumes) {
-      items.push({
-        id: r.id,
-        type: 'resumes',
-        itemType: 'resume',
-        studentId: r.studentId,
-        studentName: r.student?.name || 'Unknown',
-        studentRoll: r.student?.rollNo || 'Unknown',
-        studentYear: r.student?.year,
-        studentSection: r.student?.section,
-        studentBranch: r.student?.branch || 'IT',
-        title: `Resume - ${r.student?.name || r.student?.rollNo}`,
-        description: r.filename || 'Curriculum Vitae',
-        filename: r.filename || null,
-        sizeMb: r.sizeMb || null,
-        reviewNote: r.reviewNote || null,
-        reviewedBy: r.reviewedBy || null,
-        reviewedAt: r.reviewedAt || null,
-        fileUrl: r.driveFileId ? `/api/public/media/resume/${r.id}` : null,
-        driveFileId: r.driveFileId,
-        thumbnailUrl: r.driveFileId ? `/api/public/media/thumbnail/resume/${r.id}?v=${encodeURIComponent(r.driveFileId)}` : null,
-        status: r.status,
-        submittedAt: r.submittedAt,
-        isPublic: Boolean(r.isPublic),
-      });
-    }
-
-    for (const c of certs) {
-      items.push({
-        id: c.id,
-        type: 'certificates',
-        itemType: 'certificate',
-        studentId: c.studentId,
-        studentName: c.student?.name || 'Unknown',
-        studentRoll: c.student?.rollNo || 'Unknown',
-        studentYear: c.student?.year,
-        studentSection: c.student?.section,
-        studentBranch: c.student?.branch || 'IT',
-        title: c.title || `Certificate - ${c.student?.name}`,
-        description: c.issuer ? `Issued by ${c.issuer}` : 'Verified Certificate',
-        issuer: c.issuer || null,
-        issuedAt: c.issuedAt || null,
-        reviewNote: c.reviewNote || null,
-        reviewedBy: c.reviewedBy || null,
-        reviewedAt: c.reviewedAt || null,
-        fileUrl: c.fileDriveId ? `/api/public/media/certificate/${c.id}` : null,
-        fileDriveId: c.fileDriveId,
-        driveFileId: c.fileDriveId,
-        thumbnailUrl: c.fileDriveId ? `/api/public/media/thumbnail/certificate/${c.id}?v=${encodeURIComponent(c.fileDriveId)}` : null,
-        status: c.status,
-        submittedAt: c.createdAt,
-        isPublic: Boolean(c.isPublic),
-      });
-    }
-
-    for (const p of projs) {
-      items.push({
-        id: p.id,
-        type: 'projects',
-        itemType: 'project',
-        studentId: p.studentId,
-        studentName: p.student?.name || 'Unknown',
-        studentRoll: p.student?.rollNo || 'Unknown',
-        studentYear: p.student?.year,
-        studentSection: p.student?.section,
-        studentBranch: p.student?.branch || 'IT',
-        title: p.title,
-        description: p.description,
-        technologies: p.technologies || [],
-        githubUrl: p.githubUrl,
-        driveVideoUrl: p.driveVideoUrl,
-        fileUrl: p.driveVideoUrl || p.githubUrl,
-        proofUrl: p.githubUrl,
-        reviewNote: p.reviewNote || null,
-        reviewedBy: p.reviewedBy || null,
-        reviewedAt: p.reviewedAt || null,
-        status: p.status,
-        submittedAt: p.createdAt,
-        isPublic: Boolean(p.isPublic),
-      });
-    }
-
-    for (const a of achs) {
-      const proofUrl = a.proofUrl || (a.proofDriveId ? `/api/public/media/achievement/${a.id}` : null);
-      const thumbnailUrl = a.proofDriveId ? `/api/public/media/thumbnail/achievement/${a.id}?v=${encodeURIComponent(a.proofDriveId)}` : null;
-      items.push({
-        id: a.id,
-        type: 'achievements',
-        itemType: 'achievement',
-        studentId: a.studentId,
-        studentName: a.student?.name || 'Unknown',
-        studentRoll: a.student?.rollNo || 'Unknown',
-        studentYear: a.student?.year,
-        studentSection: a.student?.section,
-        studentBranch: a.student?.branch || 'IT',
-        title: a.title,
-        description: a.description,
-        organization: a.organization,
-        category: a.category?.name || 'Achievement',
-        achievedAt: a.achievedAt || null,
-        fileUrl: proofUrl,
-        proofUrl,
-        proofDriveId: a.proofDriveId,
-        driveFileId: a.proofDriveId,
-        thumbnailUrl,
-        reviewNote: a.reviewNote || null,
-        reviewedBy: a.reviewedBy || null,
-        reviewedAt: a.reviewedAt || null,
-        status: a.status,
-        submittedAt: a.createdAt,
-        isPublic: Boolean(a.isPublic),
-      });
-    }
-
-    items.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
-
-    res.json({
-      items,
-      total: items.length,
-    });
-  } catch (err: any) {
-    return httpError(res, 500, err, "SERVER_ERROR");
-  }
-});
-
 router.get('/moderation/videos', async (req, res) => {
   try {
     // Only videos still awaiting a decision belong in the queue. Approved
     // videos are managed from the submission detail view (publish/unpublish).
     const videos = await prisma.introVideo.findMany({
-      where: {
-        status: { in: ['PENDING', 'UNDER_REVIEW', 'CHANGES_REQUESTED'] },
-        driveFileId: { not: null },
-      },
-      select: {
-        id: true, studentId: true, driveFileId: true, mimeType: true, sizeMb: true,
-        filename: true, status: true, reviewNote: true, reviewedBy: true,
-        reviewedAt: true, isActive: true, submittedAt: true, updatedAt: true,
-        isPublic: true, publishedAt: true, changeRequestedAt: true, changeRequestNote: true,
-        student: true,
-      },
+      where: { status: { in: ['PENDING', 'UNDER_REVIEW', 'CHANGES_REQUESTED'] } },
+      include: { student: true },
       orderBy: { submittedAt: 'desc' },
-      take: 200,
     });
-    res.json(videos.map(v => {
-      return {
-        ...v,
-        studentName: v.student?.name || 'Unknown',
-        studentRoll: v.student?.rollNo || 'Unknown',
-        title: `${v.student?.name} (${v.student?.rollNo})`,
-        fileUrl: (v.driveFileId && v.driveFileId.trim()) ? `/api/public/media/video/${v.driveFileId}` : null,
-        thumbnailUrl: (v.driveFileId && v.driveFileId.trim()) ? `/api/public/media/thumbnail/video/${v.id}?v=${encodeURIComponent(v.driveFileId.trim())}` : null,
-        isPublic: Boolean(v.isPublic),
-        publicUrl: v.isPublic && v.status === 'APPROVED' ? `/api/public/videos/stream/${v.id}` : null,
-      };
-    }));
+    res.json(videos.map(v => ({
+      ...v,
+      studentName: v.student?.name || 'Unknown',
+      studentRoll: v.student?.rollNo || 'Unknown',
+      title: `${v.student?.name} (${v.student?.rollNo})`,
+      fileUrl: v.driveFileId ? `/api/public/media/video/${v.driveFileId}` : null,
+      isPublic: Boolean(v.isPublic),
+      publicUrl: v.isPublic && v.status === 'APPROVED' ? `/api/public/videos/stream/${v.id}` : null,
+    })));
   } catch (err: any) {
     return httpError(res, 500, err, "SERVER_ERROR");
   }
@@ -1550,24 +1233,15 @@ router.get('/moderation/resumes', async (req, res) => {
   try {
     const resumes = await prisma.resume.findMany({
       where: { status: { in: ['PENDING', 'UNDER_REVIEW'] } },
-      take: 200,
-      select: {
-        id: true, studentId: true, driveFileId: true, filename: true, sizeMb: true,
-        status: true, reviewNote: true, reviewedBy: true, reviewedAt: true,
-        isActive: true, isPublic: true, submittedAt: true, updatedAt: true,
-        student: true,
-      }
+      include: { student: true }
     });
-    res.json(resumes.map(r => {
-      return {
-        ...r,
-        studentName: r.student?.name || 'Unknown',
-        studentRoll: r.student?.rollNo || 'Unknown',
-        title: `${r.student?.name} (${r.student?.rollNo})`,
-        fileUrl: r.driveFileId ? `/api/public/media/resume/${r.id}` : null,
-        thumbnailUrl: r.driveFileId ? `/api/public/media/thumbnail/resume/${r.id}?v=${encodeURIComponent(r.driveFileId)}` : null,
-      };
-    }));
+    res.json(resumes.map(r => ({
+      ...r,
+      studentName: r.student?.name || 'Unknown',
+      studentRoll: r.student?.rollNo || 'Unknown',
+      title: `${r.student?.name} (${r.student?.rollNo})`,
+      fileUrl: r.driveFileId ? `/api/public/media/resume/${r.driveFileId}` : null,
+    })));
   } catch (err: any) {
     return httpError(res, 500, err, "SERVER_ERROR");
   }
@@ -1577,72 +1251,24 @@ router.get('/moderation/achievements', async (req, res) => {
   try {
     const achievements = await prisma.achievement.findMany({
       where: { status: { in: ['PENDING', 'UNDER_REVIEW'] } },
-      take: 200,
-      select: {
-        id: true, studentId: true, categoryId: true, title: true, description: true,
-        organization: true, achievedAt: true, proofDriveId: true, proofUrl: true,
-        status: true, reviewNote: true, reviewedBy: true, reviewedAt: true,
-        isPublic: true, createdAt: true, updatedAt: true,
-        student: true, category: true,
-      },
+      include: { student: true, category: true },
       orderBy: { createdAt: 'desc' }
     });
-    const projects = await prisma.project.findMany({
-      where: { status: { in: ['PENDING', 'UNDER_REVIEW'] } },
-      take: 200,
-      select: {
-        id: true, studentId: true, title: true, description: true, technologies: true,
-        githubUrl: true, driveVideoUrl: true, displayOrder: true, status: true,
-        reviewNote: true, reviewedBy: true, reviewedAt: true, isPublic: true,
-        createdAt: true, updatedAt: true,
-        student: true,
-      },
-      orderBy: { createdAt: 'desc' }
-    });
-    const mappedAchievements = achievements.map(a => {
-      const proofUrl = a.proofUrl || (a.proofDriveId ? `/api/public/media/achievement/${a.id}` : null);
-      const thumbnailUrl = a.proofDriveId ? `/api/public/media/thumbnail/achievement/${a.id}?v=${encodeURIComponent(a.proofDriveId)}` : null;
+    res.json(achievements.map(a => {
+      const proofUrl = a.proofUrl || (a.proofDriveId ? `/api/public/media/achievement/${a.proofDriveId}` : null);
       return {
         ...a,
-        itemType: 'achievement' as const,
         studentName: a.student?.name || 'Unknown',
         studentRoll: a.student?.rollNo || 'Unknown',
         submittedAt: a.createdAt,
         title: a.title,
         description: a.description,
         organization: a.organization,
-        category: a.category?.name || 'Achievement',
+        category: a.category?.name,
         proofUrl,
         fileUrl: proofUrl,
-        thumbnailUrl,
       };
-    });
-    const mappedProjects = projects.map(p => {
-      return {
-        id: p.id,
-        studentId: p.studentId,
-        studentName: p.student?.name || 'Unknown',
-        studentRoll: p.student?.rollNo || 'Unknown',
-        submittedAt: p.createdAt,
-        title: p.title,
-        description: p.description,
-        organization: null,
-        category: 'Project',
-        itemType: 'project' as const,
-        proofUrl: p.githubUrl,
-        fileUrl: p.driveVideoUrl || p.githubUrl,
-        githubUrl: p.githubUrl,
-        driveVideoUrl: p.driveVideoUrl,
-        status: p.status,
-        reviewNote: p.reviewNote,
-        reviewedBy: p.reviewedBy,
-        reviewedAt: p.reviewedAt,
-      };
-    });
-    const combined = [...mappedAchievements, ...mappedProjects].sort(
-      (a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
-    );
-    res.json(combined);
+    }));
   } catch (err: any) {
     return httpError(res, 500, err, "SERVER_ERROR");
   }
@@ -1652,56 +1278,15 @@ router.get('/moderation/certificates', async (req, res) => {
   try {
     const certificates = await prisma.certificate.findMany({
       where: { status: { in: ['PENDING', 'UNDER_REVIEW'] } },
-      take: 200,
-      select: {
-        id: true, studentId: true, title: true, issuer: true, issuedAt: true,
-        fileDriveId: true, status: true, reviewNote: true, reviewedBy: true,
-        reviewedAt: true, isPublic: true, createdAt: true, updatedAt: true,
-        student: true,
-      },
-      orderBy: { createdAt: 'desc' }
-    });
-    res.json(certificates.map(c => {
-      return {
-        ...c,
-        studentName: c.student?.name || 'Unknown',
-        studentRoll: c.student?.rollNo || 'Unknown',
-        submittedAt: c.createdAt,
-        fileUrl: c.fileDriveId ? `/api/public/media/certificate/${c.id}` : null,
-        thumbnailUrl: c.fileDriveId ? `/api/public/media/thumbnail/certificate/${c.id}?v=${encodeURIComponent(c.fileDriveId)}` : null,
-      };
-    }));
-  } catch (err: any) {
-    return httpError(res, 500, err, "SERVER_ERROR");
-  }
-});
-
-router.get('/moderation/projects', async (req, res) => {
-  try {
-    const projects = await prisma.project.findMany({
-      where: { status: { in: ['PENDING', 'UNDER_REVIEW'] } },
       include: { student: true },
       orderBy: { createdAt: 'desc' }
     });
-    res.json(projects.map(p => ({
-      id: p.id,
-      studentId: p.studentId,
-      studentName: p.student?.name || 'Unknown',
-      studentRoll: p.student?.rollNo || 'Unknown',
-      submittedAt: p.createdAt,
-      title: p.title,
-      description: p.description,
-      organization: null,
-      category: 'Project',
-      itemType: 'project' as const,
-      proofUrl: p.githubUrl,
-      fileUrl: p.driveVideoUrl || p.githubUrl,
-      githubUrl: p.githubUrl,
-      driveVideoUrl: p.driveVideoUrl,
-      status: p.status,
-      reviewNote: p.reviewNote,
-      reviewedBy: p.reviewedBy,
-      reviewedAt: p.reviewedAt,
+    res.json(certificates.map(c => ({
+      ...c,
+      studentName: c.student?.name || 'Unknown',
+      studentRoll: c.student?.rollNo || 'Unknown',
+      submittedAt: c.createdAt,
+      fileUrl: c.fileDriveId ? `/api/public/media/certificate/${c.fileDriveId}` : null
     })));
   } catch (err: any) {
     return httpError(res, 500, err, "SERVER_ERROR");
@@ -1710,53 +1295,40 @@ router.get('/moderation/projects', async (req, res) => {
 
 router.patch('/moderation/videos/:id', async (req, res) => {
   try {
-    const { action, reason, approvalNote, publish } = req.body;
+    const { action, reason, publish } = req.body;
     const video = await prisma.introVideo.findUnique({
       where: { id: req.params.id },
-      include: { student: { select: { id: true, name: true, rollNo: true } } },
+      include: { student: { select: { id: true, name: true } } },
     });
 
     if (!video) {
       return httpError(res, 404, new Error('Video not found'), "NOT_FOUND");
     }
 
-    const normalized = String(action || '').toLowerCase();
-    const status = normalized === 'approve' || action === 'APPROVED'
-      ? 'APPROVED'
-      : normalized === 'reject' || action === 'REJECTED'
-      ? 'REJECTED'
-      : normalized === 'hide' || action === 'HIDDEN'
-      ? 'HIDDEN'
-      : 'CHANGES_REQUESTED';
+    const status = action === 'approve' ? 'APPROVED' : action === 'reject' ? 'REJECTED' : 'CHANGES_REQUESTED';
     const note = reason ? String(reason) : null;
-    // A single `reviewNote` column carries whichever message the admin wrote:
-    // the approval note when approving, otherwise the reason for the decision.
-    const reviewNote = status === 'APPROVED'
-      ? (approvalNote ? String(approvalNote) : null)
-      : note;
 
     // Approval publishes the video on the public page; a rejection un-publishes
     // it so nothing is visible before approval.
-    const publishApproved = status === 'APPROVED' ? (publish !== undefined ? Boolean(publish) : true) : false;
+    const publishApproved = action === 'approve' ? publish !== false : false;
 
     const data: Record<string, unknown> = {
       status,
-      reviewNote,
+      reviewNote: note,
       reviewedAt: new Date(),
       reviewedBy: req.adminUser?.username || req.adminUser?.email || null,
     };
 
-    if (status === 'APPROVED') {
+    if (action === 'approve') {
       data.isPublic = publishApproved;
       data.publishedAt = publishApproved ? (video.publishedAt ?? new Date()) : null;
       data.changeRequestedAt = null;
       data.changeRequestNote = null;
-    } else if (status === 'REJECTED' || status === 'HIDDEN') {
+    } else if (action === 'reject') {
       data.isPublic = false;
       data.publishedAt = null;
     } else {
       // Request changes: the student must upload a new take.
-      data.isPublic = false;
       data.changeRequestedAt = new Date();
       data.changeRequestNote = note;
     }
@@ -1765,13 +1337,6 @@ router.patch('/moderation/videos/:id', async (req, res) => {
       where: { id: req.params.id },
       data,
     });
-
-    if (status === 'REJECTED' && video.student?.rollNo) {
-      await prisma.submission.updateMany({
-        where: { rollNo: video.student.rollNo },
-        data: { status: 'REJECTED' },
-      }).catch(() => {});
-    }
 
     // Keep the student informed about the decision on their video.
     if (video.student?.id) {
@@ -1849,67 +1414,13 @@ router.patch('/moderation/videos/:id/visibility', async (req, res) => {
 
 router.patch('/moderation/resumes/:id', async (req, res) => {
   try {
-    const { action, reason, approvalNote, publish } = req.body;
-    const resume = await prisma.resume.findUnique({
+    const { action, reason } = req.body;
+    const status = action === 'approve' ? 'APPROVED' : action === 'reject' ? 'REJECTED' : 'CHANGES_REQUESTED';
+    await prisma.resume.update({
       where: { id: req.params.id },
-      include: { student: { select: { id: true, name: true } } },
+      data: { status, reviewNote: reason }
     });
-    if (!resume) {
-      return httpError(res, 404, new Error('Resume not found'), "NOT_FOUND");
-    }
-
-    const normalized = String(action || '').toLowerCase();
-    const status = normalized === 'approve' || action === 'APPROVED'
-      ? 'APPROVED'
-      : normalized === 'reject' || action === 'REJECTED'
-      ? 'REJECTED'
-      : normalized === 'hide' || action === 'HIDDEN'
-      ? 'HIDDEN'
-      : 'CHANGES_REQUESTED';
-
-    const publishApproved = status === 'APPROVED' ? (publish !== undefined ? Boolean(publish) : true) : false;
-
-    const updated = await prisma.resume.update({
-      where: { id: req.params.id },
-      data: {
-        status,
-        reviewNote: status === 'APPROVED' ? (approvalNote ? String(approvalNote) : null) : (reason ? String(reason) : null),
-        reviewedAt: new Date(),
-        reviewedBy: req.adminUser?.username || req.adminUser?.email || null,
-        isPublic: publishApproved,
-      },
-    });
-
-    if (resume.student?.id) {
-      if (status === 'CHANGES_REQUESTED') {
-        await notifyStudent({
-          studentId: resume.student.id,
-          title: 'Resume Revision Requested',
-          message: reason
-            ? `Admin requested changes on your resume: "${reason}".`
-            : 'Admin requested changes on your resume.',
-          actionUrl: '/resume',
-        });
-      } else if (status === 'APPROVED') {
-        await notifyStudent({
-          studentId: resume.student.id,
-          title: 'Resume Approved',
-          message: 'Your resume has been approved.',
-          actionUrl: '/resume',
-        });
-      } else if (status === 'REJECTED') {
-        await notifyStudent({
-          studentId: resume.student.id,
-          title: 'Resume Rejected',
-          message: reason
-            ? `Your resume was rejected. Faculty note: "${reason}".`
-            : 'Your resume was rejected.',
-          actionUrl: '/resume',
-        });
-      }
-    }
-
-    res.json({ message: 'Success', resume: updated, isPublic: Boolean(updated.isPublic) });
+    res.json({ message: 'Success' });
   } catch (err: any) {
     return httpError(res, 500, err, "SERVER_ERROR");
   }
@@ -1917,416 +1428,13 @@ router.patch('/moderation/resumes/:id', async (req, res) => {
 
 router.patch('/moderation/achievements/:id', async (req, res) => {
   try {
-    const { action, reason, approvalNote, publish } = req.body;
-    const ach = await prisma.achievement.findUnique({
-      where: { id: req.params.id },
-      include: { student: { select: { id: true, name: true } } },
-    });
-    if (!ach) {
-      return httpError(res, 404, new Error('Achievement not found'), "NOT_FOUND");
-    }
-
-    const normalized = String(action || '').toLowerCase();
-    const status = normalized === 'approve' || action === 'APPROVED'
-      ? 'APPROVED'
-      : normalized === 'reject' || action === 'REJECTED'
-      ? 'REJECTED'
-      : normalized === 'hide' || action === 'HIDDEN'
-      ? 'HIDDEN'
-      : 'CHANGES_REQUESTED';
-
-    const publishApproved = status === 'APPROVED' ? (publish !== undefined ? Boolean(publish) : true) : false;
-
+    const { action, reason } = req.body;
+    const status = action === 'approve' ? 'APPROVED' : action === 'reject' ? 'REJECTED' : action === 'hide' ? 'HIDDEN' : 'CHANGES_REQUESTED';
     const updated = await prisma.achievement.update({
       where: { id: req.params.id },
-      data: {
-        status,
-        reviewNote: status === 'APPROVED' ? (approvalNote ? String(approvalNote) : null) : (reason ? String(reason) : null),
-        reviewedAt: new Date(),
-        reviewedBy: req.adminUser?.username || req.adminUser?.email || null,
-        isPublic: publishApproved,
-      },
+      data: { status, reviewNote: reason || null, reviewedAt: new Date() }
     });
-
-    if (ach.student?.id) {
-      if (status === 'CHANGES_REQUESTED') {
-        await notifyStudent({
-          studentId: ach.student.id,
-          title: 'Achievement Revision Requested',
-          message: reason
-            ? `Admin requested changes on your achievement "${ach.title}": "${reason}".`
-            : `Admin requested changes on your achievement "${ach.title}".`,
-          actionUrl: '/portfolio/achievements',
-        });
-      } else if (status === 'APPROVED') {
-        await notifyStudent({
-          studentId: ach.student.id,
-          title: 'Achievement Approved',
-          message: `Your achievement "${ach.title}" has been approved.`,
-          actionUrl: '/portfolio/achievements',
-        });
-      } else if (status === 'REJECTED') {
-        await notifyStudent({
-          studentId: ach.student.id,
-          title: 'Achievement Rejected',
-          message: reason
-            ? `Your achievement "${ach.title}" was rejected. Faculty note: "${reason}".`
-            : `Your achievement "${ach.title}" was rejected.`,
-          actionUrl: '/portfolio/achievements',
-        });
-      }
-    }
-
-    res.json({ message: 'Success', achievement: updated, isPublic: Boolean(updated.isPublic) });
-  } catch (err: any) {
-    return httpError(res, 500, err, "SERVER_ERROR");
-  }
-});
-
-router.patch('/moderation/certificates/:id', async (req, res) => {
-  try {
-    const { action, reason, approvalNote, publish } = req.body;
-    const cert = await prisma.certificate.findUnique({
-      where: { id: req.params.id },
-      include: { student: { select: { id: true, name: true } } },
-    });
-    if (!cert) {
-      return httpError(res, 404, new Error('Certificate not found'), "NOT_FOUND");
-    }
-
-    const normalized = String(action || '').toLowerCase();
-    const status = normalized === 'approve' || action === 'APPROVED'
-      ? 'APPROVED'
-      : normalized === 'reject' || action === 'REJECTED'
-      ? 'REJECTED'
-      : normalized === 'hide' || action === 'HIDDEN'
-      ? 'HIDDEN'
-      : 'CHANGES_REQUESTED';
-
-    const publishApproved = status === 'APPROVED' ? (publish !== undefined ? Boolean(publish) : true) : false;
-
-    const updated = await prisma.certificate.update({
-      where: { id: req.params.id },
-      data: {
-        status,
-        reviewNote: status === 'APPROVED' ? (approvalNote ? String(approvalNote) : null) : (reason ? String(reason) : null),
-        reviewedAt: new Date(),
-        reviewedBy: req.adminUser?.username || req.adminUser?.email || null,
-        isPublic: publishApproved,
-      },
-    });
-
-    if (cert.student?.id) {
-      if (status === 'CHANGES_REQUESTED') {
-        await notifyStudent({
-          studentId: cert.student.id,
-          title: 'Certificate Revision Requested',
-          message: reason
-            ? `Admin requested changes on your certificate "${cert.title}": "${reason}".`
-            : `Admin requested changes on your certificate "${cert.title}".`,
-          actionUrl: '/portfolio/certificates',
-        });
-      } else if (status === 'APPROVED') {
-        await notifyStudent({
-          studentId: cert.student.id,
-          title: 'Certificate Approved',
-          message: `Your certificate "${cert.title}" has been approved.`,
-          actionUrl: '/portfolio/certificates',
-        });
-      } else if (status === 'REJECTED') {
-        await notifyStudent({
-          studentId: cert.student.id,
-          title: 'Certificate Rejected',
-          message: reason
-            ? `Your certificate "${cert.title}" was rejected. Faculty note: "${reason}".`
-            : `Your certificate "${cert.title}" was rejected.`,
-          actionUrl: '/portfolio/certificates',
-        });
-      }
-    }
-
-    res.json({ message: 'Success', certificate: updated });
-  } catch (err: any) {
-    return httpError(res, 500, err, "SERVER_ERROR");
-  }
-});
-
-router.patch('/moderation/projects/:id', async (req, res) => {
-  try {
-    const { action, reason, approvalNote, publish } = req.body;
-    const project = await prisma.project.findUnique({
-      where: { id: req.params.id },
-      include: { student: { select: { id: true, name: true } } },
-    });
-    if (!project) {
-      return httpError(res, 404, new Error('Project not found'), "NOT_FOUND");
-    }
-
-    const normalized = String(action || '').toLowerCase();
-    const status = normalized === 'approve' || action === 'APPROVED'
-      ? 'APPROVED'
-      : normalized === 'reject' || action === 'REJECTED'
-      ? 'REJECTED'
-      : normalized === 'hide' || action === 'HIDDEN'
-      ? 'HIDDEN'
-      : 'CHANGES_REQUESTED';
-
-    const publishApproved = status === 'APPROVED' ? (publish !== undefined ? Boolean(publish) : true) : false;
-
-    const updated = await prisma.project.update({
-      where: { id: req.params.id },
-      data: {
-        status,
-        reviewNote: status === 'APPROVED' ? (approvalNote ? String(approvalNote) : null) : (reason ? String(reason) : null),
-        reviewedAt: new Date(),
-        reviewedBy: req.adminUser?.username || req.adminUser?.email || null,
-        isPublic: publishApproved,
-      },
-    });
-
-    if (project.student?.id) {
-      if (status === 'CHANGES_REQUESTED') {
-        await notifyStudent({
-          studentId: project.student.id,
-          title: 'Project Revision Requested',
-          message: reason
-            ? `Admin requested changes on your project "${project.title}": "${reason}".`
-            : `Admin requested changes on your project "${project.title}".`,
-          actionUrl: '/portfolio/projects',
-        });
-      } else if (status === 'APPROVED') {
-        await notifyStudent({
-          studentId: project.student.id,
-          title: 'Project Approved',
-          message: `Your project "${project.title}" has been approved.`,
-          actionUrl: '/portfolio/projects',
-        });
-      } else if (status === 'REJECTED') {
-        await notifyStudent({
-          studentId: project.student.id,
-          title: 'Project Rejected',
-          message: reason
-            ? `Your project "${project.title}" was rejected. Faculty note: "${reason}".`
-            : `Your project "${project.title}" was rejected.`,
-          actionUrl: '/portfolio/projects',
-        });
-      }
-    }
-
-    res.json({ message: 'Success', project: updated });
-  } catch (err: any) {
-    return httpError(res, 500, err, "SERVER_ERROR");
-  }
-});
-
-// ============================================================================
-// GENERIC MODERATION CAPABILITIES (videos, resumes, certificates, projects,
-// achievements)
-//
-// The video flow was built first and the other four types never grew the same
-// operations, so admins could approve them but could not un-publish, delete, or
-// ask for a re-upload. These routes close that gap with one implementation
-// instead of four more near-duplicates.
-// ============================================================================
-
-type ModerationKind = 'videos' | 'resumes' | 'certificates' | 'projects' | 'achievements';
-
-const MODERATION_KINDS: Record<string, ModerationKind> = {
-  videos: 'videos',
-  resumes: 'resumes',
-  certificates: 'certificates',
-  projects: 'projects',
-  achievements: 'achievements',
-};
-
-/** Per-kind model config: the drive field, title field, and student-facing URL. */
-const MODERATION_META: Record<
-  ModerationKind,
-  { model: 'introVideo' | 'resume' | 'certificate' | 'project' | 'achievement'; driveField: string; label: string; studentUrl: string }
-> = {
-  videos: { model: 'introVideo', driveField: 'driveFileId', label: 'Intro video', studentUrl: '/intro-video' },
-  resumes: { model: 'resume', driveField: 'driveFileId', label: 'Resume', studentUrl: '/resume' },
-  certificates: { model: 'certificate', driveField: 'fileDriveId', label: 'Certificate', studentUrl: '/portfolio/certificates' },
-  projects: { model: 'project', driveField: 'driveVideoUrl', label: 'Project', studentUrl: '/portfolio/projects' },
-  achievements: { model: 'achievement', driveField: 'proofDriveId', label: 'Achievement', studentUrl: '/portfolio/achievements' },
-};
-
-function resolveKind(raw: string): ModerationKind | null {
-  return MODERATION_KINDS[String(raw || '').toLowerCase()] ?? null;
-}
-
-/**
- * PATCH /moderation/:kind/:id/visibility — publish or unpublish without changing
- * the approval decision. Only APPROVED items may be published.
- */
-router.patch('/moderation/:kind/:id/visibility', async (req, res) => {
-  const kind = resolveKind(req.params.kind);
-  if (!kind) {
-    return httpError(res, 404, new Error('Unknown moderation type'), "NOT_FOUND");
-  }
-
-  try {
-    const { isPublic } = req.body || {};
-    if (typeof isPublic !== 'boolean') {
-      return httpError(res, 400, new Error('isPublic must be true or false'), "VALIDATION_ERROR");
-    }
-
-    const meta = MODERATION_META[kind];
-    const delegate = (prisma as any)[meta.model];
-    const record = await delegate.findUnique({ where: { id: req.params.id } });
-    if (!record) {
-      return httpError(res, 404, new Error(`${meta.label} not found`), "NOT_FOUND");
-    }
-
-    if (isPublic && record.status !== 'APPROVED') {
-      return httpError(
-        res,
-        409,
-        new Error(`Only an approved ${meta.label.toLowerCase()} can be published publicly.`),
-        "NOT_APPROVED",
-      );
-    }
-
-    const updated = await delegate.update({
-      where: { id: req.params.id },
-      data: { isPublic, publishedAt: isPublic ? new Date() : null },
-      select: { id: true, isPublic: true, publishedAt: true, status: true },
-    });
-
-    res.json({
-      success: true,
-      [kind.replace(/s$/, '')]: updated,
-      isPublic: updated.isPublic,
-      message: isPublic
-        ? `${meta.label} is now visible on the public page.`
-        : `${meta.label} has been removed from the public page.`,
-    });
-  } catch (err: any) {
-    return httpError(res, 500, err, "SERVER_ERROR");
-  }
-});
-
-/**
- * DELETE /moderation/:kind/:id — remove the artefact entirely.
- *
- * Mirrors `DELETE /submissions/:id/video`: the Drive file is deleted, the
- * record is reset to CHANGES_REQUESTED with a note, it is un-published so
- * nothing stale remains on the public page, and the student is told to
- * re-upload rather than left with a silently missing item.
- */
-router.delete('/moderation/:kind/:id', async (req, res) => {
-  const kind = resolveKind(req.params.kind);
-  if (!kind) {
-    return httpError(res, 404, new Error('Unknown moderation type'), "NOT_FOUND");
-  }
-
-  try {
-    const meta = MODERATION_META[kind];
-    const delegate = (prisma as any)[meta.model];
-
-    const record = await delegate.findUnique({
-      where: { id: req.params.id },
-      include: { student: { select: { id: true, name: true, rollNo: true } } },
-    });
-    if (!record) {
-      return httpError(res, 404, new Error(`${meta.label} not found`), "NOT_FOUND");
-    }
-
-    const driveFileId = record[meta.driveField];
-
-    // Delete from Drive when there is a real Drive-backed file. Projects store a
-    // URL rather than a Drive id, so there is nothing to delete for those.
-    if (driveFileId && kind !== 'projects' && typeof driveService.deleteFileById === 'function') {
-      const cleanRollNo = (record as any).student?.rollNo?.toUpperCase().replace(/[^a-zA-Z0-9]/g, '');
-      const studentRelativePath = cleanRollNo ? `Students/${cleanRollNo}` : undefined;
-      await driveService.deleteFileById(driveFileId, studentRelativePath).catch(() => {});
-    }
-
-    const note = `${meta.label} removed by administrator. Please upload a new one.`;
-    const data: Record<string, unknown> = {
-      status: 'CHANGES_REQUESTED',
-      reviewNote: note,
-      isPublic: false,
-      thumbnail: null,
-      reviewedBy: req.adminUser?.username || req.adminUser?.email || null,
-      reviewedAt: new Date(),
-    };
-    // Clear the file reference so the lazy thumbnail generator cannot resurrect
-    // a cached image for a file that no longer exists.
-    if (kind !== 'projects') data[meta.driveField] = null;
-
-    const updated = await delegate.update({ where: { id: req.params.id }, data });
-
-    if (record.student?.id) {
-      await notifyStudent({
-        studentId: record.student.id,
-        title: `${meta.label} Removed`,
-        message: `Your ${meta.label.toLowerCase()} was removed by the administrator. Please upload a new one.`,
-        actionUrl: meta.studentUrl,
-      });
-    }
-
-    await ActivityService.log({
-      eventId: undefined,
-      category: 'ADMIN',
-      action: `Admin deleted student ${meta.label.toLowerCase()}`,
-      details: `${meta.label} removed (${record.id}). Student notified to upload a replacement.`,
-      applicantName: record.student?.name || 'Unknown',
-      userEmail: record.student?.id || null,
-      status: 'WARNING',
-    }).catch(() => {});
-
-    res.json({ success: true, message: `${meta.label} removed. The student has been asked to re-upload.`, [kind.replace(/s$/, '')]: updated });
-  } catch (err: any) {
-    return httpError(res, 500, err, "SERVER_ERROR");
-  }
-});
-
-/**
- * POST /moderation/:kind/:id/request-changes — nudge a student to re-upload a
- * specific item without necessarily rejecting it.
- */
-router.post('/moderation/:kind/:id/request-changes', async (req, res) => {
-  const kind = resolveKind(req.params.kind);
-  if (!kind) {
-    return httpError(res, 404, new Error('Unknown moderation type'), "NOT_FOUND");
-  }
-
-  try {
-    const note = req.body?.note ? String(req.body.note) : 'Please upload a new version.';
-    const meta = MODERATION_META[kind];
-    const delegate = (prisma as any)[meta.model];
-
-    const record = await delegate.findUnique({
-      where: { id: req.params.id },
-      include: { student: { select: { id: true, name: true } } },
-    });
-    if (!record) {
-      return httpError(res, 404, new Error(`${meta.label} not found`), "NOT_FOUND");
-    }
-
-    const updated = await delegate.update({
-      where: { id: req.params.id },
-      data: {
-        status: 'CHANGES_REQUESTED',
-        reviewNote: note,
-        isPublic: false,
-        thumbnail: null,
-        reviewedBy: req.adminUser?.username || req.adminUser?.email || null,
-        reviewedAt: new Date(),
-      },
-    });
-
-    if (record.student?.id) {
-      await notifyStudent({
-        studentId: record.student.id,
-        title: `${meta.label} Update Requested`,
-        message: `Admin requested an update to your ${meta.label.toLowerCase()}: "${note}".`,
-        actionUrl: meta.studentUrl,
-      });
-    }
-
-    res.json({ success: true, message: `Change request sent for this ${meta.label.toLowerCase()}.`, [kind.replace(/s$/, '')]: updated });
+    res.json({ message: 'Success', achievement: updated });
   } catch (err: any) {
     return httpError(res, 500, err, "SERVER_ERROR");
   }
@@ -2395,31 +1503,28 @@ router.get('/announcements', async (req, res) => {
   }
 });
 
-router.delete('/announcements/:id', async (req, res) => {
-  try {
-    const existing = await prisma.announcement.findUnique({
-      where: { id: req.params.id },
-      select: { id: true },
-    });
-    if (!existing) {
-      return res.status(404).json({ error: 'NOT_FOUND', message: 'Announcement not found.' });
-    }
-    await prisma.announcement.delete({ where: { id: req.params.id } });
-    res.json({ success: true, message: 'Announcement deleted successfully.' });
-  } catch (err: any) {
-    return httpError(res, 500, err, "SERVER_ERROR");
-  }
-});
-
+/**
+ * Live recipient count for the compose dialog's audience picker.
+ *
+ * The admin client previously requested this route, it did not exist, and the
+ * client silently substituted a hardcoded 120 — so the "this will reach N
+ * students" figure was fiction. Targeting mirrors
+ * deliverAnnouncementNotifications so the preview matches what is delivered.
+ */
 router.get('/announcements/preview', async (req, res) => {
   try {
-    const target = resolveAnnouncementTarget({
-      audience: req.query.audience,
-      targetYear: req.query.targetYear,
-      targetSection: req.query.targetSection,
-    });
-    const count = await countAnnouncementAudience(target);
-    res.json({ count });
+    const raw = String((req.query as any).audience ?? 'ALL').trim().toUpperCase();
+    const yearMatch = /^YEAR[_-]?(\d+)$/.exec(raw);
+    const targetYear = yearMatch ? parseInt(yearMatch[1], 10) : null;
+
+    // Typed explicitly so a malformed filter is caught here rather than at
+    // runtime. Mirrors the audience logic in deliverAnnouncementNotifications.
+    const where: Prisma.StudentWhereInput =
+      targetYear === null ? {} : { year: targetYear };
+
+    const count = await prisma.student.count({ where });
+
+    res.json({ count, audience: raw, targetYear });
   } catch (err: any) {
     return httpError(res, 500, err, "SERVER_ERROR");
   }
@@ -2427,22 +1532,20 @@ router.get('/announcements/preview', async (req, res) => {
 
 router.post('/announcements', async (req, res) => {
   try {
-    const { title, body, content, message, scheduledAt, priority, targetYear, targetSection, targetAll, audience } = req.body;
+    const { title, body, content, message, scheduledAt, priority, targetYear, targetSection, targetAll } = req.body;
     const scheduledDate = scheduledAt ? new Date(scheduledAt) : null;
     const isFutureScheduled = scheduledDate !== null && !isNaN(scheduledDate.getTime()) && scheduledDate.getTime() > Date.now();
 
-    // `audience` is what the admin UI sends (ALL / YEAR_1..YEAR_4); targetYear and
-    // friends are kept for older callers. Both resolve to the same target here.
-    const resolved = resolveAnnouncementTarget({ audience, targetYear, targetSection, targetAll });
+    const isTargetAll = targetAll === false ? false : (targetAll === true ? true : !(targetYear || targetSection));
 
     const announcement = await prisma.announcement.create({
       data: {
         title,
         message: body || content || message || '',
         priority: priority || 'normal',
-        targetYear: resolved.targetYear,
-        targetSection: resolved.targetSection,
-        targetAll: resolved.targetAll,
+        targetYear: targetYear !== undefined && targetYear !== null && targetYear !== '' ? parseInt(String(targetYear), 10) : null,
+        targetSection: targetSection ? String(targetSection) : null,
+        targetAll: isTargetAll,
         createdBy: (req as any).adminUser?.username || (req as any).user?.username || 'admin',
         scheduledAt: scheduledDate,
         status: isFutureScheduled ? 'SCHEDULED' : 'PUBLISHED',
@@ -2518,17 +1621,45 @@ router.post('/announcements/:id/publish', async (req, res) => {
 
 router.delete('/announcements/:id', async (req, res) => {
   try {
-    const existing = await prisma.announcement.findUnique({
-      where: { id: req.params.id },
-      select: { id: true },
-    });
-    if (!existing) {
-      return res.status(404).json({ error: 'NOT_FOUND', message: 'Announcement not found.' });
+    const { id } = req.params;
+    const announcement = await prisma.announcement.findUnique({ where: { id } });
+
+    if (!announcement) {
+      return res.status(404).json({ error: 'NOT_FOUND', message: 'Announcement not found' });
     }
-    await prisma.announcement.delete({ where: { id: req.params.id } });
-    res.json({ success: true, message: 'Announcement deleted successfully.' });
+
+    // Announcements reach students as materialised Notification rows that hold
+    // only the canonical URL (see announcement.service.ts) — there is no
+    // foreign key to cascade. Deleting the Announcement alone would leave one
+    // orphaned notification per recipient, still listed by
+    // GET /api/student/notifications. Purge them in the same transaction so the
+    // announcement and its notifications disappear together or not at all.
+    //
+    // Scoped by BOTH the notification type and an exact match on this one
+    // announcement's URL. Moderation notices are written with
+    // type: 'MODERATION' and an actionUrl of '/intro-video' (or null) by
+    // notification.service.ts, so they cannot match this filter.
+    const [, deletedNotifications] = await prisma.$transaction([
+      prisma.announcement.delete({ where: { id } }),
+      prisma.notification.deleteMany({
+        where: { type: 'ANNOUNCEMENT', actionUrl: announcementActionUrl(id) },
+      }),
+    ]);
+
+    await ActivityService.log({
+      category: 'ADMIN',
+      action: 'Admin deleted announcement',
+      details: `Removed announcement "${announcement.title}" and ${deletedNotifications.count} student notification(s)`,
+      status: 'WARNING',
+    });
+
+    res.json({
+      success: true,
+      message: 'Announcement and its student notifications were deleted.',
+      deletedNotifications: deletedNotifications.count,
+    });
   } catch (err: any) {
-    return httpError(res, 500, err, "SERVER_ERROR");
+    return httpError(res, 500, err, 'SERVER_ERROR');
   }
 });
 
@@ -3223,43 +2354,6 @@ router.post('/storage/ensure-viewer-permissions', async (_req: Request, res: Res
     res.json({
       success: true,
       message: `Viewer permissions updated for ${result.count} Drive items.`,
-      ...result,
-    });
-  } catch (err: any) {
-    return httpError(res, 500, err, "SERVER_ERROR");
-  }
-});
-
-router.post('/storage/clear-copy-protection', async (req: Request, res: Response): Promise<Response | void> => {
-  try {
-    const fileId = typeof req.body?.fileId === 'string' ? req.body.fileId.trim() : undefined;
-    if (fileId) {
-      const ok = await driveService.clearCopyRequiresWriterPermission(fileId);
-      await ActivityService.log({
-        eventId: 'photo-2026',
-        category: 'ADMIN',
-        action: 'Admin cleared copy protection for Drive file',
-        details: `File ID: ${fileId}, result: ${ok ? 'SUCCESS' : 'FAILED'}`,
-        status: ok ? 'SUCCESS' : 'ERROR',
-      });
-      return res.json({ success: ok, fileId });
-    }
-
-    const result = typeof driveService.clearAllFilesCopyProtection === 'function'
-      ? await driveService.clearAllFilesCopyProtection()
-      : { count: 0, failed: 0 };
-
-    await ActivityService.log({
-      eventId: 'photo-2026',
-      category: 'ADMIN',
-      action: 'Admin cleared copy protection for all Drive media files',
-      details: `Cleared copy protection on ${result.count} files (${result.failed} failed)`,
-      status: 'SUCCESS',
-    });
-
-    res.json({
-      success: true,
-      message: `Copy protection cleared for ${result.count} Drive media files.`,
       ...result,
     });
   } catch (err: any) {
