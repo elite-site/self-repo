@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { BRANCHES, SECTIONS, YEARS, EXCLUDE_INTERNAL_EVENT, isInternalEvent } from '../config/constants';
+import { BRANCHES, SECTIONS, YEARS, EXCLUDE_INTERNAL_EVENT, isInternalEvent, INTERNAL_EVENT_ID, INTERNAL_EVENT_SLUG } from '../config/constants';
 import { env } from '../config/env';
 import { prisma } from '../lib/prisma';
 import { submissionUploadMiddleware } from '../middleware/upload';
@@ -17,7 +17,7 @@ export function invalidateMediaDriveIdCache(type: string, id: string): void {
   mediaDriveIdCache.delete(`${type}:${id}`);
 }
 
-const EVENT_ID = env.ACTIVE_EVENT_ID;
+const EVENT_ID = INTERNAL_EVENT_ID;
 const EVENT_NAME = 'Self Introduction';
 
 /**
@@ -371,7 +371,6 @@ router.get('/public/events/:id', async (req: Request, res: Response): Promise<vo
       res.status(404).json({ error: 'NOT_FOUND', message: 'Event not found' });
       return;
     }
-
     const event = await prisma.event.findFirst({
       where: { id: req.params.id, status: { in: ['OPEN', 'CLOSED'] } },
       include: { formFields: { orderBy: { displayOrder: 'asc' } } }

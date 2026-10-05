@@ -3,7 +3,7 @@ import { requireAdminAuth } from '../middleware/auth';
 import { prisma } from '../lib/prisma';
 import { ActivityService } from '../services/activity.service';
 import { deliverAnnouncementNotifications } from '../services/announcement.service';
-import { notifyStudent, notifyVideoChangeRequested } from '../services/notification.service';
+import { notifyStudent, notifyVideoChangeRequested, notifyAllStudentsAboutEvent } from '../services/notification.service';
 import { driveService } from '../services/drive.service';
 import { invalidateStudentEventsCache } from './student.events.routes';
 import { env } from '../config/env';
@@ -836,6 +836,15 @@ router.post('/events', async (req: Request, res: Response) => {
       data: { id, ...parsed.data } as any,
     });
     invalidateStudentEventsCache();
+
+    // Send the event created by the admin to all the students
+    await notifyAllStudentsAboutEvent({
+      id: event.id,
+      name: event.name,
+      description: event.description,
+      slug: event.slug,
+      eligibilityYears: event.eligibilityYears,
+    });
     res.status(201).json(event);
   } catch (err: any) {
     console.error('Error creating event:', err);
@@ -932,6 +941,17 @@ async function setEventStatus(req: Request, res: Response, status: 'OPEN' | 'CLO
       data: { status },
     });
     invalidateStudentEventsCache();
+
+    if (status === 'OPEN') {
+      await notifyAllStudentsAboutEvent({
+        id: event.id,
+        name: event.name,
+        description: event.description,
+        slug: event.slug,
+        eligibilityYears: event.eligibilityYears,
+      });
+    }
+
     res.json(event);
   } catch (err: any) {
     console.error(`Error setting event ${req.params.id} to ${status}:`, err);

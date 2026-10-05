@@ -3,26 +3,48 @@ import { Megaphone, Plus, Send, X, Users, Clock, Loader2, AlertCircle, Inbox, Tr
 import { adminApi } from '../services/api';
 import { useConfirm } from '../components/ui/ConfirmDialog';
 
+/**
+ * Shape returned by GET /admin/api/announcements.
+ */
 interface Announcement {
   id: string;
   title: string;
-  body?: string;
-  message?: string;
-  audience?: string;
+  message?: string | null;
+  body?: string | null;
+  priority?: string | null;
+  status?: string | null;
   targetAll?: boolean;
-  targetYear?: string | number | null;
+  targetYear?: number | null;
   targetSection?: string | null;
+  createdBy?: string | null;
   createdAt: string;
-  createdByName?: string;
-  createdBy?: string;
+  audience?: string;
+  createdByName?: string | null;
   recipientCount?: number;
 }
 
-const formatAudience = (a: Announcement): string => {
+/** Human-readable audience label derived from the announcement's targeting fields. */
+const audienceLabel = (a: Announcement): string => {
   if (a.audience) return String(a.audience).replace(/_/g, ' ');
-  if (a.targetAll) return 'All Students';
-  if (a.targetYear) return `Year ${a.targetYear}${a.targetSection ? ` - ${a.targetSection}` : ''}`;
+  if (a.targetAll === false) {
+    const parts: string[] = [];
+    if (a.targetYear !== null && a.targetYear !== undefined) parts.push(`Year ${a.targetYear}`);
+    if (a.targetSection) parts.push(`Section ${a.targetSection}`);
+    return parts.length ? parts.join(' · ') : 'Targeted group';
+  }
   return 'All Students';
+};
+
+const targetsEveryone = (a: Announcement): boolean =>
+  a.audience ? a.audience === 'ALL' : a.targetAll !== false;
+
+/**
+ * Translate the audience picker into the targeting fields the API understands.
+ */
+const audienceToTargeting = (audience: string) => {
+  const match = /^YEAR_(\d+)$/.exec(audience);
+  if (!match) return { targetAll: true, targetYear: null, targetSection: null };
+  return { targetAll: false, targetYear: parseInt(match[1], 10), targetSection: null };
 };
 
 const ComposeDialog: React.FC<{ onClose: () => void; onPublished: () => void }> = ({ onClose, onPublished }) => {
@@ -45,7 +67,12 @@ const ComposeDialog: React.FC<{ onClose: () => void; onPublished: () => void }> 
     if (!form.title.trim() || !form.body.trim()) { setError('Title and body are required.'); return; }
     setSubmitting(true);
     try {
-      await adminApi.createAnnouncement(form);
+      await adminApi.createAnnouncement({
+        title: form.title,
+        body: form.body,
+        scheduledAt: form.scheduledAt || null,
+        ...audienceToTargeting(form.audience),
+      });
       onPublished(); onClose();
     } catch { setError('Failed to publish. Try again.'); }
     finally { setSubmitting(false); }
@@ -61,15 +88,15 @@ const ComposeDialog: React.FC<{ onClose: () => void; onPublished: () => void }> 
         <div className="flex-1 overflow-y-auto p-5 space-y-4">
           {error && <div className="bg-status-bg-rejected border border-edge text-status-rejected text-xs rounded-lg p-3">{error}</div>}
           <label className="block">
-            <span className="text-xs font-bold text-ink-secondary ">Title *</span>
+            <span className="text-xs font-bold text-ink-secondary">Title *</span>
             <input value={form.title} onChange={e => update('title', e.target.value)} className="mt-1 w-full text-sm bg-surface text-ink border border-edge rounded-lg px-3 py-2 focus:outline-none focus:border-status-rejected" placeholder="Announcement title" />
           </label>
           <label className="block">
-            <span className="text-xs font-bold text-ink-secondary ">Body *</span>
+            <span className="text-xs font-bold text-ink-secondary">Body *</span>
             <textarea value={form.body} onChange={e => update('body', e.target.value)} rows={6} className="mt-1 w-full text-sm bg-surface text-ink border border-edge rounded-lg px-3 py-2 focus:outline-none focus:border-status-rejected resize-none" placeholder="Write your announcement here…" />
           </label>
           <label className="block">
-            <span className="text-xs font-bold text-ink-secondary ">Audience</span>
+            <span className="text-xs font-bold text-ink-secondary">Audience</span>
             <select value={form.audience} onChange={e => update('audience', e.target.value)} className="mt-1 w-full text-sm bg-surface text-ink border border-edge rounded-lg px-3 py-2 focus:outline-none focus:border-status-rejected">
               <option value="ALL">All Students</option>
               <option value="YEAR_1">Year 1 only</option>
@@ -85,7 +112,7 @@ const ComposeDialog: React.FC<{ onClose: () => void; onPublished: () => void }> 
             </div>
           )}
           <label className="block">
-            <span className="text-xs font-bold text-ink-secondary ">Schedule (optional)</span>
+            <span className="text-xs font-bold text-ink-secondary">Schedule (optional)</span>
             <input type="datetime-local" value={form.scheduledAt} onChange={e => update('scheduledAt', e.target.value)} className="mt-1 w-full text-sm bg-surface text-ink border border-edge rounded-lg px-3 py-2 focus:outline-none focus:border-status-rejected" />
             <p className="text-xs text-ink-muted mt-1">Leave blank to publish immediately.</p>
           </label>
@@ -108,6 +135,7 @@ export const Communications: React.FC = () => {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [showCompose, setShowCompose] = useState(false);
 
   const fetchAnnouncements = async () => {
@@ -125,17 +153,21 @@ export const Communications: React.FC = () => {
   const handleDelete = async (a: Announcement) => {
     const confirmed = await confirm({
       title: `Delete “${a.title}”?`,
-      description: 'This permanently removes the announcement. This cannot be undone.',
+      description: 'This permanently removes the announcement and the notification sent to students. This cannot be undone.',
       confirmLabel: 'Delete announcement',
       tone: 'danger',
     });
     if (!confirmed) return;
+
     setDeletingId(a.id);
+    setActionError(null);
     try {
       await adminApi.deleteAnnouncement(a.id);
-      setAnnouncements(list => list.filter(x => x.id !== a.id));
+      setAnnouncements((prev) => prev.filter((item) => item.id !== a.id));
     } catch (err: any) {
-      setError(err?.response?.data?.message || 'Could not delete the announcement.');
+      setActionError(
+        err?.response?.data?.message || 'Failed to delete the announcement. Please retry.',
+      );
     } finally {
       setDeletingId(null);
     }
@@ -144,6 +176,14 @@ export const Communications: React.FC = () => {
   return (
     <div className="space-y-6">
       {showCompose && <ComposeDialog onClose={() => setShowCompose(false)} onPublished={fetchAnnouncements} />}
+
+      {actionError && (
+        <div className="flex items-start gap-2 bg-status-bg-rejected border border-edge text-status-rejected text-xs rounded-lg p-3">
+          <AlertCircle className="w-4 h-4 shrink-0 mt-px" />
+          <span className="flex-1">{actionError}</span>
+          <button onClick={() => setActionError(null)} className="shrink-0 font-bold hover:underline cursor-pointer">Dismiss</button>
+        </div>
+      )}
 
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -181,35 +221,42 @@ export const Communications: React.FC = () => {
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <h3 className="font-bold text-ink text-sm truncate">{a.title}</h3>
-                  <p className="text-xs text-ink-secondary mt-1 line-clamp-2 leading-relaxed">{a.body || a.message || ''}</p>
+                  <p className="text-xs text-ink-secondary mt-1 line-clamp-2 leading-relaxed whitespace-pre-wrap">
+                    {a.message ?? a.body ?? ''}
+                  </p>
                 </div>
-                <div className="flex items-start gap-2 shrink-0">
-                  <div className="text-right">
-                    <div className="text-xs font-semibold text-ink-muted">{a.createdAt ? new Date(a.createdAt).toLocaleDateString() : ''}</div>
-                    {a.recipientCount != null && (
-                      <div className="flex items-center gap-1 text-xs text-ink-muted mt-1 justify-end">
-                        <Users className="w-3 h-3" /> {a.recipientCount} recipients
-                      </div>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => handleDelete(a)}
-                    disabled={deletingId === a.id}
-                    title="Delete"
-                    aria-label={`Delete ${a.title}`}
-                    className="p-2 rounded-lg text-status-rejected hover:bg-status-bg-rejected disabled:opacity-50 cursor-pointer"
-                  >
-                    {deletingId === a.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                  </button>
+                <div className="text-right shrink-0">
+                  <div className="text-xs font-semibold text-ink-muted">{a.createdAt ? new Date(a.createdAt).toLocaleDateString() : ''}</div>
+                  {typeof a.recipientCount === 'number' && (
+                    <div className="flex items-center gap-1 text-xs text-ink-muted mt-1 justify-end">
+                      <Users className="w-3 h-3" /> {a.recipientCount} recipients
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-4 mt-3 pt-3 border-t border-edge">
                 <span className="inline-flex items-center gap-1 text-xs font-semibold text-ink-muted">
-                  <Clock className="w-3 h-3" /> {a.createdByName || a.createdBy || 'Admin'}
+                  <Clock className="w-3 h-3" /> {a.createdBy ?? a.createdByName ?? 'admin'}
                 </span>
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold border bg-surface-canvas text-ink-secondary border-edge">
-                  {formatAudience(a)}
+                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold border ${
+                  targetsEveryone(a)
+                    ? 'bg-status-bg-approved text-status-approved border-edge'
+                    : 'bg-surface-canvas text-ink-secondary border-edge'
+                }`}>
+                  {audienceLabel(a)}
                 </span>
+                <button
+                  onClick={() => handleDelete(a)}
+                  disabled={deletingId === a.id}
+                  title={`Delete "${a.title}"`}
+                  aria-label={`Delete announcement: ${a.title}`}
+                  className="ml-auto inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold text-status-rejected hover:bg-status-bg-rejected disabled:opacity-50 cursor-pointer"
+                >
+                  {deletingId === a.id
+                    ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    : <Trash2 className="w-3.5 h-3.5" />}
+                  {deletingId === a.id ? 'Deleting' : 'Delete'}
+                </button>
               </div>
             </div>
           ))}

@@ -24,6 +24,7 @@
     "verify:env-guard": "npm run build && node scripts/verify-env-guard.js",
     "verify:esm-interop": "npm run build && node scripts/verify-esm-interop.js",
     "db:setup": "ts-node scripts/db-setup.ts",
+    "cleanup:internal-event": "ts-node scripts/cleanup-internal-event.ts",
     "get-token": "ts-node scripts/get-oauth-token.ts"
   },
   "dependencies": {

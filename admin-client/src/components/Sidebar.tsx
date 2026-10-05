@@ -22,6 +22,13 @@ import {
   HardDrive,
 } from 'lucide-react';
 
+/**
+ * The internal self-introduction submission event. This is deliberately a local
+ * copy rather than an import: `admin-client` and `backend` are installed as
+ * separate npm projects (see the root package.json scripts), so they cannot share
+ * a module. The source of truth is `INTERNAL_EVENT_ID` in
+ * `backend/src/config/constants.ts` — keep the two in sync.
+ */
 export const ACTIVE_EVENT_ID = 'self-introduction-2026';
 
 export type AdminTab =

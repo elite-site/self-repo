@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import app from '../src/server';
 import { env } from '../src/config/env';
 import { prisma } from '../src/lib/prisma';
+import { INTERNAL_EVENT_ID } from '../src/config/constants';
 
 vi.mock('../src/lib/prisma', () => ({
   prisma: {

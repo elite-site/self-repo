@@ -149,9 +149,28 @@ export interface EventRegistration {
   id: string;
   eventId: string;
   eventTitle: string;
-  status: 'REGISTERED' | 'CONFIRMED' | 'PENDING' | 'WAITLISTED' | 'CANCELLED' | 'REJECTED';
+  status: RegistrationStatus;
   registeredAt: string;
 }
+
+/**
+ * Mirrors the Prisma `RegistrationStatus` enum exactly. There is deliberately no
+ * `REGISTERED` member — the backend never emits it, so gating "am I registered?"
+ * on it silently treated every `PENDING` registration as unregistered.
+ */
+export type RegistrationStatus =
+  | 'PENDING'
+  | 'CONFIRMED'
+  | 'CANCELLED'
+  | 'REJECTED'
+  | 'WAITLISTED';
+
+/**
+ * A registration that still holds a slot. `PENDING` and `CONFIRMED` both count —
+ * `CANCELLED`, `REJECTED` and `WAITLISTED` do not.
+ */
+export const isActiveRegistration = (status: RegistrationStatus | string | undefined): boolean =>
+  status === 'PENDING' || status === 'CONFIRMED';
 
 export interface Team {
   id: string;

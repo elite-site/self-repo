@@ -60,3 +60,55 @@ export async function notifyVideoChangeRequested(
       : 'Your introduction video needs to be changed. Please upload a new version — it will replace your current video.',
   });
 }
+
+export interface EventNotificationInput {
+  id: string;
+  name: string;
+  description?: string | null;
+  slug?: string;
+  eligibilityYears?: number[];
+}
+
+/**
+ * Sends a notification to all students when an event is created by an admin.
+ *
+ * Scoped to active students in the database. When eligibilityYears is set,
+ * targets only eligible years; otherwise fans out to all students.
+ */
+export async function notifyAllStudentsAboutEvent(
+  event: EventNotificationInput,
+): Promise<number> {
+  try {
+    const where: any = {};
+    if (Array.isArray(event.eligibilityYears) && event.eligibilityYears.length > 0) {
+      where.year = { in: event.eligibilityYears };
+    }
+
+    const students = await prisma.student.findMany({
+      where,
+      select: { id: true },
+    });
+
+    if (students.length === 0) return 0;
+
+    const actionUrl = `/events/${event.id}`;
+    const desc = event.description ? `: ${event.description}` : '';
+    const message = `A new event "${event.name}" has been published${desc}. Click to view details and register!`;
+
+    const result = await prisma.notification.createMany({
+      data: students.map((student) => ({
+        studentId: student.id,
+        title: `New Event: ${event.name}`,
+        message,
+        type: 'EVENT' as const,
+        actionUrl,
+      })),
+    });
+
+    return result.count;
+  } catch (err) {
+    console.warn('[notification] failed to fan out event notifications to students:', err);
+    return 0;
+  }
+}
+

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../services/api';
-import { EventRegistration } from '../types';
+import { EventRegistration, isActiveRegistration } from '../types';
 import { Loader2, CalendarX2, AlertCircle, Trash2, ExternalLink } from 'lucide-react';
 import { SkeletonListPage } from '../components/ui/Skeleton';
 import { useToast } from '../components/Toast';

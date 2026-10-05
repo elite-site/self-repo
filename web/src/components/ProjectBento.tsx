@@ -103,17 +103,15 @@ export const ProjectBento: React.FC<ProjectBentoProps> = ({
   if (!projects || projects.length === 0) return null;
 
   const sortedProjects = [...projects].sort((a, b) => {
-    const diff = getProjectScore(b) - getProjectScore(a);
-    if (diff !== 0) return diff;
-    return ((a as any).displayOrder ?? 0) - ((b as any).displayOrder ?? 0);
+    if (typeof (a as any).displayOrder === 'number' && typeof (b as any).displayOrder === 'number') {
+      return (a as any).displayOrder - (b as any).displayOrder;
+    }
+    return new Date((b as any).createdAt || 0).getTime() - new Date((a as any).createdAt || 0).getTime();
   });
 
-  const spans = computeSpans(sortedProjects.length);
-
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:auto-rows-[11rem] lg:grid-flow-dense">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-fr">
       {sortedProjects.map((project, index) => {
-        const span = spans[index] || { colSpanClass: 'lg:col-span-12', isFeatured: false };
         const technologies: string[] = (project as any).technologies || project.techStack || [];
         const demoUrl = (project as any).driveVideoUrl || project.videoUrl;
         const validGithub = safeUrl(project.githubUrl);
@@ -122,18 +120,21 @@ export const ProjectBento: React.FC<ProjectBentoProps> = ({
         return (
           <div
             key={project.id || index}
-            className={`surface flex flex-col justify-between p-5 border border-edge hover:border-edge-strong transition-colors ${span.colSpanClass} ${span.rowSpanClass || ''}`}
+            className="surface flex flex-col justify-between p-5 border border-edge hover:border-edge-strong transition-colors rounded-xl h-full"
           >
             {/* Top: Header with title, optional status, and actions */}
             <div>
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="font-heading text-base font-bold text-ink truncate">
-                      {project.title}
-                    </h3>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-[10px] font-bold text-ink-muted uppercase tracking-wider">
+                      Project #{index + 1}
+                    </span>
                     {showStatus && renderStatusBadge(project.status)}
                   </div>
+                  <h3 className="font-heading text-base font-bold text-ink truncate">
+                    {project.title}
+                  </h3>
                 </div>
 
                 {(onEdit || onDelete) && (
@@ -165,9 +166,7 @@ export const ProjectBento: React.FC<ProjectBentoProps> = ({
               {/* Description */}
               {project.description && (
                 <p
-                  className={`mt-1.5 text-body-sm text-ink-secondary leading-relaxed ${
-                    span.isFeatured ? 'line-clamp-6' : 'line-clamp-3'
-                  }`}
+                  className="mt-1.5 text-body-sm text-ink-secondary leading-relaxed line-clamp-3"
                 >
                   {project.description}
                 </p>

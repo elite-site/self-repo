@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
 import { importRoster } from '../scripts/import-roster';
+import { INTERNAL_EVENT_ID, INTERNAL_EVENT_SLUG } from '../src/config/constants';
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
@@ -10,9 +11,9 @@ const prisma = new PrismaClient();
 
 const DEFAULT_EVENTS = [
   {
-    id: 'self-introduction-2026',
+    id: INTERNAL_EVENT_ID,
     name: 'Self Introduction',
-    slug: 'self-introduction',
+    slug: INTERNAL_EVENT_SLUG,
     year: 2026,
     status: 'OPEN' as const,
   },

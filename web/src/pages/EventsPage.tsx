@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../services/api';
-import { Event, EventRegistration } from '../types';
+import { Event, EventRegistration, isActiveRegistration } from '../types';
 import { CalendarX2, Search, Clock, CheckCircle2, ChevronRight } from 'lucide-react';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorState } from '../components/ui/ErrorState';
@@ -54,7 +54,7 @@ export const EventsPage: React.FC = () => {
   const openEventIds = new Set(events.map((e) => e.id));
   const registeredEventIds = new Set(
     registrations
-      .filter((r) => (r.status === 'REGISTERED' || r.status === 'CONFIRMED') && openEventIds.has(r.eventId))
+      .filter((r) => isActiveRegistration(r.status) && openEventIds.has(r.eventId))
       .map((r) => r.eventId)
   );
 

@@ -91,7 +91,13 @@ export const ProfilePage: React.FC = () => {
     }
 
     if (prResult.status === 'fulfilled' && Array.isArray(prResult.value)) {
-      setProjects(prResult.value);
+      const sorted = [...prResult.value].sort((a, b) => {
+        if (typeof (a as any).displayOrder === 'number' && typeof (b as any).displayOrder === 'number') {
+          return (a as any).displayOrder - (b as any).displayOrder;
+        }
+        return new Date((b as any).createdAt || 0).getTime() - new Date((a as any).createdAt || 0).getTime();
+      });
+      setProjects(sorted);
     }
 
     if (achResult.status === 'fulfilled' && Array.isArray(achResult.value)) {
@@ -525,16 +531,19 @@ export const ProfilePage: React.FC = () => {
             </Link>
           </div>
         ) : (
-          <div className={`grid gap-4 ${projects.length === 1 ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2'}`}>
-            {projects.slice(0, 4).map((proj) => (
+          <div className={`grid gap-4 auto-rows-fr ${projects.length === 1 ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2'}`}>
+            {projects.slice(0, 4).map((proj, index) => (
               <div
                 key={proj.id}
-                className="surface p-4 rounded-xl border border-edge flex flex-col justify-between hover:border-edge-strong transition-colors bg-surface-sunken"
+                className="surface p-4 rounded-xl border border-edge flex flex-col justify-between hover:border-edge-strong transition-colors bg-surface-sunken h-full"
               >
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
                     <span className={getItemStatusBadgeClass(proj.status)}>
                       {proj.status}
+                    </span>
+                    <span className="text-[10px] font-bold text-ink-muted uppercase tracking-wider">
+                      Project #{index + 1}
                     </span>
                   </div>
                   <h4 className="text-xs font-bold text-ink font-heading line-clamp-1">{proj.title}</h4>

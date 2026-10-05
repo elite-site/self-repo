@@ -4,6 +4,7 @@ import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import path from 'path';
 import { env } from '../config/env';
+import { INTERNAL_EVENT_ID } from '../config/constants';
 import { prisma } from '../lib/prisma';
 import { requireStudentAuth, STUDENT_SESSION_COOKIE_NAME } from '../middleware/studentAuth';
 import { studentLoginRateLimiter, submissionRateLimiter } from '../middleware/rateLimiter';
@@ -21,7 +22,7 @@ import { clearVideoListCache } from './public.videos.routes';
 const router = Router();
 const studentSubmissionVideoCache = new TtlCache<{ videoDriveId: string; driveFolderPath: string }>(120_000, 500);
 
-const EVENT_ID = env.ACTIVE_EVENT_ID;
+const EVENT_ID = INTERNAL_EVENT_ID;
 const EVENT_NAME = 'Self Introduction';
 
 // Serialize the student's profile + their submission for the frontend
