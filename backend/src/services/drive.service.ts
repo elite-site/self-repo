@@ -1022,7 +1022,7 @@ export class DriveService {
         'video/x-matroska',
         'video/matroska',
       ];
-      if (!mime.startsWith('video/') && !ALLOWED_MIMES.includes(mime)) {
+      if (!ALLOWED_MIMES.includes(mime)) {
         return { valid: false, error: 'Uploaded file is not a supported video MIME type.' };
       }
 

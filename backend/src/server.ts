@@ -286,7 +286,7 @@ if (webBuildPath) {
 app.use(errorHandler);
 
 async function autoMigratePendingItems() {
-  if (process.env.AUTO_MIGRATE_PENDING !== 'true') return;
+  if (process.env.NODE_ENV === 'production' || process.env.AUTO_MIGRATE_PENDING !== 'true') return;
   try {
     const [resumeRes, achRes, certRes, profRes] = await Promise.all([
       prisma.resume.updateMany({

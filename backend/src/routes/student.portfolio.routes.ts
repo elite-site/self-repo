@@ -324,7 +324,7 @@ router.post('/achievements', submissionRateLimiter, handleProofUpload, async (re
 router.put('/achievements/:id', async (req: Request, res: Response) => {
   try {
     const studentId = (req as any).studentId;
-    const { title, description, date, achievedAt, organization, organizationName, categoryId, status } = req.body;
+    const { title, description, date, achievedAt, organization, organizationName, categoryId } = req.body;
 
     const updateData: any = {};
     if (title !== undefined) updateData.title = title.trim();
@@ -334,13 +334,9 @@ router.put('/achievements/:id', async (req: Request, res: Response) => {
       updateData.organization = organization || organizationName || null;
     }
     if (categoryId !== undefined) updateData.categoryId = categoryId || null;
-    if (status !== undefined) {
-      updateData.status = status;
-    } else {
-      updateData.status = 'PENDING';
-      updateData.isPublic = false;
-      updateData.reviewNote = null;
-    }
+    updateData.status = 'PENDING';
+    updateData.isPublic = false;
+    updateData.reviewNote = null;
 
     const updated = await prisma.achievement.updateMany({
       where: { id: req.params.id, studentId },
@@ -468,7 +464,7 @@ router.post('/certificates', submissionRateLimiter, certificateUpload, async (re
         studentId,
         title: req.body.title || 'Certificate',
         issuer: req.body.issuer || '',
-        issuedAt: req.body.issueDate || req.body.issuedAt ? new Date(req.body.issueDate || req.body.issuedAt) : new Date(),
+        issuedAt: (req.body.issueDate || req.body.issuedAt) ? new Date(req.body.issueDate || req.body.issuedAt) : new Date(),
         fileDriveId: driveFileId,
         thumbnail: null,
         status: 'PENDING',

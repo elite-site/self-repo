@@ -1427,7 +1427,7 @@ router.get('/moderation/resumes', async (req, res) => {
       studentName: r.student?.name || 'Unknown',
       studentRoll: r.student?.rollNo || 'Unknown',
       title: `${r.student?.name} (${r.student?.rollNo})`,
-      fileUrl: r.driveFileId ? `/api/public/media/resume/${r.driveFileId}` : null,
+      fileUrl: r.driveFileId ? `/api/public/media/resume/${r.id}` : null,
     })));
   } catch (err: any) {
     return httpError(res, 500, err, "SERVER_ERROR");
@@ -1442,7 +1442,7 @@ router.get('/moderation/achievements', async (req, res) => {
       orderBy: { createdAt: 'desc' }
     });
     res.json(achievements.map(a => {
-      const proofUrl = a.proofUrl || (a.proofDriveId ? `/api/public/media/achievement/${a.proofDriveId}` : null);
+      const proofUrl = a.proofUrl || (a.proofDriveId ? `/api/public/media/achievement/${a.id}` : null);
       return {
         ...a,
         studentName: a.student?.name || 'Unknown',
@@ -1473,7 +1473,7 @@ router.get('/moderation/certificates', async (req, res) => {
       studentName: c.student?.name || 'Unknown',
       studentRoll: c.student?.rollNo || 'Unknown',
       submittedAt: c.createdAt,
-      fileUrl: c.fileDriveId ? `/api/public/media/certificate/${c.fileDriveId}` : null
+      fileUrl: c.fileDriveId ? `/api/public/media/certificate/${c.id}` : null
     })));
   } catch (err: any) {
     return httpError(res, 500, err, "SERVER_ERROR");

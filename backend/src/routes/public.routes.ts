@@ -57,6 +57,7 @@ router.post(
   async (req: Request, res: Response): Promise<void> => {
     let currentRollNo = '';
     let currentStudentName = '';
+    let currentStudentEmail = '';
 
     try {
       const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
@@ -71,6 +72,7 @@ router.post(
       const branch = 'IT';
       currentRollNo = rollNo;
       currentStudentName = name;
+      currentStudentEmail = email;
 
       // 2. Validate student details
       if (!rollNo) {
@@ -295,7 +297,7 @@ router.post(
         action: 'Application submission failed',
         details: err?.message || 'Unexpected server error',
         applicantName: currentStudentName,
-        userEmail: currentRollNo,
+        userEmail: currentStudentEmail || currentRollNo,
         status: 'ERROR',
         errorMessage: err?.stack || err?.message,
       });

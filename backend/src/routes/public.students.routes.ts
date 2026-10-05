@@ -240,6 +240,22 @@ export const clearPublicStudentCaches = (): void => {
   skillsCache.clear();
 };
 
+router.get('/events', async (_req: Request, res: Response) => {
+  try {
+    const events = await prisma.event.findMany({
+      where: {
+        status: 'OPEN',
+        ...EXCLUDE_INTERNAL_EVENT,
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.set('Cache-Control', 'public, max-age=60');
+    res.json(events);
+  } catch (err: any) {
+    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+  }
+});
+
 router.get('/:rollNo', async (req: Request, res: Response) => {
   try {
     res.setHeader('Cache-Control', 'public, max-age=60');
@@ -375,22 +391,6 @@ router.get('/:rollNo/resume', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'NOT_FOUND', message: 'Resume file not available' });
     }
     res.redirect(`/api/public/media/resume/${resume.id}`);
-  } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
-  }
-});
-
-router.get('/events', async (_req: Request, res: Response) => {
-  try {
-    const events = await prisma.event.findMany({
-      where: {
-        status: 'OPEN',
-        ...EXCLUDE_INTERNAL_EVENT,
-      },
-      orderBy: { createdAt: 'desc' }
-    });
-    res.set('Cache-Control', 'public, max-age=60');
-    res.json(events);
   } catch (err: any) {
     res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
   }
