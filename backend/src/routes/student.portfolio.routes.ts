@@ -80,6 +80,8 @@ router.get('/', async (req: Request, res: Response) => {
           })),
           skills: computedSkills.map((s) => ({
             ...s,
+            name: s.skill.name,
+            category: s.skill.category,
             totalBytes: String(s.totalBytes),
           })),
         });
