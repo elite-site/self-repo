@@ -67,6 +67,18 @@ router.get('/students/:id', async (req: Request, res: Response) => {
         introVideos: true,
         resumes: true,
         registrations: { include: { event: true, team: true } },
+        githubAccount: true,
+        githubRepos: {
+          orderBy: [
+            { isShowcased: 'desc' },
+            { showcaseRank: 'asc' },
+            { stars: 'desc' },
+          ],
+        },
+        githubSkills: {
+          include: { skill: true },
+          orderBy: { repoCount: 'desc' },
+        },
       },
     });
     if (!student) return res.status(404).json({ error: 'NOT_FOUND', message: 'Student not found' });
@@ -1007,21 +1019,37 @@ router.delete('/events/:id', async (req: Request, res: Response) => {
     // Child-first: answers hang off both registrations and form fields, team rows
     // hang off teams, and votes hang off candidates.
     const deleted = await prisma.$transaction(async (tx) => {
-      await tx.registrationAnswer.deleteMany({
-        where: { OR: [{ registration: { eventId: id } }, { field: { eventId: id } }] },
-      });
-      await tx.teamMember.deleteMany({ where: { team: { eventId: id } } });
-      await tx.teamInvitation.deleteMany({ where: { team: { eventId: id } } });
-      await tx.vote.deleteMany({ where: { campaign: { eventId: id } } });
-      await tx.votingCandidate.deleteMany({ where: { campaign: { eventId: id } } });
-      await tx.votingCampaign.deleteMany({ where: { eventId: id } });
-      await tx.eventRegistration.deleteMany({ where: { eventId: id } });
-      await tx.registrationFormField.deleteMany({ where: { eventId: id } });
-      await tx.team.deleteMany({ where: { eventId: id } });
-      await tx.submission.deleteMany({ where: { eventId: id } });
-      await tx.emailLog.deleteMany({ where: { eventId: id } });
+      if (registrations > 0 || formFields > 0) {
+        await tx.registrationAnswer.deleteMany({
+          where: { OR: [{ registration: { eventId: id } }, { field: { eventId: id } }] },
+        });
+      }
+      if (teams > 0) {
+        await tx.teamMember.deleteMany({ where: { team: { eventId: id } } });
+        await tx.teamInvitation.deleteMany({ where: { team: { eventId: id } } });
+      }
+      if (votes > 0) {
+        await tx.vote.deleteMany({ where: { campaign: { eventId: id } } });
+        await tx.votingCandidate.deleteMany({ where: { campaign: { eventId: id } } });
+        await tx.votingCampaign.deleteMany({ where: { eventId: id } });
+      }
+      if (registrations > 0) {
+        await tx.eventRegistration.deleteMany({ where: { eventId: id } });
+      }
+      if (formFields > 0) {
+        await tx.registrationFormField.deleteMany({ where: { eventId: id } });
+      }
+      if (teams > 0) {
+        await tx.team.deleteMany({ where: { eventId: id } });
+      }
+      if (submissions > 0) {
+        await tx.submission.deleteMany({ where: { eventId: id } });
+      }
+      if (emailLogs > 0) {
+        await tx.emailLog.deleteMany({ where: { eventId: id } });
+      }
       return tx.event.delete({ where: { id } });
-    });
+    }, { timeout: 20000, maxWait: 10000 });
     invalidateStudentEventsCache();
 
     await ActivityService.log({

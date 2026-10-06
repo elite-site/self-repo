@@ -7,6 +7,7 @@ import {
   Calendar,
   ClipboardList,
   FileText,
+  Github,
   Globe,
   LayoutDashboard,
   User,
@@ -49,6 +50,13 @@ export const SIDEBAR_NAV: NavEntry[] = [
     path: '/portfolio',
     icon: Briefcase,
     keywords: 'projects achievements certificates',
+  },
+  {
+    label: 'GitHub',
+    path: '/github',
+    icon: Github,
+    keywords: 'github repositories showcase sync skills code',
+    description: 'Connect GitHub and showcase your top repositories',
   },
   {
     label: 'Intro Video',

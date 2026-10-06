@@ -16,7 +16,9 @@ import {
   ShieldAlert,
   Crop,
   User,
-  Trash2
+  Trash2,
+  Sparkles,
+  ChevronRight,
 } from 'lucide-react';
 import { SkeletonPage } from '../components/ui/Skeleton';
 import { api, resolveMediaUrl, invalidateApiCache } from '../services/api';
@@ -30,27 +32,6 @@ import { LeetCodeIcon, CodeChefIcon } from '../components/icons/PlatformIcons';
 import { useToast } from '../components/Toast';
 import { useConfirm } from '../components/ui/ConfirmDialog';
 import { useReducedMotion } from '../hooks/useReducedMotion';
-
-const COMMON_SKILLS = [
-  'Python',
-  'Java',
-  'C++',
-  'TypeScript',
-  'JavaScript',
-  'React',
-  'Node.js',
-  'Next.js',
-  'PostgreSQL',
-  'MongoDB',
-  'Docker',
-  'AWS',
-  'Git',
-  'Machine Learning',
-  'Data Structures',
-  'Tailwind CSS',
-  'REST APIs',
-  'Flutter',
-];
 
 export const EditProfilePage: React.FC = () => {
   const { showToast } = useToast();
@@ -74,8 +55,6 @@ export const EditProfilePage: React.FC = () => {
   const [leetcodeUrl, setLeetcodeUrl] = useState('');
   const [codechefUrl, setCodechefUrl] = useState('');
   const [portfolioUrl, setPortfolioUrl] = useState('');
-  const [skills, setSkills] = useState<string[]>([]);
-  const [customSkill, setCustomSkill] = useState('');
   const [linkErrors, setLinkErrors] = useState<Partial<Record<SocialLinkKind, string>>>({});
 
   // Photo Crop & Reposition state
@@ -107,7 +86,6 @@ export const EditProfilePage: React.FC = () => {
         setLeetcodeUrl(data.leetcodeUrl || '');
         setCodechefUrl(data.codechefUrl || '');
         setPortfolioUrl(data.portfolioUrl || '');
-        setSkills(Array.isArray(data.skills) ? data.skills : []);
       })
       .catch(() => {
         setError('Failed to load profile. Please refresh.');
@@ -212,18 +190,6 @@ export const EditProfilePage: React.FC = () => {
     }
   };
 
-  const addSkill = (skill: string) => {
-    const clean = skill.trim();
-    if (clean && !skills.includes(clean)) {
-      setSkills([...skills, clean]);
-    }
-    setCustomSkill('');
-  };
-
-  const removeSkill = (skillToRemove: string) => {
-    setSkills(skills.filter((s) => s !== skillToRemove));
-  };
-
   /**
    * Canonicalise one link field. The inputs accept any common paste format
    * (full URL, no protocol, `www.`, `@handle`, bare username), so the raw text
@@ -269,21 +235,18 @@ export const EditProfilePage: React.FC = () => {
     }
 
     try {
-      // Save profile fields and skills in parallel
+      // Save profile fields (skills are computed server-side via GitHub integration)
       // Do NOT spread ...profile — it includes `biography` with the old value
       // which causes the backend to use the stale value instead of the new `bio`.
-      await Promise.all([
-        api.updateProfile({
-          bio: bio.trim(),
-          specialQualities: specialQualities.trim(),
-          githubUrl: normalized.github,
-          linkedinUrl: normalized.linkedin,
-          leetcodeUrl: normalized.leetcode,
-          codechefUrl: normalized.codechef,
-          portfolioUrl: normalized.portfolio,
-        }),
-        api.updateSkills(skills),
-      ]);
+      await api.updateProfile({
+        bio: bio.trim(),
+        specialQualities: specialQualities.trim(),
+        githubUrl: normalized.github,
+        linkedinUrl: normalized.linkedin,
+        leetcodeUrl: normalized.leetcode,
+        codechefUrl: normalized.codechef,
+        portfolioUrl: normalized.portfolio,
+      });
       invalidateApiCache();
       setSuccess(true);
       showToast('Profile saved.');
@@ -469,84 +432,29 @@ export const EditProfilePage: React.FC = () => {
           </p>
         </div>
 
-        {/* SECTION 3: TECHNICAL SKILLS */}
-        <div className="surface space-y-4">
-          <div className="flex items-center justify-between">
+        {/* SECTION 3: TECHNICAL SKILLS CALLOUT */}
+        <div className="surface p-5 sm:p-6 rounded-2xl border border-edge space-y-3">
+          <div className="flex items-center gap-2.5">
+            <div className="size-9 rounded-xl bg-brand-soft text-brand-soft-text flex items-center justify-center shrink-0">
+              <Sparkles size={18} />
+            </div>
             <div>
               <h2 className="text-label-lg font-bold text-ink font-heading">Technical Skills & Stacks</h2>
-              <p className="text-body-sm text-ink-secondary">Pick from common department skills or enter custom ones</p>
+              <p className="text-body-sm text-ink-secondary">Derived from verified GitHub repositories</p>
             </div>
-            <span className="text-body-sm font-mono font-bold text-brand bg-brand-soft px-2.5 py-0.5 rounded-full border border-brand-soft-text/20">
-              {skills.length} Selected
-            </span>
           </div>
 
-          {/* Current Skills Chips */}
-          <div className="flex flex-wrap gap-2 min-h-[42px] p-3 rounded-lg bg-surface-sunken border border-edge">
-            {skills.length === 0 ? (
-              <span className="text-body-sm text-ink-muted italic">No skills selected yet. Select or type below.</span>
-            ) : (
-              skills.map((s) => (
-                <span
-                  key={s}
-                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-surface border border-edge text-body-sm font-bold text-ink shadow-card"
-                >
-                  <span>{s}</span>
-                  <button
-                    type="button"
-                    onClick={() => removeSkill(s)}
-                    className="p-0.5 text-ink-muted hover:text-status-rejected transition-colors cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </span>
-              ))
-            )}
-          </div>
-
-          {/* Custom Skill Input */}
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={customSkill}
-              onChange={(e) => setCustomSkill(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  addSkill(customSkill);
-                }
-              }}
-              placeholder="Type a skill and press enter (e.g. Next.js, Kubernetes)"
-              className="input flex-1"
-            />
-            <button
-              type="button"
-              onClick={() => addSkill(customSkill)}
-              disabled={!customSkill.trim()}
-              className="btn btn-primary min-h-[44px]"
+          <div className="p-4 rounded-xl bg-surface-sunken border border-edge text-body-sm text-ink-secondary flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <p>
+              Skills are now automatically imported and computed from your GitHub repositories.
+            </p>
+            <Link
+              to="/github"
+              className="btn btn-secondary text-xs font-bold shrink-0 self-start sm:self-center inline-flex items-center gap-1.5"
             >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Add</span>
-            </button>
-          </div>
-
-          {/* Suggestions */}
-          <div className="space-y-2 pt-1">
-            <span className="text-label-sm font-bold text-ink-muted uppercase tracking-wider">
-              Quick Suggestions
-            </span>
-            <div className="flex flex-wrap gap-1.5">
-              {COMMON_SKILLS.filter((s) => !skills.includes(s)).slice(0, 14).map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => addSkill(s)}
-                  className="px-2.5 py-1 rounded-lg bg-surface-sunken border border-edge hover:border-brand hover:text-brand text-ink-secondary text-body-sm font-medium transition-colors cursor-pointer min-h-[44px]"
-                >
-                  + {s}
-                </button>
-              ))}
-            </div>
+              <span>Manage GitHub Connection</span>
+              <ChevronRight size={14} />
+            </Link>
           </div>
         </div>
 

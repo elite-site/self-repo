@@ -336,6 +336,12 @@ router.get('/skills', async (req: Request, res: Response) => {
 });
 
 router.put('/skills', async (req: Request, res: Response) => {
+  if (env.FEATURE_GITHUB_PORTFOLIO) {
+    return res.status(403).json({
+      error: 'FORBIDDEN',
+      message: 'Skills are now managed via your GitHub connection.',
+    });
+  }
   try {
     const studentId = (req as any).studentId;
     const { skillIds, skillNames } = req.body;

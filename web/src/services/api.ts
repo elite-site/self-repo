@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { PublicIntroVideo, StudentProfile } from '../types';
+import { PublicIntroVideo, StudentProfile, GithubStatusResponse, GithubRepoItem, StudentPortfolioResponse } from '../types';
 
 function getApiBaseUrl(): string {
   if (typeof window !== 'undefined') {
@@ -599,6 +599,36 @@ export const api = {
 
   // Announcements
   async getAnnouncement(id: string) { const res = await client.get(`/student/announcements/${encodeURIComponent(id)}`); return res.data; },
+
+  // GitHub Integration & Portfolio
+  async getGithubStatus(): Promise<GithubStatusResponse> {
+    const res = await client.get('/student/github');
+    return res.data;
+  },
+  async connectGithub(): Promise<{ url: string }> {
+    const res = await client.post('/student/github/connect');
+    return res.data;
+  },
+  async syncGithub(): Promise<{ message?: string; status?: string; nextSyncAllowedAt?: string }> {
+    const res = await client.post('/student/github/sync');
+    return res.data;
+  },
+  async updateShowcase(repoIds: string[]): Promise<{ success: boolean; showcased?: GithubRepoItem[] }> {
+    const res = await client.put('/student/github/showcase', { repoIds });
+    return res.data;
+  },
+  async disconnectGithub(): Promise<{ success: boolean }> {
+    const res = await client.delete('/student/github');
+    return res.data;
+  },
+  async snoozeGithubReminder(): Promise<{ success: boolean; snoozedUntil?: string }> {
+    const res = await client.post('/student/github/reminder/snooze');
+    return res.data;
+  },
+  async getStudentPortfolio(): Promise<StudentPortfolioResponse> {
+    const res = await client.get('/student/portfolio');
+    return res.data;
+  },
 
   // Public (in-memory cached for instant navigation without loading spinners)
   async getPublicStudents(params?: any) {

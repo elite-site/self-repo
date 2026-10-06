@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
 import { importRoster } from '../scripts/import-roster';
 import { INTERNAL_EVENT_ID, INTERNAL_EVENT_SLUG } from '../src/config/constants';
+import { seedSkills } from './seedSkillsData';
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
@@ -64,6 +65,7 @@ async function main() {
   console.log(`  ✓ ${blankCount} students have no email yet (kept NULL — locked out of SSO until re-import)`);
 
   await seedAdmin();
+  await seedSkills(prisma);
 }
 
 main()

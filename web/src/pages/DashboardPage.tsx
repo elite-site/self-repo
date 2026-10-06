@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
@@ -10,6 +10,7 @@ import {
   ExternalLink,
   FileText,
   FolderOpen,
+  Github,
   Plus,
   User,
   Users,
@@ -28,6 +29,7 @@ import {
   EventRegistration,
   VotingCampaign,
   Notification,
+  GithubStatusResponse,
 } from '../types';
 import { Card } from '../components/ui/Card';
 import { ProgressBar } from '../components/ui/ProgressBar';
@@ -373,6 +375,42 @@ export const DashboardPage: React.FC = () => {
     navigateToNotification(destination, navigate);
   };
 
+  const {
+    data: githubStatus,
+    refetch: refetchGithubStatus,
+  } = useQuery<GithubStatusResponse>({
+    queryKey: ['dashboard', 'githubStatus'],
+    queryFn: () => api.getGithubStatus(),
+    staleTime: 60_000,
+  });
+
+  const [githubBannerDismissed, setGithubBannerDismissed] = useState(false);
+
+  const isReminderSnoozed = useMemo(() => {
+    if (!githubStatus) return false;
+    if (githubStatus.reminderSnoozed) return true;
+    if (githubStatus.reminderSnoozedUntil) {
+      return new Date(githubStatus.reminderSnoozedUntil).getTime() > Date.now();
+    }
+    return false;
+  }, [githubStatus]);
+
+  const showGithubBanner =
+    !githubBannerDismissed &&
+    githubStatus &&
+    !githubStatus.connected &&
+    !isReminderSnoozed;
+
+  const handleSnoozeGithub = async () => {
+    setGithubBannerDismissed(true);
+    try {
+      await api.snoozeGithubReminder();
+      refetchGithubStatus();
+    } catch {
+      // Optimistic dismiss remains active
+    }
+  };
+
   const shouldReduce = useReducedMotion();
   // §6.2 "Animation Details": one section per 100ms, greeting first. The
   // reduced pair drops both the stagger and the travel, so nothing arrives
@@ -557,6 +595,43 @@ export const DashboardPage: React.FC = () => {
           </Link>
         )}
       </motion.header>
+
+      {showGithubBanner && (
+        <motion.div variants={staggerItem}>
+          <div className="relative overflow-hidden rounded-2xl border border-brand/20 bg-brand-soft p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
+            <div className="flex items-start gap-3.5">
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-surface text-ink shadow-sm">
+                <Github size={20} />
+              </span>
+              <div className="space-y-0.5">
+                <p className="font-heading text-label-md font-bold text-ink">
+                  Build your portfolio with GitHub
+                </p>
+                <p className="text-body-sm text-ink-secondary">
+                  Connect your GitHub to showcase your repositories and skills automatically on your portfolio.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2.5 shrink-0 self-end sm:self-center">
+              <button
+                type="button"
+                onClick={handleSnoozeGithub}
+                className="btn btn-ghost px-3 py-1.5 text-xs text-ink-secondary hover:text-ink min-h-[38px]"
+              >
+                Remind me later
+              </button>
+              <Link
+                to="/github"
+                className="btn btn-primary px-4 py-1.5 text-xs font-bold min-h-[38px] inline-flex items-center gap-1.5"
+              >
+                <Github size={14} />
+                <span>Connect GitHub</span>
+              </Link>
+            </div>
+          </div>
+        </motion.div>
+      )}
 
       {profileError && (
         <motion.div variants={staggerItem}>

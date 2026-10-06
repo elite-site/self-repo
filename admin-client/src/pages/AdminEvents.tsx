@@ -437,7 +437,7 @@ const DeleteEventDialog: React.FC<{
       if (data?.error === 'CONFIRMATION_REQUIRED') {
         setCounts(data.dependents || {});
       } else {
-        setError("Couldn't delete this event. Nothing was deleted.");
+        setError(data?.message || "Couldn't delete this event. Nothing was deleted.");
       }
     } finally {
       setBusy(false);

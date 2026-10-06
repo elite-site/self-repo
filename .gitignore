@@ -3,6 +3,8 @@ dist/
 /backend/public/
 .env
 .env.local
+*.env
+git.env
 storage/
 .pgdata/
 .local-pg/

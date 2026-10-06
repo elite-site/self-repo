@@ -249,3 +249,68 @@ export interface Announcement {
   createdAt: string;
   createdBy?: string;
 }
+
+export type GithubSyncStatus = 'IDLE' | 'QUEUED' | 'RUNNING' | 'FAILED';
+
+export interface GithubAccountInfo {
+  id?: string;
+  login: string;
+  avatarUrl?: string | null;
+  connectedAt: string;
+  lastSyncedAt?: string | null;
+  nextSyncAllowedAt?: string | null;
+  syncStatus: GithubSyncStatus;
+  syncError?: string | null;
+  manualSyncCountToday?: number;
+}
+
+export interface GithubRepoItem {
+  id: string;
+  githubRepoId?: string | number;
+  fullName: string;
+  name: string;
+  description?: string | null;
+  htmlUrl: string;
+  isFork: boolean;
+  primaryLanguage?: string | null;
+  topics: string[];
+  stars: number;
+  githubCreatedAt?: string | null;
+  pushedAt?: string | null;
+  languages?: Record<string, number>;
+  commitCount: number;
+  isShowcased: boolean;
+  showcaseRank?: number | null;
+}
+
+export interface GithubSkillItem {
+  id: string;
+  skillId?: string;
+  name: string;
+  category?: string | null;
+  repoCount: number;
+  totalBytes?: number | string;
+  lastEvidenceAt?: string | null;
+}
+
+export interface GithubStatusResponse {
+  connected: boolean;
+  account?: GithubAccountInfo | null;
+  repos?: GithubRepoItem[];
+  showcase?: GithubRepoItem[];
+  skills?: GithubSkillItem[];
+  reminderSnoozed?: boolean;
+  reminderSnoozedUntil?: string | null;
+  nextSyncAllowedAt?: string | null;
+}
+
+export interface StudentPortfolioResponse {
+  connected: boolean;
+  account?: GithubAccountInfo | null;
+  repos?: GithubRepoItem[];
+  showcased?: GithubRepoItem[];
+  skills?: GithubSkillItem[];
+  legacyProjects?: Project[];
+  student?: StudentProfile;
+}
+

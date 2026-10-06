@@ -37,6 +37,94 @@ function assertSafeLink(field: string, value: unknown): string | { error: string
 const router = Router();
 router.use(requireStudentAuth);
 
+/**
+ * GET /api/student/portfolio
+ * Unified portfolio view: returns showcased GitHub repos + computed skills if GitHub connected,
+ * falling back to legacy manual projects and student skills if not connected.
+ */
+router.get('/', async (req: Request, res: Response) => {
+  try {
+    const studentId = (req as any).studentId;
+
+    const githubAccount = await prisma.githubAccount.findUnique({
+      where: { studentId },
+    });
+
+    const isConnected = !!githubAccount;
+
+    if (isConnected) {
+      const [showcasedRepos, computedSkills] = await Promise.all([
+        prisma.githubRepo.findMany({
+          where: { studentId, isShowcased: true, removedFromGithub: false },
+          orderBy: { showcaseRank: 'asc' },
+        }),
+        prisma.githubStudentSkill.findMany({
+          where: { studentId },
+          include: { skill: true },
+          orderBy: [{ repoCount: 'desc' }, { totalBytes: 'desc' }],
+        }),
+      ]);
+
+      if (showcasedRepos.length > 0 || computedSkills.length > 0) {
+        return res.json({
+          source: 'GITHUB',
+          connected: true,
+          githubAccount: {
+            login: githubAccount.login,
+            avatarUrl: githubAccount.avatarUrl,
+            lastSyncedAt: githubAccount.lastSyncedAt,
+          },
+          showcasedRepos: showcasedRepos.map((r) => ({
+            ...r,
+            githubRepoId: String(r.githubRepoId),
+          })),
+          skills: computedSkills.map((s) => ({
+            ...s,
+            totalBytes: String(s.totalBytes),
+          })),
+        });
+      }
+    }
+
+    // Fallback to legacy projects and manual profile skills
+    const [projects, profile] = await Promise.all([
+      prisma.project.findMany({
+        where: { studentId },
+        orderBy: { displayOrder: 'asc' },
+        take: 100,
+      }),
+      prisma.studentProfile.findUnique({
+        where: { studentId },
+        include: {
+          skills: {
+            include: { skill: true },
+          },
+        },
+      }),
+    ]);
+
+    return res.json({
+      source: 'LEGACY',
+      connected: isConnected,
+      githubAccount: githubAccount
+        ? {
+            login: githubAccount.login,
+            avatarUrl: githubAccount.avatarUrl,
+            lastSyncedAt: githubAccount.lastSyncedAt,
+          }
+        : null,
+      projects: projects.map((p) => ({
+        ...p,
+        techStack: p.technologies,
+        videoUrl: p.driveVideoUrl,
+      })),
+      skills: profile?.skills || [],
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+  }
+});
+
 // --- Projects ---
 
 router.get('/projects', async (req: Request, res: Response) => {

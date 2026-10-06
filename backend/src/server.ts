@@ -1,6 +1,11 @@
 import dns from 'dns';
 dns.setDefaultResultOrder('ipv4first');
 
+// Safely serialize BigInt values in JSON responses throughout Express
+(BigInt.prototype as any).toJSON = function () {
+  return this.toString();
+};
+
 import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
@@ -19,6 +24,7 @@ import publicVideoRoutes from './routes/public.videos.routes';
 import studentRoutes from './routes/student.routes';
 import studentProfileRoutes from './routes/student.profile.routes';
 import studentPortfolioRoutes from './routes/student.portfolio.routes';
+import studentGithubRoutes from './routes/student.github.routes';
 import studentEventsRoutes from './routes/student.events.routes';
 import studentInteractionsRoutes from './routes/student.interactions.routes';
 import adminAuthRoutes from './routes/admin.auth.routes';
@@ -26,6 +32,7 @@ import adminApiRoutes from './routes/admin.api.routes';
 import adminPortalRoutes from './routes/admin.portal.routes';
 import adminAcademicYearRoutes from './routes/admin.academic-year.routes';
 import { startAnnouncementScheduler } from './jobs/announcementScheduler';
+import { startGithubSyncScheduler } from './jobs/githubSyncScheduler';
 import { mountFrontend } from './config/staticAssets';
 
 const app = express();
@@ -189,6 +196,7 @@ app.use('/api/public/videos', publicVideoRoutes);   // approved + published intr
 app.use('/api/student', studentRoutes);                         // existing: SSO, me, video upload
 app.use('/api/student/profile', studentProfileRoutes);          // Phase 1: profile
 app.use('/api/student/portfolio', studentPortfolioRoutes);      // Phase 2: projects/achievements/certs
+app.use('/api/student/github', studentGithubRoutes);            // Phase 2: GitHub portfolio & sync
 app.use('/api/student/events', studentEventsRoutes);            // Phase 4: events
 app.use('/api/student', studentInteractionsRoutes);             // Phase 5: voting, notifications, registrations, teams
 
@@ -327,6 +335,9 @@ if (process.env.NODE_ENV !== 'test') {
 
     // Start background announcement scheduler
     startAnnouncementScheduler();
+
+    // Start background GitHub sync scheduler
+    startGithubSyncScheduler();
 
     // Run backlog auto-approval migration only when explicitly enabled via env var
     if (process.env.AUTO_MIGRATE_PENDING === 'true') {
