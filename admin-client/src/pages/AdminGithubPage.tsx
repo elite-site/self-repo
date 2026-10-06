@@ -1,12 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { adminApi } from '../services/api';
 import {
-  GitBranch,
   RefreshCw,
   Search,
   AlertCircle,
   CheckCircle2,
-  Clock,
   ExternalLink,
   Filter,
   Users,
