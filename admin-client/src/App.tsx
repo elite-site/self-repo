@@ -35,6 +35,7 @@ const RolesPermissions = React.lazy(() => import('./pages/RolesPermissions').the
 const AuditLogs = React.lazy(() => import('./pages/AuditLogs').then((m) => ({ default: m.AuditLogs })));
 const Settings = React.lazy(() => import('./pages/Settings').then((m) => ({ default: m.Settings })));
 const StudentDetail = React.lazy(() => import('./pages/StudentDetail').then((m) => ({ default: m.StudentDetail })));
+const AdminGithubPage = React.lazy(() => import('./pages/AdminGithubPage').then((m) => ({ default: m.AdminGithubPage })));
 
 const PageLoadingFallback: React.FC = () => (
   <BrandedLoading message="Loading Module" fullScreen={false} />
@@ -233,7 +234,7 @@ const ProtectedLayout: React.FC = () => {
 
   // Extract tab from path: /admin/dashboard -> dashboard, /admin -> dashboard
   const pathTabs: AdminTab[] = [
-    'dashboard', 'submissions', 'students', 'activity', 'moderation',
+    'dashboard', 'submissions', 'students', 'github', 'activity', 'moderation',
     'events', 'event-registrations', 'voting', 'voting-results',
     'communications', 'email-automation', 'email-history', 'analytics',
     'exports', 'storage', 'roles', 'audit-logs', 'settings'
@@ -308,6 +309,7 @@ const router = createBrowserRouter([
       { path: 'submissions', element: <Navigate to="/admin/moderation" replace /> },
       { path: 'students', element: <StudentsPage /> },
       { path: 'students/:studentId', element: <StudentsPage /> },
+      { path: 'github', element: <AdminGithubPage /> },
       { path: 'activity', element: <ActivityPage /> },
       { path: 'moderation', element: <Moderation /> },
       { path: 'events', element: <AdminEvents /> },

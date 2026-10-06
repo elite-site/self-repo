@@ -5,6 +5,7 @@ services:
     rootDir: backend
     buildCommand: npm install && npm run render:build
     startCommand: npm start
+    plan: free # Recommendation: Upgrade to starter ($7/mo) for persistent background sync cron and eliminating 50s cold boots
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV
@@ -29,3 +30,14 @@ services:
         sync: false
       - key: ADMIN_PASSWORD_HASH
         sync: false
+      - key: FEATURE_GITHUB_PORTFOLIO
+        value: "true"
+      - key: GITHUB_CLIENT_ID
+        sync: false
+      - key: GITHUB_CLIENT_SECRET
+        sync: false
+      - key: GITHUB_API_TOKEN
+        sync: false
+      - key: INTERNAL_SYNC_SECRET
+        sync: false
+

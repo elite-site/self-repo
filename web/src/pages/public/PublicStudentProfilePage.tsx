@@ -12,6 +12,7 @@ import { safeUrl } from '../../utils/safeUrl';
 import { LeetCodeIcon, CodeChefIcon } from '../../components/icons/PlatformIcons';
 import { Skeleton, SkeletonText } from '../../components/ui/Skeleton';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { ReadmeExcerptView } from '../../components/ReadmeExcerptView';
 import {
   ArrowLeft,
   Github,
@@ -35,6 +36,8 @@ import {
   ChevronUp,
   Code2,
   CheckCircle2,
+  Star,
+  GitFork,
 } from 'lucide-react';
 
 interface PublicProfileProps {
@@ -73,24 +76,19 @@ interface PublicProject {
   videoUrl?: string | null;
   status?: string | null;
   isPublic?: boolean | null;
+  readmeExcerpt?: string | null;
+  stars?: number | null;
+  primaryLanguage?: string | null;
+  isFork?: boolean | null;
+  source?: 'GITHUB' | 'MANUAL';
 }
 
-interface GithubSkill {
+interface PublicGithubSkill {
+  id: string;
+  skillId: string;
   name: string;
   category?: string | null;
-  repoCount?: number | null;
-  totalBytes?: string | null;
-}
-
-interface GithubProject {
-  id: string;
-  title: string;
-  description?: string | null;
-  githubUrl?: string | null;
-  techStack?: string[] | null;
-  topics?: string[] | null;
-  stars?: number | null;
-  showcaseRank?: number | null;
+  repoCount: number;
 }
 
 interface PublicAchievement {
@@ -135,6 +133,8 @@ interface PublicStudent {
   email?: string | null;
   profile?: PublicProfileFields | null;
   projects?: PublicProject[] | null;
+  githubProjects?: PublicProject[] | null;
+  githubSkills?: PublicGithubSkill[] | null;
   achievements?: PublicAchievement[] | null;
   certificates?: PublicCertificate[] | null;
   resumes?: PublicResume[] | null;
@@ -171,11 +171,33 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
 
   useEffect(() => {
     if (!rollNo) return;
-    setLoading(true);
+    const cacheKey = `student_profile_${rollNo}`;
+    const cached = sessionStorage.getItem(cacheKey);
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        setStudent(parsed);
+        setLoading(false);
+      } catch {
+        // invalid cache entry, proceed to fetch
+      }
+    } else {
+      setLoading(true);
+    }
+
     api
       .getPublicStudent(rollNo)
-      .then((data) => setStudent(data as PublicStudent))
-      .catch(() => setStudent(null))
+      .then((data) => {
+        setStudent(data as PublicStudent);
+        try {
+          sessionStorage.setItem(cacheKey, JSON.stringify(data));
+        } catch {
+          // sessionStorage quota exceeded, safely ignore
+        }
+      })
+      .catch(() => {
+        if (!cached) setStudent(null);
+      })
       .finally(() => setLoading(false));
   }, [rollNo]);
 
@@ -347,22 +369,27 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
     .map((word) => word[0]?.toUpperCase())
     .join('') || 'IT';
 
+  const PLACEHOLDER_REGEX = /fill personal data of yours/i;
+
   const profile = student.profile || {};
-  const profileSkills: Array<PublicProfileSkill | string> = profile.skills || [];
-  const githubSkills: GithubSkill[] = student.githubSkills || [];
-  // GitHub-computed skills take precedence; fall back to manually entered profile skills
-  const skillsList: Array<PublicProfileSkill | string | GithubSkill> =
-    githubSkills.length > 0 ? githubSkills : profileSkills;
-  const manualProjects = (student.projects || []).filter((p) => (!p.status || p.status === 'APPROVED') && (p.isPublic !== false));
-  const githubProjects: GithubProject[] = student.githubProjects || [];
-  // GitHub showcased repos appear after manual approved projects
-  const projects: Array<PublicProject | GithubProject> = [...manualProjects, ...githubProjects];
+  const rawBio = profile.biography || profile.bio || '';
+  const bio = PLACEHOLDER_REGEX.test(rawBio) ? '' : rawBio.trim();
+  const rawSpecialQualities = profile.specialQualities || '';
+  const specialQualities = PLACEHOLDER_REGEX.test(rawSpecialQualities) ? '' : rawSpecialQualities.trim();
+
+  const skillsList = profile.skills || [];
+  const githubSkills = student.githubSkills || [];
+
+  const manualProjects = (student.projects || [])
+    .filter((p) => (!p.status || p.status === 'APPROVED') && (p.isPublic !== false))
+    .map((p) => ({ ...p, source: 'MANUAL' as const }));
+  const githubProjects = (student.githubProjects || []).map((p) => ({ ...p, source: 'GITHUB' as const }));
+  const allProjects = [...manualProjects, ...githubProjects];
   const achievements = student.achievements || [];
   const certificates = student.certificates || [];
   const resume = (student.resumes || [])[0] || null;
   const hasResume = Boolean(resume);
   const introVideo = student.introVideo || null;
-  const bio = profile.biography || profile.bio || '';
   const photo = profile.viewUrl || profile.photoUrl;
 
   const rawResumeHref = resume?.viewUrl || resume?.fileUrl ? `${resolveMediaUrl(resume?.viewUrl || resume?.fileUrl || '')}${
@@ -697,18 +724,20 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
             {/* Left: About Me & Features */}
             <div className="lg:col-span-6 space-y-6">
-              <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 p-6 backdrop-blur-sm space-y-3">
-                <h3 className="font-heading text-base font-bold text-white">About Me</h3>
-                <p className="text-sm sm:text-base text-slate-300 leading-relaxed whitespace-pre-line">
-                  {bio || <span className="text-slate-500 italic">No biography provided yet.</span>}
-                </p>
-              </div>
+              {bio ? (
+                <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 p-6 backdrop-blur-sm space-y-3">
+                  <h3 className="font-heading text-base font-bold text-white">About Me</h3>
+                  <p className="text-sm sm:text-base text-slate-300 leading-relaxed whitespace-pre-line">
+                    {bio}
+                  </p>
+                </div>
+              ) : null}
 
               {/* Special Qualities */}
-              {profile.specialQualities ? (
+              {specialQualities ? (
                 <div className="rounded-xl border border-slate-800/80 bg-slate-900/50 p-4 space-y-2">
                   <h4 className="text-xs font-bold text-white uppercase tracking-wide">Special Qualities</h4>
-                  <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-line">{profile.specialQualities}</p>
+                  <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-line">{specialQualities}</p>
                 </div>
               ) : null}
             </div>
@@ -770,24 +799,48 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
             <h2 className="mt-1 font-heading text-2xl sm:text-3xl font-bold tracking-tight text-white">Skills & Technologies</h2>
           </div>
 
-          {skillsList.length > 0 ? (
-            <div className="flex flex-wrap gap-2.5">
-              {skillsList.map((entry, index) => {
-                const label =
-                  typeof entry === 'string'
-                    ? entry
-                    : entry.skill?.name || entry.name || '';
-                if (!label) return null;
-                return (
-                  <span
-                    key={`${label}-${index}`}
-                    className="inline-flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/70 px-3.5 py-2 text-xs sm:text-sm font-medium text-slate-200 shadow-sm hover:border-rose-500/50 hover:bg-slate-800/80 hover:-translate-y-0.5 transition-all duration-200 cursor-default"
-                  >
-                    <Code2 size={14} className="text-rose-400 shrink-0" />
-                    <span>{label}</span>
-                  </span>
-                );
-              })}
+          {skillsList.length > 0 || githubSkills.length > 0 ? (
+            <div className="space-y-4">
+              {skillsList.length > 0 && (
+                <div className="flex flex-wrap gap-2.5">
+                  {skillsList.map((entry, index) => {
+                    const label =
+                      typeof entry === 'string'
+                        ? entry
+                        : entry.skill?.name || entry.name || '';
+                    if (!label) return null;
+                    return (
+                      <span
+                        key={`${label}-${index}`}
+                        className="inline-flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/70 px-3.5 py-2 text-xs sm:text-sm font-medium text-slate-200 shadow-sm hover:border-rose-500/50 hover:bg-slate-800/80 hover:-translate-y-0.5 transition-all duration-200 cursor-default"
+                      >
+                        <Code2 size={14} className="text-rose-400 shrink-0" />
+                        <span>{label}</span>
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+
+              {githubSkills.length > 0 && (
+                <div className="pt-2">
+                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">Verified from GitHub Activity</span>
+                  <div className="flex flex-wrap gap-2">
+                    {githubSkills.map((gs) => (
+                      <span
+                        key={gs.id || gs.skillId}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-1.5 text-xs font-medium text-slate-300"
+                      >
+                        <Github size={12} className="text-slate-400" />
+                        <span>{gs.name}</span>
+                        <span className="text-[10px] text-slate-400 bg-slate-800 px-1.5 py-0.2 rounded font-mono">
+                          {gs.repoCount} {gs.repoCount === 1 ? 'repo' : 'repos'}
+                        </span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <div className="rounded-xl border border-dashed border-slate-800 p-8 text-center text-slate-500 text-xs">
@@ -803,91 +856,105 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
             <h2 className="mt-1 font-heading text-2xl sm:text-3xl font-bold tracking-tight text-white">Featured Projects</h2>
           </div>
 
-          {(() => {
-            const sortedProjects = [...projects].sort((a, b) => {
-              if (typeof (a as any).displayOrder === 'number' && typeof (b as any).displayOrder === 'number') {
-                return (a as any).displayOrder - (b as any).displayOrder;
-              }
-              return new Date((b as any).createdAt || 0).getTime() - new Date((a as any).createdAt || 0).getTime();
-            });
-
-            return sortedProjects.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-fr">
-                {sortedProjects.map((project, index) => (
-                  <div
-                    key={project.id}
-                    className="w-full h-full rounded-2xl border border-slate-800/80 bg-slate-900/60 p-5 backdrop-blur-sm hover:border-rose-500/40 hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between shadow-sm print:break-inside-avoid print:border-slate-300"
-                  >
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div className="p-2 rounded-lg bg-rose-500/10 text-rose-400">
-                          <FolderGit2 size={18} />
-                        </div>
+          {allProjects.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-fr">
+              {allProjects.map((project, index) => (
+                <div
+                  key={project.id}
+                  className="w-full h-full rounded-2xl border border-slate-800/80 bg-slate-900/60 p-5 backdrop-blur-sm hover:border-rose-500/40 hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between shadow-sm print:break-inside-avoid print:border-slate-300"
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="p-2 rounded-lg bg-rose-500/10 text-rose-400">
+                        {project.source === 'GITHUB' ? <Github size={18} /> : <FolderGit2 size={18} />}
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        {project.source === 'GITHUB' && project.isFork && (
+                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full border border-slate-800 bg-slate-900 text-slate-400 inline-flex items-center gap-1">
+                            <GitFork size={10} /> Fork
+                          </span>
+                        )}
+                        {project.source === 'GITHUB' && typeof project.stars === 'number' && project.stars > 0 && (
+                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-300 inline-flex items-center gap-1">
+                            <Star size={10} /> {project.stars}
+                          </span>
+                        )}
                         <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border border-slate-800 bg-slate-950/60 text-slate-400">
-                          Project #{index + 1}
+                          {project.source === 'GITHUB' ? 'GitHub' : `Project #${index + 1}`}
                         </span>
                       </div>
-
-                      <div>
-                        <h3 className="font-heading text-base font-bold text-white tracking-tight line-clamp-1">
-                          {project.title}
-                        </h3>
-                        {project.description && (
-                          <p className="mt-1.5 text-xs text-slate-400 leading-relaxed line-clamp-3">
-                            {project.description}
-                          </p>
-                        )}
-                      </div>
-
-                      {project.techStack && project.techStack.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5 pt-1">
-                          {project.techStack.map((tech) => (
-                            <span
-                              key={tech}
-                              className="text-xs font-semibold px-2 py-0.5 rounded-md border border-slate-800 bg-slate-950/80 text-slate-300"
-                            >
-                              {tech}
-                            </span>
-                          ))}
-                        </div>
-                      )}
                     </div>
 
-                    {(safeUrl(project.githubUrl) || safeUrl(project.videoUrl)) && (
-                      <div className="mt-5 pt-3 border-t border-slate-800/80 flex items-center gap-3">
-                        {safeUrl(project.githubUrl) && (
-                          <a
-                            href={safeUrl(project.githubUrl)}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex min-h-[44px] items-center gap-1.5 py-2 px-1 text-xs font-semibold text-rose-400 hover:text-rose-300 transition-colors"
+                    <div>
+                      <h3 className="font-heading text-base font-bold text-white tracking-tight line-clamp-1">
+                        {project.title}
+                      </h3>
+                      {project.readmeExcerpt ? (
+                        <div className="mt-2 text-xs">
+                          <ReadmeExcerptView excerpt={project.readmeExcerpt} />
+                        </div>
+                      ) : project.description ? (
+                        <p className="mt-1.5 text-xs text-slate-400 leading-relaxed line-clamp-3">
+                          {project.description}
+                        </p>
+                      ) : null}
+                    </div>
+
+                    {project.techStack && project.techStack.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 pt-1">
+                        {project.techStack.map((tech) => (
+                          <span
+                            key={tech}
+                            className="text-xs font-semibold px-2 py-0.5 rounded-md border border-slate-800 bg-slate-950/80 text-slate-300"
                           >
-                            <Github size={13} />
-                            <span>Source</span>
-                          </a>
-                        )}
-                        {safeUrl(project.videoUrl) && (
-                          <a
-                            href={safeUrl(project.videoUrl)}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex min-h-[44px] items-center gap-1.5 py-2 px-1 text-xs font-semibold text-slate-300 hover:text-white transition-colors"
-                          >
-                            <ExternalLink size={13} />
-                            <span>Live Demo</span>
-                          </a>
-                        )}
+                            {tech}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {project.source === 'GITHUB' && project.primaryLanguage && !project.techStack?.length && (
+                      <div className="flex flex-wrap gap-1.5 pt-1">
+                        <span className="text-xs font-semibold px-2 py-0.5 rounded-md border border-slate-800 bg-slate-950/80 text-slate-300">
+                          {project.primaryLanguage}
+                        </span>
                       </div>
                     )}
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="rounded-xl border border-dashed border-slate-800 p-8 text-center text-slate-500 text-xs">
-                No portfolio projects published yet.
-              </div>
-            );
-          })()}
+
+                  {(safeUrl(project.githubUrl) || safeUrl(project.videoUrl)) && (
+                    <div className="mt-5 pt-3 border-t border-slate-800/80 flex items-center gap-3">
+                      {safeUrl(project.githubUrl) && (
+                        <a
+                          href={safeUrl(project.githubUrl)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex min-h-[44px] items-center gap-1.5 py-2 px-1 text-xs font-semibold text-rose-400 hover:text-rose-300 transition-colors"
+                        >
+                          <Github size={13} />
+                          <span>Source</span>
+                        </a>
+                      )}
+                      {safeUrl(project.videoUrl) && (
+                        <a
+                          href={safeUrl(project.videoUrl)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex min-h-[44px] items-center gap-1.5 py-2 px-1 text-xs font-semibold text-slate-300 hover:text-white transition-colors"
+                        >
+                          <ExternalLink size={13} />
+                          <span>Live Demo</span>
+                        </a>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-xl border border-dashed border-slate-800 p-8 text-center text-slate-500 text-xs">
+              No portfolio projects published yet.
+            </div>
+          )}
         </section>
 
         {/* ── 6. EDUCATION & TIMELINE ──────────────────────────────────── */}
@@ -981,7 +1048,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {/* Email Card */}
             {student.email && safeUrl(`mailto:${student.email}`) ? (
               <a
@@ -998,19 +1065,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
                   </p>
                 </div>
               </a>
-            ) : (
-              <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 p-5 backdrop-blur-sm space-y-2">
-                <div className="p-2 rounded-xl bg-rose-500/10 text-rose-400 w-fit">
-                  <Mail size={18} />
-                </div>
-                <div>
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Email</span>
-                  <p className="text-xs font-semibold text-white truncate mt-0.5">
-                    {student.email || 'Contact via portal'}
-                  </p>
-                </div>
-              </div>
-            )}
+            ) : null}
 
             {/* LinkedIn Card */}
             {safeUrl(profile.linkedinUrl) ? (
@@ -1030,19 +1085,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
                   </p>
                 </div>
               </a>
-            ) : (
-              <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 p-5 backdrop-blur-sm space-y-2">
-                <div className="p-2 rounded-xl bg-pink-500/10 text-pink-400 w-fit">
-                  <Linkedin size={18} />
-                </div>
-                <div>
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400">LinkedIn</span>
-                  <p className="text-xs font-semibold text-white truncate mt-0.5">
-                    Profile not linked
-                  </p>
-                </div>
-              </div>
-            )}
+            ) : null}
 
             {/* GitHub Card */}
             {safeUrl(profile.githubUrl) ? (
@@ -1062,19 +1105,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
                   </p>
                 </div>
               </a>
-            ) : (
-              <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 p-5 backdrop-blur-sm space-y-2">
-                <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-400 w-fit">
-                  <Github size={18} />
-                </div>
-                <div>
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400">GitHub</span>
-                  <p className="text-xs font-semibold text-white truncate mt-0.5">
-                    Profile not linked
-                  </p>
-                </div>
-              </div>
-            )}
+            ) : null}
 
             {/* Location Card */}
             <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 p-5 backdrop-blur-sm space-y-2">

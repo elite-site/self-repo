@@ -103,6 +103,7 @@ export const env = {
   GITHUB_SYNC_COOLDOWN_MIN: parseInt(process.env.GITHUB_SYNC_COOLDOWN_MIN || '15', 10),
   GITHUB_SYNC_DAILY_CAP: parseInt(process.env.GITHUB_SYNC_DAILY_CAP || '5', 10),
   FEATURE_GITHUB_PORTFOLIO: process.env.FEATURE_GITHUB_PORTFOLIO === 'true',
+  INTERNAL_SYNC_SECRET: process.env.INTERNAL_SYNC_SECRET || '',
 };
 
 // Every literal this codebase will fall back to. If a value used at runtime

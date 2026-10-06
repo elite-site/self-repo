@@ -4,7 +4,8 @@
   "buildCommand": "npm run --prefix web build",
   "outputDirectory": "web/dist",
   "installCommand": "npm install --prefix web",
-  "ignoreCommand": "git diff HEAD~1 --name-only | grep -qvE '^(backend|admin-client)/'",
+  "//": "Vercel ignoreCommand semantics: exit 0 skips build (quiet diff found no changes in web/ or shared/). Non-zero exits proceed with build.",
+  "ignoreCommand": "git diff --quiet HEAD~1 HEAD -- web shared",
   "rewrites": [
     {
       "source": "/(.*)",

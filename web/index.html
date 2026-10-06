@@ -44,6 +44,15 @@
         } catch (e) {
           document.documentElement.setAttribute('data-theme', 'light');
         }
+
+        // Fire a non-blocking health check to wake up sleeping backend on Render while JS bundle downloads
+        try {
+          var apiBase = window.__API_BASE__ || '';
+          if (!apiBase && window.location.hostname !== 'localhost') {
+            // In production, fallback to relative or configured API endpoint
+            fetch('/health', { mode: 'no-cors' }).catch(function() {});
+          }
+        } catch (e) {}
       })();
     </script>
   </head>

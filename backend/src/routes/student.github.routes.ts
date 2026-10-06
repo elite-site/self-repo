@@ -152,21 +152,18 @@ router.put('/showcase', async (req: Request, res: Response) => {
       });
     }
 
-    await prisma.$transaction(async (tx) => {
-      // Clear current showcase flags
-      await tx.githubRepo.updateMany({
+    await prisma.$transaction([
+      prisma.githubRepo.updateMany({
         where: { studentId },
         data: { isShowcased: false, showcaseRank: null },
-      });
-
-      // Set new showcase flags with rank
-      for (let i = 0; i < uniqueIds.length; i++) {
-        await tx.githubRepo.update({
-          where: { id: uniqueIds[i] },
+      }),
+      ...uniqueIds.map((id, i) =>
+        prisma.githubRepo.update({
+          where: { id },
           data: { isShowcased: true, showcaseRank: i + 1 },
-        });
-      }
-    }, { timeout: 30000 });
+        })
+      ),
+    ], { timeout: 30000 });
 
     const updated = await prisma.githubRepo.findMany({
       where: { studentId, isShowcased: true },

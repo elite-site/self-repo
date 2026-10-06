@@ -218,11 +218,12 @@ describe('PUT /api/student/github/showcase — validation', () => {
     expect(res.body.error).toBe('INVALID_SHOWCASE_COUNT');
   });
 
-  it('rejects 6 ids with 400', async () => {
+  it('rejects 31 ids with 400', async () => {
+    const ids = Array.from({ length: 31 }, (_, i) => `id_${i}`);
     const res = await request(app)
       .put('/api/student/github/showcase')
       .set('Cookie', `pc_student_session=${tokenA}`)
-      .send({ repoIds: ['a', 'b', 'c', 'd', 'e', 'f'] });
+      .send({ repoIds: ids });
 
     expect(res.status).toBe(400);
     expect(res.body.error).toBe('INVALID_SHOWCASE_COUNT');
@@ -380,3 +381,55 @@ describe('Cross-student isolation — GET /api/student/github', () => {
     );
   });
 });
+
+describe('Student Portfolio — GET /api/student/portfolio', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('returns showcasedRepos key when GitHub is connected and has showcased repositories', async () => {
+    mock(prisma.githubAccount.findUnique).mockResolvedValue({
+      id: 'gh_acc_1',
+      studentId: studentA.studentId,
+      login: 'alice-gh',
+      avatarUrl: 'https://avatars.githubusercontent.com/u/12345',
+      lastSyncedAt: new Date('2026-10-01T12:00:00Z'),
+    });
+
+    mock(prisma.githubRepo.findMany).mockResolvedValue([
+      {
+        id: 'repo_1',
+        studentId: studentA.studentId,
+        githubRepoId: BigInt(12345),
+        name: 'alice-cool-project',
+        fullName: 'alice-gh/alice-cool-project',
+        description: 'A great repo',
+        readmeExcerpt: '# Overview\nA great project.',
+        htmlUrl: 'https://github.com/alice-gh/alice-cool-project',
+        isShowcased: true,
+        showcaseRank: 1,
+        stars: 10,
+        commitCount: 25,
+        isFork: false,
+        primaryLanguage: 'TypeScript',
+        languages: { TypeScript: 5000 },
+        removedFromGithub: false,
+      },
+    ]);
+
+    mock(prisma.githubStudentSkill.findMany).mockResolvedValue([]);
+
+    const res = await request(app)
+      .get('/api/student/portfolio')
+      .set('Cookie', `pc_student_session=${tokenA}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.connected).toBe(true);
+    expect(res.body.source).toBe('GITHUB');
+    expect(res.body).toHaveProperty('showcasedRepos');
+    expect(Array.isArray(res.body.showcasedRepos)).toBe(true);
+    expect(res.body.showcasedRepos.length).toBe(1);
+    expect(res.body.showcasedRepos[0].name).toBe('alice-cool-project');
+  });
+});
+

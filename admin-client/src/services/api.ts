@@ -554,6 +554,27 @@ export const adminApi = {
     const res = await client.post(`/admin/api/portal/change-requests/${id}/reject`, { reason });
     return res.data;
   },
+
+  // GitHub Management
+  async getGithubOverview(params?: { search?: string; page?: number; limit?: number }): Promise<any> {
+    const res = await client.get('/admin/api/portal/github/overview', { params });
+    return res.data;
+  },
+
+  async getGithubLogs(params?: { status?: string; filter?: string }): Promise<any[]> {
+    const res = await client.get('/admin/api/portal/github/logs', { params });
+    return res.data;
+  },
+
+  async resyncStudentGithub(studentId: string): Promise<any> {
+    const res = await client.post(`/admin/api/portal/github/resync/${studentId}`);
+    return res.data;
+  },
+
+  async getGithubShowcasedProjects(params?: { search?: string; page?: number; limit?: number }): Promise<any> {
+    const res = await client.get('/admin/api/portal/github/projects', { params });
+    return res.data;
+  },
 };
 
 export const api = adminApi;

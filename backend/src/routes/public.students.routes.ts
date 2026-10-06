@@ -226,19 +226,36 @@ const loadPublicProfile = (rollNo: string) =>
         orderBy: { publishedAt: 'desc' },
         select: { id: true, submittedAt: true, publishedAt: true, sizeMb: true, driveFileId: true, status: true, isPublic: true },
       },
-      githubStudentSkills: {
-        include: { skill: true },
-        orderBy: [{ repoCount: 'desc' }, { totalBytes: 'desc' }],
-        take: 30,
+      githubAccount: {
+        select: {
+          login: true,
+          avatarUrl: true,
+          lastSyncedAt: true,
+        },
       },
       githubRepos: {
-        where: { isShowcased: true, removedFromGithub: false, isFork: false },
+        where: { isShowcased: true, removedFromGithub: false },
         orderBy: { showcaseRank: 'asc' },
         take: 30,
         select: {
-          id: true, name: true, description: true, htmlUrl: true,
-          topics: true, languages: true, stars: true, showcaseRank: true,
+          id: true,
+          githubRepoId: true,
+          name: true,
+          description: true,
+          readmeExcerpt: true,
+          htmlUrl: true,
+          stars: true,
+          primaryLanguage: true,
+          languages: true,
+          commitCount: true,
+          isFork: true,
+          showcaseRank: true,
         },
+      },
+      githubSkills: {
+        include: { skill: true },
+        orderBy: [{ repoCount: 'desc' }, { totalBytes: 'desc' }],
+        take: 30,
       },
     }
   });
@@ -346,6 +363,30 @@ router.get('/:rollNo', async (req: Request, res: Response) => {
           techStack: p.technologies || [],
           videoUrl: p.driveVideoUrl || null,
         })),
+      githubAccount: student.githubAccount || null,
+      githubProjects: (student.githubRepos || []).map((r: any) => ({
+        id: r.id,
+        githubRepoId: String(r.githubRepoId),
+        title: r.name,
+        name: r.name,
+        description: r.description,
+        readmeExcerpt: r.readmeExcerpt || null,
+        githubUrl: r.htmlUrl,
+        stars: r.stars,
+        primaryLanguage: r.primaryLanguage,
+        languages: r.languages,
+        commitCount: r.commitCount,
+        isFork: r.isFork,
+        showcaseRank: r.showcaseRank,
+        source: 'GITHUB',
+      })),
+      githubSkills: (student.githubSkills || []).map((s: any) => ({
+        id: s.id,
+        skillId: s.skillId,
+        name: s.skill?.name || '',
+        category: s.skill?.category || null,
+        repoCount: s.repoCount,
+      })),
       certificates: student.certificates.map((c: any) => {
         const { fileDriveId: _f, ...rest } = c;
         const viewUrl = c.fileDriveId ? `/api/public/media/certificate/${c.id}` : null;

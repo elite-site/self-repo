@@ -997,6 +997,8 @@ model GithubRepo {
   stars             Int       @default(0)
   githubCreatedAt   DateTime?
   pushedAt          DateTime?
+  readmeExcerpt     String?
+  readmeFetchedAt   DateTime?
   languages         Json      @default("{}")
   dependencies      Json      @default("[]")
   commitCount       Int       @default(0)

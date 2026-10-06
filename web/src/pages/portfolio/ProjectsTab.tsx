@@ -27,6 +27,7 @@ import { Modal } from '../../components/ui/Modal';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { Card } from '../../components/ui/Card';
+import { ReadmeExcerptView } from '../../components/ReadmeExcerptView';
 import { ProjectBento } from '../../components/ProjectBento';
 
 /** The portal caps a portfolio at five projects; mirrored in the header count. */
@@ -145,9 +146,6 @@ export const ProjectsTab: React.FC = () => {
 
       if (portfolioRes.status === 'fulfilled') {
         setPortfolioData(portfolioRes.value);
-        if (portfolioRes.value.legacyProjects) {
-          setLegacyProjects(portfolioRes.value.legacyProjects);
-        }
       }
 
       if (projectsRes.status === 'fulfilled' && Array.isArray(projectsRes.value)) {
@@ -267,9 +265,10 @@ export const ProjectsTab: React.FC = () => {
   }
 
   const isGithubConnected = Boolean(portfolioData?.connected);
-  const showcasedRepos = portfolioData?.showcased || [];
+  const showcasedRepos = portfolioData?.showcasedRepos || portfolioData?.showcased || [];
   const computedSkills = portfolioData?.skills || [];
   const hasShowcasedRepos = isGithubConnected && showcasedRepos.length > 0;
+  const lastSynced = portfolioData?.githubAccount?.lastSyncedAt || portfolioData?.account?.lastSyncedAt;
 
   return (
     <div className="space-y-8">
@@ -280,13 +279,13 @@ export const ProjectsTab: React.FC = () => {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-edge pb-4">
             <div>
               <div className="flex items-center gap-2">
-                <span className="badge badge-brand inline-flex items-center gap-1.5 font-bold">
+                 <span className="badge badge-brand inline-flex items-center gap-1.5 font-bold">
                   <Github size={13} />
                   <span>Synced from GitHub</span>
                 </span>
-                {portfolioData?.account?.lastSyncedAt && (
+                {lastSynced && (
                   <span className="text-label-xs text-ink-muted">
-                    Updated {formatRelativeTime(portfolioData.account.lastSyncedAt)}
+                    Updated {formatRelativeTime(lastSynced)}
                   </span>
                 )}
               </div>
@@ -358,9 +357,12 @@ export const ProjectsTab: React.FC = () => {
                             )}
                           </div>
 
-                          <p className="text-body-sm text-ink-secondary mt-1">
-                            {repo.description || 'No description provided.'}
-                          </p>
+                          <div className="mt-1">
+                            <ReadmeExcerptView
+                              excerpt={repo.readmeExcerpt}
+                              fallbackDescription={repo.description}
+                            />
+                          </div>
                         </div>
                       </div>
 
@@ -440,11 +442,7 @@ export const ProjectsTab: React.FC = () => {
 
               <div className="flex flex-wrap gap-2 pt-1">
                 {computedSkills.map((skill) => {
-                  const bytesStr = formatBytes(skill.totalBytes);
-                  const evidence = [
-                    skill.repoCount ? `${skill.repoCount} repo${skill.repoCount > 1 ? 's' : ''}` : null,
-                    bytesStr || null,
-                  ].filter(Boolean).join(' • ');
+                  const evidence = skill.repoCount ? `${skill.repoCount} repo${skill.repoCount > 1 ? 's' : ''}` : null;
 
                   return (
                     <span

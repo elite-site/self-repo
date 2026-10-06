@@ -6,8 +6,8 @@ import { GithubSyncTrigger } from '@prisma/client';
 let isRunning = false;
 let started = false;
 
-async function tick(): Promise<void> {
-  if (isRunning) return;
+export async function tick(): Promise<{ processed: number }> {
+  if (isRunning) return { processed: 0 };
   isRunning = true;
 
   try {
@@ -26,15 +26,23 @@ async function tick(): Promise<void> {
       orderBy: { lastSyncedAt: 'asc' },
     });
 
+    let processed = 0;
     for (const account of accounts) {
+      // Add small jitter between staggered accounts
+      const jitterMs = Math.floor(Math.random() * 400) + 100;
+      await new Promise((res) => setTimeout(res, jitterMs));
+
       try {
         await githubSyncService.queueSync(account.studentId, GithubSyncTrigger.SCHEDULED);
+        processed++;
       } catch (syncErr) {
         console.warn(`[GitHubSyncScheduler] Failed to queue sync for student ${account.studentId}:`, syncErr);
       }
     }
+    return { processed };
   } catch (err) {
     console.error('[GitHubSyncScheduler] Periodic tick failed:', err);
+    return { processed: 0 };
   } finally {
     isRunning = false;
   }

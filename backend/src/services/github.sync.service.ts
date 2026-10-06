@@ -138,13 +138,29 @@ export class GithubSyncService {
     let apiCalls = 0;
     let logStatus: GithubSyncLogStatus = GithubSyncLogStatus.SUCCESS;
     let syncError: string | null = null;
+    let writesCount = 0;
 
     try {
-      // 1. Fetch public repositories
-      apiCalls++;
-      const githubRepos = await githubApiService.fetchUserPublicRepos(account.login);
-      reposSeen = githubRepos.length;
+      // 1. Fetch public repositories (prefer GraphQL with 1 API call per 100 repos, fallback to REST)
+      let githubRepos: any[] = [];
+      let usedGraphQL = false;
 
+      if (env.GITHUB_API_TOKEN) {
+        try {
+          apiCalls++;
+          githubRepos = await githubApiService.fetchUserReposGraphQL(account.login);
+          usedGraphQL = true;
+        } catch (gqlErr) {
+          console.warn(`[GitHubSync] GraphQL query failed for ${account.login}, falling back to REST:`, gqlErr);
+        }
+      }
+
+      if (!usedGraphQL) {
+        apiCalls++;
+        githubRepos = await githubApiService.fetchUserPublicRepos(account.login);
+      }
+
+      reposSeen = githubRepos.length;
       const fetchedRepoIds = new Set<string>();
 
       // Existing repos in DB for this student
@@ -153,25 +169,7 @@ export class GithubSyncService {
       });
       const existingRepoMap = new Map(existingRepos.map((r) => [String(r.githubRepoId), r]));
 
-      // Determine repos to fetch dependencies for:
-      // Top 5 showcased repos + top 15 most recently pushed repos
-      const showcasedRepoIds = new Set(
-        existingRepos.filter((r) => r.isShowcased).map((r) => String(r.githubRepoId))
-      );
-
-      const sortedByPush = [...githubRepos].sort((a, b) => {
-        const timeA = a.pushed_at ? new Date(a.pushed_at).getTime() : 0;
-        const timeB = b.pushed_at ? new Date(b.pushed_at).getTime() : 0;
-        return timeB - timeA;
-      });
-
-      const depCandidateIds = new Set<string>();
-      for (const r of sortedByPush.slice(0, 15)) {
-        depCandidateIds.add(String(r.id));
-      }
-      for (const id of showcasedRepoIds) {
-        depCandidateIds.add(id);
-      }
+      const writes: any[] = [];
 
       // 2. Process each repo
       for (const repoData of githubRepos) {
@@ -179,135 +177,147 @@ export class GithubSyncService {
         fetchedRepoIds.add(strId);
         const existing = existingRepoMap.get(strId);
 
-        // Fetch languages (with ETag caching)
-        let languages: Record<string, number> = (existing?.languages as Record<string, number>) || {};
-        let etag = existing?.etag || null;
+        // Date comparison via getTime()
+        const existingPushedTime = existing?.pushedAt ? new Date(existing.pushedAt).getTime() : 0;
+        const newPushedTime = repoData.pushed_at ? new Date(repoData.pushed_at).getTime() : 0;
+        const isUnchanged = existing && existingPushedTime === newPushedTime && existing.stars === repoData.stargazers_count;
 
-        try {
-          apiCalls++;
-          const langResult = await githubApiService.fetchRepoLanguages(account.login, repoData.name, etag);
-          if (!langResult.notModified && langResult.languages) {
-            languages = langResult.languages;
-            etag = langResult.etag || null;
-          }
-        } catch (err: any) {
-          if (err instanceof GithubRateLimitError) throw err;
-          // non-fatal for single repo
+        if (isUnchanged) {
+          continue; // Skip DB write for unchanged repos
         }
 
-        // Fetch dependencies if candidate
-        let dependencies: any[] = (existing?.dependencies as any[]) || [];
-        if (depCandidateIds.has(strId)) {
+        let languages = repoData.languages || (existing?.languages as Record<string, number>) || {};
+        let dependencies = repoData.dependencies || (existing?.dependencies as any[]) || [];
+        let commitCount = repoData.commitCount ?? existing?.commitCount ?? 0;
+        let lastCommitAt = repoData.lastCommitAt || existing?.lastCommitAt || null;
+        let etag = repoData.etag || existing?.etag || null;
+
+        // If not using GraphQL, fetch details sequentially as legacy fallback
+        if (!usedGraphQL) {
           try {
             apiCalls++;
-            const deps = await githubApiService.fetchRepoDependencies(account.login, repoData.name);
-            dependencies = deps;
+            const langResult = await githubApiService.fetchRepoLanguages(account.login, repoData.name, etag);
+            if (!langResult.notModified && langResult.languages) {
+              languages = langResult.languages;
+              etag = langResult.etag || null;
+            }
           } catch (err: any) {
             if (err instanceof GithubRateLimitError) throw err;
           }
         }
 
-        // Commit count
-        let commitCount = existing?.commitCount || 0;
-        let lastCommitAt: Date | null = existing?.lastCommitAt || null;
-        if (!existing || repoData.pushed_at !== existing.pushedAt?.toISOString()) {
-          try {
-            apiCalls++;
-            const commitStats = await githubApiService.fetchRepoCommitStats(account.login, repoData.name);
-            commitCount = commitStats.commitCount;
-            if (commitStats.lastCommitAt) lastCommitAt = commitStats.lastCommitAt;
-          } catch (err: any) {
-            if (err instanceof GithubRateLimitError) throw err;
-          }
-        }
-
-        // Upsert repo in DB
-        await prisma.githubRepo.upsert({
-          where: {
-            studentId_githubRepoId: {
+        writes.push(
+          prisma.githubRepo.upsert({
+            where: {
+              studentId_githubRepoId: {
+                studentId,
+                githubRepoId: BigInt(repoData.id),
+              },
+            },
+            update: {
+              fullName: repoData.full_name,
+              name: repoData.name,
+              description: repoData.description,
+              htmlUrl: repoData.html_url,
+              isFork: repoData.fork,
+              primaryLanguage: repoData.language,
+              topics: repoData.topics,
+              stars: repoData.stargazers_count,
+              githubCreatedAt: repoData.created_at ? new Date(repoData.created_at) : null,
+              pushedAt: repoData.pushed_at ? new Date(repoData.pushed_at) : null,
+              languages,
+              dependencies,
+              commitCount,
+              lastCommitAt,
+              readmeExcerpt: repoData.readmeExcerpt !== undefined ? repoData.readmeExcerpt : (existing?.readmeExcerpt || null),
+              readmeFetchedAt: repoData.readmeFetchedAt || existing?.readmeFetchedAt || null,
+              etag,
+              syncedAt: new Date(),
+              removedFromGithub: false,
+            },
+            create: {
               studentId,
               githubRepoId: BigInt(repoData.id),
+              fullName: repoData.full_name,
+              name: repoData.name,
+              description: repoData.description,
+              htmlUrl: repoData.html_url,
+              isFork: repoData.fork,
+              primaryLanguage: repoData.language,
+              topics: repoData.topics,
+              stars: repoData.stargazers_count,
+              githubCreatedAt: repoData.created_at ? new Date(repoData.created_at) : null,
+              pushedAt: repoData.pushed_at ? new Date(repoData.pushed_at) : null,
+              languages,
+              dependencies,
+              commitCount,
+              lastCommitAt,
+              readmeExcerpt: repoData.readmeExcerpt || null,
+              readmeFetchedAt: repoData.readmeFetchedAt || null,
+              etag,
+              syncedAt: new Date(),
+              removedFromGithub: false,
             },
-          },
-          update: {
-            fullName: repoData.full_name,
-            name: repoData.name,
-            description: repoData.description,
-            htmlUrl: repoData.html_url,
-            isFork: repoData.fork,
-            primaryLanguage: repoData.language,
-            topics: repoData.topics,
-            stars: repoData.stargazers_count,
-            githubCreatedAt: repoData.created_at ? new Date(repoData.created_at) : null,
-            pushedAt: repoData.pushed_at ? new Date(repoData.pushed_at) : null,
-            languages,
-            dependencies,
-            commitCount,
-            lastCommitAt,
-            etag,
-            syncedAt: new Date(),
-            removedFromGithub: false,
-          },
-          create: {
-            studentId,
-            githubRepoId: BigInt(repoData.id),
-            fullName: repoData.full_name,
-            name: repoData.name,
-            description: repoData.description,
-            htmlUrl: repoData.html_url,
-            isFork: repoData.fork,
-            primaryLanguage: repoData.language,
-            topics: repoData.topics,
-            stars: repoData.stargazers_count,
-            githubCreatedAt: repoData.created_at ? new Date(repoData.created_at) : null,
-            pushedAt: repoData.pushed_at ? new Date(repoData.pushed_at) : null,
-            languages,
-            dependencies,
-            commitCount,
-            lastCommitAt,
-            etag,
-            syncedAt: new Date(),
-            removedFromGithub: false,
-          },
-        });
+          })
+        );
       }
 
       // 3. Mark repos no longer returned by GitHub as removedFromGithub = true
       for (const existing of existingRepos) {
-        if (!fetchedRepoIds.has(String(existing.githubRepoId))) {
-          await prisma.githubRepo.update({
-            where: { id: existing.id },
-            data: {
-              removedFromGithub: true,
-              isShowcased: false,
-              showcaseRank: null,
-            },
-          });
+        if (!fetchedRepoIds.has(String(existing.githubRepoId)) && !existing.removedFromGithub) {
+          writes.push(
+            prisma.githubRepo.update({
+              where: { id: existing.id },
+              data: {
+                removedFromGithub: true,
+                isShowcased: false,
+                showcaseRank: null,
+              },
+            })
+          );
         }
       }
 
-      // 3b. First sync: automatically showcase the student's public, non-fork repos
-      // (newest first, max 30). Only runs when the student has no showcased repos yet,
-      // so a student's own showcase choices are never overwritten.
-      const showcasedCount = await prisma.githubRepo.count({
-        where: { studentId, isShowcased: true, removedFromGithub: false },
-      });
-      if (showcasedCount === 0) {
-        const autoRepos = await prisma.githubRepo.findMany({
-          where: { studentId, removedFromGithub: false, isFork: false },
-          orderBy: { pushedAt: { sort: 'desc', nulls: 'last' } },
-          take: 30,
-          select: { id: true },
+      writesCount = writes.length;
+
+      // Execute all pending writes in one batch transaction
+      if (writes.length > 0) {
+        await prisma.$transaction(writes);
+      }
+
+      // Auto-showcase on first sync if no showcased repos exist (prefer non-fork with >= 1 commit, up to 30)
+      const hasExistingShowcase = existingRepos.some((r) => r.isShowcased && !r.removedFromGithub);
+      if (!hasExistingShowcase) {
+        const activeRepos = await prisma.githubRepo.findMany({
+          where: { studentId, removedFromGithub: false },
         });
-        for (let i = 0; i < autoRepos.length; i++) {
-          await prisma.githubRepo.update({
-            where: { id: autoRepos[i].id },
-            data: { isShowcased: true, showcaseRank: i + 1 },
+
+        if (activeRepos.length > 0) {
+          const sortedCandidates = [...activeRepos].sort((a, b) => {
+            const qA = (!a.isFork && (a.commitCount || 0) >= 1) ? 1 : 0;
+            const qB = (!b.isFork && (b.commitCount || 0) >= 1) ? 1 : 0;
+            if (qA !== qB) return qB - qA;
+            if (b.stars !== a.stars) return b.stars - a.stars;
+            const tA = a.pushedAt ? new Date(a.pushedAt).getTime() : 0;
+            const tB = b.pushedAt ? new Date(b.pushedAt).getTime() : 0;
+            return tB - tA;
           });
+
+          const topToPick = sortedCandidates.slice(0, 30);
+          if (topToPick.length > 0) {
+            await prisma.$transaction(
+              topToPick.map((r, idx) =>
+                prisma.githubRepo.update({
+                  where: { id: r.id },
+                  data: { isShowcased: true, showcaseRank: idx + 1 },
+                })
+              )
+            );
+          }
         }
       }
 
-      // 4. Recompute student skills from active repositories
+      // 4. Recompute student skills from active non-fork repositories
       await this.recomputeStudentSkills(studentId);
 
       // 5. Update GithubAccount status
@@ -359,12 +369,14 @@ export class GithubSyncService {
       status: logStatus,
       reposSeen,
       apiCalls,
+      writesCount,
+      message: writesCount === 0 ? 'No changes' : undefined,
       error: syncError,
     };
   }
 
   /**
-   * Recompute skills for a student from their active GitHub repositories
+   * Recompute skills for a student from their active non-fork GitHub repositories
    */
   async recomputeStudentSkills(studentId: string): Promise<void> {
     const repos = await prisma.githubRepo.findMany({

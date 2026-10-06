@@ -81,6 +81,7 @@ export const GithubPage: React.FC = () => {
   // Search & Filter
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'pushed' | 'stars' | 'name'>('pushed');
+  const [includeForks, setIncludeForks] = useState(true);
 
   // Cooldown countdown timer
   const [now, setNow] = useState(Date.now());
@@ -318,8 +319,12 @@ export const GithubPage: React.FC = () => {
       return a.name.localeCompare(b.name);
     });
 
+    if (!includeForks) {
+      list = list.filter((r) => !r.isFork);
+    }
+
     return list;
-  }, [repos, searchQuery, sortBy]);
+  }, [repos, searchQuery, sortBy, includeForks]);
 
   if (loading) {
     return <SkeletonPage label="Loading GitHub integration" />;
@@ -550,10 +555,8 @@ export const GithubPage: React.FC = () => {
             {skills.length > 0 ? (
               <div className="flex flex-wrap gap-2.5 pt-1">
                 {skills.map((skill) => {
-                  const bytesStr = formatBytes(skill.totalBytes);
                   const evidenceParts = [
                     skill.repoCount ? `${skill.repoCount} repo${skill.repoCount > 1 ? 's' : ''}` : null,
-                    bytesStr || null,
                   ].filter(Boolean);
 
                   return (
@@ -587,7 +590,7 @@ export const GithubPage: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <Layers size={20} className="text-ink-brand" />
                   <h2 id="showcase-heading" className="font-heading text-headline-sm text-ink">
-                    Showcase Projects
+                    Showcase Projects (Up to 30)
                   </h2>
                 </div>
                 <p className="text-body-sm text-ink-secondary mt-0.5">
@@ -701,20 +704,32 @@ export const GithubPage: React.FC = () => {
                 />
               </div>
 
-              <div className="flex items-center gap-2">
-                <label htmlFor="repo-sort" className="text-label-sm text-ink-muted whitespace-nowrap">
-                  Sort by:
+              <div className="flex flex-wrap items-center gap-3">
+                <label className="inline-flex items-center gap-2 text-label-sm font-medium text-ink cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={includeForks}
+                    onChange={(e) => setIncludeForks(e.target.checked)}
+                    className="rounded border-edge text-brand focus:ring-brand size-4 cursor-pointer"
+                  />
+                  <span>Include forks</span>
                 </label>
-                <select
-                  id="repo-sort"
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as any)}
-                  className="input h-10 py-1 text-body-sm min-w-[160px]"
-                >
-                  <option value="pushed">Recently pushed</option>
-                  <option value="stars">Most stars</option>
-                  <option value="name">Name (A-Z)</option>
-                </select>
+
+                <div className="flex items-center gap-2">
+                  <label htmlFor="repo-sort" className="text-label-sm text-ink-muted whitespace-nowrap">
+                    Sort by:
+                  </label>
+                  <select
+                    id="repo-sort"
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as any)}
+                    className="input h-10 py-1 text-body-sm min-w-[160px]"
+                  >
+                    <option value="pushed">Recently pushed</option>
+                    <option value="stars">Most stars</option>
+                    <option value="name">Name (A-Z)</option>
+                  </select>
+                </div>
               </div>
             </div>
 

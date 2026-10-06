@@ -35,6 +35,7 @@ export type AdminTab =
   | 'dashboard'
   | 'submissions'
   | 'students'
+  | 'github'
   | 'activity'
   | 'moderation'
   | 'events'
@@ -73,6 +74,7 @@ const navGroups: NavGroup[] = [
     label: 'Students',
     items: [
       { id: 'students', label: 'All students', icon: Users },
+      { id: 'github', label: 'GitHub', icon: HardDrive },
       { id: 'moderation', label: 'Moderation queue', icon: ShieldCheck },
     ],
   },

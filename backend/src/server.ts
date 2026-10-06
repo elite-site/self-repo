@@ -32,7 +32,7 @@ import adminApiRoutes from './routes/admin.api.routes';
 import adminPortalRoutes from './routes/admin.portal.routes';
 import adminAcademicYearRoutes from './routes/admin.academic-year.routes';
 import { startAnnouncementScheduler } from './jobs/announcementScheduler';
-import { startGithubSyncScheduler } from './jobs/githubSyncScheduler';
+import { startGithubSyncScheduler, tick as tickGithubSync } from './jobs/githubSyncScheduler';
 import { mountFrontend } from './config/staticAssets';
 
 const app = express();
@@ -187,6 +187,21 @@ app.get('/ready', async (_req, res) => {
   res.status(ready ? 200 : 503).json(body);
 });
 
+// Secret-protected trigger for scheduled GitHub sync tick (runs when external cron wakes sleeping instances)
+app.post('/api/internal/github-sync-tick', async (req: express.Request, res: express.Response) => {
+  const secretHeader = req.headers['x-internal-secret'] || (req.headers['authorization'] || '').replace(/^Bearer\s+/i, '');
+  if (!env.INTERNAL_SYNC_SECRET || secretHeader !== env.INTERNAL_SYNC_SECRET) {
+    return res.status(401).json({ error: 'UNAUTHORIZED', message: 'Invalid or missing internal sync secret' });
+  }
+
+  try {
+    const result = await tickGithubSync();
+    return res.json({ success: true, ...result, timestamp: new Date().toISOString() });
+  } catch (err: any) {
+    return res.status(500).json({ error: 'INTERNAL_ERROR', message: err?.message || String(err) });
+  }
+});
+
 // 1. Public API routes (existing submission form + new public directory)
 app.use('/api', publicRoutes);
 app.use('/api/public/students', publicStudentRoutes);
@@ -327,6 +342,10 @@ async function autoMigratePendingItems() {
 
 const port = env.PORT;
 if (process.env.NODE_ENV !== 'test') {
+  void prisma.$connect().catch((err) => {
+    console.warn('[Prisma] Initial database connection on boot failed:', err?.message || err);
+  });
+
   app.listen(port, () => {
     console.log(`🚀 Self Introduction Portal running on port ${port}`);
     console.log(`🌐 Web Portal:    http://localhost:${port}/`);

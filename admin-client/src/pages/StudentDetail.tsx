@@ -910,11 +910,15 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ studentId, onBack 
                             </div>
                           </div>
 
-                          {repo.description && (
+                          {repo.readmeExcerpt ? (
+                            <div className="mt-1.5 mb-2 p-2 rounded-lg bg-surface-inset border border-edge text-[11px] text-ink-muted line-clamp-3 font-mono">
+                              {repo.readmeExcerpt}
+                            </div>
+                          ) : repo.description ? (
                             <p className="text-xs text-ink-secondary line-clamp-2 mb-2">
                               {repo.description}
                             </p>
-                          )}
+                          ) : null}
 
                           <div className="flex items-center gap-2 text-[11px] text-ink-muted">
                             <GitBranch className="w-3 h-3" />

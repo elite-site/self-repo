@@ -239,15 +239,22 @@ DELETE FROM "GithubRepo" WHERE "studentId" = '<STUDENT_ID>';
 -- 4. Remove active OAuth state records
 DELETE FROM "GithubOAuthState" WHERE "studentId" = '<STUDENT_ID>';
 
--- 5. Remove account connection
-DELETE FROM "GithubAccount" WHERE "studentId" = '<STUDENT_ID>';
+### 5.3 External Cron & Sleeping Instance Trigger (`/api/internal/github-sync-tick`)
 
-COMMIT;
-```
+When running on a host that sleeps when idle (e.g., Render Free tier), the in-process cron scheduler does not run while the instance is sleeping.
 
-**Verification after unlinking:**
-```sql
-SELECT count(*) FROM "GithubAccount" WHERE "studentId" = '<STUDENT_ID>';
--- Expected: 0
-```
-The student can now connect a fresh GitHub account from the student portal.
+To trigger scheduled sync cycles reliably, an external cron (GitHub Actions workflow or cron job service) calls the internal tick endpoint:
+
+- **Endpoint**: `POST /api/internal/github-sync-tick`
+- **Headers**:
+  - `x-internal-secret`: Value matching `INTERNAL_SYNC_SECRET` configured in environment variables.
+- **Behavior**:
+  - Calls `githubSyncScheduler.tick()`.
+  - Scans for connected accounts not synced in the last 24 hours.
+  - Queues background syncs with small jitter to avoid bursts.
+- **Example cURL**:
+  ```bash
+  curl -X POST https://your-backend.onrender.com/api/internal/github-sync-tick \
+    -H "x-internal-secret: $INTERNAL_SYNC_SECRET"
+  ```
+- **Recommended Schedule**: Every 10 to 15 minutes. This both wakes/keeps warm the backend instance and executes scheduled GitHub portfolio synchronizations.

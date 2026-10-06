@@ -281,6 +281,8 @@ export interface GithubRepoItem {
   commitCount: number;
   isShowcased: boolean;
   showcaseRank?: number | null;
+  readmeExcerpt?: string | null;
+  readmeFetchedAt?: string | null;
 }
 
 export interface GithubSkillItem {
@@ -305,12 +307,15 @@ export interface GithubStatusResponse {
 }
 
 export interface StudentPortfolioResponse {
+  source?: 'GITHUB' | 'LEGACY';
   connected: boolean;
   account?: GithubAccountInfo | null;
+  githubAccount?: GithubAccountInfo | null;
   repos?: GithubRepoItem[];
   showcased?: GithubRepoItem[];
+  showcasedRepos?: GithubRepoItem[];
   skills?: GithubSkillItem[];
-  legacyProjects?: Project[];
+  projects?: Project[];
   student?: StudentProfile;
 }
 
