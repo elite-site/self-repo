@@ -166,7 +166,7 @@ router.put('/showcase', async (req: Request, res: Response) => {
           data: { isShowcased: true, showcaseRank: i + 1 },
         });
       }
-    });
+    }, { timeout: 30000 });
 
     const updated = await prisma.githubRepo.findMany({
       where: { studentId, isShowcased: true },

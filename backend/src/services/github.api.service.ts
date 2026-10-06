@@ -39,12 +39,18 @@ export class GithubRateLimitError extends Error {
 export class GithubApiService {
   private lastRateRemaining: number | null = null;
   private lastRateReset: number | null = null;
+  private lastRateLimit: number | null = null;
 
   private async fetchWithRateLimit(url: string, init: RequestInit = {}): Promise<Response> {
     const nowSec = Math.floor(Date.now() / 1000);
 
     // If we have an active rate limit and remaining is <= reserve threshold, check if reset window passed
-    if (this.lastRateRemaining !== null && this.lastRateRemaining <= env.GITHUB_RATE_RESERVE) {
+    // The reserve never exceeds 10% of the real quota, so a small quota cannot lock every sync out.
+    const effectiveReserve =
+      this.lastRateLimit !== null
+        ? Math.min(env.GITHUB_RATE_RESERVE, Math.floor(this.lastRateLimit * 0.1))
+        : env.GITHUB_RATE_RESERVE;
+    if (this.lastRateRemaining !== null && this.lastRateRemaining <= effectiveReserve) {
       if (this.lastRateReset && nowSec < this.lastRateReset) {
         throw new GithubRateLimitError(this.lastRateRemaining, new Date(this.lastRateReset * 1000));
       }
@@ -64,17 +70,20 @@ export class GithubApiService {
     const fullUrl = url.startsWith('http') ? url : `https://api.github.com${url}`;
     const response = await fetch(fullUrl, { ...init, headers });
 
+    // Only the "core" quota gates syncing. Other buckets (e.g. the small dependency-graph
+    // bucket) have their own tiny limits and must not block unrelated calls.
+    const resource = response.headers.get('x-ratelimit-resource') || 'core';
     const rem = response.headers.get('x-ratelimit-remaining');
-    if (rem !== null) {
-      this.lastRateRemaining = parseInt(rem, 10);
-    }
     const reset = response.headers.get('x-ratelimit-reset');
-    if (reset !== null) {
-      this.lastRateReset = parseInt(reset, 10);
+    const limit = response.headers.get('x-ratelimit-limit');
+    if (resource === 'core') {
+      if (rem !== null) this.lastRateRemaining = parseInt(rem, 10);
+      if (reset !== null) this.lastRateReset = parseInt(reset, 10);
+      if (limit !== null) this.lastRateLimit = parseInt(limit, 10);
     }
 
-    // 403 rate limit exceeded
-    if (response.status === 403 && rem === '0') {
+    // 403 rate limit exceeded (core quota only; other buckets just fail that one call)
+    if (response.status === 403 && rem === '0' && resource === 'core') {
       const resetDate = this.lastRateReset ? new Date(this.lastRateReset * 1000) : new Date(Date.now() + 3600000);
       throw new GithubRateLimitError(0, resetDate);
     }

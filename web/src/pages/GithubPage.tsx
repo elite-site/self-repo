@@ -591,7 +591,7 @@ export const GithubPage: React.FC = () => {
                   </h2>
                 </div>
                 <p className="text-body-sm text-ink-secondary mt-0.5">
-                  Select and rank up to 5 repositories to highlight on your student portfolio.
+                  Select and rank up to 30 repositories to highlight on your student portfolio.
                 </p>
               </div>
 
