@@ -33,7 +33,7 @@
     "react-pdf": "^9.2.1",
     "react-router-dom": "^7.18.4",
     "rehype-sanitize": "^6.0.0",
-    "tailwind-merge": "^2.5.5"
+    "tailwind-merge": "^3.7.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
