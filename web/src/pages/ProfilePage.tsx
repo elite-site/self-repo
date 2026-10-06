@@ -466,13 +466,6 @@ export const ProfilePage: React.FC = () => {
             <Sparkles className="w-5 h-5 text-ink-brand" />
             <h2 className="text-base font-bold text-ink font-heading">Technical Skills</h2>
           </div>
-          <Link
-            to="/profile/edit"
-            className="text-xs font-bold text-ink-brand hover:text-brand-hover flex items-center gap-0.5"
-          >
-            <span>Manage Skills</span>
-            <ChevronRight className="w-3.5 h-3.5" />
-          </Link>
         </div>
 
         {profile?.skills && profile.skills.length > 0 ? (
@@ -490,12 +483,9 @@ export const ProfilePage: React.FC = () => {
           <div className="text-center py-6 px-4 bg-surface-sunken rounded-xl border border-dashed border-edge">
             <Sparkles className="w-6 h-6 text-ink-muted mx-auto mb-1.5" />
             <div className="text-xs font-semibold text-ink-secondary">No technical skills added yet</div>
-            <p className="text-xs text-ink-muted mt-0.5 mb-3">
-              Highlight languages, frameworks, databases, and developer tools.
+            <p className="text-xs text-ink-muted mt-0.5">
+              Connect your GitHub account to automatically detect your skills.
             </p>
-            <Link to="/profile/edit" className="btn btn-primary text-xs">
-              <span>Add Skills</span>
-            </Link>
           </div>
         )}
       </div>

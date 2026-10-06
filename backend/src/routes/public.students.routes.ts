@@ -225,7 +225,21 @@ const loadPublicProfile = (rollNo: string) =>
         take: 1,
         orderBy: { publishedAt: 'desc' },
         select: { id: true, submittedAt: true, publishedAt: true, sizeMb: true, driveFileId: true, status: true, isPublic: true },
-      }
+      },
+      githubStudentSkills: {
+        include: { skill: true },
+        orderBy: [{ repoCount: 'desc' }, { totalBytes: 'desc' }],
+        take: 30,
+      },
+      githubRepos: {
+        where: { isShowcased: true, removedFromGithub: false, isFork: false },
+        orderBy: { showcaseRank: 'asc' },
+        take: 30,
+        select: {
+          id: true, name: true, description: true, htmlUrl: true,
+          topics: true, languages: true, stars: true, showcaseRank: true,
+        },
+      },
     }
   });
 
@@ -365,6 +379,22 @@ router.get('/:rollNo', async (req: Request, res: Response) => {
           thumbnailUrl,
         };
       }),
+      githubSkills: (student.githubStudentSkills || []).map((s: any) => ({
+        name: s.skill?.name || '',
+        category: s.skill?.category || null,
+        repoCount: s.repoCount,
+        totalBytes: String(s.totalBytes),
+      })),
+      githubProjects: (student.githubRepos || []).map((r: any) => ({
+        id: r.id,
+        title: r.name,
+        description: r.description || null,
+        githubUrl: r.htmlUrl || null,
+        techStack: Object.keys((r.languages as Record<string, number>) || {}),
+        topics: r.topics || [],
+        stars: r.stars || 0,
+        showcaseRank: r.showcaseRank,
+      })),
     };
     res.json(studentWithProofs);
   } catch (err: any) {

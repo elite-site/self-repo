@@ -75,6 +75,24 @@ interface PublicProject {
   isPublic?: boolean | null;
 }
 
+interface GithubSkill {
+  name: string;
+  category?: string | null;
+  repoCount?: number | null;
+  totalBytes?: string | null;
+}
+
+interface GithubProject {
+  id: string;
+  title: string;
+  description?: string | null;
+  githubUrl?: string | null;
+  techStack?: string[] | null;
+  topics?: string[] | null;
+  stars?: number | null;
+  showcaseRank?: number | null;
+}
+
 interface PublicAchievement {
   id: string;
   title: string;
@@ -121,6 +139,8 @@ interface PublicStudent {
   certificates?: PublicCertificate[] | null;
   resumes?: PublicResume[] | null;
   introVideo?: PublicIntroVideo | null;
+  githubSkills?: GithubSkill[] | null;
+  githubProjects?: GithubProject[] | null;
 }
 
 const DEPARTMENT = 'Information Technology';
@@ -328,8 +348,15 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
     .join('') || 'IT';
 
   const profile = student.profile || {};
-  const skillsList = profile.skills || [];
-  const projects = (student.projects || []).filter((p) => (!p.status || p.status === 'APPROVED') && (p.isPublic !== false));
+  const profileSkills: Array<PublicProfileSkill | string> = profile.skills || [];
+  const githubSkills: GithubSkill[] = student.githubSkills || [];
+  // GitHub-computed skills take precedence; fall back to manually entered profile skills
+  const skillsList: Array<PublicProfileSkill | string | GithubSkill> =
+    githubSkills.length > 0 ? githubSkills : profileSkills;
+  const manualProjects = (student.projects || []).filter((p) => (!p.status || p.status === 'APPROVED') && (p.isPublic !== false));
+  const githubProjects: GithubProject[] = student.githubProjects || [];
+  // GitHub showcased repos appear after manual approved projects
+  const projects: Array<PublicProject | GithubProject> = [...manualProjects, ...githubProjects];
   const achievements = student.achievements || [];
   const certificates = student.certificates || [];
   const resume = (student.resumes || [])[0] || null;
