@@ -21,8 +21,6 @@ import {
   X,
   GitBranch,
   Star,
-  CheckCircle,
-  Info,
 } from 'lucide-react';
 import { adminApi } from '../services/api';
 import { LeetCodeIcon, CodeChefIcon } from '../components/icons/PlatformIcons';
