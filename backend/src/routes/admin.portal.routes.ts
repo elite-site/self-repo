@@ -8,6 +8,8 @@ import { driveService } from '../services/drive.service';
 import { invalidateStudentEventsCache } from './student.events.routes';
 import { env } from '../config/env';
 import { EXCLUDE_INTERNAL_EVENT, isInternalEvent } from '../config/constants';
+import { githubSyncService } from '../services/github.sync.service';
+import { GithubSyncTrigger } from '@prisma/client';
 
 const router = Router();
 router.use(requireAdminAuth);
@@ -1847,8 +1849,6 @@ router.post('/github/resync/:studentId', async (req: Request, res: Response) => 
       return res.status(404).json({ error: 'NOT_FOUND', message: 'Student does not have a connected GitHub account.' });
     }
 
-    const { githubSyncService } = await import('../services/github.sync.service');
-    const { GithubSyncTrigger } = await import('@prisma/client');
     const result = await githubSyncService.queueSync(studentId, GithubSyncTrigger.MANUAL);
     res.json({ success: true, ...result });
   } catch (err: any) {

@@ -420,22 +420,6 @@ router.get('/:rollNo', async (req: Request, res: Response) => {
           thumbnailUrl,
         };
       }),
-      githubSkills: (student.githubStudentSkills || []).map((s: any) => ({
-        name: s.skill?.name || '',
-        category: s.skill?.category || null,
-        repoCount: s.repoCount,
-        totalBytes: String(s.totalBytes),
-      })),
-      githubProjects: (student.githubRepos || []).map((r: any) => ({
-        id: r.id,
-        title: r.name,
-        description: r.description || null,
-        githubUrl: r.htmlUrl || null,
-        techStack: Object.keys((r.languages as Record<string, number>) || {}),
-        topics: r.topics || [],
-        stars: r.stars || 0,
-        showcaseRank: r.showcaseRank,
-      })),
     };
     res.json(studentWithProofs);
   } catch (err: any) {
