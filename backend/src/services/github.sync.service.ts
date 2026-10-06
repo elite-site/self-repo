@@ -286,6 +286,27 @@ export class GithubSyncService {
         }
       }
 
+      // 3b. First sync: automatically showcase the student's public, non-fork repos
+      // (newest first, max 30). Only runs when the student has no showcased repos yet,
+      // so a student's own showcase choices are never overwritten.
+      const showcasedCount = await prisma.githubRepo.count({
+        where: { studentId, isShowcased: true, removedFromGithub: false },
+      });
+      if (showcasedCount === 0) {
+        const autoRepos = await prisma.githubRepo.findMany({
+          where: { studentId, removedFromGithub: false, isFork: false },
+          orderBy: { pushedAt: { sort: 'desc', nulls: 'last' } },
+          take: 30,
+          select: { id: true },
+        });
+        for (let i = 0; i < autoRepos.length; i++) {
+          await prisma.githubRepo.update({
+            where: { id: autoRepos[i].id },
+            data: { isShowcased: true, showcaseRank: i + 1 },
+          });
+        }
+      }
+
       // 4. Recompute student skills from active repositories
       await this.recomputeStudentSkills(studentId);
 

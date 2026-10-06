@@ -146,7 +146,7 @@ GitHub allows maintaining two active client secrets simultaneously, enabling zer
 - **Authenticated rate limit:** 5,000 requests/hour per `GITHUB_API_TOKEN`.
 - **Safety Reserve:** Set by `GITHUB_RATE_RESERVE` (default: 500 requests).
 - **Conditional Requests (ETags):** Language endpoints send `If-None-Match` with cached ETag. `304 Not Modified` responses consume minimal rate budget.
-- **Dependency Caching:** Dependency manifests are fetched only for the top 5 showcased repos plus the 15 most recently pushed repos, and only when `pushedAt` changes.
+- **Dependency Caching:** Dependency manifests are fetched only for the showcased repos (up to 30, auto-selected on first sync) plus the 15 most recently pushed repos, and only when `pushedAt` changes.
 
 ### Trigger Condition: Reserve Threshold Reached
 When `x-ratelimit-remaining` <= `GITHUB_RATE_RESERVE` (500):

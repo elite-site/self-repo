@@ -34,7 +34,7 @@ import { SkeletonPage } from '../components/ui/Skeleton';
 import { ErrorState } from '../components/ui/ErrorState';
 import { EmptyState } from '../components/ui/EmptyState';
 
-const MAX_SHOWCASE = 5;
+const MAX_SHOWCASE = 30;
 
 function formatBytes(bytes?: number | string | null): string {
   if (!bytes) return '';
@@ -587,7 +587,7 @@ export const GithubPage: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <Layers size={20} className="text-ink-brand" />
                   <h2 id="showcase-heading" className="font-heading text-headline-sm text-ink">
-                    Showcase Projects (Top 5)
+                    Showcase Projects
                   </h2>
                 </div>
                 <p className="text-body-sm text-ink-secondary mt-0.5">

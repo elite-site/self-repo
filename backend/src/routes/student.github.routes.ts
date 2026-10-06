@@ -115,17 +115,17 @@ router.post('/sync', async (req: Request, res: Response) => {
 
 /**
  * PUT /api/student/github/showcase
- * Updates the top 1..5 showcased repositories with explicit rank ordering.
+ * Updates the showcased repositories (1..30) with explicit rank ordering.
  */
 router.put('/showcase', async (req: Request, res: Response) => {
   try {
     const studentId = (req as any).studentId;
     const { repoIds } = req.body;
 
-    if (!Array.isArray(repoIds) || repoIds.length < 1 || repoIds.length > 5) {
+    if (!Array.isArray(repoIds) || repoIds.length < 1 || repoIds.length > 30) {
       return res.status(400).json({
         error: 'INVALID_SHOWCASE_COUNT',
-        message: 'You must select between 1 and 5 repositories to showcase.',
+        message: 'You must select between 1 and 30 repositories to showcase.',
       });
     }
 
