@@ -257,7 +257,7 @@ export class GithubAccountService {
 
     const [repos, skills] = await Promise.all([
       prisma.githubRepo.findMany({
-        where: { studentId, removedFromGithub: false },
+        where: { studentId, removedFromGithub: false, isFork: false },
         orderBy: [{ isShowcased: 'desc' }, { showcaseRank: 'asc' }, { stars: 'desc' }, { pushedAt: 'desc' }],
       }),
       prisma.githubStudentSkill.findMany({

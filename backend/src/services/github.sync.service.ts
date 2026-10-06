@@ -368,7 +368,7 @@ export class GithubSyncService {
    */
   async recomputeStudentSkills(studentId: string): Promise<void> {
     const repos = await prisma.githubRepo.findMany({
-      where: { studentId, removedFromGithub: false },
+      where: { studentId, removedFromGithub: false, isFork: false },
     });
 
     const langMap = new Map<string, { bytes: number; repoIds: Set<string>; lastDate: Date | null }>();
