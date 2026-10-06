@@ -53,42 +53,77 @@ router.get('/', async (req: Request, res: Response) => {
     const isConnected = !!githubAccount;
 
     if (isConnected) {
-      const [showcasedRepos, computedSkills] = await Promise.all([
-        prisma.githubRepo.findMany({
-          where: { studentId, isShowcased: true, removedFromGithub: false },
-          orderBy: { showcaseRank: 'asc' },
-        }),
-        prisma.githubStudentSkill.findMany({
-          where: { studentId },
-          include: { skill: true },
-          orderBy: [{ repoCount: 'desc' }, { totalBytes: 'desc' }],
-        }),
-      ]);
+      let showcasedRepos = await prisma.githubRepo.findMany({
+        where: { studentId, isShowcased: true, removedFromGithub: false },
+        orderBy: { showcaseRank: 'asc' },
+      });
 
-      if (showcasedRepos.length > 0 || computedSkills.length > 0) {
-        return res.json({
-          source: 'GITHUB',
-          connected: true,
-          githubAccount: {
-            login: githubAccount.login,
-            avatarUrl: githubAccount.avatarUrl,
-            lastSyncedAt: githubAccount.lastSyncedAt,
-          },
-          showcasedRepos: showcasedRepos.map((r) => ({
-            ...r,
-            githubRepoId: String(r.githubRepoId),
-          })),
-          skills: computedSkills.map((s) => ({
-            ...s,
-            name: s.skill.name,
-            category: s.skill.category,
-            totalBytes: String(s.totalBytes),
-          })),
+      // If no repos are showcased yet, auto-showcase up to 30 active candidate repos
+      if (showcasedRepos.length === 0) {
+        const candidateRepos = await prisma.githubRepo.findMany({
+          where: { studentId, removedFromGithub: false },
+          orderBy: [{ stars: 'desc' }, { pushedAt: 'desc' }],
+          take: 30,
         });
+
+        if (candidateRepos.length > 0) {
+          const sorted = [...candidateRepos].sort((a, b) => {
+            const qA = (!a.isFork && (a.commitCount || 0) >= 1) ? 1 : 0;
+            const qB = (!b.isFork && (b.commitCount || 0) >= 1) ? 1 : 0;
+            if (qA !== qB) return qB - qA;
+            if (b.stars !== a.stars) return b.stars - a.stars;
+            const tA = a.pushedAt ? new Date(a.pushedAt).getTime() : 0;
+            const tB = b.pushedAt ? new Date(b.pushedAt).getTime() : 0;
+            return tB - tA;
+          });
+
+          const toPick = sorted.slice(0, 30);
+          if (toPick.length > 0) {
+            await prisma.$transaction(
+              toPick.map((r, idx) =>
+                prisma.githubRepo.update({
+                  where: { id: r.id },
+                  data: { isShowcased: true, showcaseRank: idx + 1 },
+                })
+              )
+            );
+            showcasedRepos = await prisma.githubRepo.findMany({
+              where: { studentId, isShowcased: true, removedFromGithub: false },
+              orderBy: { showcaseRank: 'asc' },
+            });
+          }
+        }
       }
+
+      const computedSkills = await prisma.githubStudentSkill.findMany({
+        where: { studentId },
+        include: { skill: true },
+        orderBy: [{ repoCount: 'desc' }, { totalBytes: 'desc' }],
+      });
+
+      return res.json({
+        source: 'GITHUB',
+        connected: true,
+        githubAccount: {
+          login: githubAccount.login,
+          avatarUrl: githubAccount.avatarUrl,
+          lastSyncedAt: githubAccount.lastSyncedAt,
+          syncStatus: githubAccount.syncStatus,
+        },
+        showcasedRepos: showcasedRepos.map((r) => ({
+          ...r,
+          githubRepoId: String(r.githubRepoId),
+        })),
+        skills: computedSkills.map((s) => ({
+          ...s,
+          name: s.skill.name,
+          category: s.skill.category,
+          totalBytes: String(s.totalBytes),
+        })),
+      });
     }
 
-    // Fallback to legacy projects and manual profile skills
+    // Fallback to legacy projects and manual profile skills when not connected
     const [projects, profile] = await Promise.all([
       prisma.project.findMany({
         where: { studentId },
@@ -107,14 +142,9 @@ router.get('/', async (req: Request, res: Response) => {
 
     return res.json({
       source: 'LEGACY',
-      connected: isConnected,
-      githubAccount: githubAccount
-        ? {
-            login: githubAccount.login,
-            avatarUrl: githubAccount.avatarUrl,
-            lastSyncedAt: githubAccount.lastSyncedAt,
-          }
-        : null,
+      connected: false,
+      githubAccount: null,
+      showcasedRepos: [],
       projects: projects.map((p) => ({
         ...p,
         techStack: p.technologies,

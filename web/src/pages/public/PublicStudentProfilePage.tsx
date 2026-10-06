@@ -139,8 +139,6 @@ interface PublicStudent {
   certificates?: PublicCertificate[] | null;
   resumes?: PublicResume[] | null;
   introVideo?: PublicIntroVideo | null;
-  githubSkills?: GithubSkill[] | null;
-  githubProjects?: GithubProject[] | null;
 }
 
 const DEPARTMENT = 'Information Technology';

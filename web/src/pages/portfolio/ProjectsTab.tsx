@@ -20,6 +20,7 @@ import {
   Sparkles,
   ChevronRight,
   Code2,
+  RefreshCw,
 } from 'lucide-react';
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ui/ConfirmDialog';
@@ -268,6 +269,9 @@ export const ProjectsTab: React.FC = () => {
   const showcasedRepos = portfolioData?.showcasedRepos || portfolioData?.showcased || [];
   const computedSkills = portfolioData?.skills || [];
   const hasShowcasedRepos = isGithubConnected && showcasedRepos.length > 0;
+  const isSyncing =
+    portfolioData?.githubAccount?.syncStatus === 'QUEUED' ||
+    portfolioData?.githubAccount?.syncStatus === 'RUNNING';
   const lastSynced = portfolioData?.githubAccount?.lastSyncedAt || portfolioData?.account?.lastSyncedAt;
 
   return (
@@ -488,34 +492,89 @@ export const ProjectsTab: React.FC = () => {
       ) : (
         /* 2. LEGACY / NOT CONNECTED VIEW */
         <div className="space-y-6">
-          {/* GitHub Connect Recommendation Callout */}
-          <div className="p-4 sm:p-5 rounded-2xl border border-brand/20 bg-brand-soft/25 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
-            <div className="flex items-start gap-3">
-              <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-surface text-ink shadow-sm">
-                <Github size={18} />
-              </span>
-              <div>
-                <p className="font-heading text-label-md font-bold text-ink">
-                  Build your portfolio automatically with GitHub
-                </p>
-                <p className="text-body-sm text-ink-secondary">
-                  Connect your GitHub account to showcase your top repositories and automatically compute verified skills.
-                </p>
-              </div>
-            </div>
+          {/* GitHub Banner: Adaptive depending on connection and sync status */}
+          {isGithubConnected ? (
+            isSyncing ? (
+              <div className="p-4 sm:p-5 rounded-2xl border border-brand/20 bg-brand-soft/25 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+                <div className="flex items-start gap-3">
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-surface text-ink shadow-sm">
+                    <RefreshCw size={18} className="animate-spin text-ink-brand" />
+                  </span>
+                  <div>
+                    <p className="font-heading text-label-md font-bold text-ink">
+                      Syncing your GitHub repositories...
+                    </p>
+                    <p className="text-body-sm text-ink-secondary">
+                      Your repositories are being imported in the background. Check back in a moment.
+                    </p>
+                  </div>
+                </div>
 
-            <Link
-              to="/github"
-              className="btn btn-primary text-xs font-bold shrink-0 self-start sm:self-center inline-flex items-center gap-1.5"
-            >
-              <Github size={14} />
-              <span>Connect GitHub</span>
-            </Link>
-          </div>
+                <button
+                  type="button"
+                  onClick={loadData}
+                  className="btn btn-secondary text-xs font-bold shrink-0 self-start sm:self-center inline-flex items-center gap-1.5"
+                >
+                  <RefreshCw size={14} />
+                  <span>Refresh</span>
+                </button>
+              </div>
+            ) : (
+              <div className="p-4 sm:p-5 rounded-2xl border border-brand/20 bg-brand-soft/25 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+                <div className="flex items-start gap-3">
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-surface text-ink shadow-sm">
+                    <Github size={18} />
+                  </span>
+                  <div>
+                    <p className="font-heading text-label-md font-bold text-ink">
+                      GitHub connected {portfolioData?.githubAccount?.login ? `(@${portfolioData.githubAccount.login})` : ''}
+                    </p>
+                    <p className="text-body-sm text-ink-secondary">
+                      No repositories are showcased yet. Choose which repositories you want to showcase on your portfolio.
+                    </p>
+                  </div>
+                </div>
+
+                <Link
+                  to="/github"
+                  className="btn btn-primary text-xs font-bold shrink-0 self-start sm:self-center inline-flex items-center gap-1.5"
+                >
+                  <span>Manage Showcase</span>
+                  <ChevronRight size={14} />
+                </Link>
+              </div>
+            )
+          ) : (
+            <div className="p-4 sm:p-5 rounded-2xl border border-brand/20 bg-brand-soft/25 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+              <div className="flex items-start gap-3">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-surface text-ink shadow-sm">
+                  <Github size={18} />
+                </span>
+                <div>
+                  <p className="font-heading text-label-md font-bold text-ink">
+                    Build your portfolio automatically with GitHub
+                  </p>
+                  <p className="text-body-sm text-ink-secondary">
+                    Connect your GitHub account to showcase your top repositories and automatically compute verified skills.
+                  </p>
+                </div>
+              </div>
+
+              <Link
+                to="/github"
+                className="btn btn-primary text-xs font-bold shrink-0 self-start sm:self-center inline-flex items-center gap-1.5"
+              >
+                <Github size={14} />
+                <span>Connect GitHub</span>
+              </Link>
+            </div>
+          )}
 
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="font-heading text-headline-sm text-ink">Manual Projects</h2>
+              <h2 className="font-heading text-headline-sm text-ink">
+                {isGithubConnected ? 'Manual Projects (Legacy)' : 'Manual Projects'}
+              </h2>
               <p className="text-body-sm text-ink-secondary">
                 {legacyProjects.length} of {MAX_PROJECTS} projects added
               </p>
@@ -535,23 +594,37 @@ export const ProjectsTab: React.FC = () => {
           </div>
 
           {legacyProjects.length === 0 ? (
-            <EmptyState
-              icon={FolderGit2}
-              title="Your portfolio is empty"
-              description="Showcase your work by connecting GitHub or adding your first project manually."
-              action={
-                <div className="flex items-center gap-2">
+            isGithubConnected ? (
+              <EmptyState
+                icon={FolderGit2}
+                title="No repositories showcased yet"
+                description="Select repositories from your connected GitHub account to display them here."
+                action={
                   <Link to="/github" className="btn btn-primary">
                     <Github size={16} />
-                    <span>Connect GitHub</span>
+                    <span>Choose Repositories</span>
                   </Link>
-                  <button type="button" onClick={handleOpenCreateModal} className="btn btn-secondary">
-                    <Plus size={16} />
-                    <span>Add manually</span>
-                  </button>
-                </div>
-              }
-            />
+                }
+              />
+            ) : (
+              <EmptyState
+                icon={FolderGit2}
+                title="Your portfolio is empty"
+                description="Showcase your work by connecting GitHub or adding your first project manually."
+                action={
+                  <div className="flex items-center gap-2">
+                    <Link to="/github" className="btn btn-primary">
+                      <Github size={16} />
+                      <span>Connect GitHub</span>
+                    </Link>
+                    <button type="button" onClick={handleOpenCreateModal} className="btn btn-secondary">
+                      <Plus size={16} />
+                      <span>Add manually</span>
+                    </button>
+                  </div>
+                }
+              />
+            )
           ) : (
             <ProjectBento
               projects={legacyProjects}
