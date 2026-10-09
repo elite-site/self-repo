@@ -1,32 +1,81 @@
 import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeSanitize from 'rehype-sanitize';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
+import { api } from '../services/api';
 
 interface ReadmeExcerptViewProps {
   excerpt?: string | null;
+  repoId?: string;
   fallbackDescription?: string | null;
   className?: string;
   maxCollapsedHeight?: number;
 }
 
 export const ReadmeExcerptView: React.FC<ReadmeExcerptViewProps> = ({
-  excerpt,
+  excerpt: initialExcerpt,
+  repoId,
   fallbackDescription,
   className = '',
   maxCollapsedHeight = 90,
 }) => {
   const [expanded, setExpanded] = useState(false);
+  const [loadedExcerpt, setLoadedExcerpt] = useState<string | null>(initialExcerpt || null);
+  const [loading, setLoading] = useState(false);
+
+  const excerpt = loadedExcerpt || initialExcerpt;
   const content = excerpt || fallbackDescription || '';
 
-  if (!content) return null;
+  const handleToggle = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!expanded && !excerpt && repoId) {
+      setLoading(true);
+      try {
+        const data = await api.getGithubRepoReadme(repoId);
+        if (data?.readmeExcerpt) {
+          setLoadedExcerpt(data.readmeExcerpt);
+        }
+      } catch (err) {
+        console.error('Failed to load README:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    setExpanded(!expanded);
+  };
 
-  // If using plain fallback description with no excerpt
-  if (!excerpt && fallbackDescription) {
+  if (!content && !repoId) return null;
+
+  // If using plain fallback description with no excerpt yet
+  if (!excerpt && !expanded) {
     return (
-      <p className={`text-body-sm text-ink-secondary leading-relaxed ${className}`}>
-        {fallbackDescription}
-      </p>
+      <div className={`space-y-1.5 ${className}`}>
+        {fallbackDescription && (
+          <p className="text-body-sm text-ink-secondary leading-relaxed">
+            {fallbackDescription}
+          </p>
+        )}
+        {repoId && (
+          <button
+            type="button"
+            onClick={handleToggle}
+            disabled={loading}
+            className="inline-flex items-center gap-1 text-label-xs font-bold text-brand hover:underline pt-0.5 cursor-pointer disabled:opacity-50"
+          >
+            {loading ? (
+              <>
+                <Loader2 size={13} className="animate-spin" />
+                <span>Loading README...</span>
+              </>
+            ) : (
+              <>
+                <span>View README</span>
+                <ChevronDown size={13} />
+              </>
+            )}
+          </button>
+        )}
+      </div>
     );
   }
 
@@ -63,19 +112,24 @@ export const ReadmeExcerptView: React.FC<ReadmeExcerptViewProps> = ({
         )}
       </div>
 
-      {isLong && (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            setExpanded(!expanded);
-          }}
-          className="inline-flex items-center gap-1 text-label-xs font-bold text-brand hover:underline pt-0.5 cursor-pointer"
-        >
-          <span>{expanded ? 'Show less' : 'Read more'}</span>
-          {expanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-        </button>
-      )}
+      <button
+        type="button"
+        onClick={handleToggle}
+        disabled={loading}
+        className="inline-flex items-center gap-1 text-label-xs font-bold text-brand hover:underline pt-0.5 cursor-pointer disabled:opacity-50"
+      >
+        {loading ? (
+          <>
+            <Loader2 size={13} className="animate-spin" />
+            <span>Loading README...</span>
+          </>
+        ) : (
+          <>
+            <span>{expanded ? 'Show less' : 'Read more'}</span>
+            {expanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+          </>
+        )}
+      </button>
     </div>
   );
 };

@@ -189,6 +189,18 @@ const loadPublicProfile = (rollNo: string) =>
         where: { status: 'APPROVED', isPublic: true },
         orderBy: { displayOrder: 'asc' },
         take: 100,
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          technologies: true,
+          githubUrl: true,
+          driveVideoUrl: true,
+          displayOrder: true,
+          status: true,
+          createdAt: true,
+          updatedAt: true,
+        },
       },
       achievements: {
         where: { status: 'APPROVED' },

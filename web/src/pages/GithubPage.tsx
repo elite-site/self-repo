@@ -33,6 +33,7 @@ import { Card } from '../components/ui/Card';
 import { SkeletonPage } from '../components/ui/Skeleton';
 import { ErrorState } from '../components/ui/ErrorState';
 import { EmptyState } from '../components/ui/EmptyState';
+import { ReadmeExcerptView } from '../components/ReadmeExcerptView';
 
 const MAX_SHOWCASE = 30;
 
@@ -773,9 +774,12 @@ export const GithubPage: React.FC = () => {
                               )}
                             </div>
 
-                            <p className="text-body-sm text-ink-secondary line-clamp-2 mt-1">
-                              {repo.description || 'No description provided.'}
-                            </p>
+                            <div className="mt-1">
+                              <ReadmeExcerptView
+                                repoId={repo.id}
+                                fallbackDescription={repo.description || 'No description provided.'}
+                              />
+                            </div>
                           </div>
 
                           {/* Showcase Toggle Checkbox Button */}

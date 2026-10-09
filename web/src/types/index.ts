@@ -319,3 +319,55 @@ export interface StudentPortfolioResponse {
   student?: StudentProfile;
 }
 
+export interface StudentDashboardResponse {
+  profile: (StudentProfile & {
+    biography?: string | null;
+    video?: { status: string } | null;
+    submission?: { submittedAt: string } | null;
+  }) | null;
+  counts: {
+    projects: number;
+    achievements: number;
+    certificates: number;
+  };
+  resume: {
+    exists: boolean;
+    status?: string | null;
+    driveFileId?: string | null;
+  } | null;
+  events: Array<{
+    id: string;
+    title: string;
+    type?: string;
+    date: string;
+    eligibility?: string;
+  }>;
+  registrations: Array<{
+    id: string;
+    eventId: string;
+    status: string;
+  }>;
+  votingCampaigns: Array<{
+    id: string;
+    title: string;
+    description?: string | null;
+  }>;
+  notifications: Array<Notification & { isRead?: boolean }>;
+  unreadNotificationsCount: number;
+  github: {
+    connected: boolean;
+    reminderSnoozedUntil: string | null;
+  };
+}
+
+export interface GithubSummaryResponse {
+  connected: boolean;
+  login?: string | null;
+  lastSyncedAt?: string | null;
+  syncStatus?: string | null;
+  reminderSnoozedUntil?: string | null;
+  repoCount: number;
+  showcasedCount: number;
+}
+
+

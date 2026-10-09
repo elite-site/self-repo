@@ -354,6 +354,7 @@ export const ProjectsTab: React.FC = () => {
 
                           <div className="mt-1">
                             <ReadmeExcerptView
+                              repoId={repo.id}
                               excerpt={repo.readmeExcerpt}
                               fallbackDescription={repo.description}
                             />

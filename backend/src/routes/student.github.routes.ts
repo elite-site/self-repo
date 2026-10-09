@@ -65,6 +65,50 @@ router.get('/', async (req: Request, res: Response) => {
 });
 
 /**
+ * GET /api/student/github/summary
+ * Returns connected, login, lastSyncedAt, syncStatus, reminderSnoozedUntil, repoCount, showcasedCount. No repo rows.
+ */
+router.get('/summary', async (req: Request, res: Response) => {
+  try {
+    const studentId = (req as any).studentId;
+    const summary = await githubAccountService.getSummary(studentId);
+    res.json(summary);
+  } catch (err: any) {
+    console.error("Internal server error in /api/student/github/summary:", err);
+    res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
+  }
+});
+
+/**
+ * GET /api/student/github/repos/:id/readme
+ * Returns the readme excerpt for one repo owned by the session student.
+ */
+router.get('/repos/:id/readme', async (req: Request, res: Response) => {
+  try {
+    const studentId = (req as any).studentId;
+    const repo = await prisma.githubRepo.findFirst({
+      where: {
+        id: req.params.id,
+        studentId,
+      },
+      select: {
+        id: true,
+        readmeExcerpt: true,
+      },
+    });
+
+    if (!repo) {
+      return res.status(404).json({ error: 'NOT_FOUND', message: 'Repository not found' });
+    }
+
+    res.json({ id: repo.id, readmeExcerpt: repo.readmeExcerpt });
+  } catch (err: any) {
+    console.error("Internal server error in /api/student/github/repos/:id/readme:", err);
+    res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
+  }
+});
+
+/**
  * POST /api/student/github/connect
  * Initiates GitHub OAuth flow with PKCE and returns authorization URL.
  */
@@ -171,6 +215,25 @@ router.put('/showcase', async (req: Request, res: Response) => {
     const updated = await prisma.githubRepo.findMany({
       where: { studentId, isShowcased: true },
       orderBy: { showcaseRank: 'asc' },
+      select: {
+        id: true,
+        studentId: true,
+        githubRepoId: true,
+        fullName: true,
+        name: true,
+        description: true,
+        htmlUrl: true,
+        isFork: true,
+        primaryLanguage: true,
+        topics: true,
+        stars: true,
+        githubCreatedAt: true,
+        pushedAt: true,
+        languages: true,
+        commitCount: true,
+        isShowcased: true,
+        showcaseRank: true,
+      },
     });
 
     res.json({

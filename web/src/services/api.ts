@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { PublicIntroVideo, StudentProfile, GithubStatusResponse, GithubRepoItem, StudentPortfolioResponse } from '../types';
+import { PublicIntroVideo, StudentProfile, GithubStatusResponse, GithubRepoItem, StudentPortfolioResponse, StudentDashboardResponse, GithubSummaryResponse } from '../types';
 
 function getApiBaseUrl(): string {
   if (typeof window !== 'undefined') {
@@ -600,9 +600,23 @@ export const api = {
   // Announcements
   async getAnnouncement(id: string) { const res = await client.get(`/student/announcements/${encodeURIComponent(id)}`); return res.data; },
 
+  // Dashboard
+  async getDashboard(): Promise<StudentDashboardResponse> {
+    const res = await client.get('/student/dashboard');
+    return res.data;
+  },
+
   // GitHub Integration & Portfolio
+  async getGithubSummary(): Promise<GithubSummaryResponse> {
+    const res = await client.get('/student/github/summary');
+    return res.data;
+  },
   async getGithubStatus(): Promise<GithubStatusResponse> {
     const res = await client.get('/student/github');
+    return res.data;
+  },
+  async getGithubRepoReadme(repoId: string): Promise<{ id: string; readmeExcerpt: string | null }> {
+    const res = await client.get(`/student/github/repos/${encodeURIComponent(repoId)}/readme`);
     return res.data;
   },
   async connectGithub(): Promise<{ url: string }> {

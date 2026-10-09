@@ -212,6 +212,56 @@ export class GithubAccountService {
   }
 
   /**
+   * Returns lightweight summary of GitHub status and counts without repo rows.
+   */
+  async getSummary(studentId: string) {
+    const student = await prisma.student.findUnique({
+      where: { id: studentId },
+      select: {
+        githubReminderSnoozedUntil: true,
+        githubAccount: {
+          select: {
+            login: true,
+            lastSyncedAt: true,
+            syncStatus: true,
+          },
+        },
+      },
+    });
+
+    if (!student || !student.githubAccount) {
+      return {
+        connected: false,
+        login: null,
+        lastSyncedAt: null,
+        syncStatus: null,
+        reminderSnoozedUntil: student?.githubReminderSnoozedUntil || null,
+        repoCount: 0,
+        showcasedCount: 0,
+      };
+    }
+
+    const [repoCount, showcasedCount] = await Promise.all([
+      prisma.githubRepo.count({
+        where: { studentId, removedFromGithub: false },
+      }),
+      prisma.githubRepo.count({
+        where: { studentId, isShowcased: true, removedFromGithub: false },
+      }),
+    ]);
+
+    return {
+      connected: true,
+      login: student.githubAccount.login,
+      lastSyncedAt: student.githubAccount.lastSyncedAt,
+      syncStatus: student.githubAccount.syncStatus,
+      reminderSnoozedUntil: student.githubReminderSnoozedUntil,
+      repoCount,
+      showcasedCount,
+    };
+  }
+
+  /**
    * Returns current GitHub integration status, account details, cooldown,
    * repos, showcased repos, and computed skills with BigInt values serialized to string.
    */
@@ -259,6 +309,28 @@ export class GithubAccountService {
       prisma.githubRepo.findMany({
         where: { studentId, removedFromGithub: false },
         orderBy: [{ isShowcased: 'desc' }, { showcaseRank: 'asc' }, { stars: 'desc' }, { pushedAt: 'desc' }],
+        select: {
+          id: true,
+          studentId: true,
+          githubRepoId: true,
+          fullName: true,
+          name: true,
+          description: true,
+          htmlUrl: true,
+          isFork: true,
+          primaryLanguage: true,
+          topics: true,
+          stars: true,
+          githubCreatedAt: true,
+          pushedAt: true,
+          languages: true,
+          commitCount: true,
+          firstCommitAt: true,
+          lastCommitAt: true,
+          isShowcased: true,
+          showcaseRank: true,
+          removedFromGithub: true,
+        },
       }),
       prisma.githubStudentSkill.findMany({
         where: { studentId },

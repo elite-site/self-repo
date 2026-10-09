@@ -54,9 +54,30 @@ router.get('/', async (req: Request, res: Response) => {
     const isConnected = !!githubAccount;
 
     if (isConnected) {
+      const repoSelect = {
+        id: true,
+        studentId: true,
+        githubRepoId: true,
+        fullName: true,
+        name: true,
+        description: true,
+        htmlUrl: true,
+        isFork: true,
+        primaryLanguage: true,
+        topics: true,
+        stars: true,
+        githubCreatedAt: true,
+        pushedAt: true,
+        languages: true,
+        commitCount: true,
+        isShowcased: true,
+        showcaseRank: true,
+      };
+
       let showcasedRepos = await prisma.githubRepo.findMany({
         where: { studentId, isShowcased: true, removedFromGithub: false },
         orderBy: { showcaseRank: 'asc' },
+        select: repoSelect,
       });
 
       // If no repos are showcased yet, auto-showcase up to 30 active candidate repos
@@ -91,6 +112,7 @@ router.get('/', async (req: Request, res: Response) => {
             showcasedRepos = await prisma.githubRepo.findMany({
               where: { studentId, isShowcased: true, removedFromGithub: false },
               orderBy: { showcaseRank: 'asc' },
+              select: repoSelect,
             });
           }
         }
