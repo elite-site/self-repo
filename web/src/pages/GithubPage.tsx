@@ -705,8 +705,8 @@ export const GithubPage: React.FC = () => {
                 />
               </div>
 
-              <div className="flex flex-wrap items-center gap-3">
-                <label className="inline-flex items-center gap-2 text-label-sm font-medium text-ink cursor-pointer select-none">
+              <div className="flex flex-wrap items-center gap-3 shrink-0">
+                <label className="inline-flex items-center gap-2 text-label-sm font-medium text-ink cursor-pointer select-none shrink-0">
                   <input
                     type="checkbox"
                     checked={includeForks}
@@ -716,8 +716,8 @@ export const GithubPage: React.FC = () => {
                   <span>Include forks</span>
                 </label>
 
-                <div className="flex items-center gap-2">
-                  <label htmlFor="repo-sort" className="text-label-sm text-ink-muted whitespace-nowrap">
+                <div className="flex items-center gap-2 shrink-0">
+                  <label htmlFor="repo-sort" className="text-label-sm text-ink-muted whitespace-nowrap shrink-0">
                     Sort by:
                   </label>
                   <select
