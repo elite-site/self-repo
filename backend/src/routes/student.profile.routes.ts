@@ -35,51 +35,74 @@ router.use(requireStudentAuth);
 router.get('/', async (req: Request, res: Response) => {
   try {
     const studentId = req.student?.studentId || (req as any).studentId;
-    const student = await prisma.student.findUnique({
-      where: { id: studentId },
-      include: {
-        profile: {
-          include: {
-            skills: { include: { skill: true } }
+    const rollNo = req.student?.rollNo;
+
+    const [student, submissionResult, introVideo] = await Promise.all([
+      prisma.student.findUnique({
+        where: { id: studentId },
+        include: {
+          profile: {
+            include: {
+              skills: { include: { skill: true } }
+            }
+          },
+          changeRequests: {
+            take: 5,
+            orderBy: { createdAt: 'desc' }
           }
-        },
-        changeRequests: {
-          take: 5,
-          orderBy: { createdAt: 'desc' }
         }
-      }
-    });
+      }),
+      rollNo
+        ? prisma.submission.findFirst({
+            where: { rollNo },
+            orderBy: { submittedAt: 'desc' },
+            select: {
+              id: true,
+              status: true,
+              submittedAt: true,
+              videoDriveId: true,
+              reviewText: true,
+              reviewPros: true,
+              reviewCons: true,
+              reviewedAt: true,
+            },
+          })
+        : Promise.resolve(null),
+      prisma.introVideo.findFirst({
+        where: { studentId },
+        orderBy: { submittedAt: 'desc' },
+        select: {
+          id: true,
+          status: true,
+          reviewNote: true,
+          isPublic: true,
+          submittedAt: true,
+          driveFileId: true,
+        },
+      })
+    ]);
+
     if (!student) return res.status(404).json({ error: 'NOT_FOUND', message: 'Student not found' });
 
-    const submission = await prisma.submission.findFirst({
-      where: { rollNo: student.rollNo },
-      orderBy: { submittedAt: 'desc' },
-      select: {
-        id: true,
-        status: true,
-        submittedAt: true,
-        videoDriveId: true,
-        reviewText: true,
-        reviewPros: true,
-        reviewCons: true,
-        reviewedAt: true,
-      },
-    });
+    let submission = submissionResult;
+    if (!submission && student.rollNo && !rollNo) {
+      submission = await prisma.submission.findFirst({
+        where: { rollNo: student.rollNo },
+        orderBy: { submittedAt: 'desc' },
+        select: {
+          id: true,
+          status: true,
+          submittedAt: true,
+          videoDriveId: true,
+          reviewText: true,
+          reviewPros: true,
+          reviewCons: true,
+          reviewedAt: true,
+        },
+      });
+    }
 
-    const introVideo = await prisma.introVideo.findFirst({
-      where: { studentId: student.id },
-      orderBy: { submittedAt: 'desc' },
-      select: {
-        id: true,
-        status: true,
-        reviewNote: true,
-        isPublic: true,
-        submittedAt: true,
-        driveFileId: true,
-      },
-    });
-
-    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Cache-Control', 'private, max-age=30, must-revalidate');
     res.json({
       id: student.id,
       rollNo: student.rollNo,
@@ -321,7 +344,8 @@ router.delete('/photo', async (req: Request, res: Response) => {
     });
     res.json({ success: true, message: 'Profile photo removed.' });
   } catch (err: any) {
-    res.status(500).json({ error: 'Server error', message: err.message });
+    console.error("Internal server error:", err);
+    res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
   }
 });
 

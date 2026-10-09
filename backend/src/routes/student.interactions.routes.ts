@@ -69,7 +69,8 @@ router.get('/voting', async (req: Request, res: Response) => {
 
     res.json(result);
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error("Internal server error:", err);
+    res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
   }
 });
 
@@ -128,7 +129,8 @@ router.get('/voting/:id', async (req: Request, res: Response) => {
       }))
     });
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error("Internal server error:", err);
+    res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
   }
 });
 
@@ -208,7 +210,8 @@ router.post(['/voting/:id/vote', '/voting/vote'], async (req: Request, res: Resp
     ) {
       return res.status(400).json({ error: 'ALREADY_VOTED', message: 'You have already voted' });
     }
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error("Internal server error:", err);
+    res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
   }
 });
 
@@ -245,7 +248,8 @@ router.get('/notifications', async (req: Request, res: Response) => {
       hasMore: offset + items.length < total
     });
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error("Internal server error:", err);
+    res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
   }
 });
 
@@ -258,7 +262,8 @@ const handleReadAll = async (req: Request, res: Response) => {
     });
     res.json({ message: 'All marked as read' });
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error("Internal server error:", err);
+    res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
   }
 };
 
@@ -275,7 +280,8 @@ router.patch('/notifications/:id/read', async (req: Request, res: Response) => {
     if (updated.count === 0) return res.status(404).json({ error: 'NOT_FOUND', message: 'Not found' });
     res.json({ message: 'Marked as read' });
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error("Internal server error:", err);
+    res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
   }
 });
 
@@ -323,7 +329,8 @@ router.get('/announcements/:id', async (req: Request, res: Response) => {
       body: announcement.message,
     });
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error("Internal server error:", err);
+    res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
   }
 });
 
@@ -332,9 +339,7 @@ router.get('/announcements/:id', async (req: Request, res: Response) => {
 router.get(['/registrations', '/registrations/all'], async (req: Request, res: Response) => {
   try {
     const studentId = (req as any).studentId || req.student?.studentId;
-    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
+    res.setHeader('Cache-Control', 'private, max-age=30, must-revalidate');
 
     const registrations = await prisma.eventRegistration.findMany({
       where: {
@@ -344,10 +349,24 @@ router.get(['/registrations', '/registrations/all'], async (req: Request, res: R
         event: { status: { notIn: ['CLOSED', 'ARCHIVED'] } },
       },
       include: {
-        event: true,
-        student: true,
-        team: true,
-        answers: { include: { field: true } }
+        event: {
+          select: {
+            id: true,
+            name: true,
+            type: true,
+            eventDate: true,
+            registrationEnd: true,
+            status: true,
+          },
+        },
+        team: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+            status: true,
+          },
+        },
       },
       orderBy: { registeredAt: 'desc' }
     });
@@ -358,7 +377,8 @@ router.get(['/registrations', '/registrations/all'], async (req: Request, res: R
       registeredAt: r.registeredAt
     })));
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error("Internal server error:", err);
+    res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
   }
 });
 
@@ -388,7 +408,8 @@ router.get('/registrations/:id', async (req: Request, res: Response) => {
       registeredAt: reg.registeredAt
     });
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error("Internal server error:", err);
+    res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
   }
 });
 
@@ -418,7 +439,8 @@ router.post('/registrations/:id/cancel', async (req: Request, res: Response) => 
 
     res.json({ message: 'Cancelled successfully', registration: updated });
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error("Internal server error:", err);
+    res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
   }
 });
 
@@ -441,7 +463,8 @@ router.get('/teams', async (req: Request, res: Response) => {
     // model lives in one place: only the lead can invite or dissolve a team.
     res.json(teams.map((t) => ({ ...t, isLeader: t.leaderId === studentId })));
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error("Internal server error:", err);
+    res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
   }
 });
 
@@ -519,7 +542,8 @@ router.post('/teams', async (req: Request, res: Response) => {
     });
     return res.status(201).json(team);
   } catch (err: any) {
-    return res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error("Internal server error:", err);
+    return res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
   }
 });
 
@@ -568,7 +592,8 @@ router.delete('/teams/:id', async (req: Request, res: Response) => {
     if (err.code === 'P2025') {
       return res.status(404).json({ error: 'NOT_FOUND', message: 'Team not found' });
     }
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error("Internal server error:", err);
+    res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
   }
 });
 
@@ -622,7 +647,8 @@ router.post('/teams/:id/invite', async (req: Request, res: Response) => {
     });
     res.status(201).json(invite);
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error("Internal server error:", err);
+    res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
   }
 });
 
@@ -635,7 +661,8 @@ router.get('/team-invitations', async (req: Request, res: Response) => {
     });
     res.json(invitations);
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error("Internal server error:", err);
+    res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
   }
 });
 
@@ -687,7 +714,8 @@ router.post('/team-invitations/:id/accept', async (req: Request, res: Response) 
     if (err.code === 'P2002') {
       return res.status(409).json({ error: 'ALREADY_MEMBER', message: 'You are already a member of this team.' });
     }
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error("Internal server error:", err);
+    res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
   }
 });
 
@@ -701,7 +729,8 @@ router.post('/team-invitations/:id/decline', async (req: Request, res: Response)
     if (updated.count === 0) return res.status(404).json({ error: 'NOT_FOUND', message: 'Not found' });
     res.json({ message: 'Declined' });
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error("Internal server error:", err);
+    res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
   }
 });
 

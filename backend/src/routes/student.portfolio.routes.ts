@@ -45,6 +45,7 @@ router.use(requireStudentAuth);
 router.get('/', async (req: Request, res: Response) => {
   try {
     const studentId = (req as any).studentId;
+    res.set('Cache-Control', 'private, max-age=30, must-revalidate');
 
     const githubAccount = await prisma.githubAccount.findUnique({
       where: { studentId },
@@ -153,7 +154,8 @@ router.get('/', async (req: Request, res: Response) => {
       skills: profile?.skills || [],
     });
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error("Internal server error:", err);
+    res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
   }
 });
 
@@ -174,7 +176,8 @@ router.get('/projects', async (req: Request, res: Response) => {
       videoUrl: p.driveVideoUrl
     })));
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error("Internal server error:", err);
+    res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
   }
 });
 
@@ -224,7 +227,8 @@ router.post('/projects', async (req: Request, res: Response) => {
       videoUrl: project.driveVideoUrl
     });
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error("Internal server error:", err);
+    res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
   }
 });
 
@@ -244,7 +248,8 @@ router.put('/projects/reorder', async (req: Request, res: Response) => {
     );
     res.json({ message: 'Reordered successfully' });
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error("Internal server error:", err);
+    res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
   }
 });
 
@@ -294,7 +299,8 @@ router.put('/projects/:id', async (req: Request, res: Response) => {
     if (proj.count === 0) return res.status(404).json({ error: 'NOT_FOUND', message: 'Project not found' });
     res.json({ message: 'Updated successfully' });
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error("Internal server error:", err);
+    res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
   }
 });
 
@@ -307,7 +313,8 @@ router.delete('/projects/:id', async (req: Request, res: Response) => {
     if (proj.count === 0) return res.status(404).json({ error: 'NOT_FOUND', message: 'Project not found' });
     res.json({ message: 'Deleted successfully' });
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error("Internal server error:", err);
+    res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
   }
 });
 
@@ -360,7 +367,8 @@ router.get('/achievements', async (req: Request, res: Response) => {
       };
     }));
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error("Internal server error:", err);
+    res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
   }
 });
 
@@ -437,7 +445,8 @@ router.post('/achievements', submissionRateLimiter, handleProofUpload, async (re
       thumbnailUrl: null,
     });
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error("Internal server error:", err);
+    res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
   }
 });
 
@@ -466,7 +475,8 @@ router.put('/achievements/:id', async (req: Request, res: Response) => {
     if (updated.count === 0) return res.status(404).json({ error: 'NOT_FOUND', message: 'Not found' });
     res.json({ message: 'Updated successfully' });
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error("Internal server error:", err);
+    res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
   }
 });
 
@@ -488,7 +498,8 @@ router.delete('/achievements/:id', async (req: Request, res: Response) => {
     await prisma.achievement.delete({ where: { id: item.id } });
     res.json({ message: 'Deleted successfully' });
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error("Internal server error:", err);
+    res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
   }
 });
 
@@ -538,7 +549,8 @@ router.get('/certificates', async (req: Request, res: Response) => {
       };
     }));
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error("Internal server error:", err);
+    res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
   }
 });
 
@@ -606,7 +618,8 @@ router.post('/certificates', submissionRateLimiter, certificateUpload, async (re
         : null,
     });
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error("Internal server error:", err);
+    res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
   }
 });
 
@@ -646,7 +659,8 @@ router.patch('/certificates/:id/visibility', async (req: Request, res: Response)
         : 'Certificate has been hidden from your public profile.'
     });
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error("Internal server error:", err);
+    res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
   }
 });
 
@@ -668,7 +682,8 @@ router.delete('/certificates/:id', async (req: Request, res: Response) => {
     await prisma.certificate.delete({ where: { id: cert.id } });
     res.json({ message: 'Deleted successfully' });
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error("Internal server error:", err);
+    res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
   }
 });
 
@@ -735,7 +750,8 @@ router.patch('/:kind/:id/visibility', async (req: Request, res: Response) => {
         : `${meta.label} has been hidden from your public profile.`,
     });
   } catch (err: any) {
-    return res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error("Internal server error:", err);
+    return res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
   }
 });
 

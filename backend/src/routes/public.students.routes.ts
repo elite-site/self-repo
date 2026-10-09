@@ -154,7 +154,8 @@ router.get('/', async (req: Request, res: Response) => {
 
     res.json(payload);
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error("Internal server error:", err);
+    res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
   }
 });
 
@@ -169,7 +170,8 @@ router.get('/skills', async (_req: Request, res: Response) => {
     res.setHeader('Cache-Control', 'public, max-age=300');
     res.json(skills);
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error("Internal server error:", err);
+    res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
   }
 });
 
@@ -283,7 +285,8 @@ router.get('/events', async (_req: Request, res: Response) => {
     res.set('Cache-Control', 'public, max-age=60');
     res.json(events);
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error("Internal server error:", err);
+    res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
   }
 });
 
@@ -423,7 +426,8 @@ router.get('/:rollNo', async (req: Request, res: Response) => {
     };
     res.json(studentWithProofs);
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error("Internal server error:", err);
+    res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
   }
 });
 
@@ -447,7 +451,8 @@ router.get('/:rollNo/resume', async (req: Request, res: Response) => {
     }
     res.redirect(`/api/public/media/resume/${resume.id}`);
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error("Internal server error:", err);
+    res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
   }
 });
 

@@ -10,10 +10,12 @@ import { ActivityService } from '../services/activity.service';
 import { announcementActionUrl, deliverAnnouncementNotifications } from '../services/announcement.service';
 import { notifyStudent, notifyVideoChangeRequested } from '../services/notification.service';
 import { resolveContentRange } from '../utils/rangeParser';
+import { TtlCache } from '../utils/ttlCache';
 
 const router = Router();
 
 const ACTIVE_EVENT_ID = INTERNAL_EVENT_ID;
+const adminStatsCache = new TtlCache<any>(15_000, 10);
 
 // Protect all /admin/api routes with JWT authentication
 router.use(requireAdminAuth);
@@ -53,6 +55,12 @@ router.get('/events', async (_req: Request, res: Response): Promise<Response | v
 router.get('/stats', async (req: Request, res: Response): Promise<Response | void> => {
   try {
     const eventId = ((req.query.eventId as string) || ACTIVE_EVENT_ID).trim();
+
+    const cached = adminStatsCache.get(eventId);
+    if (cached) {
+      res.setHeader('Cache-Control', 'private, max-age=15, must-revalidate');
+      return res.json(cached);
+    }
 
     const [
       totalVideos,
@@ -172,7 +180,7 @@ router.get('/stats', async (req: Request, res: Response): Promise<Response | voi
       pendingModeration: (pendingProjects || 0) + (pendingAchievements || 0) + (pendingCertificates || 0) + (pendingResumes || 0),
     };
 
-    res.json({
+    const responsePayload = {
       eventId,
       totalSubmissions: totalVideos,
       totalVideos,
@@ -183,7 +191,11 @@ router.get('/stats', async (req: Request, res: Response): Promise<Response | voi
       byRating,
       overTime,
       portal,
-    });
+    };
+
+    adminStatsCache.set(eventId, responsePayload);
+    res.setHeader('Cache-Control', 'private, max-age=15, must-revalidate');
+    res.json(responsePayload);
   } catch (err: any) {
     console.error('Error fetching admin stats:', err);
     return httpError(res, 500, err, "FAILED_TO_FETCH_STATS");
@@ -1241,39 +1253,87 @@ router.get('/moderation', async (req: Request, res: Response) => {
 
     const whereClause = statusFilter ? { status: statusFilter } : {};
 
+    const studentSelect = {
+      name: true,
+      rollNo: true,
+      year: true,
+      section: true,
+      branch: true,
+    };
+
     const [videos, resumes, achievements, certificates, projects] = await Promise.all([
       rawType === 'all' || rawType === 'videos'
         ? prisma.introVideo.findMany({
             where: whereClause as any,
-            include: { student: true },
+            select: {
+              id: true,
+              studentId: true,
+              driveFileId: true,
+              status: true,
+              submittedAt: true,
+              isPublic: true,
+              reviewNote: true,
+              student: { select: studentSelect },
+            },
+            take: 200,
             orderBy: { submittedAt: 'desc' },
           })
         : Promise.resolve([]),
       rawType === 'all' || rawType === 'resumes'
         ? prisma.resume.findMany({
             where: whereClause as any,
-            include: { student: true },
+            select: {
+              id: true,
+              studentId: true,
+              driveFileId: true,
+              filename: true,
+              status: true,
+              submittedAt: true,
+              isPublic: true,
+              reviewNote: true,
+              student: { select: studentSelect },
+            },
+            take: 200,
             orderBy: { submittedAt: 'desc' },
           })
         : Promise.resolve([]),
       rawType === 'all' || rawType === 'achievements'
         ? prisma.achievement.findMany({
             where: whereClause as any,
-            include: { student: true, category: true },
+            include: {
+              student: { select: studentSelect },
+              category: true,
+            },
+            take: 200,
             orderBy: { createdAt: 'desc' },
           })
         : Promise.resolve([]),
       rawType === 'all' || rawType === 'certificates'
         ? prisma.certificate.findMany({
             where: whereClause as any,
-            include: { student: true },
+            select: {
+              id: true,
+              studentId: true,
+              title: true,
+              issuer: true,
+              fileDriveId: true,
+              status: true,
+              createdAt: true,
+              isPublic: true,
+              reviewNote: true,
+              student: { select: studentSelect },
+            },
+            take: 200,
             orderBy: { createdAt: 'desc' },
           })
         : Promise.resolve([]),
       rawType === 'all' || rawType === 'projects'
         ? prisma.project.findMany({
             where: whereClause as any,
-            include: { student: true },
+            include: {
+              student: { select: studentSelect },
+            },
+            take: 200,
             orderBy: { createdAt: 'desc' },
           })
         : Promise.resolve([]),
@@ -1407,6 +1467,7 @@ router.get('/moderation', async (req: Request, res: Response) => {
 
     allItems.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
 
+    res.setHeader('Cache-Control', 'private, max-age=15, must-revalidate');
     res.json({
       items: allItems,
       total: allItems.length,
@@ -1422,9 +1483,28 @@ router.get('/moderation/videos', async (req, res) => {
     // videos are managed from the submission detail view (publish/unpublish).
     const videos = await prisma.introVideo.findMany({
       where: { status: { in: ['PENDING', 'UNDER_REVIEW', 'CHANGES_REQUESTED'] } },
-      include: { student: true },
+      select: {
+        id: true,
+        studentId: true,
+        driveFileId: true,
+        status: true,
+        submittedAt: true,
+        isPublic: true,
+        reviewNote: true,
+        student: {
+          select: {
+            name: true,
+            rollNo: true,
+            year: true,
+            section: true,
+            branch: true,
+          },
+        },
+      },
+      take: 200,
       orderBy: { submittedAt: 'desc' },
     });
+    res.setHeader('Cache-Control', 'private, max-age=15, must-revalidate');
     res.json(videos.map(v => ({
       ...v,
       studentName: v.student?.name || 'Unknown',
@@ -1446,8 +1526,27 @@ router.get('/moderation/resumes', async (req, res) => {
   try {
     const resumes = await prisma.resume.findMany({
       where: { status: { in: ['PENDING', 'UNDER_REVIEW'] } },
-      include: { student: true }
+      select: {
+        id: true,
+        studentId: true,
+        driveFileId: true,
+        filename: true,
+        status: true,
+        submittedAt: true,
+        student: {
+          select: {
+            name: true,
+            rollNo: true,
+            year: true,
+            section: true,
+            branch: true,
+          },
+        },
+      },
+      take: 200,
+      orderBy: { submittedAt: 'desc' },
     });
+    res.setHeader('Cache-Control', 'private, max-age=15, must-revalidate');
     res.json(resumes.map(r => ({
       ...r,
       studentName: r.student?.name || 'Unknown',
@@ -1835,7 +1934,8 @@ router.post('/announcements/:id/publish', async (req, res) => {
 
     res.json(announcement);
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error("Internal server error:", err);
+    res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
   }
 });
 

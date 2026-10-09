@@ -59,7 +59,8 @@ router.get('/', async (req: Request, res: Response) => {
     const status = await githubAccountService.getStatus(studentId);
     res.json(status);
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error("Internal server error:", err);
+    res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
   }
 });
 
@@ -82,7 +83,8 @@ router.post('/connect', async (req: Request, res: Response) => {
     if (err instanceof GithubAccountError) {
       return res.status(err.statusCode).json({ error: err.code || 'CONNECT_ERROR', message: err.message });
     }
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error("Internal server error:", err);
+    res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
   }
 });
 
@@ -109,7 +111,8 @@ router.post('/sync', async (req: Request, res: Response) => {
         message: err.message,
       });
     }
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error("Internal server error:", err);
+    res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
   }
 });
 
@@ -175,7 +178,8 @@ router.put('/showcase', async (req: Request, res: Response) => {
       showcased: updated.map((r) => ({ ...r, githubRepoId: String(r.githubRepoId) })),
     });
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error("Internal server error:", err);
+    res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
   }
 });
 
@@ -190,7 +194,8 @@ router.delete('/', async (req: Request, res: Response) => {
     await githubAccountService.disconnect(studentId);
     res.json({ success: true, message: 'GitHub account disconnected successfully' });
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error("Internal server error:", err);
+    res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
   }
 });
 
@@ -204,7 +209,8 @@ router.post('/reminder/snooze', async (req: Request, res: Response) => {
     const result = await githubAccountService.snoozeReminder(studentId);
     res.json({ success: true, snoozedUntil: result.snoozedUntil });
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error("Internal server error:", err);
+    res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
   }
 });
 

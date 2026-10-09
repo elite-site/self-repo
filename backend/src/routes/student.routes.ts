@@ -408,7 +408,7 @@ router.get('/me', requireStudentAuth, async (req: Request, res: Response): Promi
     });
   } catch (err: any) {
     console.error('Error fetching student profile:', err);
-    res.status(500).json({ error: 'FAILED_TO_FETCH_PROFILE', message: err.message });
+    res.status(500).json({ error: "FAILED_TO_FETCH_PROFILE", message: "Failed to fetch student profile." });
   }
 });
 
@@ -1302,7 +1302,8 @@ router.get('/resume', requireStudentAuth, async (req, res) => {
       };
     }));
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error("Internal server error:", err);
+    res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
   }
 });
 
@@ -1416,7 +1417,7 @@ router.post('/resume', requireStudentAuth, submissionRateLimiter, resumeUpload, 
     });
   } catch (err: any) {
     console.error('Error uploading resume:', err);
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message || 'Failed to upload resume document.' });
+    res.status(500).json({ error: "SERVER_ERROR", message: "Failed to upload resume document." });
   }
 });
 

@@ -44,7 +44,8 @@ router.get('/', async (req: Request, res: Response) => {
     res.set('Cache-Control', 'no-cache, must-revalidate');
     res.json(mapped);
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error("Internal server error:", err);
+    res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
   }
 });
 
@@ -73,7 +74,8 @@ router.get('/:id', async (req: Request, res: Response) => {
       registrationFields: event.formFields
     });
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error("Internal server error:", err);
+    res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
   }
 });
 
@@ -183,7 +185,8 @@ router.post('/:id/register', async (req: Request, res: Response) => {
       registeredAt: registration.registeredAt,
     });
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error("Internal server error:", err);
+    res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
   }
 });
 

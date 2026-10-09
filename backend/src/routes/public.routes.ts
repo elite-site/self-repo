@@ -360,7 +360,8 @@ router.get('/public/events', async (_req: Request, res: Response): Promise<void>
 
     res.json(mapped);
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error("Internal server error:", err);
+    res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
   }
 });
 
@@ -401,7 +402,8 @@ router.get('/public/events/:id', async (req: Request, res: Response): Promise<vo
       registrationFields: event.formFields
     });
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error("Internal server error:", err);
+    res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
   }
 });
 

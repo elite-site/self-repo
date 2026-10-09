@@ -54,15 +54,6 @@ function getLanguageColor(name: string, index: number): string {
   return LANG_COLORS[name] || FALLBACK_LANG_COLORS[index % FALLBACK_LANG_COLORS.length];
 }
 
-function formatBytes(bytes?: number | string | null): string {
-  if (!bytes) return '';
-  const num = typeof bytes === 'string' ? parseInt(bytes, 10) : bytes;
-  if (isNaN(num) || num <= 0) return '';
-  if (num < 1024) return `${num} B`;
-  if (num < 1024 * 1024) return `${(num / 1024).toFixed(0)} KB`;
-  return `${(num / (1024 * 1024)).toFixed(1)} MB`;
-}
-
 function formatRelativeTime(dateStr?: string | null): string {
   if (!dateStr) return 'Recently';
   const time = new Date(dateStr).getTime();
