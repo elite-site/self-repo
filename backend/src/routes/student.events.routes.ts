@@ -89,21 +89,24 @@ router.post('/:id/register', async (req: Request, res: Response) => {
     if (!studentId) {
       return res.status(401).json({ error: 'UNAUTHORIZED', message: 'Authentication required' });
     }
-    const student = await prisma.student.findUnique({ where: { id: studentId }, select: { status: true } });
-    if (!student || student.status !== 'ACTIVE') {
-      return res.status(403).json({ error: 'NOT_ACTIVE', message: 'Your account is no longer active for this activity.' });
-    }
     const eventIdParam = req.params.id;
     const { teamId, answers, status: reqStatus } = req.body;
 
-    const event = await prisma.event.findFirst({
-      where: {
-        OR: [
-          { id: eventIdParam },
-          { slug: eventIdParam }
-        ]
-      }
-    });
+    const [student, event] = await Promise.all([
+      prisma.student.findUnique({ where: { id: studentId }, select: { status: true } }),
+      prisma.event.findFirst({
+        where: {
+          OR: [
+            { id: eventIdParam },
+            { slug: eventIdParam }
+          ]
+        }
+      }),
+    ]);
+
+    if (!student || student.status !== 'ACTIVE') {
+      return res.status(403).json({ error: 'NOT_ACTIVE', message: 'Your account is no longer active for this activity.' });
+    }
     if (!event) {
       return res.status(404).json({ error: 'NOT_FOUND', message: 'Event not found' });
     }

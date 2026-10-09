@@ -47,38 +47,44 @@ router.get('/', async (req: Request, res: Response) => {
     const studentId = (req as any).studentId;
     res.set('Cache-Control', 'private, max-age=30, must-revalidate');
 
-    const githubAccount = await prisma.githubAccount.findUnique({
-      where: { studentId },
-    });
+    const repoSelect = {
+      id: true,
+      studentId: true,
+      githubRepoId: true,
+      fullName: true,
+      name: true,
+      description: true,
+      htmlUrl: true,
+      isFork: true,
+      primaryLanguage: true,
+      topics: true,
+      stars: true,
+      githubCreatedAt: true,
+      pushedAt: true,
+      languages: true,
+      commitCount: true,
+      isShowcased: true,
+      showcaseRank: true,
+    };
+
+    const [githubAccount, initialShowcased, computedSkills] = await Promise.all([
+      prisma.githubAccount.findUnique({ where: { studentId } }),
+      prisma.githubRepo.findMany({
+        where: { studentId, isShowcased: true, removedFromGithub: false },
+        orderBy: { showcaseRank: 'asc' },
+        select: repoSelect,
+      }),
+      prisma.githubStudentSkill.findMany({
+        where: { studentId },
+        include: { skill: true },
+        orderBy: [{ repoCount: 'desc' }, { totalBytes: 'desc' }],
+      }),
+    ]);
 
     const isConnected = !!githubAccount;
 
     if (isConnected) {
-      const repoSelect = {
-        id: true,
-        studentId: true,
-        githubRepoId: true,
-        fullName: true,
-        name: true,
-        description: true,
-        htmlUrl: true,
-        isFork: true,
-        primaryLanguage: true,
-        topics: true,
-        stars: true,
-        githubCreatedAt: true,
-        pushedAt: true,
-        languages: true,
-        commitCount: true,
-        isShowcased: true,
-        showcaseRank: true,
-      };
-
-      let showcasedRepos = await prisma.githubRepo.findMany({
-        where: { studentId, isShowcased: true, removedFromGithub: false },
-        orderBy: { showcaseRank: 'asc' },
-        select: repoSelect,
-      });
+      let showcasedRepos = initialShowcased;
 
       // If no repos are showcased yet, auto-showcase up to 30 active candidate repos
       if (showcasedRepos.length === 0) {
@@ -117,12 +123,6 @@ router.get('/', async (req: Request, res: Response) => {
           }
         }
       }
-
-      const computedSkills = await prisma.githubStudentSkill.findMany({
-        where: { studentId },
-        include: { skill: true },
-        orderBy: [{ repoCount: 'desc' }, { totalBytes: 'desc' }],
-      });
 
       return res.json({
         source: 'GITHUB',
@@ -206,7 +206,14 @@ router.get('/projects', async (req: Request, res: Response) => {
 router.post('/projects', async (req: Request, res: Response) => {
   try {
     const studentId = (req as any).studentId;
-    const count = await prisma.project.count({ where: { studentId } });
+    const [count, maxOrderProj] = await Promise.all([
+      prisma.project.count({ where: { studentId } }),
+      prisma.project.findFirst({
+        where: { studentId },
+        orderBy: { displayOrder: 'desc' },
+        select: { displayOrder: true },
+      }),
+    ]);
     if (count >= 5) {
       return res.status(400).json({ error: 'LIMIT_EXCEEDED', message: 'Max 5 projects allowed.' });
     }
@@ -223,11 +230,6 @@ router.post('/projects', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'VALIDATION_ERROR', message: (validatedVideoUrl as any).error });
     }
 
-    // determine display order
-    const maxOrderProj = await prisma.project.findFirst({
-      where: { studentId },
-      orderBy: { displayOrder: 'desc' }
-    });
     const displayOrder = maxOrderProj ? maxOrderProj.displayOrder + 1 : 0;
 
     const project = await prisma.project.create({

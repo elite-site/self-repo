@@ -342,11 +342,14 @@ async function autoMigratePendingItems() {
 
 const port = env.PORT;
 if (process.env.NODE_ENV !== 'test') {
-  void prisma.$connect().catch((err) => {
-    console.warn('[Prisma] Initial database connection on boot failed:', err?.message || err);
-  });
+  (async () => {
+    try {
+      await prisma.$connect();
+    } catch (err: any) {
+      console.warn('[Prisma] Initial database connection on boot failed:', err?.message || err);
+    }
 
-  app.listen(port, () => {
+    app.listen(port, () => {
     console.log(`🚀 Self Introduction Portal running on port ${port}`);
     console.log(`🌐 Web Portal:    http://localhost:${port}/`);
     console.log(`📡 Public API:    http://localhost:${port}/api`);
@@ -381,6 +384,7 @@ if (process.env.NODE_ENV !== 'test') {
       );
     }
   });
+  })();
 }
 
 export default app;

@@ -1544,15 +1544,20 @@ router.get('/settings', async (_req: Request, res: Response) => {
 
 router.put('/settings', async (req: Request, res: Response) => {
   try {
-    const entries = Object.entries(req.body);
-    for (const [key, value] of entries) {
-      if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
-        await prisma.portalSettings.upsert({
-          where: { key },
-          update: { value: String(value), updatedBy: req.adminUser?.username || 'ADMIN' },
-          create: { key, value: String(value), updatedBy: req.adminUser?.username || 'ADMIN' },
-        });
-      }
+    const validEntries = Object.entries(req.body).filter(
+      ([, value]) => typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean'
+    );
+    if (validEntries.length > 0) {
+      const updatedBy = req.adminUser?.username || 'ADMIN';
+      await prisma.$transaction(
+        validEntries.map(([key, value]) =>
+          prisma.portalSettings.upsert({
+            where: { key },
+            update: { value: String(value), updatedBy },
+            create: { key, value: String(value), updatedBy },
+          })
+        )
+      );
     }
     res.json({ success: true, message: 'Settings saved successfully' });
   } catch (err: any) {

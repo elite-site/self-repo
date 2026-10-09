@@ -641,14 +641,16 @@ router.delete('/submission', requireStudentAuth, async (req: Request, res: Respo
       return;
     }
 
-    const submissions = await prisma.submission.findMany({
-      where: { rollNo: student.rollNo },
-      select: { id: true, videoDriveId: true, driveFolderPath: true },
-    });
-    const introVideos = await prisma.introVideo.findMany({
-      where: { studentId },
-      select: { id: true, driveFileId: true },
-    });
+    const [submissions, introVideos] = await Promise.all([
+      prisma.submission.findMany({
+        where: { rollNo: student.rollNo },
+        select: { id: true, videoDriveId: true, driveFolderPath: true },
+      }),
+      prisma.introVideo.findMany({
+        where: { studentId },
+        select: { id: true, driveFileId: true },
+      }),
+    ]);
 
     if (submissions.length === 0 && introVideos.length === 0) {
       res.status(404).json({ error: 'NOT_FOUND', message: 'You have no submitted video to delete.' });
@@ -1511,9 +1513,15 @@ router.post('/resume', requireStudentAuth, submissionRateLimiter, resumeUpload, 
       return;
     }
 
-    const student = await prisma.student.findUnique({
-      where: { id: studentId },
-    });
+    const [student, existingResume] = await Promise.all([
+      prisma.student.findUnique({
+        where: { id: studentId },
+      }),
+      prisma.resume.findFirst({
+        where: { studentId },
+        orderBy: { submittedAt: 'desc' },
+      }),
+    ]);
 
     if (!student) {
       res.status(404).json({ error: 'NOT_FOUND', message: 'Student account not found.' });
@@ -1523,11 +1531,6 @@ router.post('/resume', requireStudentAuth, submissionRateLimiter, resumeUpload, 
     // Clean up existing resume file on Drive if present
     const cleanRollNo = student.rollNo.toUpperCase().replace(/[^a-zA-Z0-9]/g, '');
     const relativePath = `Students/${cleanRollNo}`;
-
-    const existingResume = await prisma.resume.findFirst({
-      where: { studentId },
-      orderBy: { submittedAt: 'desc' },
-    });
 
     if (existingResume?.driveFileId) {
       try {
@@ -1620,19 +1623,21 @@ router.post('/resume', requireStudentAuth, submissionRateLimiter, resumeUpload, 
 router.delete('/resume', requireStudentAuth, async (req: Request, res: Response): Promise<void> => {
   try {
     const studentId = req.student!.studentId;
-    const student = await prisma.student.findUnique({
-      where: { id: studentId },
-      select: { rollNo: true, name: true },
-    });
+    const [student, existingResume] = await Promise.all([
+      prisma.student.findUnique({
+        where: { id: studentId },
+        select: { rollNo: true, name: true },
+      }),
+      prisma.resume.findFirst({
+        where: { studentId },
+        orderBy: { submittedAt: 'desc' },
+      }),
+    ]);
+
     if (!student) {
       res.status(404).json({ error: 'NOT_FOUND', message: 'Student account not found.' });
       return;
     }
-
-    const existingResume = await prisma.resume.findFirst({
-      where: { studentId },
-      orderBy: { submittedAt: 'desc' },
-    });
 
     if (!existingResume) {
       res.status(404).json({ error: 'NOT_FOUND', message: 'You have no resume to delete.' });

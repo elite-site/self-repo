@@ -461,8 +461,11 @@ router.post('/change-request', async (req: Request, res: Response) => {
 
 router.get('/change-requests', async (req: Request, res: Response) => {
   try {
-    const academic = await prisma.changeRequest.findMany({ where: { studentId: (req as any).studentId } });
-    const skills = await prisma.skillRequest.findMany({ where: { studentId: (req as any).studentId } });
+    const studentId = (req as any).studentId;
+    const [academic, skills] = await Promise.all([
+      prisma.changeRequest.findMany({ where: { studentId } }),
+      prisma.skillRequest.findMany({ where: { studentId } }),
+    ]);
     res.json({ changeRequests: academic, skillRequests: skills });
   } catch (err: any) {
     if (err.code === 'P2021' || err.message?.includes('does not exist')) return res.json({ changeRequests: [], skillRequests: [] });
