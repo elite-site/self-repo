@@ -361,6 +361,9 @@ model EmailLog {
   templateType EmailTemplateType
   sentAt       DateTime          @default(now())
   status       String
+
+  @@index([eventId])
+  @@index([sentAt])
 }
 
 model DriveFolderCache {
@@ -383,6 +386,7 @@ model ActivityLog {
 
   @@index([eventId, createdAt])
   @@index([category, status])
+  @@index([createdAt])
 }
 
 // ============================================================
@@ -721,6 +725,7 @@ model Team {
   updatedAt DateTime @updatedAt
 
   @@index([eventId])
+  @@index([leaderId])
 }
 
 model TeamMember {
@@ -797,6 +802,7 @@ model VotingCandidate {
   votes Vote[]
 
   @@unique([campaignId, studentId])
+  @@index([studentId])
 }
 
 model Vote {
@@ -812,6 +818,7 @@ model Vote {
 
   @@unique([campaignId, voterId])
   @@index([candidateId])
+  @@index([voterId])
 }
 
 // ── Notifications ────────────────────────────────────────────
@@ -911,6 +918,9 @@ model EmailAutomationRun {
   errorMessage   String?
 
   runAt DateTime @default(now())
+
+  @@index([automationId])
+  @@index([runAt])
 }
 
 // ── RBAC ─────────────────────────────────────────────────────
@@ -948,6 +958,7 @@ model RoleAssignment {
   assignedAt DateTime @default(now())
 
   @@unique([adminId, roleId])
+  @@index([roleId])
 }
 
 // ── Portal Settings ──────────────────────────────────────────
@@ -980,6 +991,8 @@ model GithubAccount {
   syncError            String?
   manualSyncCountToday Int              @default(0)
   manualSyncDay        DateTime?
+
+  @@index([syncStatus, lastSyncedAt])
 }
 
 model GithubRepo {
@@ -1025,6 +1038,7 @@ model SkillSourceMap {
   sourceKey  String
 
   @@unique([sourceType, ecosystem, sourceKey])
+  @@index([skillId])
 }
 
 model GithubStudentSkill {
@@ -1039,6 +1053,7 @@ model GithubStudentSkill {
 
   @@unique([studentId, skillId])
   @@index([studentId])
+  @@index([skillId])
 }
 
 model GithubSyncLog {
