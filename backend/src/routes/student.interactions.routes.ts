@@ -363,7 +363,6 @@ router.get(['/registrations', '/registrations/all'], async (req: Request, res: R
           select: {
             id: true,
             name: true,
-            code: true,
             status: true,
           },
         },
