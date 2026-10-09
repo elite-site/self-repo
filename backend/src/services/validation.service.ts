@@ -24,18 +24,6 @@ export class ValidationService {
     'video/matroska',
   ];
 
-  public static readonly ALLOWED_AUDIO_MIMES = [
-    'audio/mpeg',
-    'audio/mp3',
-    'audio/wav',
-    'audio/x-wav',
-    'audio/aac',
-    'audio/m4a',
-    'audio/x-m4a',
-    'audio/mp4',
-    'audio/ogg',
-  ];
-
   /**
    * Identifies a buffer's real media type from its magic bytes.
    *
@@ -163,55 +151,6 @@ export class ValidationService {
       return {
         valid: false,
         error: `Unsupported file format. Please upload MP4, MOV, WebM, or MKV video up to ${maxVideoSizeMb} MB.`,
-      };
-    }
-  }
-
-  /**
-   * Validates an audio file (max 10MB)
-   */
-  public static async validateAudio(
-    fileBuffer: Buffer,
-    fileName: string,
-    fileSize: number
-  ): Promise<FileValidationResult> {
-    // 1. Check size limit (10MB for audio)
-    const maxSizeBytes = 10 * 1024 * 1024;
-    if (fileSize > maxSizeBytes) {
-      return {
-        valid: false,
-        error: 'Audio file is too large. Maximum size is 10 MB.',
-      };
-    }
-
-    const ext = fileName.split('.').pop()?.toLowerCase() || '';
-    const ALLOWED_AUDIO_EXTS = ['mp3', 'wav', 'm4a', 'aac', 'ogg'];
-
-    if (!ALLOWED_AUDIO_EXTS.includes(ext)) {
-      return {
-        valid: false,
-        error: 'Unsupported file format. Please upload MP3, WAV, M4A, AAC, OGG audio up to 10 MB.',
-      };
-    }
-
-    try {
-      const type = await this.sniffMime(fileBuffer);
-
-      if (!type || !this.ALLOWED_AUDIO_MIMES.includes(type.mime as any)) {
-        return {
-          valid: false,
-          error: `Unsupported file format. Please upload MP3, WAV, M4A, AAC, OGG audio up to 10 MB. Detected: ${type?.mime || 'unknown'}`,
-        };
-      }
-
-      return {
-        valid: true,
-        detectedMime: type.mime,
-      };
-    } catch {
-      return {
-        valid: false,
-        error: 'Unsupported file format. Please upload MP3, WAV, M4A, AAC, OGG audio up to 10 MB.',
       };
     }
   }
