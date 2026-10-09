@@ -8,7 +8,7 @@ from unrequested changes**. When a rule here conflicts with your default behavio
 file wins. When a rule here conflicts with an explicit instruction in the user's current
 message, the user's message wins.
 
----
+-----
 
 ## 0. The Golden Rules (read these even if you read nothing else)
 
@@ -21,7 +21,7 @@ message, the user's message wins.
 7. **If something is unclear, ask ONE short question instead of exploring to guess.**
 8. **Never touch secrets, `.env` files, or the roster file.**
 
----
+-----
 
 ## 1. Credit & Token Discipline
 
