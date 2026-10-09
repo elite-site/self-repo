@@ -112,3 +112,17 @@ Top 10 largest JavaScript chunks:
   - **Uncompressed JSON**: **168.05 KB** (172,083 bytes)
   - **Gzip Compressed**: **2.61 KB** (2,676 bytes)
   - Root cause: Returns full table fields across 30 repositories including `dependencies` JSON arrays and up to 4,000 characters of `readmeExcerpt` per repository, plus duplicate `showcasedRepos` instances.
+
+---
+
+## 5. Phase 5 Post-Optimization Bundle Comparison
+
+### `web` Bundle Diff
+- `vendor` chunk split: Common vendor chunk reduced from **238.45 kB** (76.55 kB gzip) to **85.76 kB** (26.22 kB gzip) — a **-64.0% raw / -65.7% gzip reduction** by separating `framer-motion` into an independently cached chunk (`motion`: 152.49 kB raw / 50.82 kB gzip).
+- Markdown rendering: `react-markdown` remains isolated in `ReadmeExcerptView` (**127.17 kB** raw / 39.63 kB gzip), loaded lazily only when repository README cards are expanded.
+- Route-level code splitting: 100% of route modules in `App.tsx` are lazy-loaded with `<Suspense>`.
+
+### `admin-client` Bundle Diff
+- `LoginPage` lazy loaded: Converted from eager entry import into dynamic route chunk (`LoginPage`: 3.19 kB raw / 1.27 kB gzip).
+- Entry chunk `index-*.js`: Reduced from **109.24 kB** (34.80 kB gzip) to **106.21 kB** (34.17 kB gzip).
+- All admin module pages lazy-loaded under `<Suspense>`.
