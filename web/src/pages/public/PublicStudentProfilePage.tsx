@@ -375,8 +375,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
   const rawSpecialQualities = profile.specialQualities || '';
   const specialQualities = PLACEHOLDER_REGEX.test(rawSpecialQualities) ? '' : rawSpecialQualities.trim();
 
-  const skillsList = profile.skills || [];
-  const githubSkills = student.githubSkills || [];
+  const githubSkills: GithubSkill[] = student.githubSkills || [];
 
   const manualProjects = (student.projects || [])
     .filter((p) => (!p.status || p.status === 'APPROVED') && (p.isPublic !== false))
@@ -797,52 +796,21 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
             <h2 className="mt-1 font-heading text-2xl sm:text-3xl font-bold tracking-tight text-white">Skills & Technologies</h2>
           </div>
 
-          {skillsList.length > 0 || githubSkills.length > 0 ? (
-            <div className="space-y-4">
-              {skillsList.length > 0 && (
-                <div className="flex flex-wrap gap-2.5">
-                  {skillsList.map((entry, index) => {
-                    const label =
-                      typeof entry === 'string'
-                        ? entry
-                        : entry.skill?.name || entry.name || '';
-                    if (!label) return null;
-                    return (
-                      <span
-                        key={`${label}-${index}`}
-                        className="inline-flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/70 px-3.5 py-2 text-xs sm:text-sm font-medium text-slate-200 shadow-sm hover:border-rose-500/50 hover:bg-slate-800/80 hover:-translate-y-0.5 transition-all duration-200 cursor-default"
-                      >
-                        <Code2 size={14} className="text-rose-400 shrink-0" />
-                        <span>{label}</span>
-                      </span>
-                    );
-                  })}
-                </div>
-              )}
-
-              {githubSkills.length > 0 && (
-                <div className="pt-2">
-                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">Verified from GitHub Activity</span>
-                  <div className="flex flex-wrap gap-2">
-                    {githubSkills.map((gs) => (
-                      <span
-                        key={gs.id || gs.skillId}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-1.5 text-xs font-medium text-slate-300"
-                      >
-                        <Github size={12} className="text-slate-400" />
-                        <span>{gs.name}</span>
-                        <span className="text-[10px] text-slate-400 bg-slate-800 px-1.5 py-0.2 rounded font-mono">
-                          {gs.repoCount} {gs.repoCount === 1 ? 'repo' : 'repos'}
-                        </span>
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
+          {githubSkills.length > 0 ? (
+            <div className="flex flex-wrap gap-2.5">
+              {githubSkills.map((skill, index) => (
+                <span
+                  key={`${skill.name}-${index}`}
+                  className="inline-flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/70 px-3.5 py-2 text-xs sm:text-sm font-medium text-slate-200 shadow-sm hover:border-rose-500/50 hover:bg-slate-800/80 hover:-translate-y-0.5 transition-all duration-200 cursor-default"
+                >
+                  <Code2 size={14} className="text-rose-400 shrink-0" />
+                  <span>{skill.name}</span>
+                </span>
+              ))}
             </div>
           ) : (
             <div className="rounded-xl border border-dashed border-slate-800 p-8 text-center text-slate-500 text-xs">
-              No technical skills listed yet.
+              No technical skills verified by GitHub yet.
             </div>
           )}
         </section>
