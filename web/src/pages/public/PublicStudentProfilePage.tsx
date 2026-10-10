@@ -801,10 +801,13 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
               {githubSkills.map((skill, index) => (
                 <span
                   key={`${skill.name}-${index}`}
-                  className="inline-flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/70 px-3.5 py-2 text-xs sm:text-sm font-medium text-slate-200 shadow-sm hover:border-rose-500/50 hover:bg-slate-800/80 hover:-translate-y-0.5 transition-all duration-200 cursor-default"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-1.5 text-xs font-medium text-slate-300 shadow-sm hover:border-slate-700 hover:bg-slate-800/80 transition-all duration-200 cursor-default"
                 >
-                  <Code2 size={14} className="text-rose-400 shrink-0" />
+                  <Github size={12} className="text-slate-400 shrink-0" />
                   <span>{skill.name}</span>
+                  <span className="text-[10px] text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded font-mono">
+                    {skill.repoCount} {skill.repoCount === 1 ? 'repo' : 'repos'}
+                  </span>
                 </span>
               ))}
             </div>
