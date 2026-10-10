@@ -28,15 +28,18 @@ export const ReadmeExcerptView: React.FC<ReadmeExcerptViewProps> = ({
 
   const handleToggle = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!expanded && !excerpt && repoId) {
+    if (!expanded && !loadedExcerpt && repoId) {
       setLoading(true);
       try {
         const data = await api.getGithubRepoReadme(repoId);
         if (data?.readmeExcerpt) {
           setLoadedExcerpt(data.readmeExcerpt);
+        } else {
+          setLoadedExcerpt('No README found for this repository on GitHub.');
         }
       } catch (err) {
         console.error('Failed to load README:', err);
+        setLoadedExcerpt('Unable to load README from GitHub right now.');
       } finally {
         setLoading(false);
       }

@@ -590,6 +590,39 @@ export class GithubApiService {
 
     return dependencies;
   }
+
+  public async fetchReadmeExcerpt(fullName: string): Promise<string | null> {
+    try {
+      const res = await this.fetchWithRateLimit(`/repos/${fullName}/readme`);
+      if (res.ok) {
+        const data: any = await res.json();
+        if (data?.content && data.encoding === 'base64') {
+          const raw = Buffer.from(data.content, 'base64').toString('utf8');
+          return stripReadme(raw);
+        }
+      }
+    } catch (err: any) {
+      console.warn(`[fetchReadmeExcerpt] REST API failed for ${fullName}:`, err?.message);
+    }
+
+    for (const branch of ['HEAD', 'main', 'master']) {
+      for (const file of ['README.md', 'readme.md', 'README', 'README.rst']) {
+        try {
+          const rawRes = await fetch(`https://raw.githubusercontent.com/${fullName}/${branch}/${file}`);
+          if (rawRes.ok) {
+            const raw = await rawRes.text();
+            if (raw && raw.trim().length > 0) {
+              return stripReadme(raw);
+            }
+          }
+        } catch {
+          // continue
+        }
+      }
+    }
+
+    return null;
+  }
 }
 
 export const githubApiService = new GithubApiService();

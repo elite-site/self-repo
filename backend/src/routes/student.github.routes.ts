@@ -4,6 +4,7 @@ import { env } from '../config/env';
 import { requireStudentAuth } from '../middleware/studentAuth';
 import { githubAccountService, GithubAccountError } from '../services/github.account.service';
 import { githubSyncService, GithubSyncCooldownError, GithubSyncDailyCapError } from '../services/github.sync.service';
+import { githubApiService } from '../services/github.api.service';
 import { GithubSyncTrigger } from '@prisma/client';
 
 const router = Router();
@@ -93,6 +94,7 @@ router.get('/repos/:id/readme', async (req: Request, res: Response) => {
       },
       select: {
         id: true,
+        fullName: true,
         readmeExcerpt: true,
       },
     });
@@ -101,7 +103,21 @@ router.get('/repos/:id/readme', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'NOT_FOUND', message: 'Repository not found' });
     }
 
-    res.json({ id: repo.id, readmeExcerpt: repo.readmeExcerpt });
+    if (repo.readmeExcerpt) {
+      return res.json({ id: repo.id, readmeExcerpt: repo.readmeExcerpt });
+    }
+
+    // On-demand fetch if readmeExcerpt is not yet cached in DB
+    const fetched = await githubApiService.fetchReadmeExcerpt(repo.fullName);
+    if (fetched) {
+      await prisma.githubRepo.update({
+        where: { id: repo.id },
+        data: { readmeExcerpt: fetched, readmeFetchedAt: new Date() },
+      });
+      return res.json({ id: repo.id, readmeExcerpt: fetched });
+    }
+
+    res.json({ id: repo.id, readmeExcerpt: null });
   } catch (err: any) {
     console.error("Internal server error in /api/student/github/repos/:id/readme:", err);
     res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
