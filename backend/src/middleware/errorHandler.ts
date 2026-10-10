@@ -1,7 +1,17 @@
 import { Request, Response, NextFunction } from 'express';
+import { AppError } from '../utils/appError';
 
 export function errorHandler(err: any, _req: Request, res: Response, _next: NextFunction): void {
   console.error('Server error encountered:', err);
+
+  if (err instanceof AppError) {
+    res.status(err.status).json({
+      error: err.code,
+      message: err.message,
+      ...(err.source ? { source: err.source } : {}),
+    });
+    return;
+  }
 
   // Upload validation failures (e.g. a rejected MIME type) are the caller's
   // fault, not a server fault. Honour an explicit 4xx before anything else so
@@ -9,7 +19,7 @@ export function errorHandler(err: any, _req: Request, res: Response, _next: Next
   const declared = err?.status ?? err?.statusCode;
   if (typeof declared === 'number' && declared >= 400 && declared < 500) {
     res.status(declared).json({
-      error: err.name === 'MulterError' ? 'UPLOAD_ERROR' : 'VALIDATION_ERROR',
+      error: err.code || (err.name === 'MulterError' ? 'UPLOAD_ERROR' : 'VALIDATION_ERROR'),
       message: err.message || 'The uploaded file was rejected.',
     });
     return;

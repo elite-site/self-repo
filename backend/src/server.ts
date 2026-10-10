@@ -1,6 +1,11 @@
 import dns from 'dns';
 dns.setDefaultResultOrder('ipv4first');
 
+// Safely serialize BigInt values in JSON responses throughout Express
+(BigInt.prototype as any).toJSON = function () {
+  return this.toString();
+};
+
 import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
@@ -19,6 +24,7 @@ import publicVideoRoutes from './routes/public.videos.routes';
 import studentRoutes from './routes/student.routes';
 import studentProfileRoutes from './routes/student.profile.routes';
 import studentPortfolioRoutes from './routes/student.portfolio.routes';
+import studentGithubRoutes from './routes/student.github.routes';
 import studentEventsRoutes from './routes/student.events.routes';
 import studentInteractionsRoutes from './routes/student.interactions.routes';
 import adminAuthRoutes from './routes/admin.auth.routes';
@@ -26,6 +32,7 @@ import adminApiRoutes from './routes/admin.api.routes';
 import adminPortalRoutes from './routes/admin.portal.routes';
 import adminAcademicYearRoutes from './routes/admin.academic-year.routes';
 import { startAnnouncementScheduler } from './jobs/announcementScheduler';
+import { startGithubSyncScheduler, tick as tickGithubSync } from './jobs/githubSyncScheduler';
 import { mountFrontend } from './config/staticAssets';
 
 const app = express();
@@ -180,6 +187,21 @@ app.get('/ready', async (_req, res) => {
   res.status(ready ? 200 : 503).json(body);
 });
 
+// Secret-protected trigger for scheduled GitHub sync tick (runs when external cron wakes sleeping instances)
+app.post('/api/internal/github-sync-tick', async (req: express.Request, res: express.Response) => {
+  const secretHeader = req.headers['x-internal-secret'] || (req.headers['authorization'] || '').replace(/^Bearer\s+/i, '');
+  if (!env.INTERNAL_SYNC_SECRET || secretHeader !== env.INTERNAL_SYNC_SECRET) {
+    return res.status(401).json({ error: 'UNAUTHORIZED', message: 'Invalid or missing internal sync secret' });
+  }
+
+  try {
+    const result = await tickGithubSync();
+    return res.json({ success: true, ...result, timestamp: new Date().toISOString() });
+  } catch (err: any) {
+    return res.status(500).json({ error: 'INTERNAL_ERROR', message: err?.message || String(err) });
+  }
+});
+
 // 1. Public API routes (existing submission form + new public directory)
 app.use('/api', publicRoutes);
 app.use('/api/public/students', publicStudentRoutes);
@@ -189,6 +211,7 @@ app.use('/api/public/videos', publicVideoRoutes);   // approved + published intr
 app.use('/api/student', studentRoutes);                         // existing: SSO, me, video upload
 app.use('/api/student/profile', studentProfileRoutes);          // Phase 1: profile
 app.use('/api/student/portfolio', studentPortfolioRoutes);      // Phase 2: projects/achievements/certs
+app.use('/api/student/github', studentGithubRoutes);            // Phase 2: GitHub portfolio & sync
 app.use('/api/student/events', studentEventsRoutes);            // Phase 4: events
 app.use('/api/student', studentInteractionsRoutes);             // Phase 5: voting, notifications, registrations, teams
 
@@ -200,6 +223,7 @@ app.use('/admin/api', adminApiRoutes);
 
 // 4. Admin Portal Management routes — Phase 7 (moderation, events, voting, RBAC, settings …)
 app.use('/admin/api/portal', adminPortalRoutes);
+app.use('/admin/api', adminPortalRoutes);
 
 // 5. Admin Academic Year Promotion routes
 app.use('/admin/api/academic-year', adminAcademicYearRoutes);
@@ -286,7 +310,7 @@ if (webBuildPath) {
 app.use(errorHandler);
 
 async function autoMigratePendingItems() {
-  if (process.env.AUTO_MIGRATE_PENDING !== 'true') return;
+  if (process.env.NODE_ENV === 'production' || process.env.AUTO_MIGRATE_PENDING !== 'true') return;
   try {
     const [resumeRes, achRes, certRes, profRes] = await Promise.all([
       prisma.resume.updateMany({
@@ -318,7 +342,14 @@ async function autoMigratePendingItems() {
 
 const port = env.PORT;
 if (process.env.NODE_ENV !== 'test') {
-  app.listen(port, () => {
+  (async () => {
+    try {
+      await prisma.$connect();
+    } catch (err: any) {
+      console.warn('[Prisma] Initial database connection on boot failed:', err?.message || err);
+    }
+
+    app.listen(port, () => {
     console.log(`🚀 Self Introduction Portal running on port ${port}`);
     console.log(`🌐 Web Portal:    http://localhost:${port}/`);
     console.log(`📡 Public API:    http://localhost:${port}/api`);
@@ -326,6 +357,9 @@ if (process.env.NODE_ENV !== 'test') {
 
     // Start background announcement scheduler
     startAnnouncementScheduler();
+
+    // Start background GitHub sync scheduler
+    startGithubSyncScheduler();
 
     // Run backlog auto-approval migration only when explicitly enabled via env var
     if (process.env.AUTO_MIGRATE_PENDING === 'true') {
@@ -350,6 +384,7 @@ if (process.env.NODE_ENV !== 'test') {
       );
     }
   });
+  })();
 }
 
 export default app;

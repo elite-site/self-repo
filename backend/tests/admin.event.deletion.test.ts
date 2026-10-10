@@ -5,19 +5,33 @@ import jwt from 'jsonwebtoken';
 import request from 'supertest';
 import adminPortalRouter from '../src/routes/admin.portal.routes';
 import { env } from '../src/config/env';
+import { INTERNAL_EVENT_ID } from '../src/config/constants';
 import { prisma } from '../src/lib/prisma';
 import { ActivityService } from '../src/services/activity.service';
 
 /**
- * Tests for the DELETE /admin/api/portal/events/:id endpoint.
+ * Deleting an Event has to clear every table that hangs off it, because each of
+ * those foreign keys is declared ON DELETE RESTRICT:
  *
- * The endpoint cascades deletes across all tables that reference Event via
- * ON DELETE RESTRICT foreign keys, in child-first order so the FKs never fire.
- * It also guards the internal self-introduction event (ACTIVE_EVENT_ID).
+ *   Submission.eventId            -> Event
+ *   EventRegistration.eventId     -> Event
+ *   RegistrationFormField.eventId -> Event
+ *   Team.eventId                  -> Event
+ *   EmailLog.eventId              -> Event
+ *
+ * plus the transitive children (RegistrationAnswer off registrations AND form
+ * fields, TeamMember/TeamInvitation off teams, Vote off candidates). A bare
+ * prisma.event.delete() therefore dies with P2003 as soon as the event has any
+ * history, which is exactly the bug that shipped: there was no DELETE route at all.
+ *
+ * Two behaviours are load-bearing and asserted below:
+ *   1. Deletion order is child-first. Getting it wrong reintroduces P2003.
+ *   2. Dependents are never destroyed on the first call — the API answers 409 with
+ *      a per-table tally and only cascades once the caller resends force:true.
  */
 vi.mock('../src/lib/prisma', () => ({
   prisma: {
-    event: { findUnique: vi.fn(), delete: vi.fn() },
+    event: { findUnique: vi.fn(), delete: vi.fn(), update: vi.fn() },
     eventRegistration: { count: vi.fn(), deleteMany: vi.fn() },
     submission: { count: vi.fn(), deleteMany: vi.fn() },
     registrationFormField: { count: vi.fn(), deleteMany: vi.fn() },
@@ -25,7 +39,7 @@ vi.mock('../src/lib/prisma', () => ({
     team: { count: vi.fn(), deleteMany: vi.fn() },
     teamMember: { deleteMany: vi.fn() },
     teamInvitation: { deleteMany: vi.fn() },
-    votingCampaign: { count: vi.fn(), deleteMany: vi.fn() },
+    votingCampaign: { deleteMany: vi.fn() },
     votingCandidate: { deleteMany: vi.fn() },
     vote: { count: vi.fn(), deleteMany: vi.fn() },
     emailLog: { count: vi.fn(), deleteMany: vi.fn() },
@@ -107,8 +121,17 @@ const deleteManyMock = (
     | 'emailLog',
 ) => prisma[model].deleteMany as unknown as ReturnType<typeof vi.fn>;
 
+const COUNT_MODELS = [
+  'eventRegistration',
+  'submission',
+  'registrationFormField',
+  'team',
+  'vote',
+  'emailLog',
+] as const;
+
 /** Seed the six count queries with a realistic spread of dependents. */
-const withDependents = (overrides: Partial<Record<'eventRegistration' | 'submission' | 'registrationFormField' | 'team' | 'vote' | 'emailLog', number>> = {}) => {
+const withDependents = (overrides: Partial<Record<(typeof COUNT_MODELS)[number], number>> = {}) => {
   const values = {
     eventRegistration: 12,
     submission: 3,
@@ -118,13 +141,11 @@ const withDependents = (overrides: Partial<Record<'eventRegistration' | 'submiss
     emailLog: 25,
     ...overrides,
   };
-  (Object.keys(values) as Array<keyof typeof values>).forEach((model) => countMock(model).mockResolvedValue(values[model]));
+  COUNT_MODELS.forEach((model) => countMock(model).mockResolvedValue(values[model]));
 };
 
 const withNoDependents = () => {
-  (
-    ['eventRegistration', 'submission', 'registrationFormField', 'team', 'vote', 'emailLog'] as const
-  ).forEach((model) => countMock(model).mockResolvedValue(0));
+  COUNT_MODELS.forEach((model) => countMock(model).mockResolvedValue(0));
 };
 
 beforeEach(() => {
@@ -137,20 +158,19 @@ beforeEach(() => {
   withNoDependents();
 });
 
-describe('Event deletion — guards', () => {
-  it('requires an authenticated admin session', async () => {
+describe('Event deletion — guards', () => {  it('requires an authenticated admin session', async () => {
     const response = await request(app).delete(`/admin/api/portal/events/${EVENT_ID}`);
 
     expect(response.status).toBe(401);
     expect(eventDelete).not.toHaveBeenCalled();
   });
 
-  it('refuses to delete the active self-introduction event', async () => {
-    // ACTIVE_EVENT_ID is the default target of Submission.eventId; removing it
+  it('refuses to delete the internal submission event', async () => {
+    // INTERNAL_EVENT_ID is the default target of Submission.eventId; removing it
     // would strand every submission row in the portal.
-    const response = await authed(request(app).delete(`/admin/api/portal/events/${env.ACTIVE_EVENT_ID}`));
+    const response = await authed(request(app).delete(`/admin/api/portal/events/${INTERNAL_EVENT_ID}`));
 
-    expect(response.status).toBe(400);
+    expect(response.status).toBe(403);
     expect(response.body.error).toBe('PROTECTED_EVENT');
     expect(eventDelete).not.toHaveBeenCalled();
     // The guard runs before any lookup, so the internal event is never even read.
@@ -168,12 +188,67 @@ describe('Event deletion — guards', () => {
   });
 });
 
-describe('Event deletion — cascade', () => {
+describe('Event deletion — confirmation gate', () => {
+  it('refuses to destroy dependents on the first call and returns a per-table tally', async () => {
+    withDependents();
+
+    const response = await authed(request(app).delete(`/admin/api/portal/events/${EVENT_ID}`));
+
+    expect(response.status).toBe(409);
+    expect(response.body.error).toBe('CONFIRMATION_REQUIRED');
+    expect(response.body.dependents).toEqual({
+      registrations: 12,
+      submissions: 3,
+      formFields: 4,
+      teams: 2,
+      votes: 30,
+      emailLogs: 25,
+    });
+
+    // The whole point of the gate: not one row destroyed yet.
+    expect(eventDelete).not.toHaveBeenCalled();
+    expect(transaction).not.toHaveBeenCalled();
+    expect(deleteManyMock('eventRegistration')).not.toHaveBeenCalled();
+    expect(deleteManyMock('submission')).not.toHaveBeenCalled();
+  });
+
+  it('does not write an activity log for a refused delete', async () => {
+    withDependents();
+
+    await authed(request(app).delete(`/admin/api/portal/events/${EVENT_ID}`));
+
+    expect(activityLog).not.toHaveBeenCalled();
+  });
+
+  it('scopes each tally to this event, and reaches votes through the campaign', async () => {
+    withDependents();
+
+    await authed(request(app).delete(`/admin/api/portal/events/${EVENT_ID}`));
+
+    expect(countMock('eventRegistration')).toHaveBeenCalledWith({ where: { eventId: EVENT_ID } });
+    expect(countMock('submission')).toHaveBeenCalledWith({ where: { eventId: EVENT_ID } });
+    expect(countMock('team')).toHaveBeenCalledWith({ where: { eventId: EVENT_ID } });
+    // Vote has no eventId column — the filter has to traverse campaign.eventId.
+    expect(countMock('vote')).toHaveBeenCalledWith({ where: { campaign: { eventId: EVENT_ID } } });
+  });
+
+  it('deletes immediately with no confirmation step when the event has no history', async () => {
+    withNoDependents();
+
+    const response = await authed(request(app).delete(`/admin/api/portal/events/${EVENT_ID}`));
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(eventDelete).toHaveBeenCalledWith({ where: { id: EVENT_ID } });
+  });
+});
+
+describe('Event deletion — confirmed cascade', () => {
   it('cascades every dependent table and the event in one transaction', async () => {
     withDependents();
 
     const response = await authed(
-      request(app).delete(`/admin/api/portal/events/${EVENT_ID}`),
+      request(app).delete(`/admin/api/portal/events/${EVENT_ID}`).send({ force: true }),
     );
 
     expect(response.status).toBe(200);
@@ -192,7 +267,7 @@ describe('Event deletion — cascade', () => {
   it('removes answers that hang off either a registration or a form field', async () => {
     withDependents();
 
-    await authed(request(app).delete(`/admin/api/portal/events/${EVENT_ID}`));
+    await authed(request(app).delete(`/admin/api/portal/events/${EVENT_ID}`).send({ force: true }));
 
     // Both branches matter: an orphaned field can outlive its registrations, and a
     // withdrawn registration leaves answers behind that still pin the field row.
@@ -206,7 +281,7 @@ describe('Event deletion — cascade', () => {
   it('clears team members and invitations before their team row', async () => {
     withDependents();
 
-    await authed(request(app).delete(`/admin/api/portal/events/${EVENT_ID}`));
+    await authed(request(app).delete(`/admin/api/portal/events/${EVENT_ID}`).send({ force: true }));
 
     expect(deleteManyMock('teamMember')).toHaveBeenCalledWith({ where: { team: { eventId: EVENT_ID } } });
     expect(deleteManyMock('teamInvitation')).toHaveBeenCalledWith({ where: { team: { eventId: EVENT_ID } } });
@@ -220,7 +295,7 @@ describe('Event deletion — cascade', () => {
     //   event    -> everything above
     withDependents();
 
-    await authed(request(app).delete(`/admin/api/portal/events/${EVENT_ID}`));
+    await authed(request(app).delete(`/admin/api/portal/events/${EVENT_ID}`).send({ force: true }));
 
     const before = (fn: ReturnType<typeof vi.fn>, model: string) => {
       expect(fn, `${model} was never called`).toHaveBeenCalled();
@@ -265,7 +340,7 @@ describe('Event deletion — cascade', () => {
   it('records the deletion and how much it destroyed', async () => {
     withDependents();
 
-    await authed(request(app).delete(`/admin/api/portal/events/${EVENT_ID}`));
+    await authed(request(app).delete(`/admin/api/portal/events/${EVENT_ID}`).send({ force: true }));
 
     expect(activityLog).toHaveBeenCalledTimes(1);
     const entry = activityLog.mock.calls[0][0];
@@ -283,11 +358,55 @@ describe('Event deletion — cascade', () => {
     eventDelete.mockRejectedValue(new Error('Foreign key constraint failed on the field: eventId'));
 
     const response = await authed(
-      request(app).delete(`/admin/api/portal/events/${EVENT_ID}`),
+      request(app).delete(`/admin/api/portal/events/${EVENT_ID}`).send({ force: true }),
     );
 
     expect(response.status).toBe(500);
     expect(response.body.success).toBeUndefined();
     expect(activityLog).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * Archive is the non-destructive counterpart to delete and the action the SRS
+ * actually wants for retired events ("archivable rather than indiscriminately
+ * deleted"). It must never touch dependent rows, which is precisely what makes it
+ * safe to expose as a one-click alternative to the delete dialog.
+ */
+describe('Event archive', () => {
+  const eventUpdate = prisma.event.update as unknown as ReturnType<typeof vi.fn>;
+
+  it('requires an authenticated admin session', async () => {
+    const response = await request(app).post(`/admin/api/portal/events/${EVENT_ID}/archive`);
+
+    expect(response.status).toBe(401);
+    expect(eventUpdate).not.toHaveBeenCalled();
+  });
+
+  it('flips the status to ARCHIVED', async () => {
+    eventUpdate.mockResolvedValue({ ...mockEvent, status: 'ARCHIVED' });
+
+    const response = await authed(request(app).post(`/admin/api/portal/events/${EVENT_ID}/archive`));
+
+    expect(response.status).toBe(200);
+    expect(response.body.status).toBe('ARCHIVED');
+    expect(eventUpdate).toHaveBeenCalledWith({
+      where: { id: EVENT_ID },
+      data: { status: 'ARCHIVED' },
+    });
+  });
+
+  it('leaves every dependent row alone', async () => {
+    withDependents();
+    eventUpdate.mockResolvedValue({ ...mockEvent, status: 'ARCHIVED' });
+
+    await authed(request(app).post(`/admin/api/portal/events/${EVENT_ID}/archive`));
+
+    // The whole safety argument for archive: a status write cannot trip the
+    // ON DELETE RESTRICT graph, so it must not attempt any delete.
+    expect(transaction).not.toHaveBeenCalled();
+    expect(eventDelete).not.toHaveBeenCalled();
+    expect(deleteManyMock('eventRegistration')).not.toHaveBeenCalled();
+    expect(deleteManyMock('submission')).not.toHaveBeenCalled();
   });
 });

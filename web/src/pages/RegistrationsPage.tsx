@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../services/api';
-import { EventRegistration } from '../types';
+import { EventRegistration, isActiveRegistration } from '../types';
 import { Loader2, CalendarX2, AlertCircle, Trash2, ExternalLink } from 'lucide-react';
 import { SkeletonListPage } from '../components/ui/Skeleton';
 import { useToast } from '../components/Toast';
@@ -20,12 +20,22 @@ export const RegistrationsPage: React.FC = () => {
   const staggerContainer = selectVariantsByName(shouldReduce, 'staggerFastContainer');
   const staggerItem = selectVariantsByName(shouldReduce, 'staggerItem');
 
+  const isRegistrationActive = (r: EventRegistration) => {
+    if (r.status === 'CANCELLED' || r.status === 'REJECTED') return false;
+    const eventStatus = (r as any).event?.status;
+    if (eventStatus === 'CLOSED' || eventStatus === 'ARCHIVED') return false;
+    if (r.eventId === 'self-introduction-2026') return false;
+    return true;
+  };
+
   const loadRegistrations = async (isInitial = true) => {
     if (isInitial && regs.length === 0) setLoading(true);
     setError(null);
     try {
       const data = await api.getRegistrations();
-      if (Array.isArray(data)) setRegs(data);
+      if (Array.isArray(data)) {
+        setRegs(data.filter(isRegistrationActive));
+      }
     } catch {
       if (regs.length === 0) setError('Could not load registrations. Please retry.');
     } finally {
@@ -46,10 +56,8 @@ export const RegistrationsPage: React.FC = () => {
     });
     if (!confirmed) return;
     setCancellingId(id);
-    // Optimistic status update
-    setRegs((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, status: 'CANCELLED' } : r))
-    );
+    // Optimistic removal: active registrations page never shows cancelled
+    setRegs((prev) => prev.filter((r) => r.id !== id));
     try {
       await api.cancelRegistration(id);
       showToast('Registration cancelled.');
@@ -62,17 +70,18 @@ export const RegistrationsPage: React.FC = () => {
     }
   };
 
-  const formatDate = (date?: string) => (date ? new Date(date).toLocaleDateString() : 'To be announced');
+  const formatDate = (date?: string) =>
+    date ? new Date(date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
 
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'REGISTERED':
       case 'CONFIRMED':
         return { className: 'badge badge-approved', label: 'Registered' };
-      case 'CANCELLED':
-        return { className: 'badge badge-draft', label: 'Cancelled' };
+      case 'WAITLISTED':
+        return { className: 'badge badge-draft', label: 'Waitlisted' };
       default:
-        return { className: 'badge badge-pending', label: status };
+        return { className: 'badge badge-pending', label: 'Pending' };
     }
   };
 
@@ -167,7 +176,7 @@ export const RegistrationsPage: React.FC = () => {
                           ) : (
                             <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
                           )}
-                          <span>Cancel Registration</span>
+                          <span>Cancel registration</span>
                         </button>
                       )}
                     </td>

@@ -92,6 +92,18 @@ export const env = {
   // Override via ACTIVE_EVENT_ID env var on Render to point at a new event without
   // a code change.
   ACTIVE_EVENT_ID: process.env.ACTIVE_EVENT_ID || 'self-introduction-2026',
+
+  // GitHub Portfolio Integration
+  GITHUB_OAUTH_CLIENT_ID: process.env.GITHUB_OAUTH_CLIENT_ID || '',
+  GITHUB_OAUTH_CLIENT_SECRET: process.env.GITHUB_OAUTH_CLIENT_SECRET || '',
+  GITHUB_OAUTH_REDIRECT_URI: process.env.GITHUB_OAUTH_REDIRECT_URI || 'http://localhost:5001/api/student/github/callback',
+  GITHUB_API_TOKEN: process.env.GITHUB_API_TOKEN || '',
+  GITHUB_API_VERSION: process.env.GITHUB_API_VERSION || '2022-11-28',
+  GITHUB_RATE_RESERVE: parseInt(process.env.GITHUB_RATE_RESERVE || '500', 10),
+  GITHUB_SYNC_COOLDOWN_MIN: parseInt(process.env.GITHUB_SYNC_COOLDOWN_MIN || '15', 10),
+  GITHUB_SYNC_DAILY_CAP: parseInt(process.env.GITHUB_SYNC_DAILY_CAP || '5', 10),
+  FEATURE_GITHUB_PORTFOLIO: process.env.FEATURE_GITHUB_PORTFOLIO === 'true',
+  INTERNAL_SYNC_SECRET: process.env.INTERNAL_SYNC_SECRET || '',
 };
 
 // Every literal this codebase will fall back to. If a value used at runtime

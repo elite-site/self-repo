@@ -97,7 +97,7 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
     res.json(payload);
   } catch (err: any) {
     console.error('Error fetching public videos:', err);
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
   }
 });
 

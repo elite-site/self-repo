@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import app from '../src/server';
 import { env } from '../src/config/env';
 import { prisma } from '../src/lib/prisma';
+import { INTERNAL_EVENT_ID } from '../src/config/constants';
 
 vi.mock('../src/lib/prisma', () => ({
   prisma: {
@@ -157,10 +158,12 @@ describe('Team Creation API (POST /api/student/teams)', () => {
       .send({ name: 'Beta Builders' }); // No eventId in body
 
     expect(res.status).toBe(201);
-    expect(prisma.event.findFirst).toHaveBeenCalledWith({
-      where: { status: 'OPEN' },
-      orderBy: { createdAt: 'desc' },
-    });
+    expect(prisma.event.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ status: 'OPEN' }),
+        orderBy: { createdAt: 'desc' },
+      })
+    );
     expect(prisma.team.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({

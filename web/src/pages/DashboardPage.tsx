@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
@@ -10,6 +10,7 @@ import {
   ExternalLink,
   FileText,
   FolderOpen,
+  Github,
   Plus,
   User,
   Users,
@@ -18,14 +19,10 @@ import {
 } from 'lucide-react';
 import { api } from '../services/api';
 import { getNotificationDestination, navigateToNotification } from '../utils/notificationRouting';
+import { formatContentStatus } from '../utils/status';
 import {
-  Achievement,
-  Certificate,
+  StudentDashboardResponse,
   StudentProfile,
-  Project,
-  Event,
-  EventRegistration,
-  VotingCampaign,
   Notification,
 } from '../types';
 import { Card } from '../components/ui/Card';
@@ -268,98 +265,33 @@ export const DashboardPage: React.FC = () => {
   const queryClient = useQueryClient();
 
   const {
-    data: profileData,
-    isLoading: profileLoading,
-    isError: profileIsError,
-    refetch: refetchProfile,
-  } = useQuery<DashboardProfile>({
-    queryKey: ['dashboard', 'profile'],
-    queryFn: () => api.getProfile(),
+    data: dashboardData,
+    isLoading: dashboardLoading,
+    isError: dashboardIsError,
+    refetch: refetchDashboard,
+  } = useQuery<StudentDashboardResponse>({
+    queryKey: ['dashboard'],
+    queryFn: () => api.getDashboard(),
+    staleTime: 60_000,
   });
-  const profile = profileData ?? null;
-  const profileError = profileIsError ? 'We could not load your profile right now.' : null;
 
-  const {
-    data: resumeData,
-  } = useQuery<DashboardResume | DashboardResume[] | null>({
-    queryKey: ['dashboard', 'resume'],
-    queryFn: () => api.getResume(),
-  });
-  const resume = resumeData ?? null;
-
-  const {
-    data: projectsData,
-  } = useQuery<Project[]>({
-    queryKey: ['dashboard', 'projects'],
-    queryFn: () => api.getProjects(),
-  });
-  const projects = Array.isArray(projectsData) ? projectsData : [];
-
-  const {
-    data: achievementsData,
-  } = useQuery<Achievement[]>({
-    queryKey: ['dashboard', 'achievements'],
-    queryFn: () => api.getAchievements(),
-  });
-  const achievements = Array.isArray(achievementsData) ? achievementsData : [];
-
-  const {
-    data: certificatesData,
-  } = useQuery<Certificate[]>({
-    queryKey: ['dashboard', 'certificates'],
-    queryFn: () => api.getCertificates(),
-  });
-  const certificates = Array.isArray(certificatesData) ? certificatesData : [];
-
-  const {
-    data: eventsData,
-    isError: eventsIsError,
-    refetch: refetchEvents,
-  } = useQuery<Event[]>({
-    queryKey: ['dashboard', 'events'],
-    queryFn: () => api.getEvents(),
-  });
-  const events = Array.isArray(eventsData) ? eventsData : [];
-  const eventsError = eventsIsError ? 'We could not load department events right now.' : null;
-
-  const {
-    data: registrationsData,
-  } = useQuery<EventRegistration[]>({
-    queryKey: ['dashboard', 'registrations'],
-    queryFn: () => api.getRegistrations(),
-  });
-  const registrations = Array.isArray(registrationsData) ? registrationsData : [];
-
-  const {
-    data: votingData,
-    isError: votingIsError,
-    refetch: refetchVoting,
-  } = useQuery<VotingCampaign[]>({
-    queryKey: ['dashboard', 'votingCampaigns'],
-    queryFn: () => api.getVotingCampaigns(),
-  });
-  const votingCampaigns = Array.isArray(votingData) ? votingData : [];
-  const votingError = votingIsError ? 'We could not load voting campaigns right now.' : null;
-
-  const {
-    data: notifsData,
-    isError: notifIsError,
-    refetch: refetchNotifs,
-  } = useQuery<{ items?: Notification[] } | Notification[]>({
-    queryKey: ['dashboard', 'notifications'],
-    queryFn: () => api.getNotifications(),
-  });
-  const notifications: Notification[] = Array.isArray(notifsData)
-    ? notifsData
-    : Array.isArray(notifsData?.items)
-    ? notifsData.items
-    : [];
-  const notifError = notifIsError ? 'We could not load your recent activity right now.' : null;
+  const profile = dashboardData?.profile ?? null;
+  const profileError = dashboardIsError && !profile ? 'We could not load your profile right now.' : null;
+  const resume = dashboardData?.resume ?? null;
+  const counts = dashboardData?.counts ?? { projects: 0, achievements: 0, certificates: 0 };
+  const events = dashboardData?.events ?? [];
+  const eventsError = dashboardIsError && events.length === 0 ? 'We could not load department events right now.' : null;
+  const registrations = dashboardData?.registrations ?? [];
+  const votingCampaigns = dashboardData?.votingCampaigns ?? [];
+  const votingError = dashboardIsError && votingCampaigns.length === 0 ? 'We could not load voting campaigns right now.' : null;
+  const notifications: Notification[] = dashboardData?.notifications ?? [];
+  const notifError = dashboardIsError && notifications.length === 0 ? 'We could not load your recent activity right now.' : null;
+  const github = dashboardData?.github ?? null;
 
   const markNotificationMutation = useMutation({
     mutationFn: (id: string) => api.markNotificationRead(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['dashboard', 'notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 
@@ -372,10 +304,33 @@ export const DashboardPage: React.FC = () => {
     navigateToNotification(destination, navigate);
   };
 
+  const [githubBannerDismissed, setGithubBannerDismissed] = useState(false);
+
+  const isReminderSnoozed = useMemo(() => {
+    if (!github) return false;
+    if (github.reminderSnoozedUntil) {
+      return new Date(github.reminderSnoozedUntil).getTime() > Date.now();
+    }
+    return false;
+  }, [github]);
+
+  const showGithubBanner =
+    !githubBannerDismissed &&
+    github &&
+    !github.connected &&
+    !isReminderSnoozed;
+
+  const handleSnoozeGithub = async () => {
+    setGithubBannerDismissed(true);
+    try {
+      await api.snoozeGithubReminder();
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    } catch {
+      // Optimistic dismiss remains active
+    }
+  };
+
   const shouldReduce = useReducedMotion();
-  // §6.2 "Animation Details": one section per 100ms, greeting first. The
-  // reduced pair drops both the stagger and the travel, so nothing arrives
-  // late (§3.4).
   const staggerContainer = selectVariantsByName(shouldReduce, 'staggerFastContainer');
   const staggerItem = selectVariantsByName(shouldReduce, 'staggerFastItem');
 
@@ -383,26 +338,29 @@ export const DashboardPage: React.FC = () => {
   const checkPhoto = !!profile?.photoUrl;
   const checkBio = !!(profile?.bio || profile?.biography);
   const checkSkills = !!(profile?.skills && profile.skills.length > 0);
-  const effectiveVideoStatus = profile?.video?.status || profile?.submission?.status;
-  const checkVideo =
-    !!(profile?.video ||
-      profile?.submission?.videoUploaded ||
-      profile?.submission?.videoUrl ||
-      effectiveVideoStatus);
-  const activeResume = Array.isArray(resume) ? (resume.length > 0 ? resume[0] : null) : resume;
-  const checkResume = !!(activeResume?.driveFileId || activeResume?.fileUrl);
-  const checkProjects = projects.length > 0;
+  const effectiveVideoStatus = profile?.video?.status;
+  const checkVideo = !!profile?.video;
+  const checkResume = !!(resume?.exists || resume?.driveFileId);
+  const checkProjects = (counts?.projects ?? 0) > 0;
 
-  const videoStatus = VIDEO_STATUS[effectiveVideoStatus ?? ''] ?? 
-    (effectiveVideoStatus === 'PENDING' 
-      ? { tone: 'badge-pending' as DashboardTone, label: 'Under review' } 
-      : { tone: 'badge-draft' as DashboardTone, label: 'Not submitted' });
+  const videoStatus = {
+    label: formatContentStatus(effectiveVideoStatus),
+    tone: (effectiveVideoStatus === 'APPROVED'
+      ? 'badge-approved'
+      : effectiveVideoStatus === 'CHANGES_REQUESTED'
+        ? 'badge-changes'
+        : effectiveVideoStatus === 'REJECTED'
+          ? 'badge-rejected'
+          : effectiveVideoStatus === 'PENDING' || effectiveVideoStatus === 'UNDER_REVIEW'
+            ? 'badge-pending'
+            : 'badge-draft') as DashboardTone,
+  };
 
   let videoState: 'todo' | 'progress' | 'done' = 'todo';
   if (checkVideo) {
     if (effectiveVideoStatus === 'APPROVED') {
       videoState = 'done';
-    } else if (effectiveVideoStatus === 'SUBMITTED' || effectiveVideoStatus === 'PENDING') {
+    } else if (effectiveVideoStatus === 'PENDING' || effectiveVideoStatus === 'UNDER_REVIEW') {
       videoState = 'progress';
     } else {
       // CHANGES_REQUESTED or REJECTED
@@ -471,7 +429,7 @@ export const DashboardPage: React.FC = () => {
   // Only the events worth acting on, soonest first.
   const upcomingEvents = [...events].sort((a, b) => timeOf(a.date) - timeOf(b.date)).slice(0, 3);
   const firstName = (profile?.name || 'there').split(' ').filter(Boolean)[0];
-  const credentialsCount = achievements.length + certificates.length;
+  const credentialsCount = (counts?.achievements ?? 0) + (counts?.certificates ?? 0);
 
   /** §6.2 (1). "Semester 5" has no field behind it — `year` does. */
   const todayLine = new Date().toLocaleDateString(undefined, {
@@ -490,7 +448,7 @@ export const DashboardPage: React.FC = () => {
     },
     {
       label: 'Add project',
-      hint: `${projects.length} project${projects.length === 1 ? '' : 's'} · ${credentialsCount} credential${credentialsCount === 1 ? '' : 's'}`,
+      hint: `${counts?.projects ?? 0} project${(counts?.projects ?? 0) === 1 ? '' : 's'} · ${credentialsCount} credential${credentialsCount === 1 ? '' : 's'}`,
       to: '/portfolio',
       icon: FolderOpen,
     },
@@ -522,7 +480,7 @@ export const DashboardPage: React.FC = () => {
     },
   ];
 
-  if (profileLoading && !profile) {
+  if (dashboardLoading && !dashboardData) {
     return <DashboardSkeleton />;
   }
 
@@ -553,12 +511,49 @@ export const DashboardPage: React.FC = () => {
         )}
       </motion.header>
 
+      {showGithubBanner && (
+        <motion.div variants={staggerItem}>
+          <div className="relative overflow-hidden rounded-2xl border border-brand/20 bg-brand-soft p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
+            <div className="flex items-start gap-3.5">
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-surface text-ink shadow-sm">
+                <Github size={20} />
+              </span>
+              <div className="space-y-0.5">
+                <p className="font-heading text-label-md font-bold text-ink">
+                  Build your portfolio with GitHub
+                </p>
+                <p className="text-body-sm text-ink-secondary">
+                  Connect your GitHub to showcase your repositories and skills automatically on your portfolio.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2.5 shrink-0 self-end sm:self-center">
+              <button
+                type="button"
+                onClick={handleSnoozeGithub}
+                className="btn btn-ghost px-3 py-1.5 text-xs text-ink-secondary hover:text-ink min-h-[38px]"
+              >
+                Remind me later
+              </button>
+              <Link
+                to="/github"
+                className="btn btn-primary px-4 py-1.5 text-xs font-bold min-h-[38px] inline-flex items-center gap-1.5"
+              >
+                <Github size={14} />
+                <span>Connect GitHub</span>
+              </Link>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
       {profileError && (
         <motion.div variants={staggerItem}>
           <ErrorState
             title="We could not load your profile"
             message={profileError}
-            onRetry={() => refetchProfile()}
+            onRetry={() => refetchDashboard()}
           />
         </motion.div>
       )}
@@ -708,7 +703,7 @@ export const DashboardPage: React.FC = () => {
 
             <div className="mt-4">
               {notifError ? (
-                <ErrorState bare message={notifError} onRetry={() => refetchNotifs()} />
+                <ErrorState bare message={notifError} onRetry={() => refetchDashboard()} />
               ) : notifications.length === 0 ? (
                 <EmptyState
                   bare
@@ -782,7 +777,7 @@ export const DashboardPage: React.FC = () => {
 
             <div className="mt-4">
               {eventsError ? (
-                <ErrorState bare message={eventsError} onRetry={() => refetchEvents()} />
+                <ErrorState bare message={eventsError} onRetry={() => refetchDashboard()} />
               ) : upcomingEvents.length === 0 ? (
                 <EmptyState
                   bare
@@ -888,7 +883,7 @@ export const DashboardPage: React.FC = () => {
             <ErrorState
               title="Voting is unavailable"
               message={votingError}
-              onRetry={() => refetchVoting()}
+              onRetry={() => refetchDashboard()}
             />
           )}
         </div>

@@ -134,6 +134,7 @@ export interface Student {
   section: string;
   branch: string;
   hasUploaded: boolean;
+  video?: { status: string; isPublic: boolean } | null;
   submission: {
     id: string;
     status: string;

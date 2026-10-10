@@ -24,6 +24,7 @@
     "verify:env-guard": "npm run build && node scripts/verify-env-guard.js",
     "verify:esm-interop": "npm run build && node scripts/verify-esm-interop.js",
     "db:setup": "ts-node scripts/db-setup.ts",
+    "cleanup:internal-event": "ts-node scripts/cleanup-internal-event.ts",
     "get-token": "ts-node scripts/get-oauth-token.ts"
   },
   "dependencies": {
@@ -57,6 +58,9 @@
     "sharp": "^0.35.4",
     "ts-node": "^10.9.2",
     "typescript": "5.9.3"
+  },
+  "overrides": {
+    "uuid": "^11.1.1"
   },
   "devDependencies": {
     "@types/supertest": "^7.2.1",

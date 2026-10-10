@@ -22,12 +22,20 @@ import {
   HardDrive,
 } from 'lucide-react';
 
+/**
+ * The internal self-introduction submission event. This is deliberately a local
+ * copy rather than an import: `admin-client` and `backend` are installed as
+ * separate npm projects (see the root package.json scripts), so they cannot share
+ * a module. The source of truth is `INTERNAL_EVENT_ID` in
+ * `backend/src/config/constants.ts` — keep the two in sync.
+ */
 export const ACTIVE_EVENT_ID = 'self-introduction-2026';
 
 export type AdminTab =
   | 'dashboard'
   | 'submissions'
   | 'students'
+  | 'github'
   | 'activity'
   | 'moderation'
   | 'events'
@@ -65,14 +73,15 @@ const navGroups: NavGroup[] = [
   {
     label: 'Students',
     items: [
-      { id: 'students', label: 'Students', icon: Users },
-      { id: 'moderation', label: 'Moderation Queue', icon: ShieldCheck },
+      { id: 'students', label: 'All students', icon: Users },
+      { id: 'github', label: 'GitHub', icon: HardDrive },
+      { id: 'moderation', label: 'Moderation queue', icon: ShieldCheck },
     ],
   },
   {
     label: 'Events',
     items: [
-      { id: 'events', label: 'Events', icon: CalendarDays },
+      { id: 'events', label: 'All events', icon: CalendarDays },
       { id: 'event-registrations', label: 'Registrations', icon: Layers },
     ],
   },
@@ -136,6 +145,28 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab, onLogo
         {/* NAV GROUPS */}
         <nav className="flex-1 p-2.5 space-y-1 overflow-y-auto" aria-label="Admin navigation">
           {navGroups.map((group) => {
+            if (group.items.length === 1) {
+              const item = group.items[0];
+              const Icon = item.icon;
+              const isActive = activeTab === item.id;
+              return (
+                <div key={group.label} className="mb-2">
+                  <button
+                    onClick={() => onSelectTab(item.id)}
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                      isActive
+                        ? 'bg-brand-soft text-brand-soft-text font-semibold'
+                        : 'text-ink-secondary hover:text-ink hover:bg-surface-sunken'
+                    }`}
+                    aria-current={isActive ? 'page' : undefined}
+                    aria-pressed={isActive}
+                  >
+                    <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-brand' : 'text-ink-muted'}`} aria-hidden="true" />
+                    <span className="truncate">{item.label}</span>
+                  </button>
+                </div>
+              );
+            }
             const hasActive = group.items.some((i) => i.id === activeTab);
             // The group holding the current page can never be collapsed, so the
             // sidebar always shows where the admin is rather than hiding the page
@@ -175,7 +206,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab, onLogo
                         >
                           <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-brand' : 'text-ink-muted'}`} aria-hidden="true" />
                           <span className="truncate">{item.label}</span>
-                          {isActive && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-brand" aria-hidden="true" />}
                         </button>
                       );
                     })}

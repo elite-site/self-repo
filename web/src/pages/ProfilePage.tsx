@@ -22,8 +22,9 @@ import {
   GraduationCap
 } from 'lucide-react';
 import { api, resolveMediaUrl } from '../services/api';
-import { StudentProfile, Project, Certificate, Achievement, StudentIntroVideo } from '../types';
+import { StudentProfile, Project, Certificate, Achievement, StudentIntroVideo, StudentPortfolioResponse } from '../types';
 import { getPhotoStyle } from '../utils/photoStyle';
+import { formatContentStatus, getContentStatusBadgeClass } from '../utils/status';
 import { SkeletonPage } from '../components/ui/Skeleton';
 import { createPortal } from 'react-dom';
 import { LeetCodeIcon, CodeChefIcon } from '../components/icons/PlatformIcons';
@@ -56,19 +57,21 @@ export const ProfilePage: React.FC = () => {
   const [reason, setReason] = useState('');
   const [submittingReq, setSubmittingReq] = useState(false);
   const [reqSuccess, setReqSuccess] = useState(false);
+  const [portfolio, setPortfolio] = useState<StudentPortfolioResponse | null>(null);
   const [reqError, setReqError] = useState<string | null>(null);
 
   const fetchProfileData = async () => {
     setLoading(true);
     setError(null);
 
-    const [pResult, rResult, prResult, achResult, certResult, meResult] = await Promise.allSettled([
+    const [pResult, rResult, prResult, achResult, certResult, meResult, portResult] = await Promise.allSettled([
       api.getProfile(),
       api.getResume(),
       api.getProjects(),
       api.getAchievements(),
       api.getCertificates(),
       api.getMe(),
+      api.getStudentPortfolio(),
     ]);
 
     if (pResult.status === 'fulfilled') {
@@ -90,7 +93,13 @@ export const ProfilePage: React.FC = () => {
     }
 
     if (prResult.status === 'fulfilled' && Array.isArray(prResult.value)) {
-      setProjects(prResult.value);
+      const sorted = [...prResult.value].sort((a, b) => {
+        if (typeof (a as any).displayOrder === 'number' && typeof (b as any).displayOrder === 'number') {
+          return (a as any).displayOrder - (b as any).displayOrder;
+        }
+        return new Date((b as any).createdAt || 0).getTime() - new Date((a as any).createdAt || 0).getTime();
+      });
+      setProjects(sorted);
     }
 
     if (achResult.status === 'fulfilled' && Array.isArray(achResult.value)) {
@@ -99,6 +108,10 @@ export const ProfilePage: React.FC = () => {
 
     if (certResult.status === 'fulfilled' && Array.isArray(certResult.value)) {
       setCertificates(certResult.value);
+    }
+
+    if (portResult.status === 'fulfilled') {
+      setPortfolio(portResult.value);
     }
 
     setLoading(false);
@@ -202,6 +215,36 @@ export const ProfilePage: React.FC = () => {
       default: return 'badge badge-draft';
     }
   };
+
+  const showcasedRepos = portfolio?.showcasedRepos || portfolio?.showcased || [];
+  const githubSkills = portfolio?.skills || [];
+  const approvedManualProjects = projects.filter((p) => p.status === 'APPROVED');
+
+  const githubProjectItems = showcasedRepos.map((r) => ({
+    id: r.id,
+    title: r.name,
+    description: r.description || 'GitHub repository',
+    techStack: r.primaryLanguage
+      ? [r.primaryLanguage, ...(r.topics || []).slice(0, 2)]
+      : (r.topics || []).slice(0, 3),
+    githubUrl: r.htmlUrl,
+    isGithub: true as const,
+    stars: r.stars,
+    isFork: r.isFork,
+    status: 'VERIFIED',
+  }));
+
+  const manualProjectItems = projects.map((p) => ({
+    ...p,
+    isGithub: false as const,
+  }));
+
+  const combinedProjects = [
+    ...approvedManualProjects.map((p) => ({ ...p, isGithub: false as const })),
+    ...githubProjectItems,
+  ];
+
+  const displayProjects = combinedProjects.length > 0 ? combinedProjects : manualProjectItems;
 
   return (
     <>
@@ -380,11 +423,9 @@ export const ProfilePage: React.FC = () => {
             <h2 className="text-base font-bold text-ink font-heading">Introduction Video</h2>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            {(video?.status || profile?.submission?.status) && (
-              <span className={getItemStatusBadgeClass(video?.status || profile?.submission?.status)}>
-                {video?.status || profile?.submission?.status}
-              </span>
-            )}
+            <span className={getContentStatusBadgeClass(video?.status)}>
+              {formatContentStatus(video?.status)}
+            </span>
             <Link
               to="/intro-video"
               className="btn btn-secondary px-3 py-1.5 text-xs"
@@ -461,36 +502,54 @@ export const ProfilePage: React.FC = () => {
             <Sparkles className="w-5 h-5 text-ink-brand" />
             <h2 className="text-base font-bold text-ink font-heading">Technical Skills</h2>
           </div>
-          <Link
-            to="/profile/edit"
-            className="text-xs font-bold text-ink-brand hover:text-brand-hover flex items-center gap-0.5"
-          >
-            <span>Manage Skills</span>
-            <ChevronRight className="w-3.5 h-3.5" />
-          </Link>
         </div>
 
-        {profile?.skills && profile.skills.length > 0 ? (
-          <div className="flex flex-wrap gap-2 pt-1">
-            {profile.skills.map((skill) => (
-              <span
-                key={skill}
-                className="px-3 py-1.5 bg-surface border border-edge text-ink rounded-lg text-xs font-semibold shadow-sm"
-              >
-                {skill}
-              </span>
-            ))}
+        {(profile?.skills && profile.skills.length > 0) || githubSkills.length > 0 ? (
+          <div className="space-y-4">
+            {profile?.skills && profile.skills.length > 0 && (
+              <div className="flex flex-wrap gap-2 pt-1">
+                {profile.skills.map((skill) => (
+                  <span
+                    key={skill}
+                    className="px-3 py-1.5 bg-surface border border-edge text-ink rounded-lg text-xs font-semibold shadow-sm"
+                  >
+                    {skill}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {githubSkills.length > 0 && (
+              <div className="pt-2 border-t border-edge/60">
+                <span className="text-[11px] font-bold text-ink-muted uppercase tracking-wider block mb-2">
+                  Verified from GitHub Activity
+                </span>
+                <div className="flex flex-wrap gap-2">
+                  {githubSkills.map((gs) => (
+                    <span
+                      key={gs.id || gs.name}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface border border-edge text-ink text-xs font-medium shadow-sm"
+                    >
+                      <Github size={12} className="text-ink-muted" />
+                      <span>{gs.name}</span>
+                      {gs.repoCount ? (
+                        <span className="text-[10px] text-ink-muted bg-surface-sunken px-1.5 py-0.5 rounded font-mono">
+                          {gs.repoCount} {gs.repoCount === 1 ? 'repo' : 'repos'}
+                        </span>
+                      ) : null}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <div className="text-center py-6 px-4 bg-surface-sunken rounded-xl border border-dashed border-edge">
             <Sparkles className="w-6 h-6 text-ink-muted mx-auto mb-1.5" />
             <div className="text-xs font-semibold text-ink-secondary">No technical skills added yet</div>
-            <p className="text-xs text-ink-muted mt-0.5 mb-3">
-              Highlight languages, frameworks, databases, and developer tools.
+            <p className="text-xs text-ink-muted mt-0.5">
+              Connect your GitHub account to automatically detect your skills.
             </p>
-            <Link to="/profile/edit" className="btn btn-primary text-xs">
-              <span>Add Skills</span>
-            </Link>
           </div>
         )}
       </div>
@@ -509,33 +568,49 @@ export const ProfilePage: React.FC = () => {
             to="/portfolio"
             className="text-xs font-bold text-ink-brand hover:text-brand-hover flex items-center gap-0.5"
           >
-            <span>Manage ({projects.length})</span>
+            <span>Manage ({displayProjects.length})</span>
             <ChevronRight className="w-3.5 h-3.5" />
           </Link>
         </div>
 
-        {projects.length === 0 ? (
+        {displayProjects.length === 0 ? (
           <div className="text-center py-8 px-4 bg-surface-sunken rounded-xl border border-dashed border-edge">
             <FolderGit2 className="w-8 h-8 text-ink-muted mx-auto mb-2" />
             <div className="text-xs font-bold text-ink-secondary">No projects added yet</div>
             <p className="text-xs text-ink-muted mt-0.5 mb-3">
               Showcase software applications, AI models, hardware builds, or academic projects.
             </p>
-            <Link to="/portfolio" className="btn btn-primary text-xs">
-              <span>Add Project</span>
-            </Link>
+            <div className="flex items-center justify-center gap-2">
+              <Link to="/github" className="btn btn-secondary text-xs">
+                <Github size={14} />
+                <span>Connect GitHub</span>
+              </Link>
+              <Link to="/portfolio" className="btn btn-primary text-xs">
+                <span>Add Project</span>
+              </Link>
+            </div>
           </div>
         ) : (
-          <div className={`grid gap-4 ${projects.length === 1 ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2'}`}>
-            {projects.slice(0, 4).map((proj) => (
+          <div className={`grid gap-4 auto-rows-fr ${displayProjects.length === 1 ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2'}`}>
+            {displayProjects.slice(0, 4).map((proj, index) => (
               <div
                 key={proj.id}
-                className="surface p-4 rounded-xl border border-edge flex flex-col justify-between hover:border-edge-strong transition-colors bg-surface-sunken"
+                className="surface p-4 rounded-xl border border-edge flex flex-col justify-between hover:border-edge-strong transition-colors bg-surface-sunken h-full"
               >
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <span className={getItemStatusBadgeClass(proj.status)}>
-                      {proj.status}
+                    {proj.isGithub ? (
+                      <span className="badge badge-brand inline-flex items-center gap-1 text-[11px] font-bold">
+                        <Github className="w-3 h-3" />
+                        <span>GitHub</span>
+                      </span>
+                    ) : (
+                      <span className={getItemStatusBadgeClass((proj as any).status)}>
+                        {(proj as any).status}
+                      </span>
+                    )}
+                    <span className="text-[10px] font-bold text-ink-muted uppercase tracking-wider">
+                      Project #{index + 1}
                     </span>
                   </div>
                   <h4 className="text-xs font-bold text-ink font-heading line-clamp-1">{proj.title}</h4>
@@ -558,7 +633,7 @@ export const ProfilePage: React.FC = () => {
                       href={proj.githubUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-ink-secondary hover:text-ink-brand"
+                      className="text-ink-secondary hover:text-ink-brand inline-flex items-center gap-1"
                       aria-label="View project on GitHub"
                     >
                       <Github className="w-3.5 h-3.5" />

@@ -19,6 +19,7 @@
          One request for all four; the weights are the ones the roles use. -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://self-repo.onrender.com" />
     <link
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Inter:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
@@ -44,6 +45,17 @@
         } catch (e) {
           document.documentElement.setAttribute('data-theme', 'light');
         }
+
+        // Fire a non-blocking health check to wake up sleeping backend on Render while JS bundle downloads
+        try {
+          var rawApi = '%VITE_API_BASE_URL%';
+          var apiOrigin = (rawApi && rawApi.indexOf('%') === -1)
+            ? rawApi.replace(/\/api\/?$/, '')
+            : (window.location.hostname !== 'localhost' ? 'https://self-repo.onrender.com' : 'http://localhost:5001');
+          if (apiOrigin) {
+            fetch(apiOrigin + '/health', { mode: 'no-cors' }).catch(function() {});
+          }
+        } catch (e) {}
       })();
     </script>
   </head>

@@ -5,7 +5,7 @@ import { api } from '../services/api';
 import { useSession } from '../context/SessionContext';
 import { useToast } from '../components/Toast';
 import { useConfirm } from '../components/ui/ConfirmDialog';
-import { Event, EventRegistration } from '../types';
+import { Event, EventRegistration, isActiveRegistration } from '../types';
 import {
   Calendar,
   Clock,
@@ -65,8 +65,7 @@ export const EventDetailPage: React.FC = () => {
 
       if (Array.isArray(regList)) {
         const found = regList.find(
-          (r: EventRegistration) =>
-            r.eventId === id && (r.status === 'REGISTERED' || r.status === 'CONFIRMED')
+          (r: EventRegistration) => r.eventId === id && isActiveRegistration(r.status)
         );
         setRegistration(found || null);
       }
@@ -108,7 +107,7 @@ export const EventDetailPage: React.FC = () => {
         id: res?.id || `reg-${Date.now()}`,
         eventId: id,
         eventTitle: event?.title || '',
-        status: 'REGISTERED',
+        status: 'CONFIRMED',
         registeredAt: res?.registeredAt || new Date().toISOString(),
         ...res,
       });
@@ -314,6 +313,16 @@ export const EventDetailPage: React.FC = () => {
                       {cancelling ? <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" /> : <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />}
                       <span>Cancel registration</span>
                     </button>
+                  </div>
+                ) : !isEventActive ? (
+                  <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs flex items-center gap-2.5">
+                    <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
+                    <div>
+                      <span className="font-bold block">Registration closed</span>
+                      <span className="text-[10px] text-amber-700">
+                        This event is no longer accepting new registrations
+                      </span>
+                    </div>
                   </div>
                 ) : (
                   <button

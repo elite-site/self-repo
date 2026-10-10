@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { BRANCHES, SECTIONS, YEARS } from '../config/constants';
+import { BRANCHES, SECTIONS, YEARS, EXCLUDE_INTERNAL_EVENT, isInternalEvent, INTERNAL_EVENT_ID, INTERNAL_EVENT_SLUG } from '../config/constants';
 import { env } from '../config/env';
 import { prisma } from '../lib/prisma';
 import { submissionUploadMiddleware } from '../middleware/upload';
@@ -17,7 +17,7 @@ export function invalidateMediaDriveIdCache(type: string, id: string): void {
   mediaDriveIdCache.delete(`${type}:${id}`);
 }
 
-const EVENT_ID = env.ACTIVE_EVENT_ID;
+const EVENT_ID = INTERNAL_EVENT_ID;
 const EVENT_NAME = 'Self Introduction';
 
 /**
@@ -57,6 +57,7 @@ router.post(
   async (req: Request, res: Response): Promise<void> => {
     let currentRollNo = '';
     let currentStudentName = '';
+    let currentStudentEmail = '';
 
     try {
       const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
@@ -71,6 +72,7 @@ router.post(
       const branch = 'IT';
       currentRollNo = rollNo;
       currentStudentName = name;
+      currentStudentEmail = email;
 
       // 2. Validate student details
       if (!rollNo) {
@@ -295,7 +297,7 @@ router.post(
         action: 'Application submission failed',
         details: err?.message || 'Unexpected server error',
         applicantName: currentStudentName,
-        userEmail: currentRollNo,
+        userEmail: currentStudentEmail || currentRollNo,
         status: 'ERROR',
         errorMessage: err?.stack || err?.message,
       });
@@ -320,7 +322,10 @@ router.get('/public/events', async (_req: Request, res: Response): Promise<void>
   try {
     const now = new Date();
     const events = await prisma.event.findMany({
-      where: { status: { in: ['OPEN', 'CLOSED'] } },
+      where: {
+        status: 'OPEN',
+        ...EXCLUDE_INTERNAL_EVENT,
+      },
       orderBy: { eventDate: 'asc' }
     });
     res.set('Cache-Control', 'public, max-age=60');
@@ -355,13 +360,18 @@ router.get('/public/events', async (_req: Request, res: Response): Promise<void>
 
     res.json(mapped);
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error("Internal server error:", err);
+    res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
   }
 });
 
 // GET /api/public/events/:id - Public event detail
 router.get('/public/events/:id', async (req: Request, res: Response): Promise<void> => {
   try {
+    if (isInternalEvent(req.params.id)) {
+      res.status(404).json({ error: 'NOT_FOUND', message: 'Event not found' });
+      return;
+    }
     const event = await prisma.event.findFirst({
       where: { id: req.params.id, status: { in: ['OPEN', 'CLOSED'] } },
       include: { formFields: { orderBy: { displayOrder: 'asc' } } }
@@ -392,7 +402,8 @@ router.get('/public/events/:id', async (req: Request, res: Response): Promise<vo
       registrationFields: event.formFields
     });
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error("Internal server error:", err);
+    res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
   }
 });
 
@@ -616,13 +627,26 @@ router.get('/public/media/:type/:fileId', async (req: Request, res: Response): P
         if (prof?.photoDriveId) resolvedDriveId = prof.photoDriveId;
       } else if (type === 'video') {
         const vid = await prisma.introVideo.findFirst({
-          where: { OR: [{ id: fileId }, { studentId: fileId }] },
+          where: {
+            OR: [
+              { id: fileId },
+              { studentId: fileId },
+              { driveFileId: fileId },
+              { student: { rollNo: fileId } },
+            ],
+          },
         });
         if (vid?.driveFileId) {
           resolvedDriveId = vid.driveFileId;
         } else {
           const sub = await prisma.submission.findFirst({
-            where: { OR: [{ id: fileId }, { rollNo: fileId }] },
+            where: {
+              OR: [
+                { id: fileId },
+                { rollNo: fileId },
+                { videoDriveId: fileId },
+              ],
+            },
           });
           if (sub?.videoDriveId) resolvedDriveId = sub.videoDriveId;
         }
@@ -699,7 +723,11 @@ router.get('/public/media/:type/:fileId', async (req: Request, res: Response): P
       rangeHeader,
     );
 
-    res.setHeader('Content-Type', mimeType);
+    let responseMimeType = mimeType;
+    if (type === 'video' && (!responseMimeType || responseMimeType === 'application/octet-stream')) {
+      responseMimeType = 'video/mp4';
+    }
+    res.setHeader('Content-Type', responseMimeType);
     res.setHeader('Accept-Ranges', 'bytes');
     res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
     res.setHeader('ETag', etag);

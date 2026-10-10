@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
 import { driveService } from '../services/drive.service';
 import { TtlCache } from '../utils/ttlCache';
+import { EXCLUDE_INTERNAL_EVENT } from '../config/constants';
 
 const router = Router();
 
@@ -153,7 +154,8 @@ router.get('/', async (req: Request, res: Response) => {
 
     res.json(payload);
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error("Internal server error:", err);
+    res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
   }
 });
 
@@ -168,7 +170,8 @@ router.get('/skills', async (_req: Request, res: Response) => {
     res.setHeader('Cache-Control', 'public, max-age=300');
     res.json(skills);
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error("Internal server error:", err);
+    res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
   }
 });
 
@@ -186,6 +189,18 @@ const loadPublicProfile = (rollNo: string) =>
         where: { status: 'APPROVED', isPublic: true },
         orderBy: { displayOrder: 'asc' },
         take: 100,
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          technologies: true,
+          githubUrl: true,
+          driveVideoUrl: true,
+          displayOrder: true,
+          status: true,
+          createdAt: true,
+          updatedAt: true,
+        },
       },
       achievements: {
         where: { status: 'APPROVED' },
@@ -224,7 +239,38 @@ const loadPublicProfile = (rollNo: string) =>
         take: 1,
         orderBy: { publishedAt: 'desc' },
         select: { id: true, submittedAt: true, publishedAt: true, sizeMb: true, driveFileId: true, status: true, isPublic: true },
-      }
+      },
+      githubAccount: {
+        select: {
+          login: true,
+          avatarUrl: true,
+          lastSyncedAt: true,
+        },
+      },
+      githubRepos: {
+        where: { isShowcased: true, removedFromGithub: false },
+        orderBy: { showcaseRank: 'asc' },
+        take: 30,
+        select: {
+          id: true,
+          githubRepoId: true,
+          name: true,
+          description: true,
+          readmeExcerpt: true,
+          htmlUrl: true,
+          stars: true,
+          primaryLanguage: true,
+          languages: true,
+          commitCount: true,
+          isFork: true,
+          showcaseRank: true,
+        },
+      },
+      githubSkills: {
+        include: { skill: true },
+        orderBy: [{ repoCount: 'desc' }, { totalBytes: 'desc' }],
+        take: 30,
+      },
     }
   });
 
@@ -238,6 +284,23 @@ export const clearPublicStudentCaches = (): void => {
   studentProfileCache.clear();
   skillsCache.clear();
 };
+
+router.get('/events', async (_req: Request, res: Response) => {
+  try {
+    const events = await prisma.event.findMany({
+      where: {
+        status: 'OPEN',
+        ...EXCLUDE_INTERNAL_EVENT,
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.set('Cache-Control', 'public, max-age=60');
+    res.json(events);
+  } catch (err: any) {
+    console.error("Internal server error:", err);
+    res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
+  }
+});
 
 router.get('/:rollNo', async (req: Request, res: Response) => {
   try {
@@ -315,6 +378,30 @@ router.get('/:rollNo', async (req: Request, res: Response) => {
           techStack: p.technologies || [],
           videoUrl: p.driveVideoUrl || null,
         })),
+      githubAccount: student.githubAccount || null,
+      githubProjects: (student.githubRepos || []).map((r: any) => ({
+        id: r.id,
+        githubRepoId: String(r.githubRepoId),
+        title: r.name,
+        name: r.name,
+        description: r.description,
+        readmeExcerpt: r.readmeExcerpt || null,
+        githubUrl: r.htmlUrl,
+        stars: r.stars,
+        primaryLanguage: r.primaryLanguage,
+        languages: r.languages,
+        commitCount: r.commitCount,
+        isFork: r.isFork,
+        showcaseRank: r.showcaseRank,
+        source: 'GITHUB',
+      })),
+      githubSkills: (student.githubSkills || []).map((s: any) => ({
+        id: s.id,
+        skillId: s.skillId,
+        name: s.skill?.name || '',
+        category: s.skill?.category || null,
+        repoCount: s.repoCount,
+      })),
       certificates: student.certificates.map((c: any) => {
         const { fileDriveId: _f, ...rest } = c;
         const viewUrl = c.fileDriveId ? `/api/public/media/certificate/${c.id}` : null;
@@ -351,7 +438,8 @@ router.get('/:rollNo', async (req: Request, res: Response) => {
     };
     res.json(studentWithProofs);
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error("Internal server error:", err);
+    res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
   }
 });
 
@@ -375,20 +463,8 @@ router.get('/:rollNo/resume', async (req: Request, res: Response) => {
     }
     res.redirect(`/api/public/media/resume/${resume.id}`);
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
-  }
-});
-
-router.get('/events', async (_req: Request, res: Response) => {
-  try {
-    const events = await prisma.event.findMany({
-      where: { status: 'OPEN' },
-      orderBy: { createdAt: 'desc' }
-    });
-    res.set('Cache-Control', 'public, max-age=60');
-    res.json(events);
-  } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error("Internal server error:", err);
+    res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
   }
 });
 

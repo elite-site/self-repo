@@ -149,9 +149,28 @@ export interface EventRegistration {
   id: string;
   eventId: string;
   eventTitle: string;
-  status: 'REGISTERED' | 'CONFIRMED' | 'PENDING' | 'WAITLISTED' | 'CANCELLED' | 'REJECTED';
+  status: RegistrationStatus;
   registeredAt: string;
 }
+
+/**
+ * Mirrors the Prisma `RegistrationStatus` enum exactly. There is deliberately no
+ * `REGISTERED` member — the backend never emits it, so gating "am I registered?"
+ * on it silently treated every `PENDING` registration as unregistered.
+ */
+export type RegistrationStatus =
+  | 'PENDING'
+  | 'CONFIRMED'
+  | 'CANCELLED'
+  | 'REJECTED'
+  | 'WAITLISTED';
+
+/**
+ * A registration that still holds a slot. `PENDING` and `CONFIRMED` both count —
+ * `CANCELLED`, `REJECTED` and `WAITLISTED` do not.
+ */
+export const isActiveRegistration = (status: RegistrationStatus | string | undefined): boolean =>
+  status === 'PENDING' || status === 'CONFIRMED';
 
 export interface Team {
   id: string;
@@ -230,3 +249,125 @@ export interface Announcement {
   createdAt: string;
   createdBy?: string;
 }
+
+export type GithubSyncStatus = 'IDLE' | 'QUEUED' | 'RUNNING' | 'FAILED';
+
+export interface GithubAccountInfo {
+  id?: string;
+  login: string;
+  avatarUrl?: string | null;
+  connectedAt: string;
+  lastSyncedAt?: string | null;
+  nextSyncAllowedAt?: string | null;
+  syncStatus: GithubSyncStatus;
+  syncError?: string | null;
+  manualSyncCountToday?: number;
+}
+
+export interface GithubRepoItem {
+  id: string;
+  githubRepoId?: string | number;
+  fullName: string;
+  name: string;
+  description?: string | null;
+  htmlUrl: string;
+  isFork: boolean;
+  primaryLanguage?: string | null;
+  topics: string[];
+  stars: number;
+  githubCreatedAt?: string | null;
+  pushedAt?: string | null;
+  languages?: Record<string, number>;
+  commitCount: number;
+  isShowcased: boolean;
+  showcaseRank?: number | null;
+  readmeExcerpt?: string | null;
+  readmeFetchedAt?: string | null;
+}
+
+export interface GithubSkillItem {
+  id: string;
+  skillId?: string;
+  name: string;
+  category?: string | null;
+  repoCount: number;
+  totalBytes?: number | string;
+  lastEvidenceAt?: string | null;
+}
+
+export interface GithubStatusResponse {
+  connected: boolean;
+  account?: GithubAccountInfo | null;
+  repos?: GithubRepoItem[];
+  showcase?: GithubRepoItem[];
+  skills?: GithubSkillItem[];
+  reminderSnoozed?: boolean;
+  reminderSnoozedUntil?: string | null;
+  nextSyncAllowedAt?: string | null;
+}
+
+export interface StudentPortfolioResponse {
+  source?: 'GITHUB' | 'LEGACY';
+  connected: boolean;
+  account?: GithubAccountInfo | null;
+  githubAccount?: GithubAccountInfo | null;
+  repos?: GithubRepoItem[];
+  showcased?: GithubRepoItem[];
+  showcasedRepos?: GithubRepoItem[];
+  skills?: GithubSkillItem[];
+  projects?: Project[];
+  student?: StudentProfile;
+}
+
+export interface StudentDashboardResponse {
+  profile: (StudentProfile & {
+    biography?: string | null;
+    video?: { status: string } | null;
+    submission?: { submittedAt: string } | null;
+  }) | null;
+  counts: {
+    projects: number;
+    achievements: number;
+    certificates: number;
+  };
+  resume: {
+    exists: boolean;
+    status?: string | null;
+    driveFileId?: string | null;
+  } | null;
+  events: Array<{
+    id: string;
+    title: string;
+    type?: string;
+    date: string;
+    eligibility?: string;
+  }>;
+  registrations: Array<{
+    id: string;
+    eventId: string;
+    status: string;
+  }>;
+  votingCampaigns: Array<{
+    id: string;
+    title: string;
+    description?: string | null;
+  }>;
+  notifications: Array<Notification & { isRead?: boolean }>;
+  unreadNotificationsCount: number;
+  github: {
+    connected: boolean;
+    reminderSnoozedUntil: string | null;
+  };
+}
+
+export interface GithubSummaryResponse {
+  connected: boolean;
+  login?: string | null;
+  lastSyncedAt?: string | null;
+  syncStatus?: string | null;
+  reminderSnoozedUntil?: string | null;
+  repoCount: number;
+  showcasedCount: number;
+}
+
+

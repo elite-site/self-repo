@@ -14,10 +14,19 @@ async function tick(): Promise<void> {
     });
 
     for (const announcement of due) {
-      const published = await prisma.announcement.update({
-        where: { id: announcement.id },
+      // Claim the row atomically (see the publish route for the full rationale).
+      // If an admin published this announcement manually while this tick was
+      // reading, the claim is lost and we must not deliver a second time.
+      const claimed = await prisma.announcement.updateMany({
+        where: { id: announcement.id, status: 'SCHEDULED' },
         data: { status: 'PUBLISHED', publishedAt: new Date() },
       });
+
+      if (claimed.count === 0) continue;
+
+      const published = await prisma.announcement.findUnique({ where: { id: announcement.id } });
+      if (!published) continue;
+
       await deliverAnnouncementNotifications({
         id: published.id,
         title: published.title,

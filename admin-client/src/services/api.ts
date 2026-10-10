@@ -231,7 +231,10 @@ export const adminApi = {
     const res = await client.get('/admin/api/moderation', {
       params: { type, ...(status ? { status } : {}) },
     });
-    return res.data || { items: [], total: 0 };
+    if (res.data && typeof res.data === 'object' && Array.isArray(res.data.items)) {
+      return res.data;
+    }
+    return { items: [], total: 0 };
   },
   async getModerationVideos(): Promise<{ items: ModerationVideoItem[] }> {
     const res = await client.get('/admin/api/moderation/videos');
@@ -549,6 +552,27 @@ export const adminApi = {
 
   async rejectChangeRequest(id: string, reason?: string): Promise<{ success: boolean; changeRequest: any }> {
     const res = await client.post(`/admin/api/portal/change-requests/${id}/reject`, { reason });
+    return res.data;
+  },
+
+  // GitHub Management
+  async getGithubOverview(params?: { search?: string; page?: number; limit?: number }): Promise<any> {
+    const res = await client.get('/admin/api/portal/github/overview', { params });
+    return res.data;
+  },
+
+  async getGithubLogs(params?: { status?: string; filter?: string }): Promise<any[]> {
+    const res = await client.get('/admin/api/portal/github/logs', { params });
+    return res.data;
+  },
+
+  async resyncStudentGithub(studentId: string): Promise<any> {
+    const res = await client.post(`/admin/api/portal/github/resync/${studentId}`);
+    return res.data;
+  },
+
+  async getGithubShowcasedProjects(params?: { search?: string; page?: number; limit?: number }): Promise<any> {
+    const res = await client.get('/admin/api/portal/github/projects', { params });
     return res.data;
   },
 };

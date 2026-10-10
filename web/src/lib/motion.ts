@@ -318,38 +318,6 @@ export const sidebarTransition: Transition = {
 };
 export const reducedSidebarTransition: Transition = transitionReduced;
 
-// ─── Swipe Card ──────────────────────────────────────────────────────────────
-
-export const SWIPE_POWER_REQUIRED = 10000;
-
-export function getSwipePower(offset: number, velocity: number): number {
-  return Math.abs(offset) * velocity;
-}
-
-/**
- * Offsets for the cards stacked behind the dragged one. Geometry, not
- * choreography: it is a function of the user's own finger, so it is applied as
- * a `style` rather than animated, and `MOTION_INTENSITY: 3` says the voting
- * card gets no ambient motion.
- *
- * @example
- * <motion.div style={swipeCardStackVariants(index)} />
- */
-export function swipeCardStackVariants(index: number): MotionStyle {
-  return {
-    scale: 1 - index * 0.05,
-    y: index * 8,
-    zIndex: 10 - index,
-    opacity: index < 3 ? 1 : 0,
-  };
-}
-
-/**
- * The reduced-motion counterpart is the same function: nothing here animates on
- * its own, so there is nothing for a reduced-motion user to opt out of. Aliased
- * rather than copied so the two cannot drift.
- */
-export const reducedSwipeCardStackVariants = swipeCardStackVariants;
 
 // ─── Variant Registry ────────────────────────────────────────────────────────
 

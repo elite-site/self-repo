@@ -235,7 +235,7 @@ export const Settings: React.FC = () => {
                 className="w-full px-3.5 py-2 text-xs rounded-lg border border-edge-strong bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-brand font-mono"
               />
               <span className="text-xs text-ink-muted mt-1 block">
-                Standard self-introduction MP4/WebM ceiling. Applied to every upload; capped at 100&nbsp;MB.
+                Standard introduction video MP4/WebM ceiling. Applied to every upload; capped at 100&nbsp;MB.
               </span>
             </div>
 

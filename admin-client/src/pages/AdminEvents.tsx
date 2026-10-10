@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  CalendarDays, Plus, Pencil, Copy, Archive, Eye, Users, Trash2,
-  AlertCircle, Loader2, CheckCircle, X, ChevronLeft, ChevronRight
+  CalendarDays, Plus, Users, Trash2,
+  AlertCircle, Loader2, CheckCircle, X, ChevronLeft, ChevronRight, ChevronDown
 } from 'lucide-react';
 import { adminApi } from '../services/api';
 import { EventItem, EventPayload } from '../types';
-import { useConfirm } from '../components/ui/ConfirmDialog';
+import { formatDate, formatRegistrationRange } from '../utils/formatDate';
 
 const StatusBadge = ({ status }: { status: string }) => {
   const map: Record<string, { label: string; cls: string }> = {
@@ -22,6 +22,22 @@ const StatusBadge = ({ status }: { status: string }) => {
 const steps = ['Basics', 'Dates', 'Eligibility', 'Form', 'Teams', 'Notifications', 'Review'];
 
 const EVENT_TYPES = ['HACKATHON', 'WORKSHOP', 'COMPETITION', 'SEMINAR', 'OTHER'];
+
+const EVENT_TYPE_LABELS: Record<string, string> = {
+  GENERAL: 'General',
+  HACKATHON: 'Hackathon',
+  WORKSHOP: 'Workshop',
+  COMPETITION: 'Competition',
+  SEMINAR: 'Seminar',
+  OTHER: 'Other',
+};
+
+const formatEventType = (type?: string | null): string => {
+  if (!type) return 'General';
+  const upper = type.toUpperCase();
+  if (EVENT_TYPE_LABELS[upper]) return EVENT_TYPE_LABELS[upper];
+  return type.charAt(0).toUpperCase() + type.slice(1).toLowerCase();
+};
 
 const DEPENDENT_LABELS: Record<string, string> = {
   registrations: 'Registrations',
@@ -41,13 +57,12 @@ const toLocalInput = (iso?: string | null) => {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 
-const formatDate = (iso?: string | null) => (iso ? new Date(iso).toLocaleDateString() : 'To be announced');
-
 interface FormState {
   name: string;
   description: string;
   type: string;
   year: number;
+  status: string;
   registrationStart: string;
   registrationEnd: string;
   eventDate: string;
@@ -62,6 +77,7 @@ interface FormState {
 
 const emptyForm: FormState = {
   name: '', description: '', type: 'HACKATHON', year: new Date().getFullYear(),
+  status: 'OPEN',
   registrationStart: '', registrationEnd: '', eventDate: '',
   eligibilityYears: [], minCompletion: 0,
   teamEnabled: false, teamMin: 1, teamMax: 4,
@@ -71,11 +87,9 @@ const emptyForm: FormState = {
 const fromEvent = (e: EventItem): FormState => ({
   name: e.name,
   description: e.description ?? '',
-  // Preserve whatever the event already is, including the 'GENERAL' default.
-  // Mapping GENERAL onto a specific type here silently rewrote the type of
-  // every default event the moment an admin opened Edit and hit Save.
   type: e.type || 'GENERAL',
   year: e.year ?? new Date().getFullYear(),
+  status: e.status || 'OPEN',
   registrationStart: toLocalInput(e.registrationStart),
   registrationEnd: toLocalInput(e.registrationEnd),
   eventDate: toLocalInput(e.eventDate),
@@ -107,11 +121,7 @@ const EventWizard: React.FC<{
       description: form.description.trim(),
       type: form.type,
       year: form.year,
-      // New events start as DRAFT, matching handleDuplicate and the existence of a
-      // separate publish action. Creating straight to OPEN made the event
-      // student-visible the instant the wizard finished, before an admin had
-      // reviewed or published it.
-      status: existing ? existing.status : 'DRAFT',
+      status: form.status || 'OPEN',
       registrationStart: form.registrationStart || null,
       registrationEnd: form.registrationEnd || null,
       eventDate: form.eventDate || null,
@@ -134,8 +144,6 @@ const EventWizard: React.FC<{
       onSaved();
       onClose();
     } catch (err: any) {
-      // Previously swallowed by an empty catch, so a failed create looked
-      // exactly like a successful one: the wizard closed and nothing appeared.
       notify(err?.response?.data?.message || 'Could not save the event.', 'error');
     } finally {
       setSubmitting(false);
@@ -147,7 +155,9 @@ const EventWizard: React.FC<{
       <div className="surface bg-surface text-ink w-full max-w-2xl max-h-[90dvh] overflow-hidden flex flex-col shadow-modal animate-scale-in">
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-edge">
-          <h2 id="wizard-title" className="text-headline-sm font-semibold text-ink">{existing ? 'Edit Event' : 'Create Event'}</h2>
+          <h2 id="wizard-title" className="text-headline-sm font-semibold text-ink">
+            {existing ? 'Edit event' : 'Create event'}
+          </h2>
           <button onClick={onClose} className="btn btn-ghost p-2" aria-label="Close wizard">
             <X className="w-5 h-5" aria-hidden="true" />
           </button>
@@ -184,7 +194,11 @@ const EventWizard: React.FC<{
                 <label htmlFor="event-type" className="block">
                   <span className="label">Event Type</span>
                   <select id="event-type" value={form.type} onChange={e => update('type', e.target.value)} className="select">
-                    {EVENT_TYPES.map(t => <option key={t}>{t}</option>)}
+                    {EVENT_TYPES.map(t => (
+                      <option key={t} value={t}>
+                        {EVENT_TYPE_LABELS[t] || t}
+                      </option>
+                    ))}
                   </select>
                 </label>
                 <label htmlFor="event-year" className="block">
@@ -192,6 +206,18 @@ const EventWizard: React.FC<{
                   <input type="number" id="event-year" min={2000} max={2100} value={form.year} onChange={e => update('year', +e.target.value)} className="input" />
                 </label>
               </div>
+              <label htmlFor="event-status" className="block">
+                <span className="label">Status</span>
+                <select id="event-status" value={form.status} onChange={e => update('status', e.target.value)} className="select">
+                  <option value="OPEN">Open (Published & Visible to Students)</option>
+                  <option value="DRAFT">Draft (Hidden from Students)</option>
+                  <option value="CLOSED">Closed (Registration ended)</option>
+                  <option value="ARCHIVED">Archived</option>
+                </select>
+                <p className="text-label-sm text-ink-muted mt-1">
+                  Events set to "Open" appear in the Student Portal and send notifications to eligible students.
+                </p>
+              </label>
             </>
           )}
           {step === 1 && (
@@ -269,10 +295,11 @@ const EventWizard: React.FC<{
             <div className="space-y-3">
               <h3 className="text-label-md font-bold text-ink">Review</h3>
               <div className="surface-sunken rounded-lg p-4 space-y-2 text-body-sm">
-                <div><span className="font-semibold text-ink-secondary">Title:</span> <span className="text-ink ml-2">{form.name || 'To be announced'}</span></div>
-                <div><span className="font-semibold text-ink-secondary">Type:</span> <span className="text-ink ml-2">{form.type}</span></div>
-                <div><span className="font-semibold text-ink-secondary">Event Date:</span> <span className="text-ink ml-2">{form.eventDate || 'To be announced'}</span></div>
-                <div><span className="font-semibold text-ink-secondary">Registration:</span> <span className="text-ink ml-2">{form.registrationStart || 'To be announced'} to {form.registrationEnd || 'To be announced'}</span></div>
+                <div><span className="font-semibold text-ink-secondary">Title:</span> <span className="text-ink ml-2">{form.name || '—'}</span></div>
+                <div><span className="font-semibold text-ink-secondary">Status:</span> <span className="ml-2"><StatusBadge status={form.status} /></span></div>
+                <div><span className="font-semibold text-ink-secondary">Type:</span> <span className="text-ink ml-2">{formatEventType(form.type)}</span></div>
+                <div><span className="font-semibold text-ink-secondary">Event Date:</span> <span className="text-ink ml-2">{formatDate(form.eventDate)}</span></div>
+                <div><span className="font-semibold text-ink-secondary">Registration:</span> <span className="text-ink ml-2">{formatRegistrationRange(form.registrationStart, form.registrationEnd)}</span></div>
                 <div><span className="font-semibold text-ink-secondary">Eligible years:</span> <span className="text-ink ml-2">{form.eligibilityYears.length ? form.eligibilityYears.join(', ') : 'All years'}</span></div>
                 <div><span className="font-semibold text-ink-secondary">Teams:</span> <span className="text-ink ml-2">{form.teamEnabled ? `Yes (${form.teamMin}-${form.teamMax})` : 'No'}</span></div>
               </div>
@@ -292,7 +319,7 @@ const EventWizard: React.FC<{
           ) : (
             <button onClick={handleSubmit} disabled={submitting || !form.name.trim()} className="btn btn-primary text-label-sm" aria-busy={submitting}>
               {submitting && <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />}
-              {existing ? 'Save Changes' : 'Create Event'}
+              {existing ? 'Save changes' : 'Create event'}
             </button>
           )}
         </div>
@@ -314,10 +341,10 @@ const EventDetail: React.FC<{ event: EventItem; onClose: () => void }> = ({ even
         {event.description && <p className="text-ink-secondary">{event.description}</p>}
         <div className="surface-sunken rounded-lg p-4 space-y-2">
           <div><span className="font-semibold text-ink-secondary">Status:</span> <span className="text-ink ml-2"><StatusBadge status={event.status} /></span></div>
-          <div><span className="font-semibold text-ink-secondary">Type:</span> <span className="text-ink ml-2">{event.type || 'GENERAL'}</span></div>
+          <div><span className="font-semibold text-ink-secondary">Type:</span> <span className="text-ink ml-2">{formatEventType(event.type)}</span></div>
           <div><span className="font-semibold text-ink-secondary">Year:</span> <span className="text-ink ml-2">{event.year}</span></div>
           <div><span className="font-semibold text-ink-secondary">Event date:</span> <span className="text-ink ml-2">{formatDate(event.eventDate)}</span></div>
-          <div><span className="font-semibold text-ink-secondary">Registration:</span> <span className="text-ink ml-2">{formatDate(event.registrationStart)} to {formatDate(event.registrationEnd)}</span></div>
+          <div><span className="font-semibold text-ink-secondary">Registration:</span> <span className="text-ink ml-2">{formatRegistrationRange(event.registrationStart, event.registrationEnd)}</span></div>
           <div><span className="font-semibold text-ink-secondary">Eligible years:</span> <span className="text-ink ml-2">{event.eligibilityYears?.length ? event.eligibilityYears.join(', ') : 'All years'}</span></div>
           <div><span className="font-semibold text-ink-secondary">Min completion:</span> <span className="text-ink ml-2">{event.minCompletion ?? 0}%</span></div>
           <div><span className="font-semibold text-ink-secondary">Teams:</span> <span className="text-ink ml-2">{event.teamEnabled ? `${event.teamMin ?? 1}-${event.teamMax ?? 4} members` : 'Disabled'}</span></div>
@@ -329,20 +356,252 @@ const EventDetail: React.FC<{ event: EventItem; onClose: () => void }> = ({ even
   </div>
 );
 
+const ArchiveEventDialog: React.FC<{
+  event: EventItem;
+  onClose: () => void;
+  onArchived: () => void;
+  notify: (message: string, type?: 'success' | 'error') => void;
+}> = ({ event, onClose, onArchived, notify }) => {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const confirm = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      await adminApi.archiveEvent(event.id);
+      notify(`Archived "${event.name}".`);
+      onArchived();
+      onClose();
+    } catch (err: any) {
+      setError(err?.response?.data?.message || 'Could not archive this event.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-modal bg-scrim flex items-center justify-center p-4 animate-fade-in" role="dialog" aria-modal="true" aria-labelledby="archive-title">
+      <div className="surface bg-surface text-ink w-full max-w-md overflow-hidden flex flex-col shadow-modal animate-scale-in">
+        <div className="flex items-center justify-between p-5 border-b border-edge">
+          <h2 id="archive-title" className="text-headline-sm font-semibold text-ink">Archive event</h2>
+          <button onClick={onClose} disabled={busy} className="btn btn-ghost p-2" aria-label="Close">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <div className="p-5 space-y-4">
+          <p className="text-body-sm text-ink-secondary">
+            Students will no longer be able to register for <span className="font-semibold text-ink">{event.name}</span>. Existing registrations, submissions and teams are kept.
+          </p>
+          {error && (
+            <div className="flex items-start gap-2 rounded-lg border border-status-rejected/30 bg-status-bg-rejected p-3 text-status-rejected text-xs" role="alert">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+              <span>{error}</span>
+            </div>
+          )}
+        </div>
+        <div className="flex items-center justify-end gap-3 p-5 border-t border-edge bg-surface-sunken">
+          <button onClick={onClose} disabled={busy} className="btn btn-secondary text-xs">
+            Cancel
+          </button>
+          <button onClick={confirm} disabled={busy} className="btn btn-primary text-xs flex items-center gap-1.5">
+            {busy && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+            Archive event
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const DeleteEventDialog: React.FC<{
+  event: EventItem;
+  onClose: () => void;
+  onDeleted: () => void;
+  notify: (message: string, type?: 'success' | 'error') => void;
+}> = ({ event, onClose, onDeleted, notify }) => {
+  const [counts, setCounts] = useState<Record<string, number> | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const runDelete = async (force: boolean) => {
+    setBusy(true);
+    setError(null);
+    try {
+      await adminApi.deleteEvent(event.id, force);
+      notify(`Deleted "${event.name}".`);
+      onDeleted();
+      onClose();
+    } catch (err: any) {
+      const data = err?.response?.data;
+      if (data?.error === 'CONFIRMATION_REQUIRED') {
+        setCounts(data.dependents || {});
+      } else {
+        setError(data?.message || "Couldn't delete this event. Nothing was deleted.");
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleArchiveInstead = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      await adminApi.archiveEvent(event.id);
+      notify(`Archived "${event.name}".`);
+      onDeleted();
+      onClose();
+    } catch (err: any) {
+      setError(err?.response?.data?.message || 'Could not archive this event.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const listed = counts
+    ? Object.entries(counts).filter(([, n]) => (n as number) > 0)
+    : [];
+
+  return (
+    <div
+      className="fixed inset-0 z-modal bg-scrim flex items-center justify-center p-4 animate-fade-in"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="delete-event-title"
+    >
+      <div className="surface bg-surface text-ink w-full max-w-md overflow-hidden flex flex-col shadow-modal animate-scale-in">
+        <div className="flex items-center justify-between p-5 border-b border-edge">
+          <h2 id="delete-event-title" className="text-headline-sm font-semibold text-ink">
+            Delete event
+          </h2>
+          <button
+            onClick={onClose}
+            disabled={busy}
+            className="btn btn-ghost p-2"
+            aria-label="Close"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="p-5 space-y-4">
+          <p className="text-body-sm text-ink-secondary">
+            Permanently delete <span className="font-semibold text-ink">{event.name}</span>?
+          </p>
+
+          {counts && (
+            <div className="rounded-lg border border-status-rejected/30 bg-status-bg-rejected p-4 space-y-2">
+              <p className="text-xs font-bold text-status-rejected">
+                This will also permanently delete the following:
+              </p>
+              <ul className="space-y-1">
+                {listed.map(([key, n]) => (
+                  <li key={key} className="flex items-center justify-between text-xs text-status-rejected">
+                    <span>{DEPENDENT_LABELS[key] ?? key}</span>
+                    <span className="font-bold">{n}</span>
+                  </li>
+                ))}
+              </ul>
+              <p className="text-[11px] text-status-rejected pt-1 border-t border-status-rejected/20">
+                This cannot be undone.
+              </p>
+            </div>
+          )}
+
+          {error && (
+            <div className="flex items-start gap-2 rounded-lg border border-status-rejected/30 bg-status-bg-rejected p-3 text-status-rejected text-xs" role="alert">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+              <div className="space-y-2">
+                <p>{error}</p>
+                <div className="flex items-center gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => runDelete(counts !== null)}
+                    disabled={busy}
+                    className="underline font-semibold hover:opacity-80 cursor-pointer"
+                  >
+                    Try again
+                  </button>
+                  <span>•</span>
+                  <button
+                    type="button"
+                    onClick={handleArchiveInstead}
+                    disabled={busy}
+                    className="underline font-semibold hover:opacity-80 cursor-pointer"
+                  >
+                    Archive instead
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center justify-end gap-3 p-5 border-t border-edge bg-surface-sunken">
+          <button
+            onClick={onClose}
+            disabled={busy}
+            className="btn btn-secondary text-xs"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => runDelete(counts !== null)}
+            disabled={busy}
+            className="btn btn-danger text-xs flex items-center gap-1.5"
+          >
+            {busy && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+            {counts ? 'Delete anyway' : 'Delete event'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const AdminEvents: React.FC = () => {
-  const confirm = useConfirm();
   const [events, setEvents] = useState<EventItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<EventItem | null | undefined>(undefined);
   const [viewing, setViewing] = useState<EventItem | null>(null);
+  const [archiving, setArchiving] = useState<EventItem | null>(null);
+  const [deleting, setDeleting] = useState<EventItem | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type?: 'success' | 'error' } | null>(null);
+  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   const notify = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
-    setTimeout(() => setToast(null), 3500);
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    toastTimeoutRef.current = setTimeout(() => setToast(null), 6000);
   };
+
+  useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpenId(null);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMenuOpenId(null);
+    };
+    document.addEventListener('mousedown', handleOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
 
   const fetchEvents = async () => {
     setLoading(true);
@@ -365,8 +624,6 @@ export const AdminEvents: React.FC = () => {
       await adminApi.createEvent({
         ...fromEvent(ev),
         name: `${ev.name} (Copy)`,
-        // The dates were read back out of datetime-local inputs, so they are
-        // already in the `YYYY-MM-DDTHH:mm` shape the create endpoint parses.
         registrationStart: toLocalInput(ev.registrationStart) || null,
         registrationEnd: toLocalInput(ev.registrationEnd) || null,
         eventDate: toLocalInput(ev.eventDate) || null,
@@ -383,86 +640,37 @@ export const AdminEvents: React.FC = () => {
     }
   };
 
-  const handleArchive = async (ev: EventItem) => {
-    const confirmed = await confirm({
-      title: `Archive “${ev.name}”?`,
-      description: 'Students will no longer be able to register for this event. Existing registrations, submissions and teams are kept.',
-      confirmLabel: 'Archive event',
-    });
-    if (!confirmed) return;
-    setBusyId(ev.id);
-    try {
-      await adminApi.archiveEvent(ev.id);
-      notify(`Archived "${ev.name}".`);
-      await fetchEvents();
-    } catch (err: any) {
-      notify(err?.response?.data?.message || 'Could not archive the event.', 'error');
-    } finally {
-      setBusyId(null);
-    }
-  };
-
-  const handleDelete = async (ev: EventItem) => {
-    setBusyId(ev.id);
-    try {
-      await adminApi.deleteEvent(ev.id, false);
-      notify(`Deleted "${ev.name}".`);
-      await fetchEvents();
-    } catch (err: any) {
-      const data = err?.response?.data;
-      if (data?.error === 'CONFIRMATION_REQUIRED') {
-        const dependents = data.dependents || {};
-        const countSummary = Object.entries(dependents)
-          .filter(([, count]) => (count as number) > 0)
-          .map(([k, count]) => `${count} ${DEPENDENT_LABELS[k] || k}`)
-          .join(', ');
-
-        const forceConfirmed = await confirm({
-          title: `Delete “${ev.name}”?`,
-          description: `This event has associated records (${countSummary || 'dependent data'}). Deleting it will permanently delete all of them. This cannot be undone.`,
-          confirmLabel: 'Delete anyway',
-          tone: 'danger',
-        });
-        if (!forceConfirmed) {
-          setBusyId(null);
-          return;
-        }
-        try {
-          await adminApi.deleteEvent(ev.id, true);
-          notify(`Deleted "${ev.name}".`);
-          await fetchEvents();
-        } catch (forceErr: any) {
-          notify(forceErr?.response?.data?.message || 'Could not delete the event.', 'error');
-        }
-      } else {
-        notify(data?.message || 'Could not delete the event.', 'error');
-      }
-    } finally {
-      setBusyId(null);
-    }
-  };
-
   return (
     <div className="space-y-6 page-enter">
       {/* Toast Notification */}
       {toast && (
         <div
-          className={`fixed top-5 right-5 z-toast text-xs font-semibold px-4 py-3 rounded-lg shadow-modal animate-fade-in flex items-center gap-2 ${
+          className={`fixed bottom-5 right-5 z-overlay text-xs font-semibold px-4 py-3 rounded-lg shadow-modal animate-fade-in flex items-center gap-2 ${
             toast.type === 'error'
               ? 'bg-status-bg-rejected text-status-rejected border border-status-rejected/30'
               : 'bg-surface-inverse text-ink-inverse'
           }`}
-          role="alert"
-          aria-live="polite"
+          role={toast.type === 'error' ? 'alert' : 'status'}
+          aria-live={toast.type === 'error' ? 'assertive' : 'polite'}
         >
-          {toast.type === 'error'
-            ? <AlertCircle className="w-4 h-4 shrink-0" aria-hidden="true" />
-            : <CheckCircle className="w-4 h-4 shrink-0 text-emerald-400" aria-hidden="true" />}
+          {toast.type === 'error' ? (
+            <AlertCircle className="w-4 h-4 shrink-0" aria-hidden="true" />
+          ) : (
+            <CheckCircle className="w-4 h-4 shrink-0 text-emerald-400" aria-hidden="true" />
+          )}
           <span>{toast.message}</span>
+          <button
+            type="button"
+            onClick={() => setToast(null)}
+            className="p-1 hover:opacity-75 rounded ml-2 text-current cursor-pointer"
+            aria-label="Close notification"
+          >
+            <X className="w-3.5 h-3.5" aria-hidden="true" />
+          </button>
         </div>
       )}
 
-      {/* `undefined` means closed, `null` means creating, an item means editing. */}
+      {/* Wizard */}
       {editing !== undefined && (
         <EventWizard
           existing={editing ?? undefined}
@@ -471,20 +679,40 @@ export const AdminEvents: React.FC = () => {
           notify={notify}
         />
       )}
+
+      {/* Details */}
       {viewing && <EventDetail event={viewing} onClose={() => setViewing(null)} />}
 
+      {/* Archive Dialog */}
+      {archiving && (
+        <ArchiveEventDialog
+          event={archiving}
+          onClose={() => setArchiving(null)}
+          onArchived={fetchEvents}
+          notify={notify}
+        />
+      )}
+
+      {/* Delete Dialog */}
+      {deleting && (
+        <DeleteEventDialog
+          event={deleting}
+          onClose={() => setDeleting(null)}
+          onDeleted={fetchEvents}
+          notify={notify}
+        />
+      )}
+
+      {/* Page Header */}
       <div className="flex items-center justify-between pb-2 border-b border-edge">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-brand-soft text-brand flex items-center justify-center">
-            <CalendarDays className="w-6 h-6" aria-hidden="true" />
-          </div>
-          <div>
-            <h1 className="text-headline-md font-semibold text-ink">Events</h1>
-            <p className="text-body-sm text-ink-muted">Manage all department events</p>
-          </div>
+        <div>
+          <h1 className="text-headline-md font-semibold text-ink">Events</h1>
+          <p className="text-body-sm text-ink-muted">
+            {events.length} {events.length === 1 ? 'event' : 'events'}
+          </p>
         </div>
         <button onClick={() => setEditing(null)} className="btn btn-primary">
-          <Plus className="w-4 h-4" aria-hidden="true" /> Create Event
+          <Plus className="w-4 h-4" aria-hidden="true" /> Create event
         </button>
       </div>
 
@@ -506,13 +734,13 @@ export const AdminEvents: React.FC = () => {
           <button onClick={() => setEditing(null)} className="btn btn-ghost text-body-sm">Create your first event</button>
         </div>
       ) : (
-        <div className="surface overflow-hidden">
-          <div className="overflow-x-auto">
+        <div className="surface">
+          <div className="overflow-x-auto min-h-[260px]">
             <table className="w-full text-sm" role="grid">
               <thead className="bg-surface-inset border-b border-edge">
                 <tr>
                   {['Event', 'Type', 'Event Date', 'Registration', 'Registrations', 'Status', 'Actions'].map(h => (
-                    <th key={h} scope="col" className="text-left px-4 py-3 text-label-sm font-bold text-ink-muted ">{h}</th>
+                    <th key={h} scope="col" className="text-left px-4 py-3 text-label-sm font-bold text-ink-muted">{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -520,76 +748,145 @@ export const AdminEvents: React.FC = () => {
                 {events.map((ev) => (
                   <tr key={ev.id} className="hover:bg-surface-sunken transition-colors">
                     <td className="px-4 py-3 font-semibold text-ink">{ev.name}</td>
-                    <td className="px-4 py-3 text-label-sm text-ink-muted">{ev.type || 'GENERAL'}</td>
+                    <td className="px-4 py-3 text-label-sm text-ink-muted">{formatEventType(ev.type)}</td>
                     <td className="px-4 py-3 text-label-sm text-ink-secondary">{formatDate(ev.eventDate)}</td>
                     <td className="px-4 py-3 text-label-sm text-ink-secondary">
-                      {formatDate(ev.registrationStart)} to {formatDate(ev.registrationEnd)}
+                      {formatRegistrationRange(ev.registrationStart, ev.registrationEnd)}
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-1 text-label-sm font-semibold text-ink-secondary">
+                      <Link
+                        to={`/admin/event-registrations?eventId=${ev.id}`}
+                        className="inline-flex items-center gap-1.5 text-label-sm font-semibold text-brand hover:underline"
+                        aria-label={`View ${ev.registrationCount ?? 0} registrations for ${ev.name}`}
+                      >
                         <Users className="w-3.5 h-3.5 text-ink-muted" aria-hidden="true" />
-                        {ev.registrationCount ?? 0}
-                      </div>
+                        <span>{ev.registrationCount ?? 0}</span>
+                      </Link>
                     </td>
                     <td className="px-4 py-3"><StatusBadge status={ev.status} /></td>
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-1" role="group" aria-label={`Actions for ${ev.name}`}>
-                        <Link
-                          to={`/admin/event-registrations?eventId=${ev.id}`}
-                          title="Registrations"
-                          className="btn btn-ghost p-2 text-brand hover:bg-brand-soft"
-                          aria-label={`Registrations for ${ev.name}`}
-                        >
-                          <Users className="w-3.5 h-3.5" aria-hidden="true" />
-                        </Link>
+                      <div className="flex items-center gap-1.5" role="group" aria-label={`Actions for ${ev.name}`}>
                         <button
+                          type="button"
                           onClick={() => setEditing(ev)}
                           disabled={busyId === ev.id}
-                          title="Edit"
-                          className="btn btn-ghost p-2"
-                          aria-label={`Edit ${ev.name}`}
+                          className="btn btn-ghost px-2.5 py-1 text-xs font-semibold"
                         >
-                          <Pencil className="w-3.5 h-3.5" aria-hidden="true" />
+                          Edit
                         </button>
                         <button
-                          onClick={() => handleDuplicate(ev)}
+                          type="button"
+                          onClick={() => setDeleting(ev)}
                           disabled={busyId === ev.id}
-                          title="Duplicate"
-                          className="btn btn-ghost p-2"
-                          aria-label={`Duplicate ${ev.name}`}
-                        >
-                          <Copy className="w-3.5 h-3.5" aria-hidden="true" />
-                        </button>
-                        <button
-                          onClick={() => setViewing(ev)}
-                          title="View"
-                          className="btn btn-ghost p-2"
-                          aria-label={`View ${ev.name}`}
-                        >
-                          <Eye className="w-3.5 h-3.5" aria-hidden="true" />
-                        </button>
-                        <button
-                          onClick={() => handleArchive(ev)}
-                          disabled={busyId === ev.id || ev.status === 'ARCHIVED'}
-                          title="Archive"
-                          className="btn btn-ghost p-2"
-                          aria-label={`Archive ${ev.name}`}
-                        >
-                          {busyId === ev.id
-                            ? <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />
-                            : <Archive className="w-3.5 h-3.5" aria-hidden="true" />}
-                        </button>
-                        <button
-                          onClick={() => handleDelete(ev)}
-                          disabled={busyId === ev.id}
-                          title="Delete"
-                          className="btn btn-ghost p-2 text-status-rejected hover:bg-status-bg-rejected"
+                          className="btn btn-ghost px-2.5 py-1 text-xs font-semibold text-status-rejected hover:bg-status-bg-rejected transition-colors inline-flex items-center gap-1"
+                          title={`Delete ${ev.name}`}
                           aria-label={`Delete ${ev.name}`}
                         >
-                          {busyId === ev.id
-                            ? <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />
-                            : <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />}
+                          <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
+                          <span>Delete</span>
                         </button>
+                        <div className="relative inline-block text-left" ref={menuOpenId === ev.id ? menuRef : undefined}>
+                          <button
+                            type="button"
+                            onClick={() => setMenuOpenId(menuOpenId === ev.id ? null : ev.id)}
+                            className="btn btn-ghost px-2 py-1 text-xs font-semibold inline-flex items-center gap-0.5"
+                            aria-haspopup="menu"
+                            aria-expanded={menuOpenId === ev.id}
+                          >
+                            <span>More</span>
+                            <ChevronDown className="w-3 h-3 text-ink-muted" aria-hidden="true" />
+                          </button>
+                          {menuOpenId === ev.id && (
+                            <div
+                              role="menu"
+                              className="absolute right-0 mt-1 w-44 bg-surface border border-edge rounded-lg shadow-raised z-raised py-1 text-left animate-scale-in"
+                            >
+                              {ev.status !== 'OPEN' ? (
+                                <button
+                                  type="button"
+                                  role="menuitem"
+                                  onClick={async () => {
+                                    setMenuOpenId(null);
+                                    setBusyId(ev.id);
+                                    try {
+                                      await adminApi.setEventStatus(ev.id, 'OPEN');
+                                      notify(`"${ev.name}" is now live and published to all students.`);
+                                      await fetchEvents();
+                                    } catch (err: any) {
+                                      notify(err?.response?.data?.message || 'Could not publish event', 'error');
+                                    } finally {
+                                      setBusyId(null);
+                                    }
+                                  }}
+                                  disabled={busyId === ev.id}
+                                  className="w-full text-left px-3 py-1.5 text-xs text-status-approved hover:bg-surface-sunken transition-colors cursor-pointer font-semibold"
+                                >
+                                  Publish to Students
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  role="menuitem"
+                                  onClick={async () => {
+                                    setMenuOpenId(null);
+                                    setBusyId(ev.id);
+                                    try {
+                                      await adminApi.setEventStatus(ev.id, 'CLOSED');
+                                      notify(`"${ev.name}" registration closed.`);
+                                      await fetchEvents();
+                                    } catch (err: any) {
+                                      notify(err?.response?.data?.message || 'Could not close event', 'error');
+                                    } finally {
+                                      setBusyId(null);
+                                    }
+                                  }}
+                                  disabled={busyId === ev.id}
+                                  className="w-full text-left px-3 py-1.5 text-xs text-ink hover:bg-surface-sunken transition-colors cursor-pointer"
+                                >
+                                  Close Registration
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                role="menuitem"
+                                onClick={() => { setMenuOpenId(null); handleDuplicate(ev); }}
+                                disabled={busyId === ev.id}
+                                className="w-full text-left px-3 py-1.5 text-xs text-ink hover:bg-surface-sunken transition-colors cursor-pointer"
+                              >
+                                Duplicate
+                              </button>
+                              <button
+                                type="button"
+                                role="menuitem"
+                                onClick={() => { setMenuOpenId(null); setViewing(ev); }}
+                                className="w-full text-left px-3 py-1.5 text-xs text-ink hover:bg-surface-sunken transition-colors cursor-pointer"
+                              >
+                                Preview
+                              </button>
+                              <button
+                                type="button"
+                                role="menuitem"
+                                onClick={() => { setMenuOpenId(null); setArchiving(ev); }}
+                                disabled={busyId === ev.id || ev.status === 'ARCHIVED'}
+                                title={ev.status === 'ARCHIVED' ? 'Already archived' : undefined}
+                                className="w-full text-left px-3 py-1.5 text-xs text-ink hover:bg-surface-sunken transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                              >
+                                Archive
+                              </button>
+                              <div className="my-1 border-t border-edge" role="separator" />
+                              <button
+                                type="button"
+                                role="menuitem"
+                                onClick={() => { setMenuOpenId(null); setDeleting(ev); }}
+                                disabled={busyId === ev.id}
+                                className="w-full text-left px-3 py-1.5 text-xs text-status-rejected hover:bg-status-bg-rejected transition-colors cursor-pointer disabled:opacity-50 inline-flex items-center gap-1.5"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                                <span>Delete</span>
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </td>
                   </tr>

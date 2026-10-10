@@ -4,7 +4,8 @@
 #   WEB_URL = https://<netlify-site>.netlify.app
 # Cost note: every run bills >= 1 minute. */30 is ~1,440 min/month; on a
 # private repo's free tier (2,000 min) do not go more frequent than that.
-# A side effect worth having: the ping keeps a sleeping free-tier API warm.
+# Note: Render free tier spins down after 15 minutes of inactivity, so a
+# 30-minute ping cannot keep a Render free instance awake continuously.
 name: Smoke (live)
 
 on:

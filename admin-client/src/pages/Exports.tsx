@@ -54,7 +54,7 @@ export const Exports: React.FC = () => {
       icon: Video,
       color: 'emerald',
       description:
-        'Detailed breakdown of all uploaded self-introduction videos, qualitative review feedback, pros/cons keywords, faculty rating, and Google Drive identifiers.',
+        'Detailed breakdown of all uploaded introduction videos, qualitative review feedback, pros/cons keywords, faculty rating, and Google Drive identifiers.',
       fields: ['Submission ID', 'Student Roll No', 'Video Drive File ID', 'Rating (GOOD/AVG/POOR)', 'Faculty Comments', 'Submitted At', 'Reviewed At'],
       getUrl: () => adminApi.getSubmissionsExportUrl(selectedEventId),
       filename: `video-submissions-${selectedEventId}.xlsx`,

@@ -24,6 +24,7 @@ const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const EditProfilePage = lazy(() => import('./pages/EditProfilePage'));
 const PortfolioPage = lazy(() => import('./pages/PortfolioPage'));
+const GithubPage = lazy(() => import('./pages/GithubPage'));
 const VideoPage = lazy(() => import('./pages/VideoPage'));
 const ResumePage = lazy(() => import('./pages/ResumePage'));
 const EventsPage = lazy(() => import('./pages/EventsPage'));
@@ -223,6 +224,7 @@ const AuthWrapper: React.FC = () => {
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/profile/edit" element={<EditProfilePage />} />
           <Route path="/portfolio/*" element={<PortfolioPage />} />
+          <Route path="/github" element={<GithubPage />} />
           <Route path="/intro-video" element={<VideoPage />} />
           <Route path="/video" element={<Navigate to="/intro-video" replace />} />
           <Route path="/resume" element={<ResumePage />} />

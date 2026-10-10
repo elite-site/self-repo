@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { requireStudentAuth } from '../middleware/studentAuth';
 import { prisma } from '../lib/prisma';
 import { ActivityService } from '../services/activity.service';
+import { EXCLUDE_INTERNAL_EVENT, isInternalEvent } from '../config/constants';
 
 const router = Router();
 router.use(requireStudentAuth);
@@ -22,7 +23,10 @@ router.get('/', async (req: Request, res: Response) => {
     }
 
     const events = await prisma.event.findMany({
-      where: { status: 'OPEN' },
+      where: {
+        status: 'OPEN',
+        ...EXCLUDE_INTERNAL_EVENT,
+      },
       orderBy: { createdAt: 'desc' },
       take: 100
     });
@@ -40,12 +44,17 @@ router.get('/', async (req: Request, res: Response) => {
     res.set('Cache-Control', 'no-cache, must-revalidate');
     res.json(mapped);
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error("Internal server error:", err);
+    res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
   }
 });
 
 router.get('/:id', async (req: Request, res: Response) => {
   try {
+    if (isInternalEvent(req.params.id)) {
+      return res.status(404).json({ error: 'NOT_FOUND', message: 'Event not found' });
+    }
+
     const event = await prisma.event.findFirst({
       where: {
         OR: [
@@ -65,31 +74,39 @@ router.get('/:id', async (req: Request, res: Response) => {
       registrationFields: event.formFields
     });
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error("Internal server error:", err);
+    res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
   }
 });
 
 router.post('/:id/register', async (req: Request, res: Response) => {
   try {
+    if (isInternalEvent(req.params.id)) {
+      return res.status(404).json({ error: 'NOT_FOUND', message: 'Event not found' });
+    }
+
     const studentId = req.student?.studentId || (req as any).studentId;
     if (!studentId) {
       return res.status(401).json({ error: 'UNAUTHORIZED', message: 'Authentication required' });
     }
-    const student = await prisma.student.findUnique({ where: { id: studentId }, select: { status: true } });
-    if (!student || student.status !== 'ACTIVE') {
-      return res.status(403).json({ error: 'NOT_ACTIVE', message: 'Your account is no longer active for this activity.' });
-    }
     const eventIdParam = req.params.id;
     const { teamId, answers, status: reqStatus } = req.body;
 
-    const event = await prisma.event.findFirst({
-      where: {
-        OR: [
-          { id: eventIdParam },
-          { slug: eventIdParam }
-        ]
-      }
-    });
+    const [student, event] = await Promise.all([
+      prisma.student.findUnique({ where: { id: studentId }, select: { status: true } }),
+      prisma.event.findFirst({
+        where: {
+          OR: [
+            { id: eventIdParam },
+            { slug: eventIdParam }
+          ]
+        }
+      }),
+    ]);
+
+    if (!student || student.status !== 'ACTIVE') {
+      return res.status(403).json({ error: 'NOT_ACTIVE', message: 'Your account is no longer active for this activity.' });
+    }
     if (!event) {
       return res.status(404).json({ error: 'NOT_FOUND', message: 'Event not found' });
     }
@@ -171,7 +188,8 @@ router.post('/:id/register', async (req: Request, res: Response) => {
       registeredAt: registration.registeredAt,
     });
   } catch (err: any) {
-    res.status(500).json({ error: 'SERVER_ERROR', message: err.message });
+    console.error("Internal server error:", err);
+    res.status(500).json({ error: "SERVER_ERROR", message: "An unexpected error occurred. Please try again later." });
   }
 });
 

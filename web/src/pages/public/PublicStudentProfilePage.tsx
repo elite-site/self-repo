@@ -12,6 +12,7 @@ import { safeUrl } from '../../utils/safeUrl';
 import { LeetCodeIcon, CodeChefIcon } from '../../components/icons/PlatformIcons';
 import { Skeleton, SkeletonText } from '../../components/ui/Skeleton';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { ReadmeExcerptView } from '../../components/ReadmeExcerptView';
 import {
   ArrowLeft,
   Github,
@@ -35,6 +36,8 @@ import {
   ChevronUp,
   Code2,
   CheckCircle2,
+  Star,
+  GitFork,
 } from 'lucide-react';
 
 interface PublicProfileProps {
@@ -71,6 +74,21 @@ interface PublicProject {
   techStack?: string[] | null;
   githubUrl?: string | null;
   videoUrl?: string | null;
+  status?: string | null;
+  isPublic?: boolean | null;
+  readmeExcerpt?: string | null;
+  stars?: number | null;
+  primaryLanguage?: string | null;
+  isFork?: boolean | null;
+  source?: 'GITHUB' | 'MANUAL';
+}
+
+interface PublicGithubSkill {
+  id: string;
+  skillId: string;
+  name: string;
+  category?: string | null;
+  repoCount: number;
 }
 
 interface PublicAchievement {
@@ -122,6 +140,7 @@ interface PublicStudent {
   email?: string | null;
   profile?: PublicProfileFields | null;
   projects?: PublicProject[] | null;
+  githubProjects?: PublicProject[] | null;
   githubSkills?: GithubSkill[] | null;
   achievements?: PublicAchievement[] | null;
   certificates?: PublicCertificate[] | null;
@@ -157,11 +176,33 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
 
   useEffect(() => {
     if (!rollNo) return;
-    setLoading(true);
+    const cacheKey = `student_profile_${rollNo}`;
+    const cached = sessionStorage.getItem(cacheKey);
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        setStudent(parsed);
+        setLoading(false);
+      } catch {
+        // invalid cache entry, proceed to fetch
+      }
+    } else {
+      setLoading(true);
+    }
+
     api
       .getPublicStudent(rollNo)
-      .then((data) => setStudent(data as PublicStudent))
-      .catch(() => setStudent(null))
+      .then((data) => {
+        setStudent(data as PublicStudent);
+        try {
+          sessionStorage.setItem(cacheKey, JSON.stringify(data));
+        } catch {
+          // sessionStorage quota exceeded, safely ignore
+        }
+      })
+      .catch(() => {
+        if (!cached) setStudent(null);
+      })
       .finally(() => setLoading(false));
   }, [rollNo]);
 
@@ -234,19 +275,48 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
 
   if (loading) {
     return (
-      <div className="min-h-[100dvh] bg-[#070B16] text-slate-100 flex flex-col">
-        <header className="sticky top-0 z-50 h-16 border-b border-slate-800/80 bg-[#070B16]/80 backdrop-blur-md px-6 flex items-center justify-between">
-          <Skeleton className="h-6 w-32 rounded-lg" />
-          <div className="hidden md:flex gap-4">
-            <Skeleton className="h-4 w-16" />
-            <Skeleton className="h-4 w-16" />
-            <Skeleton className="h-4 w-16" />
-          </div>
-          <Skeleton className="h-8 w-24 rounded-lg" />
-        </header>
+      <div className="min-h-[100dvh] bg-[#070B16] text-slate-100 flex flex-col antialiased overflow-x-clip">
+        {/* Background ambient lighting */}
+        <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(ellipse_80%_60%_at_50%_-20%,rgba(225,29,72,0.14),rgba(255,255,255,0))]" />
+        <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(ellipse_60%_50%_at_80%_100%,rgba(59,130,246,0.08),rgba(0,0,0,0))]" />
 
-        <main className="mx-auto max-w-[1200px] w-full px-6 py-12 space-y-12">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+        <nav className="sticky top-0 z-50 w-full backdrop-blur-xl bg-[#070B16]/80 border-b border-slate-800/80">
+          <div className="mx-auto flex h-16 max-w-[1200px] items-center justify-between px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center gap-3">
+              <Link
+                to="/students"
+                className="group inline-flex min-h-[44px] items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-white transition-colors py-2 px-2.5 rounded-lg hover:bg-slate-800/60"
+                title="Return to Student Directory"
+              >
+                <ArrowLeft size={14} className="transition-transform group-hover:-translate-x-0.5" />
+                <span className="hidden sm:inline">Directory</span>
+              </Link>
+              <div className="h-4 w-px bg-slate-800 hidden sm:block" />
+              <div className="flex items-center gap-2.5 min-h-[44px]">
+                <Skeleton className="size-8 rounded-lg" />
+                <Skeleton className="h-4 w-28 rounded hidden md:inline-block" />
+              </div>
+            </div>
+
+            <div className="hidden lg:flex items-center gap-1 rounded-full border border-slate-800/80 bg-slate-900/60 p-1 backdrop-blur-md">
+              <Skeleton className="h-6 w-14 rounded-full" />
+              <Skeleton className="h-6 w-14 rounded-full" />
+              <Skeleton className="h-6 w-14 rounded-full" />
+              <Skeleton className="h-6 w-14 rounded-full" />
+              <Skeleton className="h-6 w-14 rounded-full" />
+              <Skeleton className="h-6 w-14 rounded-full" />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-9 w-24 rounded-lg hidden sm:block" />
+              <Skeleton className="h-9 w-20 rounded-lg hidden sm:block" />
+              <Skeleton className="h-9 w-9 rounded-lg lg:hidden" />
+            </div>
+          </div>
+        </nav>
+
+        <main className="mx-auto max-w-[1200px] w-full px-4 sm:px-6 lg:px-8 pt-6 sm:pt-12 lg:pt-14 space-y-14 sm:space-y-20 pb-20">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
             <div className="lg:col-span-5 space-y-4">
               <Skeleton className="h-6 w-28 rounded-full" />
               <Skeleton className="h-12 w-64 max-w-full rounded-lg" />
@@ -304,15 +374,26 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
     .map((word) => word[0]?.toUpperCase())
     .join('') || 'IT';
 
+  const PLACEHOLDER_REGEX = /fill personal data of yours/i;
+
   const profile = student.profile || {};
-  const githubSkills = student.githubSkills || [];
-  const projects = student.projects || [];
+  const rawBio = profile.biography || profile.bio || '';
+  const bio = PLACEHOLDER_REGEX.test(rawBio) ? '' : rawBio.trim();
+  const rawSpecialQualities = profile.specialQualities || '';
+  const specialQualities = PLACEHOLDER_REGEX.test(rawSpecialQualities) ? '' : rawSpecialQualities.trim();
+
+  const githubSkills: GithubSkill[] = student.githubSkills || [];
+
+  const manualProjects = (student.projects || [])
+    .filter((p) => (!p.status || p.status === 'APPROVED') && (p.isPublic !== false))
+    .map((p) => ({ ...p, source: 'MANUAL' as const }));
+  const githubProjects = (student.githubProjects || []).map((p) => ({ ...p, source: 'GITHUB' as const }));
+  const allProjects = [...manualProjects, ...githubProjects];
   const achievements = student.achievements || [];
   const certificates = student.certificates || [];
   const resume = (student.resumes || [])[0] || null;
   const hasResume = Boolean(resume);
   const introVideo = student.introVideo || null;
-  const bio = profile.biography || profile.bio || '';
   const photo = profile.viewUrl || profile.photoUrl;
 
   const rawResumeHref = resume?.viewUrl || resume?.fileUrl ? `${resolveMediaUrl(resume?.viewUrl || resume?.fileUrl || '')}${
@@ -341,7 +422,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
       <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(ellipse_60%_50%_at_80%_100%,rgba(59,130,246,0.08),rgba(0,0,0,0))] print:hidden" />
 
       {/* ── 1. STICKY NAVBAR ────────────────────────────────────────────── */}
-      <nav className="sticky top-0 z-50 w-full backdrop-blur-xl bg-[#070B16]/80 border-b border-slate-800/80 transition-all duration-200 print:hidden">
+      <nav className="sticky top-0 z-50 w-full backdrop-blur-xl bg-[#070B16]/80 border-b border-slate-800/80 print:hidden">
         <div className="mx-auto flex h-16 max-w-[1200px] items-center justify-between px-4 sm:px-6 lg:px-8">
           {/* Left: Directory Link + Personal Logo Mark */}
           <div className="flex items-center gap-3">
@@ -647,18 +728,20 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
             {/* Left: About Me & Features */}
             <div className="lg:col-span-6 space-y-6">
-              <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 p-6 backdrop-blur-sm space-y-3">
-                <h3 className="font-heading text-base font-bold text-white">About Me</h3>
-                <p className="text-sm sm:text-base text-slate-300 leading-relaxed whitespace-pre-line">
-                  {bio || <span className="text-slate-500 italic">No biography provided yet.</span>}
-                </p>
-              </div>
+              {bio ? (
+                <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 p-6 backdrop-blur-sm space-y-3">
+                  <h3 className="font-heading text-base font-bold text-white">About Me</h3>
+                  <p className="text-sm sm:text-base text-slate-300 leading-relaxed whitespace-pre-line">
+                    {bio}
+                  </p>
+                </div>
+              ) : null}
 
               {/* Special Qualities */}
-              {profile.specialQualities ? (
+              {specialQualities ? (
                 <div className="rounded-xl border border-slate-800/80 bg-slate-900/50 p-4 space-y-2">
                   <h4 className="text-xs font-bold text-white uppercase tracking-wide">Special Qualities</h4>
-                  <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-line">{profile.specialQualities}</p>
+                  <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-line">{specialQualities}</p>
                 </div>
               ) : null}
             </div>
@@ -749,17 +832,32 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
             <h2 className="mt-1 font-heading text-2xl sm:text-3xl font-bold tracking-tight text-white">Featured Projects</h2>
           </div>
 
-          {projects.length > 0 ? (
-            <div className="flex flex-wrap gap-6">
-              {projects.map((project) => (
+          {allProjects.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-fr">
+              {allProjects.map((project, index) => (
                 <div
                   key={project.id}
-                  className="flex-1 min-w-[min(16rem,100%)] max-w-full md:max-w-[calc(50%-12px)] lg:max-w-[calc(33.333%-16px)] rounded-2xl border border-slate-800/80 bg-slate-900/60 p-5 backdrop-blur-sm hover:border-rose-500/40 hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between shadow-sm print:break-inside-avoid print:border-slate-300"
+                  className="w-full h-full rounded-2xl border border-slate-800/80 bg-slate-900/60 p-5 backdrop-blur-sm hover:border-rose-500/40 hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between shadow-sm print:break-inside-avoid print:border-slate-300"
                 >
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="p-2 rounded-lg bg-rose-500/10 text-rose-400">
-                        <FolderGit2 size={18} />
+                        {project.source === 'GITHUB' ? <Github size={18} /> : <FolderGit2 size={18} />}
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        {project.source === 'GITHUB' && project.isFork && (
+                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full border border-slate-800 bg-slate-900 text-slate-400 inline-flex items-center gap-1">
+                            <GitFork size={10} /> Fork
+                          </span>
+                        )}
+                        {project.source === 'GITHUB' && typeof project.stars === 'number' && project.stars > 0 && (
+                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-300 inline-flex items-center gap-1">
+                            <Star size={10} /> {project.stars}
+                          </span>
+                        )}
+                        <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border border-slate-800 bg-slate-950/60 text-slate-400">
+                          {project.source === 'GITHUB' ? 'GitHub' : `Project #${index + 1}`}
+                        </span>
                       </div>
                     </div>
 
@@ -767,11 +865,15 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
                       <h3 className="font-heading text-base font-bold text-white tracking-tight line-clamp-1">
                         {project.title}
                       </h3>
-                      {project.description && (
+                      {project.readmeExcerpt ? (
+                        <div className="mt-2 text-xs">
+                          <ReadmeExcerptView excerpt={project.readmeExcerpt} />
+                        </div>
+                      ) : project.description ? (
                         <p className="mt-1.5 text-xs text-slate-400 leading-relaxed line-clamp-3">
                           {project.description}
                         </p>
-                      )}
+                      ) : null}
                     </div>
 
                     {project.techStack && project.techStack.length > 0 && (
@@ -784,6 +886,13 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
                             {tech}
                           </span>
                         ))}
+                      </div>
+                    )}
+                    {project.source === 'GITHUB' && project.primaryLanguage && !project.techStack?.length && (
+                      <div className="flex flex-wrap gap-1.5 pt-1">
+                        <span className="text-xs font-semibold px-2 py-0.5 rounded-md border border-slate-800 bg-slate-950/80 text-slate-300">
+                          {project.primaryLanguage}
+                        </span>
                       </div>
                     )}
                   </div>
@@ -915,7 +1024,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {/* Email Card */}
             {student.email && safeUrl(`mailto:${student.email}`) ? (
               <a
@@ -932,19 +1041,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
                   </p>
                 </div>
               </a>
-            ) : (
-              <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 p-5 backdrop-blur-sm space-y-2">
-                <div className="p-2 rounded-xl bg-rose-500/10 text-rose-400 w-fit">
-                  <Mail size={18} />
-                </div>
-                <div>
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Email</span>
-                  <p className="text-xs font-semibold text-white truncate mt-0.5">
-                    {student.email || 'Contact via portal'}
-                  </p>
-                </div>
-              </div>
-            )}
+            ) : null}
 
             {/* LinkedIn Card */}
             {safeUrl(profile.linkedinUrl) ? (
@@ -964,19 +1061,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
                   </p>
                 </div>
               </a>
-            ) : (
-              <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 p-5 backdrop-blur-sm space-y-2">
-                <div className="p-2 rounded-xl bg-pink-500/10 text-pink-400 w-fit">
-                  <Linkedin size={18} />
-                </div>
-                <div>
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400">LinkedIn</span>
-                  <p className="text-xs font-semibold text-white truncate mt-0.5">
-                    Profile not linked
-                  </p>
-                </div>
-              </div>
-            )}
+            ) : null}
 
             {/* GitHub Card */}
             {safeUrl(profile.githubUrl) ? (
@@ -996,19 +1081,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
                   </p>
                 </div>
               </a>
-            ) : (
-              <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 p-5 backdrop-blur-sm space-y-2">
-                <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-400 w-fit">
-                  <Github size={18} />
-                </div>
-                <div>
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400">GitHub</span>
-                  <p className="text-xs font-semibold text-white truncate mt-0.5">
-                    Profile not linked
-                  </p>
-                </div>
-              </div>
-            )}
+            ) : null}
 
             {/* Location Card */}
             <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 p-5 backdrop-blur-sm space-y-2">

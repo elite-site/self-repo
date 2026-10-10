@@ -34,39 +34,10 @@ export interface DriveUploadResult {
   driveFolderPath: string;
 }
 
-export interface DriveStreamResult {
-  stream: Readable;
-  mimeType: string;
-  /** Full size of the file in bytes, when the storage backend reports it. */
-  size?: number;
-  /** Present when the response only carries a byte range (HTTP 206). */
-  contentRange?: { start: number; end: number; total: number };
-}
-
-/**
- * Parse a `Content-Range` response header (e.g. `bytes 0-1023/4096`) into the
- * same shape as `parseRange`.
- *
- * Used as a fallback when a Drive file's total size is unknown: the original
- * `Range` request is passed through to Drive untouched, and this recovers the
- * range Drive actually served so the client still gets a valid 206.
- */
-export function parseContentRangeHeader(
-  header: string | undefined,
-): { start: number; end: number; total: number } | null {
-  if (!header || typeof header !== 'string') return null;
-
-  const match = /^bytes\s+(\d+)-(\d+)\/(\d+|\*)$/i.exec(header.trim());
-  if (!match) return null;
-
-  const start = parseInt(match[1], 10);
-  const end = parseInt(match[2], 10);
-  const total = match[3] === '*' ? NaN : parseInt(match[3], 10);
-
-  if (!Number.isFinite(start) || !Number.isFinite(end) || start > end) return null;
-
-  return { start, end, total: Number.isFinite(total) ? total : end + 1 };
-}
+export { DriveStreamResult, parseContentRangeHeader } from './drive.stream';
+import { streamDriveFile, DriveStreamResult, parseContentRangeHeader } from './drive.stream';
+import { generateThumbnail } from './drive.thumbnail';
+import { initDriveClient } from './drive.client';
 
 /**
  * How long a confirmed `anyone` grant is trusted before Drive is re-queried.
@@ -112,69 +83,12 @@ export class DriveService {
   }
 
   private init() {
-    // 1. Try Google OAuth 2.0 (Primary & Recommended for Workspace My Drive)
-    if (
-      env.GOOGLE_OAUTH_CLIENT_ID &&
-      env.GOOGLE_OAUTH_CLIENT_SECRET &&
-      env.GOOGLE_OAUTH_REFRESH_TOKEN &&
-      env.GOOGLE_DRIVE_ROOT_FOLDER_ID
-    ) {
-      try {
-        const oauth2Client = new google.auth.OAuth2(
-          env.GOOGLE_OAUTH_CLIENT_ID,
-          env.GOOGLE_OAUTH_CLIENT_SECRET
-        );
-        oauth2Client.setCredentials({
-          refresh_token: env.GOOGLE_OAUTH_REFRESH_TOKEN,
-        });
-        this.drive = google.drive({ version: 'v3', auth: oauth2Client });
-        this.oauthClient = oauth2Client;   // ← store for token refresh
-        this.isMock = false;
-        console.log('✅ Google Drive API initialized with OAuth 2.0 Refresh Token (Workspace Account)');
-      } catch (err) {
-        if (process.env.NODE_ENV === 'production' || env.NODE_ENV === 'production') {
-          throw new Error('[FATAL] Google Drive credentials must be configured in production (NODE_ENV=production). Mock storage is prohibited in production.');
-        }
-        console.warn('⚠️ Failed to initialize Google Drive OAuth 2.0 auth. Falling back to local storage mock.', err);
-        this.isMock = true;
-      }
-    }
-    // 2. Try Service Account Auth (Legacy Fallback)
-    else if (
-      env.GOOGLE_SERVICE_ACCOUNT_EMAIL &&
-      env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY &&
-      env.GOOGLE_DRIVE_ROOT_FOLDER_ID
-    ) {
-      try {
-        const auth = new google.auth.GoogleAuth({
-          credentials: {
-            client_email: env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-            private_key: env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY,
-          },
-          scopes: ['https://www.googleapis.com/auth/drive'],
-        });
-        this.drive = google.drive({ version: 'v3', auth });
-        this.serviceAccountAuth = auth;    // ← store for token refresh
-        this.isMock = false;
-        console.log('✅ Google Drive API initialized with Service Account');
-      } catch (err) {
-        if (process.env.NODE_ENV === 'production' || env.NODE_ENV === 'production') {
-          throw new Error('[FATAL] Google Drive credentials must be configured in production (NODE_ENV=production). Mock storage is prohibited in production.');
-        }
-        console.warn('⚠️ Failed to initialize Google Drive auth. Falling back to local storage mock.', err);
-        this.isMock = true;
-      }
-    } else {
-      if (process.env.NODE_ENV === 'production' || env.NODE_ENV === 'production') {
-        throw new Error('[FATAL] Google Drive credentials must be configured in production (NODE_ENV=production). Mock storage is prohibited in production.');
-      }
-      console.log('ℹ️ Google Drive credentials not set. Using local mock storage for Drive.');
-      this.isMock = true;
-    }
-
-    if (this.isMock && !fs.existsSync(this.mockBaseDir)) {
-      fs.mkdirSync(this.mockBaseDir, { recursive: true });
-    }
+    const initialized = initDriveClient();
+    this.drive = initialized.drive;
+    this.isMock = initialized.isMock;
+    this.mockBaseDir = initialized.mockBaseDir;
+    this.oauthClient = initialized.oauthClient;
+    this.serviceAccountAuth = initialized.serviceAccountAuth;
   }
 
   /**
@@ -1022,7 +936,7 @@ export class DriveService {
         'video/x-matroska',
         'video/matroska',
       ];
-      if (!mime.startsWith('video/') && !ALLOWED_MIMES.includes(mime)) {
+      if (!ALLOWED_MIMES.includes(mime)) {
         return { valid: false, error: 'Uploaded file is not a supported video MIME type.' };
       }
 
@@ -1383,158 +1297,17 @@ export class DriveService {
     relativePath?: string,
     rangeHeader?: string,
   ): Promise<DriveStreamResult> {
-    if (this.isMock || !this.drive || fileId.startsWith('mock_') || fileId.startsWith('drive_')) {
-      const inspectMockFile = (metaFilePath: string): { actualFilePath: string; meta: any; size: number } | null => {
-        try {
-          const meta = JSON.parse(fs.readFileSync(metaFilePath, 'utf-8'));
-          if (meta.id === fileId) {
-            const dir = path.dirname(metaFilePath);
-            const targetName = meta.fileName || meta.name || path.basename(metaFilePath).replace('.meta.json', '');
-            let actualPath = path.join(dir, targetName);
-            if (!fs.existsSync(actualPath)) {
-              actualPath = metaFilePath.replace('.meta.json', '');
-            }
-            if (fs.existsSync(actualPath)) {
-              const stat = fs.statSync(actualPath);
-              return { actualFilePath: actualPath, meta, size: stat.size };
-            }
-          }
-        } catch (_) {}
-        return null;
-      };
-
-      let match: { actualFilePath: string; meta: any; size: number } | null = null;
-
-      // 1. Find file in relativePath if provided
-      if (relativePath) {
-        const dirPath = path.join(this.mockBaseDir, relativePath);
-        if (fs.existsSync(dirPath)) {
-          const files = fs.readdirSync(dirPath);
-          for (const file of files) {
-            if (file.endsWith('.meta.json')) {
-              match = inspectMockFile(path.join(dirPath, file));
-              if (match) break;
-            }
-          }
-        }
-      }
-
-      // 2. If not found in relativePath, search recursively in mockBaseDir
-      if (!match) {
-        const findInDir = (dir: string): { actualFilePath: string; meta: any; size: number } | null => {
-          if (!fs.existsSync(dir)) return null;
-          const entries = fs.readdirSync(dir, { withFileTypes: true });
-          for (const entry of entries) {
-            const full = path.join(dir, entry.name);
-            if (entry.isDirectory()) {
-              const res = findInDir(full);
-              if (res) return res;
-            } else if (entry.name.endsWith('.meta.json')) {
-              const found = inspectMockFile(full);
-              if (found) return found;
-            }
-          }
-          return null;
-        };
-        match = findInDir(this.mockBaseDir);
-      }
-
-      if (!match) {
-        throw new Error(`Mock file ${fileId} not found`);
-      }
-
-      return this.createLocalStream(
-        match.actualFilePath,
-        match.meta.mimeType || match.meta.mimetype || 'application/octet-stream',
-        match.size,
-        rangeHeader,
-      );
-    }
-
-    // Google Drive stream with metadata caching
-    let totalSize: number | undefined;
-    let mimeType = 'application/octet-stream';
-    const cachedMeta = this.fileMetadataCache.get(fileId);
-
-    if (cachedMeta && (Date.now() - cachedMeta.cachedAt < 3600_000)) {
-      totalSize = cachedMeta.size;
-      mimeType = cachedMeta.mimeType;
-    } else {
-      if (!this.viewerPermissionCache.has(fileId)) {
-        this.setViewerPermission(fileId).catch(() => {});
-      }
-      const metadata = await this.drive.files.get({
-        fileId,
-        supportsAllDrives: true,
-        fields: 'mimeType, size, name',
-      });
-
-      totalSize = metadata.data.size ? parseInt(metadata.data.size, 10) : undefined;
-      mimeType = metadata.data.mimeType || 'application/octet-stream';
-      this.fileMetadataCache.set(fileId, {
-        size: totalSize,
-        mimeType,
-        name: metadata.data.name || undefined,
-        cachedAt: Date.now(),
-      });
-    }
-
-    const requestOptions: any = { responseType: 'stream' };
-
-    // A parsed range lets us both narrow the Drive request and report an exact
-    // Content-Range back to the caller. Suffix ranges (`bytes=-500`) matter most
-    // here: MP4 `moov` atoms are often at the end of the file.
-    const parsed = rangeHeader && totalSize ? parseRange(rangeHeader, totalSize) : null;
-
-    if (rangeHeader) {
-      // When the size is unknown we cannot parse the header ourselves, so pass it
-      // through untouched and let Drive serve the range.
-      requestOptions.headers = {
-        Range: parsed ? `bytes=${parsed.start}-${parsed.end}` : rangeHeader,
-      };
-    }
-
-    const res = await this.drive.files.get(
-      { fileId, alt: 'media', supportsAllDrives: true },
-      requestOptions,
-    );
-
-    // Fall back to the range Drive actually served, so a pass-through range still
-    // produces a correct 206 rather than a full 200 body the player cannot seek in.
-    // `totalSize` is always defined when `parsed` is, since parsing needs it.
-    const contentRange = parsed
-      ? { start: parsed.start, end: parsed.end, total: totalSize! }
-      : (parseContentRangeHeader(
-          (res.headers?.['content-range'] as string | undefined) ?? undefined,
-        ) ?? undefined);
-
-    return {
-      stream: res.data as Readable,
-      mimeType,
-      size: totalSize,
-      contentRange,
-    };
-  }
-
-  /** Build a (optionally ranged) read stream for the local mock storage. */
-  private createLocalStream(
-    filePath: string,
-    mimeType: string,
-    size: number,
-    rangeHeader?: string,
-  ): DriveStreamResult {
-    const range = rangeHeader ? parseRange(rangeHeader, size) : null;
-
-    if (!range) {
-      return { stream: fs.createReadStream(filePath), mimeType, size };
-    }
-
-    return {
-      stream: fs.createReadStream(filePath, { start: range.start, end: range.end }),
-      mimeType,
-      size,
-      contentRange: { start: range.start, end: range.end, total: size },
-    };
+    return streamDriveFile({
+      drive: this.drive,
+      isMock: this.isMock,
+      mockBaseDir: this.mockBaseDir,
+      fileMetadataCache: this.fileMetadataCache,
+      viewerPermissionCache: this.viewerPermissionCache,
+      setViewerPermission: (id) => this.setViewerPermission(id),
+      fileId,
+      relativePath,
+      rangeHeader,
+    });
   }
 
   /**
@@ -1775,95 +1548,7 @@ export class DriveService {
     fileId: string,
     type: 'video' | 'resume' | 'certificate' | 'achievement' = 'certificate',
   ): Promise<Buffer | null> {
-    try {
-      const dimensions =
-        type === 'video'
-          ? { width: 320, height: 180 }
-          : type === 'resume'
-          ? { width: 240, height: 320 }
-          : { width: 320, height: 240 };
-
-      if (this.isMock || !this.drive) {
-        // Mock / local dev mode: look for local file in mock storage
-        const inspectMock = (id: string): string | null => {
-          try {
-            const scan = (dir: string): string | null => {
-              if (!fs.existsSync(dir)) return null;
-              for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-                const full = path.join(dir, entry.name);
-                if (entry.isDirectory()) {
-                  const sub = scan(full);
-                  if (sub) return sub;
-                } else if (entry.name.endsWith('.meta.json')) {
-                  try {
-                    const m = JSON.parse(fs.readFileSync(full, 'utf8'));
-                    if (m.id === id) {
-                      const actual = full.replace('.meta.json', '');
-                      if (fs.existsSync(actual)) return actual;
-                    }
-                  } catch {}
-                }
-              }
-              return null;
-            };
-            return scan(this.mockBaseDir);
-          } catch {
-            return null;
-          }
-        };
-
-        const localPath = inspectMock(fileId);
-        if (localPath && fs.existsSync(localPath)) {
-          const buf = fs.readFileSync(localPath);
-          try {
-            return await sharp(buf)
-              .resize(dimensions.width, dimensions.height, { fit: 'cover' })
-              .webp({ quality: 70 })
-              .toBuffer();
-          } catch {
-            // Not a decodable image (e.g. mock PDF/video) -> create clean placeholder WebP buffer
-          }
-        }
-
-        // Return a clean mock WebP placeholder buffer using Sharp
-        return await sharp({
-          create: {
-            width: dimensions.width,
-            height: dimensions.height,
-            channels: 4,
-            background: { r: 15, g: 23, b: 42, alpha: 1 },
-          },
-        })
-          .webp({ quality: 70 })
-          .toBuffer();
-      }
-
-      // Production Google Drive thumbnail retrieval
-      const meta = await this.drive.files.get({
-        fileId,
-        fields: 'thumbnailLink',
-        supportsAllDrives: true,
-      });
-
-      const thumbnailLink = meta.data.thumbnailLink;
-      if (!thumbnailLink) {
-        return null;
-      }
-
-      const response = await fetch(thumbnailLink);
-      if (!response.ok) {
-        return null;
-      }
-
-      const original = Buffer.from(await response.arrayBuffer());
-      return await sharp(original)
-        .resize(dimensions.width, dimensions.height, { fit: 'cover' })
-        .webp({ quality: 70 })
-        .toBuffer();
-    } catch (err: any) {
-      console.warn(`[Drive] Thumbnail generation failed for ${type}/${fileId}:`, err?.message || err);
-      return null;
-    }
+    return generateThumbnail(this.drive, this.isMock, this.mockBaseDir, fileId, type);
   }
 }
 

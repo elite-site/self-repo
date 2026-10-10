@@ -12,7 +12,7 @@ import { AdminHeader } from './components/AdminHeader';
 const StatsDashboard = React.lazy(() => import('./components/StatsDashboard').then((m) => ({ default: m.StatsDashboard })));
 const StudentsTable = React.lazy(() => import('./components/StudentsTable').then((m) => ({ default: m.StudentsTable })));
 const ActivityLogView = React.lazy(() => import('./components/ActivityLogView').then((m) => ({ default: m.ActivityLogView })));
-import { LoginPage } from './components/LoginPage';
+const LoginPage = React.lazy(() => import('./components/LoginPage').then((m) => ({ default: m.LoginPage })));
 import { AdminStats, AdminUser } from './types';
 import { adminApi } from './services/api';
 import { useTheme } from './context/ThemeContext';
@@ -35,6 +35,7 @@ const RolesPermissions = React.lazy(() => import('./pages/RolesPermissions').the
 const AuditLogs = React.lazy(() => import('./pages/AuditLogs').then((m) => ({ default: m.AuditLogs })));
 const Settings = React.lazy(() => import('./pages/Settings').then((m) => ({ default: m.Settings })));
 const StudentDetail = React.lazy(() => import('./pages/StudentDetail').then((m) => ({ default: m.StudentDetail })));
+const AdminGithubPage = React.lazy(() => import('./pages/AdminGithubPage').then((m) => ({ default: m.AdminGithubPage })));
 
 const PageLoadingFallback: React.FC = () => (
   <BrandedLoading message="Loading Module" fullScreen={false} />
@@ -228,12 +229,16 @@ const ProtectedLayout: React.FC = () => {
         </div>
       );
     }
-    return <LoginPage onLoginSuccess={completeLogin} />;
+    return (
+      <Suspense fallback={<BrandedLoading message="Loading Login" />}>
+        <LoginPage onLoginSuccess={completeLogin} />
+      </Suspense>
+    );
   }
 
   // Extract tab from path: /admin/dashboard -> dashboard, /admin -> dashboard
   const pathTabs: AdminTab[] = [
-    'dashboard', 'submissions', 'students', 'activity', 'moderation',
+    'dashboard', 'submissions', 'students', 'github', 'activity', 'moderation',
     'events', 'event-registrations', 'voting', 'voting-results',
     'communications', 'email-automation', 'email-history', 'analytics',
     'exports', 'storage', 'roles', 'audit-logs', 'settings'
@@ -308,6 +313,7 @@ const router = createBrowserRouter([
       { path: 'submissions', element: <Navigate to="/admin/moderation" replace /> },
       { path: 'students', element: <StudentsPage /> },
       { path: 'students/:studentId', element: <StudentsPage /> },
+      { path: 'github', element: <AdminGithubPage /> },
       { path: 'activity', element: <ActivityPage /> },
       { path: 'moderation', element: <Moderation /> },
       { path: 'events', element: <AdminEvents /> },
