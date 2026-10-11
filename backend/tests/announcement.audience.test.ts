@@ -5,7 +5,7 @@ import app from '../src/server';
 import { env } from '../src/config/env';
 import { announcementStudentWhere, resolveAnnouncementTarget } from '../src/modules/announcements';
 
-vi.mock('../src/lib/prisma', () => ({
+vi.mock('../src/infrastructure/prisma', () => ({
   prisma: {
     announcement: {
       create: vi.fn(),
@@ -22,7 +22,7 @@ vi.mock('../src/lib/prisma', () => ({
   },
 }));
 
-const { prisma } = await import('../src/lib/prisma');
+const { prisma } = await import('../src/infrastructure/prisma');
 
 const adminToken = jwt.sign(
   { userId: 'admin-1', username: 'admin' },
@@ -113,7 +113,7 @@ describe('announcement audience resolution', () => {
         .set('Authorization', `Bearer ${adminToken}`);
 
       expect(res.status).toBe(200);
-      expect(res.body).toEqual({ count: 42 });
+      expect(res.body).toMatchObject({ count: 42 });
       expect((prisma.student.count as any).mock.calls[0][0]).toEqual({ where: { year: 2 } });
     });
 

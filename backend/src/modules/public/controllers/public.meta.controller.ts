@@ -3,9 +3,10 @@ import { BRANCHES, SECTIONS, YEARS, INTERNAL_EVENT_ID } from '../../../config/co
 import { env } from '../../../config/env';
 import * as repo from '../public.repository';
 import * as service from '../public.service';
-import { driveService } from '../../../services/drive.service';
-import { ActivityService } from '../../../services/activity.service';
+import { driveService } from '../../media/drive';
+import { ActivityService } from '../../admin';
 import { ValidationService } from '../../../services/validation.service';
+import { logger } from '../../../utils/logger';
 
 const EVENT_ID = INTERNAL_EVENT_ID;
 const EVENT_NAME = 'Self Introduction';
@@ -205,7 +206,10 @@ export async function submitLegacyApplication(req: Request, res: Response): Prom
           let thumbnailBuffer: Buffer | null = null;
           try {
             thumbnailBuffer = await driveService.generateThumbnail(uploadResult.videoDriveId, 'video');
-          } catch {}
+          } catch (err) {
+            // Non-fatal: video submission succeeds even if thumbnail generation fails
+            logger.warn('Failed generating video thumbnail for submission', { error: err });
+          }
           const ivData = {
             driveFileId: uploadResult.videoDriveId,
             filename: videoFile.originalname,

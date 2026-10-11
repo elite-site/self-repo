@@ -1,10 +1,10 @@
 import { Router } from 'express';
-import authRoutes from '../../routes/student/auth.routes';
-import overviewRoutes from '../../routes/student/overview.routes';
-import videoRoutes from '../../routes/student/video.routes';
-import resumeRoutes from '../../routes/student/resume.routes';
-import profileRoutes from '../../routes/student/profile.routes';
-import interactionsRoutes from '../../routes/student/interactions.routes';
+import { studentAuthRouter as authRoutes } from '../auth';
+import overviewRoutes from './routes/overview.routes';
+import videoRoutes from './routes/video.routes';
+import resumeRoutes from './routes/resume.routes';
+import profileRoutes from './routes/profile.routes';
+import interactionsRoutes from './routes/interactions.routes';
 
 // Main student router (/api/student)
 export const studentRouter = Router();

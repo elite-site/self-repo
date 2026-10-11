@@ -1,5 +1,4 @@
 import { prisma } from '../../infrastructure/prisma';
-import type { Prisma } from '@prisma/client';
 
 export async function findAllCampaigns() {
   return prisma.votingCampaign.findMany();

@@ -226,7 +226,7 @@ export async function uploadDirectToDrive(
       } catch (err: any) {
         if (signal?.aborted || err.message?.includes('cancelled')) {
           void fetch(sessionUrl, { method: 'DELETE' }).catch(() => {});
-          throw new Error('Upload was cancelled.');
+          throw new Error('Upload was cancelled.', { cause: err });
         }
 
         if (attempt < 3) {
@@ -244,11 +244,12 @@ export async function uploadDirectToDrive(
               currentByte = status.nextByte;
               emitProgress(currentByte);
             }
-          } catch {
-            // retry next
+          } catch (retryErr) {
+            // Non-fatal: retry next attempt
+            console.warn('Resumable session status query failed non-fatally:', retryErr);
           }
         } else {
-          throw new Error(`Failed to upload video chunk after 3 attempts: ${err?.message || err}`);
+          throw new Error(`Failed to upload video chunk after 3 attempts: ${err?.message || err}`, { cause: err });
         }
       }
     }

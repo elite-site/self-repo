@@ -6,8 +6,8 @@ import request from 'supertest';
 import { adminPortalRouter } from '../src/modules/admin';
 import { env } from '../src/config/env';
 import { INTERNAL_EVENT_ID } from '../src/config/constants';
-import { prisma } from '../src/lib/prisma';
-import { ActivityService } from '../src/services/activity.service';
+import { prisma } from '../src/infrastructure/prisma';
+import { ActivityService } from '../src/modules/admin/services/activity.service';
 
 /**
  * Deleting an Event has to clear every table that hangs off it, because each of
@@ -29,7 +29,7 @@ import { ActivityService } from '../src/services/activity.service';
  *   2. Dependents are never destroyed on the first call — the API answers 409 with
  *      a per-table tally and only cascades once the caller resends force:true.
  */
-vi.mock('../src/lib/prisma', () => ({
+vi.mock('../src/infrastructure/prisma', () => ({
   prisma: {
     event: { findUnique: vi.fn(), delete: vi.fn(), update: vi.fn() },
     eventRegistration: { count: vi.fn(), deleteMany: vi.fn() },
@@ -48,18 +48,26 @@ vi.mock('../src/lib/prisma', () => ({
   },
 }));
 
-vi.mock('../src/services/activity.service', () => ({
+vi.mock('../src/modules/admin/services/activity.service', () => ({
   ActivityService: { log: vi.fn().mockResolvedValue(undefined) },
 }));
 
-vi.mock('../src/modules/announcements', () => ({
-  deliverAnnouncementNotifications: vi.fn(),
-}));
+vi.mock('../src/modules/announcements', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../src/modules/announcements')>();
+  return {
+    ...actual,
+    deliverAnnouncementNotifications: vi.fn(),
+  };
+});
 
-vi.mock('../src/services/notification.service', () => ({
-  notifyStudent: vi.fn(),
-  notifyVideoChangeRequested: vi.fn(),
-}));
+vi.mock('../src/modules/students', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../src/modules/students')>();
+  return {
+    ...actual,
+    notifyStudent: vi.fn(),
+    notifyVideoChangeRequested: vi.fn(),
+  };
+});
 
 const activityLog = ActivityService.log as unknown as ReturnType<typeof vi.fn>;
 const transaction = prisma.$transaction as unknown as ReturnType<typeof vi.fn>;

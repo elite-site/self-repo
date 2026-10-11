@@ -3,9 +3,9 @@ import jwt from 'jsonwebtoken';
 import request from 'supertest';
 import app from '../src/server';
 import { env } from '../src/config/env';
-import { prisma } from '../src/lib/prisma';
+import { prisma } from '../src/infrastructure/prisma';
 
-vi.mock('../src/lib/prisma', () => ({
+vi.mock('../src/infrastructure/prisma', () => ({
   prisma: {
     announcement: {
       create: vi.fn(),

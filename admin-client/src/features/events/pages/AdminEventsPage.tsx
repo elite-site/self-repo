@@ -44,7 +44,7 @@ export const AdminEventsPage: React.FC = () => {
           role={toast.type === 'error' ? 'alert' : 'status'}
           aria-live={toast.type === 'error' ? 'assertive' : 'polite'}
         >
-          {toast.type === 'error' ? <AlertCircle className="w-4 h-4 shrink-0" aria-hidden="true" /> : <CheckCircle className="w-4 h-4 shrink-0 text-emerald-400" aria-hidden="true" />}
+          {toast.type === 'error' ? <AlertCircle className="w-4 h-4 shrink-0" aria-hidden="true" /> : <CheckCircle className="w-4 h-4 shrink-0 text-success" aria-hidden="true" />}
           <span>{toast.message}</span>
           <button type="button" onClick={() => setToast(null)} className="p-1 hover:opacity-75 rounded ml-2 text-current cursor-pointer" aria-label="Close notification">
             <X className="w-3.5 h-3.5" aria-hidden="true" />

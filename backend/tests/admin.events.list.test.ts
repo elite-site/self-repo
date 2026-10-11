@@ -5,7 +5,7 @@ import jwt from 'jsonwebtoken';
 import request from 'supertest';
 import adminApiRouter from '../src/modules/admin';
 import { env } from '../src/config/env';
-import { prisma } from '../src/lib/prisma';
+import { prisma } from '../src/infrastructure/prisma';
 
 /**
  * Regression guard for the admin Events table's Registrations column.
@@ -16,7 +16,7 @@ import { prisma } from '../src/lib/prisma';
  * a plausible-looking number that was simply invented. The equivalent portal route
  * has always computed it; the admin client just calls this one.
  */
-vi.mock('../src/lib/prisma', () => ({
+vi.mock('../src/infrastructure/prisma', () => ({
   prisma: {
     event: { findMany: vi.fn() },
     student: { findMany: vi.fn(), count: vi.fn(), aggregate: vi.fn() },

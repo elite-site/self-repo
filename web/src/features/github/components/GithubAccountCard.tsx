@@ -4,10 +4,7 @@ import {
   RefreshCw,
   ExternalLink,
   Unlink,
-  Clock,
-  Layers,
   Star,
-  GitFork,
   Loader2,
 } from 'lucide-react';
 import { Card } from '@/shared/ui/Card';
@@ -15,7 +12,7 @@ import { GithubAccountInfo, GithubSkillItem } from '../types';
 
 interface GithubAccountCardProps {
   account?: GithubAccountInfo | null;
-  skills: GithubSkillItem[];
+  skills?: GithubSkillItem[];
   syncing: boolean;
   isSyncActive: boolean;
   isCooldown: boolean;
@@ -42,7 +39,6 @@ function formatRelativeTime(dateStr?: string | null): string {
 
 export const GithubAccountCard: React.FC<GithubAccountCardProps> = ({
   account,
-  skills,
   syncing,
   isSyncActive,
   isCooldown,

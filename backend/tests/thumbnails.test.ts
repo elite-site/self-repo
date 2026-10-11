@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import request from 'supertest';
 import app from '../src/server';
-import { prisma } from '../src/lib/prisma';
-import { driveService } from '../src/services/drive.service';
+import { prisma } from '../src/infrastructure/prisma';
+import { driveService } from '../src/modules/media/drive';
 
-vi.mock('../src/lib/prisma', () => ({
+vi.mock('../src/infrastructure/prisma', () => ({
   prisma: {
     student: {
       findUnique: vi.fn(),
@@ -44,7 +44,7 @@ vi.mock('../src/lib/prisma', () => ({
   },
 }));
 
-vi.mock('../src/services/drive.service', () => ({
+vi.mock('../src/modules/media/drive', () => ({
   driveService: {
     generateThumbnail: vi.fn(),
     uploadFile: vi.fn(),

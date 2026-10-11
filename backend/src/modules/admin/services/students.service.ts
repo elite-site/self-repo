@@ -1,4 +1,4 @@
-import { driveService } from '../../../services/drive.service';
+import { driveService } from '../../media/drive';
 import { AppError } from '../../../utils/appError';
 import * as adminRepo from '../admin.repository';
 import type { PortalStudentsQueryParams } from '../admin.types';

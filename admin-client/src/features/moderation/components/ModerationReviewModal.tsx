@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { UnifiedModerationItem, ModerationType } from '../types';
-import { adminApi } from '@/services/api';
+import { moderationApi } from '../api';
 import { useConfirm } from '@/shared/ui/ConfirmDialog';
 import { ModerationReviewHeader } from './subcomponents/ModerationReviewHeader';
 import { ModerationItemPreview } from './subcomponents/ModerationItemPreview';
@@ -40,7 +40,6 @@ export const ModerationReviewModal: React.FC<ModerationReviewModalProps> = ({
   const [publishOnApprove, setPublishOnApprove] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [visibilityBusy, setVisibilityBusy] = useState(false);
-  const [actionBusy, setActionBusy] = useState(false);
   const [deleteBusy, setDeleteBusy] = useState(false);
 
   // Reset form whenever selectedItem changes
@@ -101,7 +100,7 @@ export const ModerationReviewModal: React.FC<ModerationReviewModalProps> = ({
     try {
       const typeKey: ModerationType = typeKeyFor(selectedItem);
 
-      await adminApi.moderationDecision(typeKey, selectedItem.id, {
+      await moderationApi.moderationDecision(typeKey, selectedItem.id, {
         action,
         reason: reason.trim() || undefined,
         approvalNote: approvalNote.trim() || undefined,
@@ -162,7 +161,7 @@ export const ModerationReviewModal: React.FC<ModerationReviewModalProps> = ({
     const next = !selectedItem.isPublic;
     setVisibilityBusy(true);
     try {
-      await adminApi.setModerationVisibility(typeKeyFor(selectedItem), selectedItem.id, next);
+      await moderationApi.setModerationVisibility(typeKeyFor(selectedItem), selectedItem.id, next);
       onUpdateItems((prev) => prev.map((i) => (i.id === selectedItem.id ? { ...i, isPublic: next } : i)));
       showToast(next ? 'Showing on public profile.' : 'Hidden from public profile.');
     } catch {
@@ -173,22 +172,9 @@ export const ModerationReviewModal: React.FC<ModerationReviewModalProps> = ({
   };
 
   /** Ask the student to upload a replacement for this item. */
-  const handleRequestChanges = async () => {
-    const note = window.prompt(
-      `What should the student change before re-uploading their ${readableTypeOf(selectedItem).toLowerCase()}?`,
-      'Please upload an updated version.'
-    );
-    if (note === null) return;
-
-    setActionBusy(true);
-    try {
-      await adminApi.requestModerationChanges(typeKeyFor(selectedItem), selectedItem.id, note.trim() || undefined);
-      showToast('Change request sent.');
-    } catch {
-      showToast("Couldn't send the request. Try again.", 'error');
-    } finally {
-      setActionBusy(false);
-    }
+  const handleRequestChanges = () => {
+    setAction('changes');
+    showToast('Specify feedback in the decision form below and submit.', 'success');
   };
 
   /** Destructive: remove the item and drop it out of the queue. */
@@ -203,7 +189,7 @@ export const ModerationReviewModal: React.FC<ModerationReviewModalProps> = ({
 
     setDeleteBusy(true);
     try {
-      await adminApi.deleteModerationItem(typeKeyFor(selectedItem), selectedItem.id);
+      await moderationApi.deleteModerationItem(typeKeyFor(selectedItem), selectedItem.id);
       showToast(`Deleted ${readableTypeOf(selectedItem).toLowerCase()}.`);
 
       const nextRemaining = filteredItems.filter((i) => i.id !== selectedItem.id);
@@ -268,7 +254,7 @@ export const ModerationReviewModal: React.FC<ModerationReviewModalProps> = ({
                 onToggleVisibility={handleToggleVisibility}
                 visibilityBusy={visibilityBusy}
                 onRequestChanges={handleRequestChanges}
-                actionBusy={actionBusy}
+                actionBusy={submitting && action === 'changes'}
                 onDeleteItem={handleDeleteItem}
                 deleteBusy={deleteBusy}
               />

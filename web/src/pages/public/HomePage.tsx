@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { StudentSession } from '@/shared/types';
-import { api } from '@/services/api';
+import { directoryApi } from '@/features/directory/api';
+import { authApi } from '@/features/auth/api';
 import { Navbar } from '@/shared/layout/Navbar';
 import { Footer } from '@/shared/layout/Footer';
 import { HomeHero } from './components/HomeHero';
@@ -19,27 +20,30 @@ export const HomePage: React.FC<HomePageProps> = ({ session, onLogout }) => {
 
   const [featuredStudents, setFeaturedStudents] = useState<any[]>([]);
   const [studentsLoading, setStudentsLoading] = useState(true);
+  const [studentsError, setStudentsError] = useState<string | null>(null);
   const [studentTotal, setStudentTotal] = useState<number | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
+  const loadFeaturedStudents = useCallback(() => {
+    setStudentsLoading(true);
+    setStudentsError(null);
 
-    api
+    directoryApi
       .getPublicStudents({ limit: 3 })
       .then((data) => {
-        if (cancelled) return;
         setFeaturedStudents(Array.isArray(data?.students) ? data.students : []);
         if (typeof data?.total === 'number') setStudentTotal(data.total);
       })
-      .catch(() => {})
+      .catch((err) => {
+        setStudentsError(err?.message || 'Unable to load spotlight students.');
+      })
       .finally(() => {
-        if (!cancelled) setStudentsLoading(false);
+        setStudentsLoading(false);
       });
-
-    return () => {
-      cancelled = true;
-    };
   }, []);
+
+  useEffect(() => {
+    loadFeaturedStudents();
+  }, [loadFeaturedStudents]);
 
   useEffect(() => {
     document.title = 'ELITE Student Portal — Department of IT, SASI';
@@ -60,7 +64,7 @@ export const HomePage: React.FC<HomePageProps> = ({ session, onLogout }) => {
   };
 
   const handleSignIn = () => {
-    window.location.href = api.getOAuthAuthorizeUrl();
+    window.location.href = authApi.getOAuthAuthorizeUrl();
   };
 
   const stats = [
@@ -76,6 +80,8 @@ export const HomePage: React.FC<HomePageProps> = ({ session, onLogout }) => {
           onSignIn={handleSignIn}
           loading={studentsLoading}
           featuredStudents={featuredStudents}
+          error={studentsError}
+          onRetry={loadFeaturedStudents}
         />
 
         {stats.length > 0 && (

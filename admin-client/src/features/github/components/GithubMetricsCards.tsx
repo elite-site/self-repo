@@ -27,7 +27,7 @@ export const GithubMetricsCards: React.FC<GithubMetricsCardsProps> = ({ overview
 
       <div className="surface p-5 rounded-2xl border border-edge">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400">
+          <div className="p-2.5 rounded-xl bg-success/10 text-success">
             <CheckCircle2 size={20} />
           </div>
           <div>
@@ -39,7 +39,7 @@ export const GithubMetricsCards: React.FC<GithubMetricsCardsProps> = ({ overview
 
       <div className="surface p-5 rounded-2xl border border-edge">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-rose-500/10 text-rose-400">
+          <div className="p-2.5 rounded-xl bg-danger/10 text-danger">
             <AlertCircle size={20} />
           </div>
           <div>

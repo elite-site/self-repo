@@ -1,8 +1,8 @@
 import * as repo from './events.repository';
 import { isInternalEvent } from '../../config/constants';
 import { AppError } from '../../utils/appError';
-import { ActivityService } from '../../services/activity.service';
-import { notifyAllStudentsAboutEvent } from '../../services/notification.service';
+import { ActivityService } from '../admin';
+import { notifyAllStudentsAboutEvent } from '../students';
 import ExcelJS from 'exceljs';
 
 let cachedOpenEvents: { data: any[]; expiry: number } | null = null;

@@ -19,3 +19,8 @@ export async function findRecentActivityLogs(take: number = 2000) {
     take,
   });
 }
+
+export async function createActivityLog(data: any) {
+  return prisma.activityLog.create({ data });
+}
+

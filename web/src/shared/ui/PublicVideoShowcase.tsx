@@ -49,12 +49,7 @@ export const PublicVideoShowcase: React.FC<Props> = ({
 
        } =
          usePublicVideos(preloaded);
-  const [activeId,
-
-       setActiveId] =
-         useState<string |
-
-       null>(null);
+  const [, setActiveId] = useState<string | null>(null);
   const playerRefs
          = useRef<Record<string,
 

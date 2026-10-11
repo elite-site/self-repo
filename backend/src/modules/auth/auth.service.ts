@@ -3,8 +3,9 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { env } from '../../config/env';
 import { INTERNAL_EVENT_ID } from '../../config/constants';
-import { ssoService } from '../../services/sso.service';
-import { ActivityService } from '../../services/activity.service';
+import { ssoService, SSOService } from './sso.service';
+import { ActivityService } from '../admin/services/activity.service';
+export { ssoService, SSOService };
 import { AppError } from '../../utils/appError';
 import { isAllowedRedirectUrl } from './auth.schemas';
 import * as authRepo from './auth.repository';
@@ -34,7 +35,7 @@ export function getAuthorizeUrl(rawReturnTo?: string): string {
 }
 
 export async function processGoogleCallback(code: string, state: string): Promise<{ token: string; redirectUrl: string }> {
-  let decodedState: any = null;
+  let decodedState: any;
   try {
     decodedState = jwt.verify(state, env.STUDENT_JWT_SECRET);
   } catch {

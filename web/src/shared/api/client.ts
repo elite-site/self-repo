@@ -21,6 +21,97 @@ export const client = axios.create({
   withCredentials: true,
 });
 
+export interface ApiFieldError {
+  field: string;
+  message: string;
+}
+
+export interface ApiErrorPayload {
+  code: string;
+  message: string;
+  status: number;
+  details?: ApiFieldError[];
+  requestId?: string;
+  response?: any;
+}
+
+export class ApiError extends Error {
+  code: string;
+  status: number;
+  details?: ApiFieldError[];
+  requestId?: string;
+  response?: any;
+
+  constructor(payload: ApiErrorPayload) {
+    super(payload.message);
+    this.name = 'ApiError';
+    this.code = payload.code;
+    this.status = payload.status;
+    this.details = payload.details;
+    this.requestId = payload.requestId;
+    this.response = payload.response;
+    Object.setPrototypeOf(this, ApiError.prototype);
+  }
+}
+
+export function normalizeError(error: unknown): ApiError {
+  if (error instanceof ApiError) {
+    return error;
+  }
+
+  if (axios.isAxiosError(error)) {
+    const status = error.response?.status || (error.code === 'ECONNABORTED' ? 408 : 0);
+    const data = error.response?.data as any;
+
+    let code = 'NETWORK_ERROR';
+    if (status === 400) code = 'VALIDATION_ERROR';
+    else if (status === 401) code = 'UNAUTHORIZED';
+    else if (status === 403) code = 'FORBIDDEN';
+    else if (status === 404) code = 'NOT_FOUND';
+    else if (status === 409) code = 'CONFLICT';
+    else if (status === 429) code = 'RATE_LIMITED';
+    else if (status >= 500) code = 'SERVER_ERROR';
+    else if (error.code === 'ECONNABORTED') code = 'TIMEOUT';
+
+    if (data?.error && typeof data.error === 'string') {
+      code = data.error;
+    } else if (data?.code && typeof data.code === 'string') {
+      code = data.code;
+    }
+
+    let message = data?.message || error.message || 'An unexpected error occurred';
+    if (status === 0) {
+      message = 'Network error. Please check your internet connection.';
+    }
+
+    const details = Array.isArray(data?.details) ? data.details : undefined;
+    const requestId = data?.requestId || (error.response?.headers?.['x-request-id'] as string | undefined);
+
+    return new ApiError({
+      code,
+      message,
+      status,
+      details,
+      requestId,
+      response: error.response,
+    });
+  }
+
+  if (error instanceof Error) {
+    return new ApiError({
+      code: 'UNKNOWN_ERROR',
+      message: error.message,
+      status: 500,
+    });
+  }
+
+  return new ApiError({
+    code: 'UNKNOWN_ERROR',
+    message: String(error) || 'An unexpected error occurred',
+    status: 500,
+  });
+}
+
 // Automatically attach Bearer token if present in localStorage (cross-domain & iOS Safari support)
 client.interceptors.request.use((config) => {
   const token = localStorage.getItem('student_token');
@@ -34,14 +125,17 @@ client.interceptors.request.use((config) => {
 client.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error?.response?.status === 401 && typeof window !== 'undefined') {
-      const url = error.config?.url || '';
+    const apiError = normalizeError(error);
+
+    if (apiError.status === 401 && typeof window !== 'undefined') {
+      const url = error?.config?.url || '';
       if (url.includes('/student/') && !url.includes('/student/me')) {
         localStorage.removeItem('student_token');
         window.dispatchEvent(new CustomEvent('elite-session-expired'));
       }
     }
-    return Promise.reject(error);
+
+    return Promise.reject(apiError);
   }
 );
 

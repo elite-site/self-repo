@@ -1,7 +1,11 @@
-import { client } from '@/shared/api';
+import { client, cachedFetch } from '@/shared/api';
 import { PublicStudent } from '../types';
 
 export const publicProfileApi = {
-  getPublicStudent: (rollNo: string): Promise<PublicStudent> =>
-    client.get(`/api/public/student/${encodeURIComponent(rollNo)}`).then((r) => r.data),
+  async getPublicStudent(rollNo: string): Promise<PublicStudent> {
+    return cachedFetch(`student_${rollNo}`, 30_000, async () => {
+      const res = await client.get(`/public/students/${encodeURIComponent(rollNo)}`);
+      return res.data;
+    });
+  },
 };

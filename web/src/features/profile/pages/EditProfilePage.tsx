@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate, Link, useOutletContext } from 'react-router-dom';
+import { Link, useOutletContext } from 'react-router-dom';
 import { ArrowLeft, Save, Loader2, CheckCircle2 } from 'lucide-react';
 import { SkeletonPage } from '@/shared/ui/Skeleton';
 import { PhotoCropModal } from '@/shared/ui/PhotoCropModal';
@@ -8,7 +8,6 @@ import { useEditProfile } from '../hooks/useEditProfile';
 import { PhotoUploadSection, SocialLinksForm } from '../components';
 
 export const EditProfilePage: React.FC = () => {
-  const navigate = useNavigate();
   const { onPhotoChange } = useOutletContext<StudentOutletContext>() ?? {};
   const {
     profile,

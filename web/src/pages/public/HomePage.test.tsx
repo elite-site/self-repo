@@ -1,15 +1,18 @@
-import React from 'react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { HomePage } from './HomePage';
-import { api } from '../../services/api';
 
 vi.mock('@/shared/layout/Navbar', () => ({
   Navbar: () => <nav data-testid="navbar" />,
 }));
 vi.mock('@/shared/layout/Footer', () => ({
   Footer: () => <footer data-testid="footer" />,
+}));
+vi.mock('@/features/directory/api', () => ({
+  directoryApi: {
+    getPublicStudents: vi.fn().mockResolvedValue({ students: [], total: 0 }),
+  },
 }));
 
 const renderHome = async (session: any = null) => {

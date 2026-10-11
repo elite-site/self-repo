@@ -15,24 +15,30 @@ import path from 'path';
 import fs from 'fs';
 import { env } from './config/env';
 import { errorHandler } from './middleware/errorHandler';
-import { prisma } from './lib/prisma';
-import { driveService } from './services/drive.service';
+import { connectDatabase } from './infrastructure/prisma';
+import { healthCheckHandler, readyCheckHandler } from './infrastructure/health';
+import { autoMigratePendingItems } from './modules/admin/services/backlogMigration.service';
+import { driveService } from './modules/media/drive';
 import { generalApiRateLimiter } from './middleware/rateLimiter';
 import publicRoutes, { publicStudentRouter as publicStudentRoutes, publicVideoRouter as publicVideoRoutes } from './modules/public';
 import studentRoutes, { studentProfileRouter as studentProfileRoutes, studentInteractionsRouter as studentInteractionsRoutes } from './modules/students';
 import { portfolioRouter as studentPortfolioRoutes } from './modules/portfolio';
-import { studentGithubRouter as studentGithubRoutes } from './modules/github';
+import { studentGithubRouter as studentGithubRoutes, internalGithubRouter } from './modules/github';
 import { eventsRouter as studentEventsRoutes } from './modules/events';
 import { adminAuthRouter as adminAuthRoutes } from './modules/auth';
 import adminApiRoutes, { adminPortalRouter as adminPortalRoutes, adminAcademicYearRouter as adminAcademicYearRoutes } from './modules/admin';
 import { startAnnouncementScheduler } from './jobs/announcementScheduler';
-import { startGithubSyncScheduler, tick as tickGithubSync } from './jobs/githubSyncScheduler';
+import { startGithubSyncScheduler } from './jobs/githubSyncScheduler';
 import { mountFrontend } from './config/staticAssets';
+import { requestIdMiddleware } from './middleware/requestId';
+import { logger } from './utils/logger';
+
 
 const app = express();
 
 // Trust proxy for secure cookies on Render/Railway
 app.set('trust proxy', 1);
+app.use(requestIdMiddleware);
 
 // Security headers
 app.use(
@@ -138,63 +144,13 @@ app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 // General rate limiter on all /api student-facing routes
 app.use('/api', generalApiRateLimiter);
 
-// Healthcheck
-app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
+// Healthcheck & Readiness
+app.get('/health', healthCheckHandler);
+app.get('/ready', readyCheckHandler);
 
-// Readiness probe for Render/Railway: DB + Drive must both respond.
-// Caches probe result for 30s to avoid hammering Google Drive & DB on frequent platform health pings.
-let lastReadyProbeTime = 0;
-let cachedReadyResult: { statusCode: number; body: Record<string, any> } | null = null;
-const READY_CACHE_TTL_MS = 30_000;
+// Internal routes (e.g. external-cron triggered GitHub sync tick)
+app.use('/api/internal', internalGithubRouter);
 
-app.get('/ready', async (_req, res) => {
-  const now = Date.now();
-  if (cachedReadyResult && (now - lastReadyProbeTime) < READY_CACHE_TTL_MS) {
-    return res
-      .status(cachedReadyResult.statusCode)
-      .json(cachedReadyResult.body);
-  }
-
-  const probe: Record<string, 'ok' | 'down'> = { db: 'down', drive: 'down' };
-  try {
-    await prisma.$queryRaw`SELECT 1`;
-    probe.db = 'ok';
-  } catch {
-    /* keep down */
-  }
-  try {
-    await driveService.assertRootReachable();
-    probe.drive = 'ok';
-  } catch {
-    /* keep down */
-  }
-  const ready = probe.db === 'ok' && probe.drive === 'ok';
-  const body = { status: ready ? 'ok' : 'unready', ...probe, timestamp: new Date().toISOString() };
-  cachedReadyResult = {
-    statusCode: ready ? 200 : 503,
-    body,
-  };
-  lastReadyProbeTime = now;
-
-  res.status(ready ? 200 : 503).json(body);
-});
-
-// Secret-protected trigger for scheduled GitHub sync tick (runs when external cron wakes sleeping instances)
-app.post('/api/internal/github-sync-tick', async (req: express.Request, res: express.Response) => {
-  const secretHeader = req.headers['x-internal-secret'] || (req.headers['authorization'] || '').replace(/^Bearer\s+/i, '');
-  if (!env.INTERNAL_SYNC_SECRET || secretHeader !== env.INTERNAL_SYNC_SECRET) {
-    return res.status(401).json({ error: 'UNAUTHORIZED', message: 'Invalid or missing internal sync secret' });
-  }
-
-  try {
-    const result = await tickGithubSync();
-    return res.json({ success: true, ...result, timestamp: new Date().toISOString() });
-  } catch (err: any) {
-    return res.status(500).json({ error: 'INTERNAL_ERROR', message: err?.message || String(err) });
-  }
-});
 
 // 1. Public API routes (existing submission form + new public directory)
 app.use('/api', publicRoutes);
@@ -303,82 +259,51 @@ if (webBuildPath) {
 // Global error handler
 app.use(errorHandler);
 
-async function autoMigratePendingItems() {
-  if (process.env.NODE_ENV === 'production' || process.env.AUTO_MIGRATE_PENDING !== 'true') return;
-  try {
-    const [resumeRes, achRes, certRes, profRes] = await Promise.all([
-      prisma.resume.updateMany({
-        where: { status: 'PENDING' },
-        data: { status: 'APPROVED', isPublic: true },
-      }),
-      prisma.achievement.updateMany({
-        where: { status: 'PENDING' },
-        data: { status: 'APPROVED', isPublic: true },
-      }),
-      prisma.certificate.updateMany({
-        where: { status: 'PENDING' },
-        data: { status: 'APPROVED', isPublic: true },
-      }),
-      prisma.studentProfile.updateMany({
-        where: { isPublic: false },
-        data: { isPublic: true },
-      }),
-    ]);
-    if (resumeRes.count > 0 || achRes.count > 0 || certRes.count > 0 || profRes.count > 0) {
-      console.log(
-        `[Auto-Approval] Backlog migrated to APPROVED: ${resumeRes.count} resumes, ${achRes.count} achievements, ${certRes.count} certificates, ${profRes.count} profiles set public.`
-      );
-    }
-  } catch (err: any) {
-    console.warn('[Auto-Approval] Startup migration skipped or encountered error:', err?.message || err);
-  }
-}
-
 const port = env.PORT;
-if (process.env.NODE_ENV !== 'test') {
+if (env.NODE_ENV !== 'test') {
   (async () => {
     try {
-      await prisma.$connect();
+      await connectDatabase();
     } catch (err: any) {
-      console.warn('[Prisma] Initial database connection on boot failed:', err?.message || err);
+      logger.warn('[Prisma] Initial database connection on boot failed', { err });
     }
 
     app.listen(port, () => {
-    console.log(`🚀 Self Introduction Portal running on port ${port}`);
-    console.log(`🌐 Web Portal:    http://localhost:${port}/`);
-    console.log(`📡 Public API:    http://localhost:${port}/api`);
-    console.log(`🛡️ Admin Portal:  http://localhost:${port}/admin`);
+      console.log(`🚀 Self Introduction Portal running on port ${port}`);
+      console.log(`🌐 Web Portal:    http://localhost:${port}/`);
+      console.log(`📡 Public API:    http://localhost:${port}/api`);
+      console.log(`🛡️ Admin Portal:  http://localhost:${port}/admin`);
 
-    // Start background announcement scheduler
-    startAnnouncementScheduler();
+      // Start background announcement scheduler
+      startAnnouncementScheduler();
 
-    // Start background GitHub sync scheduler
-    startGithubSyncScheduler();
+      // Start background GitHub sync scheduler
+      startGithubSyncScheduler();
 
-    // Run backlog auto-approval migration only when explicitly enabled via env var
-    if (process.env.AUTO_MIGRATE_PENDING === 'true') {
-      autoMigratePendingItems().catch(() => {});
-    }
-
-    // Sweep every stored Drive file and folder back to viewer permission.
-    // This walks the whole corpus and writes to Google Drive, so it is opt-in:
-    // admins can trigger the same sweep on demand from the admin portal, and
-    // files uploaded after boot already get viewer permission individually.
-    if (process.env.SYNC_DRIVE_PERMISSIONS === 'true') {
-      if (typeof driveService.ensureAllFilesViewerAccess === 'function') {
-        setTimeout(() => {
-          driveService.ensureAllFilesViewerAccess().catch((err) => {
-            console.warn('[Drive] Background viewer permissions sync encountered an error:', err?.message || err);
-          });
-        }, 5000);
+      // Run backlog auto-approval migration only when explicitly enabled via env var
+      if (env.AUTO_MIGRATE_PENDING) {
+        autoMigratePendingItems().catch((err) => {
+          logger.warn('[Auto-Approval] Background migration encountered an error', { err });
+        });
       }
-    } else {
-      console.log(
-        '[Drive] Skipping boot-time viewer permission sweep (set SYNC_DRIVE_PERMISSIONS=true to enable).',
-      );
-    }
-  });
+
+      // Sweep every stored Drive file and folder back to viewer permission.
+      if (env.SYNC_DRIVE_PERMISSIONS) {
+        if (typeof driveService.ensureAllFilesViewerAccess === 'function') {
+          setTimeout(() => {
+            driveService.ensureAllFilesViewerAccess().catch((err) => {
+              logger.warn('[Drive] Background viewer permissions sync encountered an error', { err });
+            });
+          }, 5000);
+        }
+      } else {
+        console.log(
+          '[Drive] Skipping boot-time viewer permission sweep (set SYNC_DRIVE_PERMISSIONS=true to enable).',
+        );
+      }
+    });
   })();
 }
+
 
 export default app;

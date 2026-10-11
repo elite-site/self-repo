@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('../src/lib/prisma', () => ({
+vi.mock('../src/infrastructure/prisma', () => ({
   prisma: {
     portalSettings: {
       findUnique: vi.fn(),
@@ -8,7 +8,7 @@ vi.mock('../src/lib/prisma', () => ({
   },
 }));
 
-const { prisma } = await import('../src/lib/prisma');
+const { prisma } = await import('../src/infrastructure/prisma');
 const { getMaxVideoSizeMb, getMaxVideoHardCapMb, getDefaultMaxVideoSizeMb } = await import(
   '../src/services/limits.service'
 );

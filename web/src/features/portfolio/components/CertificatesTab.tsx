@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { api, resolveMediaUrl } from '@/services/api';
+import { portfolioApi } from '../api';
+import { resolveMediaUrl } from '@/shared/api';
 import { Certificate } from '@/shared/types';
 import { Plus, Loader2, FileText, Trash2, ExternalLink, Globe, EyeOff } from 'lucide-react';
 import { useToast } from '@/shared/ui/Toast';
@@ -56,7 +57,7 @@ export const CertificatesTab: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await api.getCertificates();
+      const data = await portfolioApi.getCertificates();
       if (Array.isArray(data)) setCertificates(data);
     } catch {
       setError('We could not load your certificates. Check your connection and try again.');
@@ -99,7 +100,7 @@ export const CertificatesTab: React.FC = () => {
     formData.append('issueDate', issueDate || new Date().toISOString());
 
     try {
-      await api.uploadCertificate(formData);
+      await portfolioApi.uploadCertificate(formData);
       setModalOpen(false);
       showToast(`${title.trim()} added.`);
       loadCertificates();
@@ -122,7 +123,7 @@ export const CertificatesTab: React.FC = () => {
     if (!confirmed) return;
 
     try {
-      await api.deleteCertificate(certificate.id);
+      await portfolioApi.deleteCertificate(certificate.id);
       showToast('Certificate deleted.');
       loadCertificates();
     } catch {
@@ -138,7 +139,7 @@ export const CertificatesTab: React.FC = () => {
     setTogglingId(id);
 
     try {
-      await api.setCertificatePublic(id, newIsPublic);
+      await portfolioApi.setCertificatePublic(id, newIsPublic);
     } catch (err: any) {
       // Revert on failure
       setCertificates((prev) =>

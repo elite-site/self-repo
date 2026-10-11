@@ -3,7 +3,7 @@ import { AppError } from '../../../utils/appError';
 import {
   AcademicYearPromotionError,
   promoteAcademicYear as runAcademicYearPromotion,
-} from '../../../services/academicYear.service';
+} from '../services/academicYear.service';
 import * as adminService from '../admin.service';
 
 export async function getRoster(req: Request, res: Response): Promise<void> {

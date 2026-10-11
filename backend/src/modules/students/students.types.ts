@@ -16,9 +16,5 @@ export interface StudentFilter {
   search?: string;
 }
 
-export interface ChangeRequestInput {
-  field: string;
-  currentValue?: string;
-  requestedValue: string;
-  reason?: string;
-}
+export { ChangeRequestInput } from './schemas/profile.schema';
+

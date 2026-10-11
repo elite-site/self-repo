@@ -1,15 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import request from 'supertest';
 import jwt from 'jsonwebtoken';
-import { buildDatabaseUrl } from '../src/lib/prisma';
+import { buildDatabaseUrl } from '../src/infrastructure/prisma';
 import { getClientIdentity } from '../src/middleware/rateLimiter';
 import { STUDENT_SESSION_COOKIE_NAME } from '../src/middleware/studentAuth';
 import app from '../src/server';
-import { prisma } from '../src/lib/prisma';
-import { driveService } from '../src/services/drive.service';
+import { prisma } from '../src/infrastructure/prisma';
+import { driveService } from '../src/modules/media/drive';
 
-vi.mock('../src/lib/prisma', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../src/lib/prisma')>();
+vi.mock('../src/infrastructure/prisma', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../src/infrastructure/prisma')>();
   return {
     ...actual,
     prisma: {
@@ -18,7 +18,7 @@ vi.mock('../src/lib/prisma', async (importOriginal) => {
   };
 });
 
-vi.mock('../src/services/drive.service', () => ({
+vi.mock('../src/modules/media/drive', () => ({
   driveService: {
     assertRootReachable: vi.fn().mockResolvedValue(undefined),
   },

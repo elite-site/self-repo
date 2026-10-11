@@ -3,10 +3,10 @@ import request from 'supertest';
 import jwt from 'jsonwebtoken';
 import app from '../src/server';
 import { env } from '../src/config/env';
-import { prisma } from '../src/lib/prisma';
+import { prisma } from '../src/infrastructure/prisma';
 import { INTERNAL_EVENT_ID } from '../src/config/constants';
 
-vi.mock('../src/lib/prisma', () => ({
+vi.mock('../src/infrastructure/prisma', () => ({
   prisma: {
     event: {
       findFirst: vi.fn(),
@@ -38,11 +38,15 @@ vi.mock('../src/lib/prisma', () => ({
   },
 }));
 
-vi.mock('../src/services/activity.service', () => ({
-  ActivityService: {
-    log: vi.fn().mockResolvedValue(undefined),
-  },
-}));
+vi.mock('../src/modules/admin', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../src/modules/admin')>();
+  return {
+    ...actual,
+    ActivityService: {
+      log: vi.fn().mockResolvedValue(undefined),
+    },
+  };
+});
 
 const studentPayload = {
   studentId: 'stud_123',

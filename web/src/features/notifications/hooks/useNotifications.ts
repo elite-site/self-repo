@@ -75,7 +75,10 @@ export function useNotifications() {
     try {
       await notificationsApi.markNotificationRead(id);
       await loadNotifications(true);
-    } catch {}
+    } catch (err) {
+      // Non-fatal: notification state refresh failure
+      console.warn('Failed to mark notification as read:', err);
+    }
   };
 
   const handleNotificationClick = (n: Notification) => {

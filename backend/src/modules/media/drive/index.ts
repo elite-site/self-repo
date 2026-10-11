@@ -6,7 +6,7 @@ import { uploadFile, uploadSubmissionFiles, verifyUploadedVideoFile } from './up
 import { createResumableUploadSession, streamUploadToDrive } from './resumable';
 import * as mediaFns from './media';
 import * as cleanupFns from './cleanup';
-import { DriveStreamResult, parseContentRangeHeader } from '../../../services/drive.stream';
+import { DriveStreamResult, parseContentRangeHeader } from './stream';
 
 export * from './types';
 export { DriveStreamResult, parseContentRangeHeader };

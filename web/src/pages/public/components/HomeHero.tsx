@@ -7,12 +7,16 @@ interface HomeHeroProps {
   onSignIn: () => void;
   loading: boolean;
   featuredStudents: any[];
+  error?: string | null;
+  onRetry?: () => void;
 }
 
 export const HomeHero: React.FC<HomeHeroProps> = ({
   onSignIn,
   loading,
   featuredStudents,
+  error,
+  onRetry,
 }) => {
   return (
     <section className="border-b border-edge bg-surface">
@@ -48,6 +52,8 @@ export const HomeHero: React.FC<HomeHeroProps> = ({
           <HomeSpotlightCard
             loading={loading}
             featuredStudents={featuredStudents}
+            error={error}
+            onRetry={onRetry}
           />
         </div>
       </div>

@@ -17,7 +17,6 @@ export const ProfilePage: React.FC = () => {
     projects,
     achievements,
     certificates,
-    portfolio,
     loading,
     error,
     modalOpen,

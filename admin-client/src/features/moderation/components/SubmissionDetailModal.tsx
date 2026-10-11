@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import { AlertCircle } from 'lucide-react';
 import { IntroVideoState, Submission, SubmissionRating } from '@/types';
-import { adminApi } from '@/services/api';
+import { moderationApi } from '../api';
 import { SubmissionDetailHeader } from './subcomponents/SubmissionDetailHeader';
 import { SubmissionIdentityCard } from './subcomponents/SubmissionIdentityCard';
 import { SubmissionVideoSection } from './subcomponents/SubmissionVideoSection';
@@ -79,7 +79,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
   useEffect(() => {
     if (!submission) return;
     let cancelled = false;
-    adminApi
+    moderationApi
       .getSubmission(submission.id)
       .then((data) => {
         if (!cancelled && data?.introVideo) setIntroVideo(data.introVideo as IntroVideoState);
@@ -96,7 +96,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
     setRequestingVideo(true);
     setVideoNotice(null);
     try {
-      const res = await adminApi.requestNewVideo(submission.id, reason);
+      const res = await moderationApi.requestNewVideo(submission.id, reason);
       setVideoNotice(res.message || 'The student has been notified.');
       setIntroVideo((prev) =>
         prev
@@ -121,7 +121,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
     setTogglingPublic(true);
     setVideoNotice(null);
     try {
-      const res = await adminApi.setVideoPublic(introVideo.id, next);
+      const res = await moderationApi.setVideoPublic(introVideo.id, next);
       setIntroVideo((prev) => (prev ? { ...prev, isPublic: next } : prev));
       setVideoNotice(res.message || 'Public visibility updated.');
     } catch (err: any) {
@@ -135,7 +135,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
     setUpdating(true);
     setActionError(null);
     try {
-      const res = await adminApi.updateRating(submission.id, value);
+      const res = await moderationApi.updateRating(submission.id, value);
       if (res.success) {
         setRating(res.submission.rating || null);
         onUpdated(res.submission);
@@ -159,7 +159,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
     setSendingReview(true);
     setActionError(null);
     try {
-      const res = await adminApi.updateReview(submission.id, {
+      const res = await moderationApi.updateReview(submission.id, {
         reviewText: clear ? '' : reviewText,
         pros: clear ? [] : reviewPros,
         cons: clear ? [] : reviewCons,

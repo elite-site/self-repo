@@ -138,7 +138,9 @@ export type SessionFailure =
  * escape without a manual logout.
  */
 export function classifySessionFailure(error: unknown): SessionFailure {
-  const status = (error as { response?: { status?: number } } | null)?.response?.status;
+  const status =
+    (error as { status?: number } | null)?.status ??
+    (error as { response?: { status?: number } } | null)?.response?.status;
 
   if (status === 401 || status === 403) {
     return { kind: 'unauthorized', message: null };

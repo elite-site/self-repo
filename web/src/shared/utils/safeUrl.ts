@@ -10,6 +10,7 @@ export function safeUrl(url: string | null | undefined): string | undefined {
   if (!trimmed) return undefined;
 
   // Disallow control characters
+  // eslint-disable-next-line no-control-regex -- control character check is the intentional security boundary for URL sanitization
   if (/[\u0000-\u001F\u007F]/.test(trimmed)) return undefined;
 
   // Disallow protocol-relative URLs (e.g. //attacker.com)

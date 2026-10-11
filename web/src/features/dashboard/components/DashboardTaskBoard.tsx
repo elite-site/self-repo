@@ -17,7 +17,7 @@ import { cn } from '@/shared/lib/cn';
  * invented (§2.4).
  */
 
-import type { DashboardTask, DashboardTone, DashboardTaskState } from '../types';
+import type { DashboardTask, DashboardTaskState } from '../types';
 
 const COLUMNS: ReadonlyArray<{ id: DashboardTaskState; title: string; empty: string }> = [
   { id: 'todo', title: 'To Do', empty: 'Nothing left to do 🎉' },

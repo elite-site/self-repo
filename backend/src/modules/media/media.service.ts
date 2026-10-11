@@ -1,4 +1,4 @@
-import { driveService, DriveService } from '../../services/drive.service';
+import { driveService, DriveService } from './drive';
 import * as mediaRepo from './media.repository';
 import { AppError } from '../../utils/appError';
 import { isValidMediaType } from './media.schemas';

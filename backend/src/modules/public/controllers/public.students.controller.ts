@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import * as repo from '../public.repository';
 import * as service from '../public.service';
-import { driveService } from '../../../services/drive.service';
+import { driveService } from '../../media/drive';
 
 export async function listPublicStudents(req: Request, res: Response): Promise<void> {
   try {

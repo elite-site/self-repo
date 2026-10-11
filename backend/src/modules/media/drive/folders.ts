@@ -25,7 +25,7 @@ export async function getOrCreateDriveFolder(
   }
 
   if (ctx.isMock || !ctx.drive) {
-    const folderId = `mock_folder_${cacheKey ? cacheKey.replace(/[\/\s]/g, '_') : name}`;
+    const folderId = `mock_folder_${cacheKey ? cacheKey.replace(/[/\s]/g, '_') : name}`;
     ctx.folderMemoryCache.set(memoryKey, folderId);
     if (cacheKey) {
       await mediaRepo.upsertFolderCache(cacheKey, folderId);
@@ -102,7 +102,7 @@ export async function resolveFolderPath(
   if (ctx.isMock || !ctx.drive) {
     const fullMockPath = path.join(ctx.mockBaseDir, relativePath);
     fs.mkdirSync(fullMockPath, { recursive: true });
-    return `mock_folder_${relativePath.replace(/[\/\s]/g, '_')}`;
+    return `mock_folder_${relativePath.replace(/[/\s]/g, '_')}`;
   }
 
   const segments = relativePath.split('/').map((s) => s.trim()).filter(Boolean);

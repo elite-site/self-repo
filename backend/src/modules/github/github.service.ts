@@ -1,13 +1,12 @@
 import * as repo from './github.repository';
-import { githubAccountService } from '../../services/github.account.service';
-import { githubSyncService } from '../../services/github.sync.service';
+import { githubSyncService } from './services/github.sync.service';
 import { GithubSyncTrigger } from '@prisma/client';
 import { AppError } from '../../utils/appError';
 
-export * from '../../services/student/github.service';
-export * from '../../services/github.account.service';
-export * from '../../services/github.sync.service';
-export * from '../../services/github.api.service';
+export * from './services/student.github.service';
+export * from './services/github.account.service';
+export * from './services/github.sync.service';
+export * from './services/github.api.service';
 
 export async function getAdminGithubOverview(params: { page?: number; limit?: number; search?: string }) {
   const p = Math.max(1, params.page || 1);
@@ -116,4 +115,17 @@ export async function getAdminGithubProjects(params: { search?: string; page?: n
       githubRepoId: String(r.githubRepoId),
     })),
   };
+}
+
+export async function syncScheduledBatch(take: number = 10): Promise<{ processed: number }> {
+  const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const accounts = await repo.findAccountsNeedingScheduledSync(cutoff, take);
+  for (const account of accounts) {
+    try {
+      await githubSyncService.queueSync(account.studentId, GithubSyncTrigger.SCHEDULED);
+    } catch {
+      // Non-fatal per individual account scheduled sync
+    }
+  }
+  return { processed: accounts.length };
 }

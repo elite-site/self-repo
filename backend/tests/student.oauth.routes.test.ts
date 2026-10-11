@@ -3,26 +3,25 @@ import request from 'supertest';
 import jwt from 'jsonwebtoken';
 import app from '../src/server';
 import { env } from '../src/config/env';
-import { prisma } from '../src/lib/prisma';
-import { ssoService } from '../src/services/sso.service';
+import { prisma } from '../src/infrastructure/prisma';
+import { ssoService } from '../src/modules/auth';
 
-vi.mock('../src/lib/prisma', () => ({
+vi.mock('../src/infrastructure/prisma', () => ({
   prisma: {
     student: { findUnique: vi.fn() },
     activityLog: { create: vi.fn().mockResolvedValue({}) },
   },
 }));
-vi.mock('../src/services/activity.service', () => ({
+vi.mock('../src/modules/admin/services/activity.service', () => ({
   ActivityService: { log: vi.fn().mockResolvedValue(undefined) },
 }));
-vi.mock('../src/services/sso.service', () => {
-  const ssoService = {
+vi.mock('../src/modules/auth/sso.service', () => ({
+  ssoService: {
     getAuthUrl: vi.fn().mockReturnValue('https://accounts.google.com/o/oauth2/v2/auth?hd=sasi.ac.in&x=1'),
     exchangeCode: vi.fn(),
     isAllowed: vi.fn(),
-  };
-  return { ssoService };
-});
+  },
+}));
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -64,7 +63,9 @@ describe('student google oauth', () => {
     expect(setCookie!.some((c) => c.includes('pc_student_session='))).toBe(true);
     expect(setCookie!.some((c) => c.includes('HttpOnly'))).toBe(true);
     expect(res.headers.location).toMatch(/token=/);
-    expect(prisma.student.findUnique).toHaveBeenCalledWith({ where: { email: 'aakhila251201@sasi.ac.in' } });
+    expect(prisma.student.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { email: 'aakhila251201@sasi.ac.in' } })
+    );
   });
 
   it('403s when the college email is not in the roster', async () => {

@@ -1,5 +1,5 @@
 import ExcelJS from 'exceljs';
-import { ActivityService } from '../../../services/activity.service';
+import { ActivityService } from './activity.service';
 import { INTERNAL_EVENT_ID, RATING_LABELS } from '../../../config/constants';
 import * as adminRepo from '../admin.repository';
 import type { StudentRosterQueryParams } from '../admin.types';

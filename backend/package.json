@@ -5,6 +5,7 @@
   "main": "dist/server.js",
   "scripts": {
     "dev": "ts-node src/server.ts",
+    "lint": "eslint src",
     "prebuild": "node scripts/migrate-if-configured.js",
     "build": "tsc",
     "install:admin": "npm install --include=dev --prefix ../admin-client",
@@ -63,8 +64,12 @@
     "uuid": "^11.1.1"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/supertest": "^7.2.1",
+    "eslint": "^10.12.0",
+    "eslint-plugin-import-x": "^4.17.1",
     "supertest": "^7.2.2",
+    "typescript-eslint": "^8.71.1",
     "vitest": "^5.0.1"
   },
   "allowScripts": {

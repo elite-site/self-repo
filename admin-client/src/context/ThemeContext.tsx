@@ -89,6 +89,7 @@ export const AdminThemeProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       mediaQuery.addEventListener('change', listener);
       return () => mediaQuery.removeEventListener('change', listener);
     }
+    return undefined;
   }, [theme, adminUser]);
 
   const setTheme = (mode: ThemeMode) => {

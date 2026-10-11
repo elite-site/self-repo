@@ -69,12 +69,6 @@ const SETUP_ITEMS = [
   },
 ] as const;
 
-const VIDEO_STATUS: Record<string, { tone: DashboardTone; label: string }> = {
-  APPROVED: { tone: 'badge-approved', label: 'Approved' },
-  SUBMITTED: { tone: 'badge-pending', label: 'Under review' },
-  CHANGES_REQUESTED: { tone: 'badge-changes', label: 'Changes requested' },
-  REJECTED: { tone: 'badge-rejected', label: 'Rejected' },
-};
 
 const greetingFor = (hour: number) => {
   if (hour < 12) return 'Good morning';

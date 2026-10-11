@@ -3,11 +3,11 @@ import request from 'supertest';
 import jwt from 'jsonwebtoken';
 import app from '../src/server';
 import { env } from '../src/config/env';
-import { prisma } from '../src/lib/prisma';
-import { notifyAllStudentsAboutEvent } from '../src/services/notification.service';
+import { prisma } from '../src/infrastructure/prisma';
+import { notifyAllStudentsAboutEvent } from '../src/modules/students';
 import { invalidateStudentEventsCache } from '../src/modules/events';
 
-vi.mock('../src/lib/prisma', () => ({
+vi.mock('../src/infrastructure/prisma', () => ({
   prisma: {
     event: {
       create: vi.fn(),
@@ -71,15 +71,23 @@ vi.mock('../src/lib/prisma', () => ({
   },
 }));
 
-vi.mock('../src/services/activity.service', () => ({
-  ActivityService: {
-    log: vi.fn().mockResolvedValue(undefined),
-  },
-}));
+vi.mock('../src/modules/admin', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../src/modules/admin')>();
+  return {
+    ...actual,
+    ActivityService: {
+      log: vi.fn().mockResolvedValue(undefined),
+    },
+  };
+});
 
-vi.mock('../src/modules/announcements', () => ({
-  deliverAnnouncementNotifications: vi.fn(),
-}));
+vi.mock('../src/modules/announcements', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../src/modules/announcements')>();
+  return {
+    ...actual,
+    deliverAnnouncementNotifications: vi.fn(),
+  };
+});
 
 const adminToken = jwt.sign(
   { userId: 'admin_1', email: 'admin@sasi.ac.in', username: 'admin' },

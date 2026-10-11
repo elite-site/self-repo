@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { api } from '@/services/api';
+import { videoApi } from '@/features/video/api';
 import { PUBLIC_VIDEOS_QUERY_KEY } from '@/shared/lib/queryClient';
 import { PublicIntroVideo } from '@/shared/types';
 
@@ -27,7 +27,7 @@ export function usePublicVideos(preloaded?: PublicVideosState): PublicVideosStat
   const ownsRequest = !preloaded;
   const { data, isPending, isError } = useQuery<PublicIntroVideo[]>({
     queryKey: PUBLIC_VIDEOS_QUERY_KEY,
-    queryFn: async () => (await api.getPublicVideos()).items,
+    queryFn: async () => (await videoApi.getPublicVideos()).items,
     enabled: ownsRequest,
     // No retry. The failure is a normal state this hook reports (`failed`), and a
     // retry would keep the list in its loading state for longer than the page is

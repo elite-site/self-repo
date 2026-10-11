@@ -33,8 +33,8 @@ export const AdminGithubPage: React.FC = () => {
         <div
           className={`p-4 rounded-xl text-sm flex items-center gap-2.5 ${
             message.type === 'success'
-              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-              : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+              ? 'bg-success/10 text-success border border-success/20'
+              : 'bg-danger/10 text-danger border border-danger/20'
           }`}
         >
           {message.type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}

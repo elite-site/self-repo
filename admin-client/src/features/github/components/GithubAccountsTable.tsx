@@ -95,18 +95,18 @@ export const GithubAccountsTable: React.FC<GithubAccountsTableProps> = ({
                     <span
                       className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${
                         acc.syncStatus === 'COMPLETED'
-                          ? 'bg-emerald-500/10 text-emerald-400'
+                          ? 'bg-success/10 text-success'
                           : acc.syncStatus === 'FAILED'
-                          ? 'bg-rose-500/10 text-rose-400'
+                          ? 'bg-danger/10 text-danger'
                           : acc.syncStatus === 'SYNCING'
-                          ? 'bg-amber-500/10 text-amber-300'
-                          : 'bg-slate-500/10 text-slate-400'
+                          ? 'bg-warning/10 text-warning'
+                          : 'bg-surface-sunken text-ink-muted'
                       }`}
                     >
                       {acc.syncStatus}
                     </span>
                     {acc.syncError && (
-                      <div className="text-[10px] text-rose-400 truncate max-w-xs mt-0.5" title={acc.syncError}>
+                      <div className="text-[10px] text-danger truncate max-w-xs mt-0.5" title={acc.syncError}>
                         {acc.syncError}
                       </div>
                     )}

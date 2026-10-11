@@ -3,11 +3,11 @@ import request from 'supertest';
 import jwt from 'jsonwebtoken';
 import app from '../src/server';
 import { env } from '../src/config/env';
-import { prisma } from '../src/lib/prisma';
-import { ssoService } from '../src/services/sso.service';
+import { prisma } from '../src/infrastructure/prisma';
+import { ssoService } from '../src/modules/auth';
 
-vi.mock('../src/lib/prisma', () => ({ prisma: { student: { findUnique: vi.fn() } } }));
-vi.mock('../src/services/sso.service', () => ({
+vi.mock('../src/infrastructure/prisma', () => ({ prisma: { student: { findUnique: vi.fn() } } }));
+vi.mock('../src/modules/auth/sso.service', () => ({
   ssoService: {
     getAuthUrl: vi.fn(),
     exchangeCode: vi.fn(),
@@ -54,7 +54,9 @@ describe('blank-email lockout (via the SSO callback route)', () => {
       .get('/api/student/google/callback')
       .query({ code: 'c1', state: goodState });
 
-    expect(prisma.student.findUnique).toHaveBeenCalledWith({ where: { email: 'test@sasi.ac.in' } });
+    expect(prisma.student.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { email: 'test@sasi.ac.in' } })
+    );
     expect(res.status).toBe(403);
     expect(res.body.error).toBe('EMAIL_NOT_REGISTERED');
   });

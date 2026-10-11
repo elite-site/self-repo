@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeSanitize from 'rehype-sanitize';
 import { ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
-import { api } from '@/services/api';
+import { githubApi } from '@/features/github/api';
 
 interface ReadmeExcerptViewProps {
   excerpt?: string | null;
@@ -31,7 +31,7 @@ export const ReadmeExcerptView: React.FC<ReadmeExcerptViewProps> = ({
     if (!expanded && !loadedExcerpt && repoId) {
       setLoading(true);
       try {
-        const data = await api.getGithubRepoReadme(repoId);
+        const data = await githubApi.getGithubRepoReadme(repoId);
         if (data?.readmeExcerpt) {
           setLoadedExcerpt(data.readmeExcerpt);
         } else {

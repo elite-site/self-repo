@@ -1,5 +1,5 @@
 import React from 'react';
-import { UploadCloud, FileVideo, X, Info } from 'lucide-react';
+import { FileVideo, X, Info } from 'lucide-react';
 import { UploadStats, VideoMeta } from '../types';
 
 interface VideoUploadCardProps {

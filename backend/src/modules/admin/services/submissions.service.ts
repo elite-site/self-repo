@@ -1,7 +1,8 @@
-import { driveService } from '../../../services/drive.service';
-import { ActivityService } from '../../../services/activity.service';
-import { notifyVideoChangeRequested } from '../../../services/notification.service';
+import { driveService } from '../../media/drive';
+import { ActivityService } from './activity.service';
+import { notifyVideoChangeRequested } from '../../students';
 import { AppError } from '../../../utils/appError';
+import { logger } from '../../../utils/logger';
 import {
   INTERNAL_EVENT_ID,
   RATINGS,
@@ -160,7 +161,10 @@ export async function deleteSubmissionVideo(id: string) {
       changeRequestedAt: new Date(),
       changeRequestNote: 'Your previous video was removed. Please upload a new one.',
     });
-  } catch (_) {}
+  } catch (err) {
+    // Non-fatal: legacy video row might not exist for this submission
+    logger.warn('Failed to update legacy video record on submission video delete', { error: err });
+  }
 
   if (student?.id) {
     await notifyVideoChangeRequested(

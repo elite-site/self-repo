@@ -3,9 +3,10 @@ import request from 'supertest';
 import express from 'express';
 import { publicStudentRouter as publicStudentsRouter, clearPublicStudentCaches } from '../src/modules/public';
 import { portfolioRouter } from '../src/modules/portfolio';
-import { prisma } from '../src/lib/prisma';
+import { prisma } from '../src/infrastructure/prisma';
+import { errorHandler } from '../src/middleware/errorHandler';
 
-vi.mock('../src/lib/prisma', () => ({
+vi.mock('../src/infrastructure/prisma', () => ({
   prisma: {
     student: {
       findUnique: vi.fn(),
@@ -34,7 +35,7 @@ vi.mock('../src/middleware/studentAuth', () => ({
   },
 }));
 
-vi.mock('../src/services/drive.service', () => ({
+vi.mock('../src/modules/media/drive', () => ({
   driveService: {
     uploadFile: vi.fn(),
   },
@@ -47,6 +48,7 @@ app.use('/api/student/portfolio', (req: any, _res: any, next: any) => {
   req.studentId = 'student_123';
   next();
 }, portfolioRouter);
+app.use(errorHandler);
 
 describe('Public Students Routes & Visibility Overhaul', () => {
   beforeEach(() => {
@@ -131,7 +133,7 @@ describe('Public Students Routes & Visibility Overhaul', () => {
       expect(prisma.student.findUnique).toHaveBeenCalledWith(
         expect.objectContaining({
           include: expect.objectContaining({
-            certificates: { where: { status: 'APPROVED', isPublic: true } },
+            certificates: expect.objectContaining({ where: { status: 'APPROVED', isPublic: true } }),
           }),
         })
       );

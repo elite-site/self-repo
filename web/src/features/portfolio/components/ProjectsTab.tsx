@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { api } from '@/services/api';
+import { portfolioApi } from '../api';
 import { StudentPortfolioResponse } from '@/shared/types';
 import {
   Github,
@@ -65,7 +65,7 @@ export const ProjectsTab: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await api.getStudentPortfolio();
+      const data = await portfolioApi.getStudentPortfolio();
       setPortfolioData(data);
     } catch {
       setError('We could not load your portfolio. Check your connection and try again.');

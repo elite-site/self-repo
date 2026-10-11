@@ -76,7 +76,6 @@ export async function findGithubShowcasedRepos(where: any, skip: number, take: n
     where,
     skip,
     take,
-    orderBy: [{ stars: 'desc' }, { pushedAt: 'desc' }],
     include: {
       student: {
         select: { id: true, name: true, rollNo: true, year: true, section: true },
@@ -84,3 +83,17 @@ export async function findGithubShowcasedRepos(where: any, skip: number, take: n
     },
   });
 }
+
+export async function findAccountsNeedingScheduledSync(cutoff: Date, take: number = 10) {
+  return prisma.githubAccount.findMany({
+    where: {
+      syncStatus: { notIn: ['RUNNING', 'QUEUED'] },
+      OR: [
+        { lastSyncedAt: null },
+        { lastSyncedAt: { lte: cutoff } },
+      ],
+    },
+    take,
+  });
+}
+

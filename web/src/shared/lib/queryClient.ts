@@ -1,4 +1,4 @@
-import { QueryClient } from '@tanstack/react-query';
+import { QueryClient, QueryCache, MutationCache } from '@tanstack/react-query';
 
 /**
  * The query cache and the keys that name its entries.
@@ -21,8 +21,28 @@ export const SESSION_QUERY_KEY = ['session'] as const;
 /** Faculty-approved, published introduction videos shown on public pages. */
 export const PUBLIC_VIDEOS_QUERY_KEY = ['public', 'videos'] as const;
 
+function handleGlobalAuthError(error: unknown): void {
+  const status = (error as any)?.status ?? (error as any)?.response?.status;
+  if ((status === 401 || status === 403) && typeof window !== 'undefined') {
+    if (status === 401) {
+      localStorage.removeItem('student_token');
+      window.dispatchEvent(new CustomEvent('elite-session-expired'));
+    }
+  }
+}
+
 export function createQueryClient(): QueryClient {
   return new QueryClient({
+    queryCache: new QueryCache({
+      onError: (error) => {
+        handleGlobalAuthError(error);
+      },
+    }),
+    mutationCache: new MutationCache({
+      onError: (error) => {
+        handleGlobalAuthError(error);
+      },
+    }),
     defaultOptions: {
       queries: {
         // 30 s is fresh enough for dashboard data and avoids a refetch storm
@@ -31,11 +51,20 @@ export function createQueryClient(): QueryClient {
         staleTime: 30_000,
         // Five minutes of grace for an entry nothing is reading.
         gcTime: 5 * 60_000,
-        // One retry covers a dropped request. More just delays the error state.
-        retry: 1,
+        // No retry on 4xx client errors (400, 401, 403, 404, etc.); 1 retry for network drops or 5xx
+        retry: (failureCount, error: any) => {
+          const status = error?.status ?? error?.response?.status;
+          if (typeof status === 'number' && status >= 400 && status < 500) {
+            return false;
+          }
+          return failureCount < 1;
+        },
         // Off globally — only the session query opts back in so that a photo
         // change made in another tab is picked up without a full page reload.
         refetchOnWindowFocus: false,
+      },
+      mutations: {
+        retry: false,
       },
     },
   });

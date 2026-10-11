@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { api } from '@/services/api';
+import { portfolioApi } from '../api';
 import { Achievement } from '@/shared/types';
 import { Plus, Trophy, Loader2, Trash2, Calendar, Pencil, FileText } from 'lucide-react';
 import { useToast } from '@/shared/ui/Toast';
@@ -60,7 +60,7 @@ export const AchievementsTab: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await api.getAchievements();
+      const data = await portfolioApi.getAchievements();
       if (Array.isArray(data)) setAchievements(data);
     } catch {
       setError('We could not load your achievements. Check your connection and try again.');
@@ -118,7 +118,7 @@ export const AchievementsTab: React.FC = () => {
           date: date || new Date().toISOString(),
           proofUrl: proofUrl.trim() || undefined,
         };
-        await api.updateAchievement(editingAchievement.id, payload);
+        await portfolioApi.updateAchievement(editingAchievement.id, payload);
         showToast('Achievement updated.');
       } else {
         const formData = new FormData();
@@ -128,7 +128,7 @@ export const AchievementsTab: React.FC = () => {
         formData.append('organization', organization.trim());
         formData.append('date', date || new Date().toISOString());
         if (proofUrl.trim()) formData.append('proofUrl', proofUrl.trim());
-        await api.createAchievement(formData);
+        await portfolioApi.createAchievement(formData);
         showToast('Achievement added.');
       }
       setModalOpen(false);
@@ -152,7 +152,7 @@ export const AchievementsTab: React.FC = () => {
     if (!confirmed) return;
 
     try {
-      await api.deleteAchievement(achievement.id);
+      await portfolioApi.deleteAchievement(achievement.id);
       showToast('Achievement deleted.');
       loadAchievements();
     } catch {

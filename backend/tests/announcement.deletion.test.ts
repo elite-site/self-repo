@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import request from 'supertest';
 import app from '../src/server';
 import { env } from '../src/config/env';
-import { prisma } from '../src/lib/prisma';
+import { prisma } from '../src/infrastructure/prisma';
 
 /**
  * Announcement deletion must remove the Announcement row *and* the per-student
@@ -14,7 +14,7 @@ import { prisma } from '../src/lib/prisma';
  * This file keeps its own Prisma mock so the existing delivery tests in
  * announcement.notifications.test.ts stay untouched.
  */
-vi.mock('../src/lib/prisma', () => ({
+vi.mock('../src/infrastructure/prisma', () => ({
   prisma: {
     announcement: {
       findUnique: vi.fn(),

@@ -1,6 +1,6 @@
-import { driveService } from '../../../services/drive.service';
-import { ActivityService } from '../../../services/activity.service';
-import { notifyStudent, notifyVideoChangeRequested } from '../../../services/notification.service';
+import { driveService } from '../../media/drive';
+import { ActivityService } from './activity.service';
+import { notifyStudent, notifyVideoChangeRequested } from '../../students';
 import { AppError } from '../../../utils/appError';
 import * as adminRepo from '../admin.repository';
 

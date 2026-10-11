@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useConfirm } from '@/shared/ui';
 import { eventsApi } from '../api';
 import { VotingCampaign } from '../types';
 
 export const useVotingManagement = () => {
+  const confirm = useConfirm();
   const [campaigns, setCampaigns] = useState<VotingCampaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -27,7 +29,12 @@ export const useVotingManagement = () => {
   }, [fetchCampaigns]);
 
   const handleActivate = async (id: string) => {
-    if (!window.confirm('Activate this voting campaign? Students will be able to vote immediately.')) return;
+    const confirmed = await confirm({
+      title: 'Activate Voting Campaign',
+      description: 'Activate this voting campaign? Students will be able to vote immediately.',
+      confirmLabel: 'Activate',
+    });
+    if (!confirmed) return;
     setActivating(id);
     try {
       await eventsApi.activateVotingCampaign(id);
@@ -40,7 +47,13 @@ export const useVotingManagement = () => {
   };
 
   const handleClose = async (id: string) => {
-    if (!window.confirm('Close this campaign? No more votes will be accepted.')) return;
+    const confirmed = await confirm({
+      title: 'Close Voting Campaign',
+      description: 'Close this campaign? No more votes will be accepted.',
+      confirmLabel: 'Close Campaign',
+      tone: 'danger',
+    });
+    if (!confirmed) return;
     try {
       await eventsApi.closeVotingCampaign(id);
       fetchCampaigns();

@@ -1,6 +1,6 @@
 import * as repo from './public.repository';
 import { TtlCache } from '../../utils/ttlCache';
-import { driveService } from '../../services/drive.service';
+import { driveService } from '../media/drive';
 import { isInternalEvent } from '../../config/constants';
 import { AppError } from '../../utils/appError';
 

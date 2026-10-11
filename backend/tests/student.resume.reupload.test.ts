@@ -3,10 +3,10 @@ import request from 'supertest';
 import jwt from 'jsonwebtoken';
 import app from '../src/server';
 import { env } from '../src/config/env';
-import { prisma } from '../src/lib/prisma';
-import { driveService } from '../src/services/drive.service';
+import { prisma } from '../src/infrastructure/prisma';
+import { driveService } from '../src/modules/media/drive';
 
-vi.mock('../src/lib/prisma', () => ({
+vi.mock('../src/infrastructure/prisma', () => ({
   prisma: {
     student: {
       findUnique: vi.fn(),
@@ -32,23 +32,31 @@ vi.mock('../src/lib/prisma', () => ({
       updateMany: vi.fn(),
       deleteMany: vi.fn(),
     },
+    event: {
+      findUnique: vi.fn(),
+      create: vi.fn(),
+    },
     activityLog: {
       create: vi.fn(),
     },
   },
 }));
 
-vi.mock('../src/services/drive.service', () => ({
+vi.mock('../src/modules/media/drive', () => ({
   driveService: {
     uploadFile: vi.fn(),
     uploadSubmissionFiles: vi.fn(),
     deleteVideo: vi.fn(),
     deleteFileById: vi.fn(),
+    deleteFilesByPrefix: vi.fn().mockResolvedValue(1),
     cleanupFailedUpload: vi.fn(),
     streamDriveFile: vi.fn(),
     generateThumbnail: vi.fn().mockResolvedValue(Buffer.from('fake-webp')),
     getWatchUrl: vi.fn().mockImplementation((id: string) => id ? `https://drive.google.com/file/d/${id}/view` : null),
     getPreviewUrl: vi.fn().mockImplementation((id: string) => id ? `https://drive.google.com/file/d/${id}/preview` : null),
+    resolveStudentFolder: vi.fn(),
+    createResumableUploadSession: vi.fn(),
+    streamUploadToDrive: vi.fn(),
   },
 }));
 
@@ -220,10 +228,13 @@ describe('Resume and Intro Video Reupload Persistence & Cache Invalidation', () 
       });
       (driveService.deleteVideo as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
       (driveService.deleteFileById as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(true);
-      (driveService.uploadSubmissionFiles as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
-        videoDriveId: 'video_new_123',
-        driveFolderPath: 'Events/2026/3-A/IT_23K61A1201_Test',
+      (driveService.resolveStudentFolder as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+        folderId: 'folder_123',
+        relativePath: 'Events/2026/3-A/IT_23K61A1201_Test',
       });
+      (driveService.createResumableUploadSession as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+      (driveService.streamUploadToDrive as unknown as ReturnType<typeof vi.fn>).mockResolvedValue('video_new_123');
+      (prisma.event.findUnique as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ id: 'event_default' });
       (prisma.submission.update as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
         id: 'sub_1',
         videoDriveId: 'video_new_123',
@@ -245,10 +256,14 @@ describe('Resume and Intro Video Reupload Persistence & Cache Invalidation', () 
         status: 'PENDING',
       });
 
+      const videoBuffer = Buffer.from('000000186674797069736f6d000000006d703432', 'hex');
       const res = await request(app)
-        .post('/api/student/submission')
+        .post('/api/student/submission/video-stream')
         .set('Cookie', `pc_student_session=${token}`)
-        .attach('video', Buffer.from('000000186674797069736f6d000000006d703432', 'hex'), 'intro.mp4');
+        .set('Content-Type', 'video/mp4')
+        .set('Content-Length', String(videoBuffer.length))
+        .set('X-Filename', 'intro.mp4')
+        .send(videoBuffer);
 
       expect(res.status).toBe(201);
       // Confirmed: the superseded files are removed from storage

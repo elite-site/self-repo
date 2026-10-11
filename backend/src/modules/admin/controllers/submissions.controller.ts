@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { driveService } from '../../../services/drive.service';
+import { driveService } from '../../media/drive';
 import { resolveContentRange } from '../../../utils/rangeParser';
 import { AppError } from '../../../utils/appError';
 import * as adminService from '../admin.service';

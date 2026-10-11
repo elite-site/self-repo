@@ -3,10 +3,10 @@ import request from 'supertest';
 import jwt from 'jsonwebtoken';
 import app from '../src/server';
 import { env } from '../src/config/env';
-import { prisma } from '../src/lib/prisma';
-import { driveService } from '../src/services/drive.service';
+import { prisma } from '../src/infrastructure/prisma';
+import { driveService } from '../src/modules/media/drive';
 
-vi.mock('../src/lib/prisma', () => ({
+vi.mock('../src/infrastructure/prisma', () => ({
   prisma: {
     $transaction: vi.fn(),
     student: {
@@ -32,7 +32,7 @@ vi.mock('../src/lib/prisma', () => ({
   },
 }));
 
-vi.mock('../src/services/drive.service', () => ({
+vi.mock('../src/modules/media/drive', () => ({
   driveService: {
     uploadFile: vi.fn(),
     uploadSubmissionFiles: vi.fn(),

@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import * as repo from '../public.repository';
 import * as service from '../public.service';
-import { driveService } from '../../../services/drive.service';
+import { driveService } from '../../media/drive';
 
 const PUBLIC_VIDEO_WHERE = {
   status: 'APPROVED' as const,

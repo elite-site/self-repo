@@ -6,11 +6,15 @@ import { resolveMediaUrl } from '@/shared/api';
 interface HomeSpotlightCardProps {
   loading: boolean;
   featuredStudents: any[];
+  error?: string | null;
+  onRetry?: () => void;
 }
 
 export const HomeSpotlightCard: React.FC<HomeSpotlightCardProps> = ({
   loading,
   featuredStudents,
+  error,
+  onRetry,
 }) => {
   return (
     <div className="rounded-xl border border-edge bg-surface p-5 shadow-card sm:p-6">
@@ -35,6 +39,19 @@ export const HomeSpotlightCard: React.FC<HomeSpotlightCardProps> = ({
       {loading ? (
         <div className="py-8 text-center text-body-sm text-ink-secondary">
           Loading department profiles…
+        </div>
+      ) : error ? (
+        <div className="py-6 text-center text-body-sm text-ink-secondary space-y-2">
+          <p>{error}</p>
+          {onRetry && (
+            <button
+              type="button"
+              onClick={onRetry}
+              className="text-label-md font-semibold text-ink-brand hover:underline cursor-pointer"
+            >
+              Retry
+            </button>
+          )}
         </div>
       ) : featuredStudents.length > 0 ? (
         <div className="divide-y divide-edge pt-2">

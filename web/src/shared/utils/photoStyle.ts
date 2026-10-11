@@ -22,9 +22,9 @@ export function getPhotoStyle(profile?: PhotoPosition | null): React.CSSProperti
     };
   }
 
-  const offsetX = profile.photoOffsetX != null ? `${profile.photoOffsetX}%` : '50%';
-  const offsetY = profile.photoOffsetY != null ? `${profile.photoOffsetY}%` : '50%';
-  const zoom = profile.photoZoom != null && profile.photoZoom > 0 ? profile.photoZoom : 1;
+  const offsetX = profile.photoOffsetX !== null && profile.photoOffsetX !== undefined ? `${profile.photoOffsetX}%` : '50%';
+  const offsetY = profile.photoOffsetY !== null && profile.photoOffsetY !== undefined ? `${profile.photoOffsetY}%` : '50%';
+  const zoom = profile.photoZoom !== null && profile.photoZoom !== undefined && profile.photoZoom > 0 ? profile.photoZoom : 1;
 
   return {
     objectFit: 'cover',

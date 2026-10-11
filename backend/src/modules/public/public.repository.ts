@@ -147,6 +147,14 @@ export async function updateVideoThumbnailByDriveId(driveFileId: string, thumbna
   }).catch(() => {});
 }
 
+export async function updateAchievementThumbnail(id: string, thumbnail: Buffer) {
+  return prisma.achievement.update({ where: { id }, data: { thumbnail } });
+}
+
+export async function updateCertificateThumbnail(id: string, thumbnail: Buffer) {
+  return prisma.certificate.update({ where: { id }, data: { thumbnail } });
+}
+
 // Public Students
 export async function countPublicStudents(where: any) {
   return prisma.student.count({ where });

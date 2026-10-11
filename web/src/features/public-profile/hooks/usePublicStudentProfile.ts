@@ -15,6 +15,7 @@ export function usePublicStudentProfile() {
 
   const [student, setStudent] = useState<PublicStudent | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [imageError, setImageError] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('home');
@@ -23,6 +24,35 @@ export function usePublicStudentProfile() {
   useEffect(() => {
     setImageError(false);
   }, [rollNo]);
+
+  const retry = () => {
+    if (!rollNo) return;
+    setLoading(true);
+    setError(null);
+
+    publicProfileApi
+      .getPublicStudent(rollNo)
+      .then((data) => {
+        setStudent(data);
+        setError(null);
+        try {
+          sessionStorage.setItem(`student_profile_${rollNo}`, JSON.stringify(data));
+        } catch {
+          // ignore
+        }
+      })
+      .catch((err) => {
+        const status = err?.status ?? err?.response?.status;
+        if (status === 404) {
+          setStudent(null);
+          setError(null);
+        } else {
+          setStudent(null);
+          setError(err?.message || 'Could not load student profile. Please retry.');
+        }
+      })
+      .finally(() => setLoading(false));
+  };
 
   useEffect(() => {
     if (!rollNo) return;
@@ -39,19 +69,30 @@ export function usePublicStudentProfile() {
     } else {
       setLoading(true);
     }
+    setError(null);
 
     publicProfileApi
       .getPublicStudent(rollNo)
       .then((data) => {
         setStudent(data);
+        setError(null);
         try {
           sessionStorage.setItem(cacheKey, JSON.stringify(data));
         } catch {
           // sessionStorage quota exceeded, safely ignore
         }
       })
-      .catch(() => {
-        if (!cached) setStudent(null);
+      .catch((err) => {
+        const status = err?.status ?? err?.response?.status;
+        if (status === 404) {
+          if (!cached) setStudent(null);
+          setError(null);
+        } else {
+          if (!cached) {
+            setStudent(null);
+            setError(err?.message || 'Could not load student profile. Please retry.');
+          }
+        }
       })
       .finally(() => setLoading(false));
   }, [rollNo]);
@@ -155,6 +196,8 @@ export function usePublicStudentProfile() {
   return {
     student,
     loading,
+    error,
+    retry,
     name,
     firstName,
     restOfName,

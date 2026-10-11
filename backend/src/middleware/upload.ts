@@ -33,7 +33,7 @@ export const submissionUploadMiddleware = upload.fields([
 export const profilePhotoUpload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
+  fileFilter: (_req, file, cb) => {
     if (['image/jpeg','image/png','image/webp'].includes(file.mimetype)) cb(null, true);
     else cb(new UploadValidationError('Only JPG, PNG, WebP allowed'));
   }
@@ -42,7 +42,7 @@ export const profilePhotoUpload = multer({
 export const certificateUpload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
+  fileFilter: (_req, file, cb) => {
     if (['application/pdf','image/jpeg','image/png'].includes(file.mimetype)) cb(null, true);
     else cb(new UploadValidationError('Only PDF, JPG, PNG allowed'));
   }

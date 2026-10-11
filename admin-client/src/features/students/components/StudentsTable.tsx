@@ -11,7 +11,7 @@ import {
   FileSpreadsheet,
 } from 'lucide-react';
 import { StudentsResponse, Student } from '@/types';
-import { adminApi } from '@/services/api';
+import { studentsApi } from '../api';
 import { formatDateTime } from '@/shared/utils/formatDate';
 
 interface StudentsTableProps {
@@ -42,7 +42,7 @@ export const StudentsTable: React.FC<StudentsTableProps> = ({
   const loadStudents = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await adminApi.getStudents({
+      const res = await studentsApi.getStudents({
         eventId: activeEventId,
         page,
         limit: 25,
@@ -96,7 +96,7 @@ export const StudentsTable: React.FC<StudentsTableProps> = ({
           </button>
 
           <button
-            onClick={() => window.open(adminApi.getStudentsExportUrl(activeEventId), '_blank')}
+            onClick={() => window.open(studentsApi.getStudentsExportUrl(activeEventId), '_blank')}
             className="btn bg-status-solid-approved text-on-primary self-start sm:self-auto"
             title="Download the full student roster as an Excel (.xlsx) file"
           >
@@ -201,7 +201,7 @@ export const StudentsTable: React.FC<StudentsTableProps> = ({
               </thead>
               <tbody className="divide-y divide-edge">
                 {data.data.map((student) => {
-                  const reviewed = student.submission?.reviewedAt != null && (
+                  const reviewed = student.submission?.reviewedAt !== null && student.submission?.reviewedAt !== undefined && (
                     Boolean(student.submission.reviewText) ||
                     (student.submission.reviewPros?.length ?? 0) > 0 ||
                     (student.submission.reviewCons?.length ?? 0) > 0

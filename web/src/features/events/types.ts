@@ -41,4 +41,4 @@ export interface Event {
   }>;
 }
 
-export interface PublicEventDetail extends Event {}
+export type PublicEventDetail = Event;

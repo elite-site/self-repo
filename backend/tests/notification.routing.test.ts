@@ -3,7 +3,7 @@ import {
   getNotificationDestination,
   navigateToNotification,
   type NotificationRoutingTarget,
-} from '../../web/src/utils/notificationRouting';
+} from '../../web/src/shared/utils/notificationRouting';
 
 describe('notification destination resolution', () => {
   it('prefers an explicit action URL over type-based routing', () => {

@@ -1,7 +1,7 @@
 import * as repo from './moderation.repository';
 import { parseModerationStatus } from './moderation.schemas';
 import { AppError } from '../../utils/appError';
-import { notifyStudent, notifyVideoChangeRequested } from '../../services/notification.service';
+import { notifyStudent, notifyVideoChangeRequested } from '../students';
 
 export async function getUnifiedModerationItems(rawType: string = 'all', rawStatus: string = 'ALL') {
   const normalizedType = rawType.toLowerCase();

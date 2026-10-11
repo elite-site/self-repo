@@ -1,5 +1,5 @@
-import { ActivityService } from '../../../services/activity.service';
-import { notifyVideoChangeRequested } from '../../../services/notification.service';
+import { ActivityService } from './activity.service';
+import { notifyVideoChangeRequested } from '../../students';
 import { AppError } from '../../../utils/appError';
 import { RATINGS, RATING_LABELS } from '../../../config/constants';
 import * as adminRepo from '../admin.repository';

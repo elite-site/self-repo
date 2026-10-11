@@ -4,12 +4,11 @@ import cookieParser from 'cookie-parser';
 import request from 'supertest';
 import jwt from 'jsonwebtoken';
 import { env } from '../src/config/env';
-import { prisma } from '../src/lib/prisma';
-import { adminAcademicYearRouter } from '../src/modules/admin';
-import { ActivityService } from '../src/services/activity.service';
-import { promoteAcademicYear } from '../src/services/academicYear.service';
+import { prisma } from '../src/infrastructure/prisma';
+import { ActivityService } from '../src/modules/admin/services/activity.service';
+import { adminAcademicYearRouter, promoteAcademicYear } from '../src/modules/admin';
 
-vi.mock('../src/lib/prisma', () => ({
+vi.mock('../src/infrastructure/prisma', () => ({
   prisma: {
     student: {
       aggregate: vi.fn(),
@@ -23,7 +22,7 @@ vi.mock('../src/lib/prisma', () => ({
   },
 }));
 
-vi.mock('../src/services/activity.service', () => ({
+vi.mock('../src/modules/admin/services/activity.service', () => ({
   ActivityService: {
     log: vi.fn().mockResolvedValue(undefined),
   },

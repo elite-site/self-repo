@@ -1,4 +1,4 @@
-import { apiClient, authApi } from '@/shared/api';
+import { apiClient, authApi, ApiError, normalizeApiError } from '@/shared/api';
 import { activityLogApi } from '@/features/activity-log/api';
 import { analyticsApi } from '@/features/analytics/api';
 import { announcementsApi } from '@/features/announcements/api';
@@ -15,6 +15,8 @@ import { studentsApi } from '@/features/students/api';
 export {
   apiClient,
   authApi,
+  ApiError,
+  normalizeApiError,
   activityLogApi,
   analyticsApi,
   announcementsApi,

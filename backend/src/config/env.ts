@@ -104,7 +104,14 @@ export const env = {
   GITHUB_SYNC_DAILY_CAP: parseInt(process.env.GITHUB_SYNC_DAILY_CAP || '5', 10),
   FEATURE_GITHUB_PORTFOLIO: process.env.FEATURE_GITHUB_PORTFOLIO === 'true',
   INTERNAL_SYNC_SECRET: process.env.INTERNAL_SYNC_SECRET || '',
+
+  // Operational toggles & limits
+  AUTO_MIGRATE_PENDING: process.env.AUTO_MIGRATE_PENDING === 'true',
+  SYNC_DRIVE_PERMISSIONS: process.env.SYNC_DRIVE_PERMISSIONS === 'true',
+  MAX_VIDEO_SIZE_HARD_CAP_MB: parseInt(process.env.MAX_VIDEO_SIZE_HARD_CAP_MB || '100', 10),
+  DB_CONNECTION_LIMIT: process.env.DB_CONNECTION_LIMIT || '5',
 };
+
 
 // Every literal this codebase will fall back to. If a value used at runtime
 // matches one of these, the secret is effectively public — it is committed to
@@ -172,7 +179,7 @@ if (nodeEnv === 'production') {
   // Not fatal: these are only consumed by one-off scripts such as prisma/seed.ts,
   // never by the running server, so they must not block a deploy.
   const seedOnlyWarnings = PROD_VALUE_CHECKS
-    .filter(({ name, value, fallback }) => name !== 'DATABASE_URL')
+    .filter(({ name }) => name !== 'DATABASE_URL')
     .filter(({ name }) => !runtimeSecrets.some((s) => s.name === name))
     .filter(({ value, fallback }) => !value || value === fallback)
     .map(({ name }) => name);

@@ -19,10 +19,11 @@ import jwt from 'jsonwebtoken';
 import { Readable } from 'stream';
 import app from '../src/server';
 import { env } from '../src/config/env';
-import { prisma } from '../src/lib/prisma';
-import { driveService } from '../src/services/drive.service';
+import { prisma } from '../src/infrastructure/prisma';
+import { driveService } from '../src/modules/media/drive';
+import { studentSubmissionVideoCache } from '../src/modules/students/services/videoStream.service';
 
-vi.mock('../src/lib/prisma', () => ({
+vi.mock('../src/infrastructure/prisma', () => ({
   prisma: {
     student: { findUnique: vi.fn() },
     submission: { findFirst: vi.fn(), create: vi.fn(), update: vi.fn() },
@@ -38,7 +39,7 @@ vi.mock('../src/lib/prisma', () => ({
   },
 }));
 
-vi.mock('../src/services/drive.service', () => ({
+vi.mock('../src/modules/media/drive', () => ({
   driveService: {
     uploadFile: vi.fn(),
     uploadSubmissionFiles: vi.fn(),
@@ -104,6 +105,7 @@ const submissionRow = (videoDriveId = 'video_take_1') => ({
 describe("Student intro video — persists across logout and login", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    studentSubmissionVideoCache.clear();
     mock(prisma.student.findUnique).mockResolvedValue(STUDENT);
     mock(prisma.submission.findFirst).mockResolvedValue(submissionRow());
     mock(prisma.introVideo.findFirst).mockResolvedValue(storedVideo());
@@ -182,6 +184,7 @@ describe("Student intro video — persists across logout and login", () => {
 describe('Student intro video — stream endpoint serves a returning student', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    studentSubmissionVideoCache.clear();
     mock(prisma.student.findUnique).mockResolvedValue(STUDENT);
     mock(prisma.submission.findFirst).mockResolvedValue(submissionRow());
     mock(prisma.introVideo.findFirst).mockResolvedValue(storedVideo());

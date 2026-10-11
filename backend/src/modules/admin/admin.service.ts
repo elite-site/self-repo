@@ -8,3 +8,6 @@ export * from './services/roles.service';
 export * from './services/stats.service';
 export * from './services/storage.service';
 export * from './services/activity-log.service';
+export * from './services/academicYear.service';
+export * from './services/activity.service';
+

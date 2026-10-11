@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { VideoOff, Trash2 } from 'lucide-react';
 import { Submission } from '@/types';
-import { adminApi } from '@/services/api';
+import { moderationApi } from '../../api';
 import { useConfirm } from '@/shared/ui/ConfirmDialog';
 
 interface SubmissionManageActionsProps {
@@ -37,7 +37,7 @@ export const SubmissionManageActions: React.FC<SubmissionManageActionsProps> = (
     setDeletingVideo(true);
     onError(null);
     try {
-      const res = await adminApi.deleteVideo(submission.id);
+      const res = await moderationApi.deleteVideo(submission.id);
       if (res.success) {
         onVideoDeleted(res.submission);
       }
@@ -60,7 +60,7 @@ export const SubmissionManageActions: React.FC<SubmissionManageActionsProps> = (
     setDeletingRecord(true);
     onError(null);
     try {
-      const res = await adminApi.deleteSubmission(submission.id);
+      const res = await moderationApi.deleteSubmission(submission.id);
       if (res.success) {
         onSubmissionDeleted(submission.id);
       }

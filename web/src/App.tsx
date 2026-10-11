@@ -1,11 +1,11 @@
 import React, { useCallback, lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, Outlet, useNavigate, BrowserRouter } from 'react-router-dom';
-import { StudentSession } from '@/shared/types';
 import { PublicThemeProvider, StudentThemeProvider } from './context/ThemeContext';
 import { SessionProvider, useSession } from './context/SessionContext';
 import { ToastProvider } from '@/shared/ui/Toast';
 import { ConfirmProvider } from '@/shared/ui/ConfirmDialog';
 import { SkeletonPage } from '@/shared/ui/Skeleton';
+import { ErrorBoundary } from '@/shared/ui/ErrorBoundary';
 import { hasStoredToken } from '@/shared/utils/sessionBootstrap';
 
 // Public Pages (isolated chunk for public visitors)
@@ -43,37 +43,6 @@ const RouteLoadingFallback: React.FC = () => (
   </div>
 );
 
-const LoginRoute: React.FC<{
-  session: StudentSession | null;
-  authChecking: boolean;
-  sessionError: string | null;
-  onRetry: () => void;
-}> = ({ session, authChecking, sessionError, onRetry }) => {
-  if (authChecking) {
-    return <RouteLoadingFallback />;
-  }
-  if (session) {
-    return <Navigate to="/dashboard" replace />;
-  }
-  if (sessionError) {
-    return (
-      <div className="min-h-[100dvh] bg-surface flex items-center justify-center px-6">
-        <div className="max-w-md text-center">
-          <h1 className="text-lg font-black text-ink mb-2">Unable to verify your session</h1>
-          <p className="text-sm text-ink-secondary mb-6">{sessionError}</p>
-          <button
-            type="button"
-            onClick={onRetry}
-            className="px-5 py-2.5 rounded-xl bg-status-solid-rejected text-on-primary text-sm font-bold hover:bg-brand transition-colors cursor-pointer"
-          >
-            Retry
-          </button>
-        </div>
-      </div>
-    );
-  }
-  return <Navigate to="/" replace />;
-};
 
 const AuthWrapper: React.FC = () => {
   const { session, authChecking, sessionError, retrySessionCheck, logout, setPhoto } = useSession();
@@ -116,7 +85,8 @@ const AuthWrapper: React.FC = () => {
   };
 
   return (
-    <Suspense fallback={<RouteLoadingFallback />}>
+    <ErrorBoundary>
+      <Suspense fallback={<RouteLoadingFallback />}>
       <Routes>
         {/* Public Pages: Strictly Home, Directory, and Student Details (Isolated Public Theme) */}
         <Route
@@ -228,19 +198,22 @@ const AuthWrapper: React.FC = () => {
         </Route>
       </Routes>
     </Suspense>
+    </ErrorBoundary>
   );
 };
 
 export const App: React.FC = () => {
   return (
-    <BrowserRouter>
-      <ToastProvider>
-        <ConfirmProvider>
-          <SessionProvider>
-            <AuthWrapper />
-          </SessionProvider>
-        </ConfirmProvider>
-      </ToastProvider>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <ToastProvider>
+          <ConfirmProvider>
+            <SessionProvider>
+              <AuthWrapper />
+            </SessionProvider>
+          </ConfirmProvider>
+        </ToastProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 };

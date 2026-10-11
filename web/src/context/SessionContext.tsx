@@ -1,7 +1,8 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { StudentSession } from '@/shared/types';
-import { api } from '@/services/api';
+import { profileApi } from '@/features/profile/api';
+import { authApi } from '@/features/auth/api';
 import { SESSION_QUERY_KEY } from '@/shared/lib/queryClient';
 import {
   TOKEN_STORAGE_KEY,
@@ -69,7 +70,7 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const { data, error, isPending, refetch } = useQuery<StudentSession | null>({
     queryKey: SESSION_QUERY_KEY,
-    queryFn: async () => ({ student: (await api.getMe()).student }),
+    queryFn: async () => ({ student: (await profileApi.getMe()).student }),
     enabled: verifyEnabled,
     // A 401 is a sign-out, not a hiccup. React Query retries three times by default,
     // which would triple the `/me` call on every signed-out visit and hold the student
@@ -131,8 +132,11 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const logout = useCallback(async () => {
     try {
-      await api.logout();
-    } catch {}
+      await authApi.logout();
+    } catch (err) {
+      // Non-fatal: local session cleanup must proceed even if network fails
+      console.warn('Logout API failed non-fatally:', err);
+    }
     localStorage.removeItem(TOKEN_STORAGE_KEY);
     setVerifyEnabled(false);
     // A sign-out destroys every cached entry, not just the token. Anything a signed-in

@@ -26,9 +26,14 @@ studentGithubRouter.post('/reminder/snooze', asyncHandler(controller.snoozeRemin
 export const adminPortalGithubRouter = Router();
 adminPortalGithubRouter.use(requireAdminAuth);
 
-adminPortalGithubRouter.get('/github/overview', controller.getAdminOverview);
-adminPortalGithubRouter.get('/github/logs', controller.getAdminLogs);
-adminPortalGithubRouter.post('/github/resync/:studentId', controller.adminResyncStudent);
-adminPortalGithubRouter.get('/github/projects', controller.getAdminProjects);
+adminPortalGithubRouter.get('/github/overview', asyncHandler(controller.getAdminOverview));
+adminPortalGithubRouter.get('/github/logs', asyncHandler(controller.getAdminLogs));
+adminPortalGithubRouter.post('/github/resync/:studentId', asyncHandler(controller.adminResyncStudent));
+adminPortalGithubRouter.get('/github/projects', asyncHandler(controller.getAdminProjects));
+
+// 3. Internal GitHub Router (/api/internal)
+export const internalGithubRouter = Router();
+internalGithubRouter.post('/github-sync-tick', asyncHandler(controller.handleInternalSyncTick));
 
 export default studentGithubRouter;
+

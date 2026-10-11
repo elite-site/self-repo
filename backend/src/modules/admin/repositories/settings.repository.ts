@@ -4,6 +4,14 @@ export async function findAllPortalSettings() {
   return prisma.portalSettings.findMany();
 }
 
+export async function findPortalSettingByKey(key: string) {
+  return prisma.portalSettings.findUnique({
+    where: { key },
+    select: { value: true },
+  });
+}
+
+
 export async function upsertPortalSetting(key: string, value: string, group: string, updatedBy?: string) {
   return prisma.portalSettings.upsert({
     where: { key },

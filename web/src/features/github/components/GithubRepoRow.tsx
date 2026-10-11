@@ -16,7 +16,6 @@ interface GithubRepoRowProps {
 export const GithubRepoRow: React.FC<GithubRepoRowProps> = ({
   repo: r,
   isShowcased,
-  showcaseRank,
   onToggleShowcase,
   onMoveUp,
   onMoveDown,

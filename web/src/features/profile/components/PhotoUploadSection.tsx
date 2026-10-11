@@ -1,5 +1,5 @@
 import React from 'react';
-import { Camera, Trash2, Crop, Loader2 } from 'lucide-react';
+import { Camera, Trash2, Loader2 } from 'lucide-react';
 import { resolveMediaUrl } from '@/shared/api';
 import { getPhotoStyle } from '@/shared/utils/photoStyle';
 import { StudentProfile } from '../types';

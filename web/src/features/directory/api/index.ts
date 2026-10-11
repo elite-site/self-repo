@@ -1,4 +1,5 @@
-import { client, cachedFetch } from '@/shared/api/client';
+import { client, cachedFetch } from '@/shared/api';
+import { publicProfileApi } from '@/features/public-profile/api';
 import { DirectoryStudent, SkillItem } from '../types';
 
 export const directoryApi = {
@@ -29,10 +30,5 @@ export const directoryApi = {
     });
   },
 
-  async getPublicStudent(rollNo: string): Promise<any> {
-    return cachedFetch(`student_${rollNo}`, 30_000, async () => {
-      const res = await client.get(`/public/students/${rollNo}`);
-      return res.data;
-    });
-  },
+  getPublicStudent: publicProfileApi.getPublicStudent,
 };

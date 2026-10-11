@@ -1,8 +1,9 @@
 import React, { Suspense, useCallback, useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { SkeletonPage } from '@/shared/ui/Skeleton';
+import { ErrorBoundary } from '@/shared/ui/ErrorBoundary';
 import { useCommandPalette } from '@/shared/hooks/useCommandPalette';
-import { api, isNotificationPollingPaused } from '@/services/api';
+import { notificationsApi, isNotificationPollingPaused } from '@/features/notifications/api';
 import type { StudentSession } from '@/shared/types';
 import { CommandPalette, recordRecentRoute } from './CommandPalette';
 import { BottomTabBar } from './BottomTabBar';
@@ -94,11 +95,16 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ session, onLogout, onPhoto
               area swaps to a placeholder. Falling through to the app-level
               boundary would blank the whole viewport on every click.
             */}
-            <Suspense fallback={<SkeletonPage label="Loading page" />}>
-              <PageTransition>
-                <Outlet context={{ onPhotoChange } satisfies StudentOutletContext} />
-              </PageTransition>
-            </Suspense>
+            <ErrorBoundary
+              fallbackTitle="Unable to load this section"
+              fallbackMessage="An error occurred while loading this section of the portal. Please retry."
+            >
+              <Suspense fallback={<SkeletonPage label="Loading page" />}>
+                <PageTransition>
+                  <Outlet context={{ onPhotoChange } satisfies StudentOutletContext} />
+                </PageTransition>
+              </Suspense>
+            </ErrorBoundary>
           </div>
         </main>
       </div>
@@ -144,7 +150,7 @@ function useUnreadCount(pathname: string): number {
 
   const refresh = useCallback(() => {
     if (isNotificationPollingPaused()) return;
-    api
+    notificationsApi
       .getNotifications({ limit: 10, isBackgroundPoll: true })
       .then((data: unknown) => {
         const summary = data as { unreadCount?: number } | null;

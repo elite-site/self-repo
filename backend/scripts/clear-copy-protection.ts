@@ -2,7 +2,7 @@ import path from 'path';
 import dotenv from 'dotenv';
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
-import { driveService } from '../src/services/drive.service';
+import { driveService } from '../src/modules/media/drive';
 
 async function main() {
   const targetFileId = process.argv[2];

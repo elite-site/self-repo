@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { AdminUser, AdminStats } from '@/types';
 import { useTheme, ThemeMode } from '@/context/ThemeContext';
-import { adminApi } from '@/services/api';
+import { analyticsApi } from '@/features/analytics/api';
 
 interface AdminHeaderProps {
   user?: AdminUser | null;
@@ -42,7 +42,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
 
   // Fetch quick stats for notification badge
   useEffect(() => {
-    adminApi
+    analyticsApi
       .getStats()
       .then((data) => setPortalStats(data))
       .catch(() => {});

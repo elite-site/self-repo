@@ -34,7 +34,7 @@ export const ModerationHeader: React.FC<ModerationHeaderProps> = ({
           }`}
           role={toast.type === 'error' ? 'alert' : 'status'}
         >
-          {toast.type === 'error' ? <AlertCircle className="w-4 h-4 shrink-0" /> : <CheckCircle className="w-4 h-4 shrink-0 text-emerald-400" />}
+          {toast.type === 'error' ? <AlertCircle className="w-4 h-4 shrink-0" /> : <CheckCircle className="w-4 h-4 shrink-0 text-success" />}
           <span>{toast.message}</span>
           <button
             type="button"

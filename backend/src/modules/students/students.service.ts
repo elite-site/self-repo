@@ -1,21 +1,23 @@
 import * as repo from './students.repository';
-export * from '../../services/student/profile.service';
-export * from '../../services/student/profilePhoto.service';
-export * from '../../services/student/profileSkills.service';
-export * from '../../services/student/profile.serializer';
-export * from '../../services/student/overview.serializer';
-export * from '../../services/student/overview.service';
-export * from '../../services/student/me.service';
-export * from '../../services/student/dashboard.service';
-export * from '../../services/student/interactions.service';
-export * from '../../services/student/notifications.service';
-export * from '../../services/student/registrations.service';
-export * from '../../services/student/teams.service';
-export * from '../../services/student/teamInvitations.service';
-export * from '../../services/student/video.service';
-export * from '../../services/student/videoRecord.service';
-export * from '../../services/student/videoStream.service';
-export * from '../../services/student/resume.service';
+
+export * from './services/profile.service';
+export * from './services/profilePhoto.service';
+export * from './services/profileSkills.service';
+export * from './services/profile.serializer';
+export * from './services/overview.serializer';
+export * from './services/overview.service';
+export * from './services/me.service';
+export * from './services/dashboard.service';
+export * from './services/interactions.service';
+export * from './services/notifications.service';
+export * from './services/notification.service';
+export * from './services/registrations.service';
+export * from './services/teams.service';
+export * from './services/teamInvitations.service';
+export * from './services/video.service';
+export * from './services/videoRecord.service';
+export * from './services/videoStream.service';
+export * from './services/resume.service';
 
 export async function getStudentById(id: string) {
   return repo.findStudentById(id, true);

@@ -1,9 +1,5 @@
 import { AppError } from '../../utils/appError';
 import * as repo from './voting.repository';
-import type {
-  CreateVotingCampaignInput,
-  UpdateVotingCampaignInput,
-} from './voting.types';
 
 function formatCampaign(c: any, studentMap: Map<string, any>) {
   const now = new Date();

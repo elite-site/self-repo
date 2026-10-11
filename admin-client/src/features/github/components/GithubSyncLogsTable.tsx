@@ -68,12 +68,12 @@ export const GithubSyncLogsTable: React.FC<GithubSyncLogsTableProps> = ({
                     <span
                       className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${
                         log.status === 'SUCCESS'
-                          ? 'bg-emerald-500/10 text-emerald-400'
+                          ? 'bg-success/10 text-success'
                           : log.status === 'FAILED'
-                          ? 'bg-rose-500/10 text-rose-400'
+                          ? 'bg-danger/10 text-danger'
                           : log.status === 'SKIPPED_RATE_LIMIT'
-                          ? 'bg-amber-500/10 text-amber-300'
-                          : 'bg-slate-500/10 text-slate-400'
+                          ? 'bg-warning/10 text-warning'
+                          : 'bg-surface-sunken text-ink-muted'
                       }`}
                     >
                       {log.status}

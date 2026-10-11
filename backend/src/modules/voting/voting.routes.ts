@@ -7,10 +7,10 @@ import * as controller from './voting.controller';
 // Admin voting router
 export const adminVotingRouter = Router();
 adminVotingRouter.use(requireAdminAuth);
-adminVotingRouter.get('/voting', controller.listAdminCampaigns);
-adminVotingRouter.post('/voting', controller.createAdminCampaign);
-adminVotingRouter.patch('/voting/:id', controller.updateAdminCampaign);
-adminVotingRouter.get('/voting/:id/results', controller.getAdminCampaignResults);
+adminVotingRouter.get('/voting', asyncHandler(controller.listAdminCampaigns));
+adminVotingRouter.post('/voting', asyncHandler(controller.createAdminCampaign));
+adminVotingRouter.patch('/voting/:id', asyncHandler(controller.updateAdminCampaign));
+adminVotingRouter.get('/voting/:id/results', asyncHandler(controller.getAdminCampaignResults));
 
 // Student voting router
 export const studentVotingRouter = Router();

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { DriveService } from '../src/services/drive.service';
+import { DriveService } from '../src/modules/media/drive';
 import { env } from '../src/config/env';
 
 describe('DriveService init fail-safe guard', () => {

@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Loader2, ArrowLeft, FileText, ExternalLink, Download } from 'lucide-react';
+import { ErrorState } from '@/shared/ui/ErrorState';
 import { directoryApi } from '@/features/directory/api';
 import { StudentSession } from '@/shared/types';
 import { safeUrl } from '@/shared/utils/safeUrl';
@@ -18,10 +19,12 @@ export const PublicResumeViewerPage: React.FC<PublicResumeViewerProps> = ({ sess
   const [resumeUrl, setResumeUrl] = useState<string | null>(null);
   const [studentName, setStudentName] = useState<string>('');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const loadResume = useCallback(() => {
     if (!rollNo) return;
     setLoading(true);
+    setError(null);
 
     directoryApi
       .getPublicStudent(rollNo)
@@ -39,15 +42,28 @@ export const PublicResumeViewerPage: React.FC<PublicResumeViewerProps> = ({ sess
           } else {
             setResumeUrl(null);
           }
+        } else {
+          setResumeUrl(null);
         }
       })
-      .catch(() => {
-        setResumeUrl(null);
+      .catch((err) => {
+        const status = err?.status ?? err?.response?.status;
+        if (status === 404) {
+          setResumeUrl(null);
+          setError(null);
+        } else {
+          setResumeUrl(null);
+          setError(err?.message || 'We could not reach the server to load this resume.');
+        }
       })
       .finally(() => {
         setLoading(false);
       });
   }, [rollNo]);
+
+  useEffect(() => {
+    loadResume();
+  }, [loadResume]);
 
   useEffect(() => {
     if (loading) {
@@ -129,6 +145,14 @@ export const PublicResumeViewerPage: React.FC<PublicResumeViewerProps> = ({ sess
                 title={`${studentName}'s Resume`}
               />
             )}
+          </div>
+        ) : error ? (
+          <div className="text-center py-12 px-6 max-w-md">
+            <ErrorState
+              title="Unable to load resume"
+              message={error}
+              onRetry={loadResume}
+            />
           </div>
         ) : (
           <div className="text-center py-20 px-6 max-w-md surface border border-edge rounded-xl shadow-xs">

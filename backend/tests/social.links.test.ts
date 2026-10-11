@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { normalizeSocialLink } from '../../web/src/utils/socialLinks';
+import { normalizeSocialLink } from '../../web/src/shared/utils/socialLinks';
 
 /**
  * The professional link fields used to be `type="url"`, which rejects every

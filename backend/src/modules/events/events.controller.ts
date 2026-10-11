@@ -1,10 +1,10 @@
 import { Request, Response } from 'express';
-import { httpError } from '../../middleware/apiError';
+import { AppError } from '../../utils/appError';
 import * as service from './events.service';
 import { parseEventPayload } from './events.schemas';
 
 // Student controllers
-export async function getStudentEvents(req: Request, res: Response): Promise<Response | void> {
+export async function getStudentEvents(_req: Request, res: Response): Promise<Response | void> {
   try {
     const events = await service.getOpenStudentEvents();
     res.set('Cache-Control', 'no-cache, must-revalidate');
@@ -35,7 +35,7 @@ export async function getAdminEvents(_req: Request, res: Response): Promise<Resp
     res.json({ events });
   } catch (err: any) {
     console.error('Error fetching events list:', err);
-    return httpError(res, 500, err, 'FAILED_TO_FETCH_EVENTS');
+    throw new AppError('FAILED_TO_FETCH_EVENTS', 'Error fetching events list', 500);
   }
 }
 
@@ -63,7 +63,7 @@ export async function getRegistrations(req: Request, res: Response): Promise<Res
     res.json(result);
   } catch (err: any) {
     console.error('Error fetching registrations:', err);
-    return httpError(res, 500, err, 'SERVER_ERROR');
+    throw err;
   }
 }
 
@@ -88,7 +88,7 @@ export async function exportRegistrations(req: Request, res: Response): Promise<
     res.end();
   } catch (err: any) {
     console.error('Error exporting registrations:', err);
-    return httpError(res, 500, err, 'SERVER_ERROR');
+    throw err;
   }
 }
 
@@ -101,7 +101,7 @@ export async function getRegistrationById(req: Request, res: Response): Promise<
       return res.status(404).json({ error: 'NOT_FOUND', message: 'Registration not found' });
     }
     console.error('Error fetching registration detail:', err);
-    return httpError(res, 500, err, 'SERVER_ERROR');
+    throw err;
   }
 }
 
@@ -118,7 +118,7 @@ export async function updateRegistrationStatus(req: Request, res: Response): Pro
       return res.status(404).json({ error: 'NOT_FOUND', message: 'Registration not found' });
     }
     console.error('Error updating registration status:', err);
-    return httpError(res, 500, err, 'SERVER_ERROR');
+    throw err;
   }
 }
 
@@ -131,7 +131,7 @@ export async function deleteRegistration(req: Request, res: Response): Promise<R
       return res.status(404).json({ error: 'NOT_FOUND', message: 'Registration not found' });
     }
     console.error('Error deleting registration:', err);
-    return httpError(res, 500, err, 'SERVER_ERROR');
+    throw err;
   }
 }
 
@@ -145,7 +145,7 @@ export async function getTeams(req: Request, res: Response): Promise<Response | 
     res.json({ teams });
   } catch (err: any) {
     console.error('Error fetching teams:', err);
-    return httpError(res, 500, err, 'SERVER_ERROR');
+    throw err;
   }
 }
 
@@ -159,7 +159,7 @@ export async function updateTeamStatus(req: Request, res: Response): Promise<Res
       return res.status(400).json({ error: err.code || 'INVALID_STATUS', message: err.message });
     }
     console.error('Error updating team status:', err);
-    return httpError(res, 500, err, 'SERVER_ERROR');
+    throw err;
   }
 }
 
@@ -176,7 +176,7 @@ export async function removeTeamMember(req: Request, res: Response): Promise<Res
       return res.status(404).json({ error: 'NOT_FOUND', message: err.message });
     }
     console.error('Error removing team member:', err);
-    return httpError(res, 500, err, 'SERVER_ERROR');
+    throw err;
   }
 }
 

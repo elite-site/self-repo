@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { SSOService } from '../src/services/sso.service';
+import { SSOService } from '../src/modules/auth';
 
 const okIdentity = { email: 'aakhila251201@sasi.ac.in', emailVerified: true, domain: 'sasi.ac.in', sub: '111' };
 

@@ -1,5 +1,6 @@
-import { prisma } from '../lib/prisma';
+import { findPortalSettingByKey } from '../modules/admin/repositories/settings.repository';
 import { env } from '../config/env';
+import { logger } from '../utils/logger';
 
 /**
  * Portal-wide operational limits.
@@ -42,14 +43,13 @@ export async function getMaxVideoSizeMb(): Promise<number> {
   const fallback = Math.min(getDefaultMaxVideoSizeMb(), getMaxVideoHardCapMb());
 
   try {
-    const row = await prisma.portalSettings.findUnique({
-      where: { key: VIDEO_SIZE_SETTING_KEY },
-      select: { value: true },
-    });
+    const row = await findPortalSettingByKey(VIDEO_SIZE_SETTING_KEY);
     if (!row) return fallback;
     return Math.min(parsePositiveInt(row.value) ?? fallback, getMaxVideoHardCapMb());
-  } catch {
-    // A settings lookup failure must not block an upload; use the safe default.
+  } catch (err) {
+    // Non-fatal settings read fallback: settings lookup failure must not block an upload (ERR-9)
+    logger.warn('Failed to fetch portal video size limit from settings, falling back to default', { err });
     return fallback;
   }
 }
+

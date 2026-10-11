@@ -119,7 +119,7 @@ export const StudentDetailHeader: React.FC<StudentDetailHeaderProps> = ({
                 href={profile.leetcodeUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-edge hover:bg-surface-sunken text-xs font-semibold text-amber-500"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-edge hover:bg-surface-sunken text-xs font-semibold text-warning"
               >
                 <LeetCodeIcon className="w-3.5 h-3.5" /> LeetCode
               </a>
@@ -129,7 +129,7 @@ export const StudentDetailHeader: React.FC<StudentDetailHeaderProps> = ({
                 href={profile.codechefUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-edge hover:bg-surface-sunken text-xs font-semibold text-amber-700"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-edge hover:bg-surface-sunken text-xs font-semibold text-ink-secondary"
               >
                 <CodeChefIcon className="w-3.5 h-3.5" /> CodeChef
               </a>

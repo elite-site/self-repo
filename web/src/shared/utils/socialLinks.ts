@@ -143,7 +143,7 @@ export function normalizeSocialLink(kind: SocialLinkKind, input: string | null |
   // and `github.com/jane` all reduce to a bare handle and are rebuilt in canonical form.
   if (isPlatformField && PLATFORM_HOSTS[kind].includes(host)) {
     const segments = path.split('/').filter(Boolean);
-    let handle = '';
+    let handle: string;
     if (kind === 'linkedin') {
       handle = segments[0] === 'in' ? segments[1] : segments[0];
     } else if (kind === 'leetcode') {

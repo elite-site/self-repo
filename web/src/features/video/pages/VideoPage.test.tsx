@@ -1,26 +1,22 @@
-import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import VideoPage from './VideoPage';
-import { api } from '@/services/api';
+import { profileApi } from '@/features/profile/api';
 
-vi.mock('@/services/api', async () => {
-  const actual = await vi.importActual<any>('@/services/api');
-  return {
-    ...actual,
-    api: {
-      getMe: vi.fn(),
-      uploadDirectToDrive: vi.fn(),
-      initDirectVideoUploadSession: vi.fn(),
-      completeDirectVideoUpload: vi.fn(),
-      uploadIntroVideo: vi.fn(),
-      setVideoPublic: vi.fn(),
-      deleteVideo: vi.fn(),
-      getVideoBlobUrl: vi.fn(),
-    },
-  };
-});
+vi.mock('@/features/profile/api', () => ({
+  profileApi: {
+    getMe: vi.fn(),
+  },
+}));
+
+vi.mock('@/features/video/api', () => ({
+  videoApi: {
+    setVideoPublic: vi.fn(),
+    deleteVideo: vi.fn(),
+    getVideoBlobUrl: vi.fn(),
+  },
+}));
 
 vi.mock('@/context/SessionContext', () => ({
   useSession: () => ({
@@ -62,7 +58,7 @@ describe('VideoPage video playback and proxy fallback', () => {
   };
 
   it('initially points to direct media url, retries with ?proxy=1 on error, and shows retry UI if both fail', async () => {
-    (api.getMe as any).mockResolvedValue(mockVideoData);
+    (profileApi.getMe as any).mockResolvedValue(mockVideoData);
 
     const { container } = render(
       <MemoryRouter>

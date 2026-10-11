@@ -9,8 +9,9 @@ import {
 } from 'react-router-dom';
 import { Sidebar, AdminHeader, AdminTab } from '@/shared/layout';
 import { BrandedLoading, ConfirmProvider, LoginPage } from '@/shared/ui';
+import { ErrorBoundary } from '@/shared/ui/ErrorBoundary';
 import { AdminUser } from '@/shared/types';
-import { adminApi } from '@/services/api';
+import { authApi } from '@/shared/api';
 import { useTheme } from './context/ThemeContext';
 
 // Lazy Loaded Pages
@@ -66,7 +67,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const checkAuth = useCallback(async () => {
     try {
-      const res = await adminApi.getMe();
+      const res = await authApi.getMe();
       if (res.authenticated && res.user) {
         setUser(res.user);
         setAdminUser(res.user);
@@ -75,7 +76,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setAdminUser(null);
       }
     } catch (err: any) {
-      const status = err?.response?.status;
+      const status = err?.status || err?.response?.status;
       if (status === 401 || status === 403) {
         setUser(null);
         setAdminUser(null);
@@ -110,7 +111,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = async () => {
     try {
-      await adminApi.logout();
+      await authApi.logout();
     } catch (err) {
       console.error('Logout failed', err);
     } finally {
@@ -213,9 +214,11 @@ export const ProtectedLayout: React.FC = () => {
 
         {/* MAIN WORKSPACE VIEW */}
         <main className="flex-1 p-5 sm:p-8 max-w-canvas w-full mx-auto">
-          <Suspense fallback={<PageLoadingFallback />}>
-            <Outlet />
-          </Suspense>
+          <ErrorBoundary>
+            <Suspense fallback={<PageLoadingFallback />}>
+              <Outlet />
+            </Suspense>
+          </ErrorBoundary>
         </main>
       </div>
     </div>
@@ -224,13 +227,27 @@ export const ProtectedLayout: React.FC = () => {
 
 // ──────────────────────────────────────────────
 // Router creation
-// ──────────────────────────────────────────────
+const RootRouterError: React.FC = () => (
+  <div className="min-h-screen bg-surface-canvas flex items-center justify-center p-6 text-center">
+    <div className="surface p-8 rounded-xl max-w-md w-full border border-edge">
+      <h2 className="text-lg font-semibold text-ink mb-2">Something went wrong</h2>
+      <p className="text-sm text-ink-muted mb-4">We were unable to load this section of the portal.</p>
+      <button
+        type="button"
+        onClick={() => window.location.assign('/admin/dashboard')}
+        className="btn btn-primary cursor-pointer text-sm"
+      >
+        Return to Dashboard
+      </button>
+    </div>
+  </div>
+);
 
 const router = createBrowserRouter([
   {
     path: '/admin',
     element: <AuthProvider><ProtectedLayout /></AuthProvider>,
-    errorElement: <div className="p-8 text-center text-ink-muted">Something went wrong</div>,
+    errorElement: <RootRouterError />,
     children: [
       { index: true, element: <Navigate to="/admin/dashboard" replace /> },
       { path: 'dashboard', element: <DashboardPage /> },
@@ -276,9 +293,14 @@ const router = createBrowserRouter([
 
 export const App: React.FC = () => {
   return (
-    <ConfirmProvider>
-      <RouterProvider router={router} />
-    </ConfirmProvider>
+    <ErrorBoundary
+      fallbackTitle="Application Error"
+      fallbackMessage="An unexpected error occurred in the admin portal shell."
+    >
+      <ConfirmProvider>
+        <RouterProvider router={router} />
+      </ConfirmProvider>
+    </ErrorBoundary>
   );
 };
 

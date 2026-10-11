@@ -1,5 +1,4 @@
 import { prisma } from '../../infrastructure/prisma';
-import type { Prisma } from '@prisma/client';
 
 const studentSelect = {
   name: true,

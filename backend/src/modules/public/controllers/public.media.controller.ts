@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import * as repo from '../public.repository';
 import * as service from '../public.service';
-import { driveService } from '../../../services/drive.service';
+import { driveService } from '../../media/drive';
 
 const REDIRECTABLE_TYPES = new Set(['video']);
 
@@ -65,47 +65,38 @@ export async function getMediaThumbnail(req: Request, res: Response): Promise<vo
     const etag = `"${versionKey}"`;
 
     if (req.headers['if-none-match'] === etag && !req.query.t) {
-      res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
+      res.setHeader('Cache-Control', 'public, max-age=60, must-revalidate');
       res.setHeader('ETag', etag);
       res.status(304).end();
       return;
     }
 
     if (!thumbnail && driveFileId) {
-      if (type === 'certificate' || type === 'achievement') {
-        try {
-          const { stream, mimeType } = await driveService.streamDriveFile(driveFileId);
-          if (mimeType && mimeType.startsWith('image/')) {
-            res.setHeader('Content-Type', mimeType);
-            res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
-            res.setHeader('ETag', etag);
-            stream.pipe(res);
-            return;
-          }
-        } catch {}
-      } else {
-        try {
-          const generated = await driveService.generateThumbnail(driveFileId, type as 'video' | 'resume');
-          if (generated) {
-            thumbnail = generated;
-            if (type === 'resume') {
-              await repo.updateResumeThumbnail(id, generated);
-            } else if (type === 'video') {
-              if (record?.id) {
-                await repo.updateVideoThumbnail(record.id, generated);
-              } else {
-                await repo.updateVideoThumbnailByDriveId(driveFileId, generated);
-              }
+      try {
+        const generated = await driveService.generateThumbnail(driveFileId, type as 'video' | 'resume' | 'certificate' | 'achievement');
+        if (generated) {
+          thumbnail = generated;
+          if (type === 'resume') {
+            await repo.updateResumeThumbnail(id, generated);
+          } else if (type === 'video') {
+            if (record?.id) {
+              await repo.updateVideoThumbnail(record.id, generated);
+            } else {
+              await repo.updateVideoThumbnailByDriveId(driveFileId, generated);
             }
+          } else if (type === 'achievement') {
+            await repo.updateAchievementThumbnail(id, generated);
+          } else if (type === 'certificate') {
+            await repo.updateCertificateThumbnail(id, generated);
           }
-        } catch (genErr) {
-          console.warn(`[thumbnail] Lazy generation failed for ${type}/${id}:`, genErr);
         }
+      } catch (genErr) {
+        console.warn(`[thumbnail] Lazy generation failed for ${type}/${id}:`, genErr);
       }
     }
 
     if (thumbnail) {
-      res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
+      res.setHeader('Cache-Control', 'public, max-age=60, must-revalidate');
       res.setHeader('ETag', etag);
       res.setHeader('Content-Type', 'image/webp');
       res.status(200).send(thumbnail);
@@ -208,7 +199,7 @@ export async function streamPublicMedia(req: Request, res: Response): Promise<vo
 
     res.setHeader('Content-Type', mimeType || 'application/octet-stream');
     res.setHeader('Accept-Ranges', 'bytes');
-    res.setHeader('Cache-Control', 'private, max-age=86400, stale-while-revalidate=604800');
+    res.setHeader('Cache-Control', 'private, max-age=3600');
     res.setHeader('ETag', etag);
 
     if (contentRange) {

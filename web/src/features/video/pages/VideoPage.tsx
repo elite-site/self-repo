@@ -5,15 +5,10 @@ import {
   Loader2,
   Globe,
   EyeOff,
-  CheckCircle2,
-  Clock,
   AlertCircle,
-  Info,
-  FileVideo,
 } from 'lucide-react';
 import { SkeletonPage } from '@/shared/ui/Skeleton';
 import { ProgressSteps } from '@/shared/ui/ProgressSteps';
-import { formatSubmittedAt } from '@/shared/utils/formatDate';
 import { useVideoUpload } from '../hooks/useVideoUpload';
 import { VideoPlayerCard, VideoUploadCard, VideoReviewFeedback } from '../components';
 
@@ -37,8 +32,6 @@ export const VideoPage: React.FC = () => {
     error,
     publishing,
     deleting,
-    deleteNotice,
-    publishNotice,
     previewError,
     playbackUrl,
     fileInputRef,

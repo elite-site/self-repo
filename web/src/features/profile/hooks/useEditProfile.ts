@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { profileApi } from '../api';
 import { StudentProfile } from '../types';
-import { normalizeSocialLink, SocialLinkKind } from '@/shared/utils/socialLinks';
+import type { SocialLinkKind } from '@/shared/utils/socialLinks';
 import { compressImageToWebP } from '@/shared/utils/cropImage';
 import { invalidateApiCache } from '@/shared/api';
 import { useToast } from '@/shared/ui/Toast';
@@ -27,7 +27,7 @@ export function useEditProfile(onPhotoChangeProp?: (newUrl: string | null) => vo
   const [leetcodeUrl, setLeetcodeUrl] = useState('');
   const [codechefUrl, setCodechefUrl] = useState('');
   const [portfolioUrl, setPortfolioUrl] = useState('');
-  const [linkErrors, setLinkErrors] = useState<Partial<Record<SocialLinkKind, string>>>({});
+  const [linkErrors] = useState<Partial<Record<SocialLinkKind, string>>>({});
 
   // Crop state
   const [isCropModalOpen, setIsCropModalOpen] = useState(false);

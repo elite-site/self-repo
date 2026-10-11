@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { FolderGit2, Award, FileText, Video, ChevronRight } from 'lucide-react';
+import { FolderGit2, Award, Video, ChevronRight } from 'lucide-react';
 import { Project, Certificate, Achievement, StudentIntroVideo } from '@/shared/types';
 
 interface ProfilePortfolioSectionProps {
@@ -8,7 +8,7 @@ interface ProfilePortfolioSectionProps {
   certificates: Certificate[];
   achievements: Achievement[];
   video: StudentIntroVideo | null;
-  resume: any | null;
+  resume?: any | null;
 }
 
 export const ProfilePortfolioSection: React.FC<ProfilePortfolioSectionProps> = ({
@@ -16,7 +16,6 @@ export const ProfilePortfolioSection: React.FC<ProfilePortfolioSectionProps> = (
   certificates,
   achievements,
   video,
-  resume,
 }) => {
   return (
     <div className="surface p-6 sm:p-8 space-y-6">

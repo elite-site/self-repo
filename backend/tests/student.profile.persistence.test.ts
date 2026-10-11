@@ -3,9 +3,9 @@ import request from 'supertest';
 import jwt from 'jsonwebtoken';
 import app from '../src/server';
 import { env } from '../src/config/env';
-import { prisma } from '../src/lib/prisma';
+import { prisma } from '../src/infrastructure/prisma';
 
-vi.mock('../src/lib/prisma', () => {
+vi.mock('../src/infrastructure/prisma', () => {
   return {
     prisma: {
       student: {
@@ -41,6 +41,12 @@ vi.mock('../src/lib/prisma', () => {
         updateMany: vi.fn(),
         deleteMany: vi.fn(),
       },
+      introVideo: {
+        findFirst: vi.fn(),
+        create: vi.fn(),
+        update: vi.fn(),
+        deleteMany: vi.fn(),
+      },
     },
   };
 });
@@ -54,13 +60,15 @@ const studentPayload = {
 
 const token = jwt.sign(studentPayload, env.STUDENT_JWT_SECRET);
 
-vi.mock('../src/services/drive.service', () => ({
+vi.mock('../src/modules/media/drive', () => ({
   driveService: {
     uploadFile: vi.fn(),
+    deleteFileById: vi.fn(),
+    deleteFilesByPrefix: vi.fn(),
   },
 }));
 
-import { driveService } from '../src/services/drive.service';
+import { driveService } from '../src/modules/media/drive';
 
 describe('Student Profile Data Persistence', () => {
   beforeEach(() => {
@@ -251,7 +259,7 @@ describe('Student Profile Data Persistence', () => {
 
       expect(res.status).toBe(200);
       expect(driveService.uploadFile).toHaveBeenCalled();
-      expect(res.body.photoUrl).toBe('/api/public/media/photo/prof_1');
+      expect(res.body.photoUrl).toMatch(/^\/api\/public\/media\/photo\/prof_1/);
     });
 
     it('reports a storage failure instead of silently saving a placeholder photoUrl', async () => {

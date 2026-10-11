@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { env } from '../../../config/env';
+import { logger } from '../../../utils/logger';
 import { DriveContext } from './types';
 
 export async function cleanupFailedUpload(
@@ -67,7 +68,10 @@ export async function deleteFileById(
               fs.rmSync(full, { force: true });
               fs.rmSync(full.replace(/\.meta\.json$/, ''), { force: true });
               return true;
-            } catch (_) {}
+            } catch (err) {
+              // Non-fatal: mock file entry unreadable or already deleted
+              logger.warn('Failed cleaning mock metadata file', { error: err });
+            }
           }
         }
       }
@@ -102,7 +106,10 @@ export async function deleteFilesByPrefix(
           try {
             fs.rmSync(path.join(dirPath, file), { force: true });
             deletedCount++;
-          } catch (_) {}
+          } catch (err) {
+            // Non-fatal: mock file might already be removed
+            logger.warn('Failed removing mock file with prefix', { file, error: err });
+          }
         }
       }
     }
@@ -164,7 +171,10 @@ export async function deleteVideo(
                 fs.unlinkSync(fallback);
               }
             }
-          } catch (_) {}
+          } catch (err) {
+            // Non-fatal: corrupted or partially removed mock meta file
+            logger.warn('Failed cleaning mock video meta files', { file, error: err });
+          }
         }
       }
     }

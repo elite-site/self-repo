@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createElement, ReactNode } from 'react';
 import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { api } from '@/services/api';
+import { videoApi } from '@/features/video/api';
 import { createQueryClient } from '@/shared/lib/queryClient';
 import { usePublicVideos } from './usePublicVideos';
 import { PublicIntroVideo } from '@/shared/types';
@@ -45,7 +45,7 @@ describe('usePublicVideos', () => {
 
   it('fetches for itself when no preloaded result is supplied', async () => {
     const spy = vi
-      .spyOn(api, 'getPublicVideos')
+      .spyOn(videoApi, 'getPublicVideos')
       .mockResolvedValue({ items: [video('a')], total: 1 });
 
     const { result } = renderHook(() => usePublicVideos(), { wrapper: withFreshClient() });
@@ -63,7 +63,7 @@ describe('usePublicVideos', () => {
    * `/public/videos` calls on every load.
    */
   it('does not issue a request when handed a preloaded result', async () => {
-    const spy = vi.spyOn(api, 'getPublicVideos').mockResolvedValue({ items: [], total: 0 });
+    const spy = vi.spyOn(videoApi, 'getPublicVideos').mockResolvedValue({ items: [], total: 0 });
 
     const preloaded = { videos: [video('x'), video('y')], loading: false, failed: false };
     const { result } = renderHook(() => usePublicVideos(preloaded), {
@@ -76,7 +76,7 @@ describe('usePublicVideos', () => {
   });
 
   it('marks the request failed when the API rejects, and keeps an empty list', async () => {
-    vi.spyOn(api, 'getPublicVideos').mockRejectedValue(new Error('offline'));
+    vi.spyOn(videoApi, 'getPublicVideos').mockRejectedValue(new Error('offline'));
 
     const { result } = renderHook(() => usePublicVideos(), { wrapper: withFreshClient() });
 
@@ -86,7 +86,7 @@ describe('usePublicVideos', () => {
   });
 
   it('stays not-loading when preloaded results say loading is done', () => {
-    const spy = vi.spyOn(api, 'getPublicVideos').mockResolvedValue({ items: [], total: 0 });
+    const spy = vi.spyOn(videoApi, 'getPublicVideos').mockResolvedValue({ items: [], total: 0 });
 
     const { result } = renderHook(
       () => usePublicVideos({ videos: [], loading: true, failed: false }),
@@ -100,7 +100,7 @@ describe('usePublicVideos', () => {
 
   it('does not set state after unmount', async () => {
     let resolveFn: (v: { items: PublicIntroVideo[]; total: number }) => void = () => {};
-    vi.spyOn(api, 'getPublicVideos').mockReturnValue(
+    vi.spyOn(videoApi, 'getPublicVideos').mockReturnValue(
       new Promise((resolve) => {
         resolveFn = resolve;
       }),

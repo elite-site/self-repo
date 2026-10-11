@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { driveService } from '../src/services/drive.service';
+import { driveService } from '../src/modules/media/drive';
 
 describe('DriveService.probeDirectLink unit tests', () => {
   const originalFetch = global.fetch;

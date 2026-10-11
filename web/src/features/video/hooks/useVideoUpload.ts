@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { videoApi } from '../api';
-import { api, resolveMediaUrl, UploadProgressInfo, pauseNotificationPolling, resumeNotificationPolling } from '@/services/api';
+import { profileApi } from '@/features/profile/api';
+import { resolveMediaUrl, UploadProgressInfo } from '@/shared/api';
+import { pauseNotificationPolling, resumeNotificationPolling } from '@/features/notifications/api';
 import { StudentIntroVideo, StudentSubmission, UploadStats, VideoMeta } from '../types';
 import { useSession } from '@/context/SessionContext';
 import { useToast } from '@/shared/ui/Toast';
@@ -59,7 +61,7 @@ export function useVideoUpload() {
     if (isInitial && !hasSubmissionData.current) setLoading(true);
     setError(null);
     try {
-      const data: any = await api.getMe();
+      const data: any = await profileApi.getMe();
       if (data && data.student) {
         setVideo(data.student.video || null);
         setMaxVideoSizeMb(data.student.maxVideoSizeMb || DEFAULT_MAX_VIDEO_MB);
@@ -109,16 +111,20 @@ export function useVideoUpload() {
     }
   }, []);
 
+  const prevVideoIdRef = useRef<string | undefined>(undefined);
   useEffect(() => {
-    setPreviewError(false);
-    setUseProxy(false);
+    if (prevVideoIdRef.current !== undefined && prevVideoIdRef.current !== video?.id) {
+      setPreviewError(false);
+      setUseProxy(false);
+    }
+    prevVideoIdRef.current = video?.id;
   }, [video?.id]);
 
   const handleTogglePublish = async (next: boolean) => {
     setPublishing(true);
     setPublishNotice(null);
     try {
-      const res = await api.setVideoPublic(next);
+      const res = await videoApi.setVideoPublic(next);
       setVideo((prev) => (prev ? { ...prev, isPublic: res.isPublic, publishedAt: res.isPublic ? new Date().toISOString() : null } : prev));
       const notice = res.message || (next ? 'Your video is now public.' : 'Your video is no longer public.');
       setPublishNotice(notice);
@@ -143,7 +149,7 @@ export function useVideoUpload() {
     setDeleting(true);
     setError(null);
     try {
-      const res = await api.deleteVideo();
+      const res = await videoApi.deleteVideo();
       setLocalPreview(null);
       setVideo(null);
       setSubmission(null);

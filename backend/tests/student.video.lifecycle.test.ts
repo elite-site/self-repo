@@ -4,11 +4,11 @@ import jwt from 'jsonwebtoken';
 import { Readable } from 'stream';
 import app from '../src/server';
 import { env } from '../src/config/env';
-import { prisma } from '../src/lib/prisma';
-import { driveService } from '../src/services/drive.service';
+import { prisma } from '../src/infrastructure/prisma';
+import { driveService } from '../src/modules/media/drive';
 import { parseRange } from '../src/utils/rangeParser';
 
-vi.mock('../src/lib/prisma', () => ({
+vi.mock('../src/infrastructure/prisma', () => ({
   prisma: {
     event: {
       findUnique: vi.fn(),
@@ -36,7 +36,7 @@ vi.mock('../src/lib/prisma', () => ({
   },
 }));
 
-vi.mock('../src/services/drive.service', () => ({
+vi.mock('../src/modules/media/drive', () => ({
   driveService: {
     resolveStudentFolder: vi.fn(),
     createResumableUploadSession: vi.fn(),
@@ -46,11 +46,15 @@ vi.mock('../src/services/drive.service', () => ({
   },
 }));
 
-vi.mock('../src/services/activity.service', () => ({
-  ActivityService: {
-    log: vi.fn().mockResolvedValue(undefined),
-  },
-}));
+vi.mock('../src/modules/admin', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../src/modules/admin')>();
+  return {
+    ...actual,
+    ActivityService: {
+      log: vi.fn().mockResolvedValue(undefined),
+    },
+  };
+});
 
 const studentPayload = {
   studentId: 'student_video_test_id',

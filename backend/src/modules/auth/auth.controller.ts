@@ -4,6 +4,7 @@ import { STUDENT_SESSION_COOKIE_NAME } from '../../middleware/studentAuth';
 import * as authService from './auth.service';
 import { validateCallbackQuery } from './auth.schemas';
 import { AppError } from '../../utils/appError';
+import { logger } from '../../utils/logger';
 
 // --- Student Controllers ---
 
@@ -108,7 +109,10 @@ export async function adminMe(req: Request, res: Response): Promise<void> {
         });
         return;
       }
-    } catch (_) {}
+    } catch (err) {
+      // Non-fatal: fallback to basic adminUser payload if detail lookup fails
+      logger.warn('Failed to load full admin details in auth check', { error: err });
+    }
   }
 
   res.json({

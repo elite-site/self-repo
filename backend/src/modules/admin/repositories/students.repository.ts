@@ -1,4 +1,5 @@
 import { prisma } from '../../../infrastructure/prisma';
+import { AcademicYearPromotionError } from '../admin.errors';
 
 export async function countSubmissions(whereClause: any) {
   return prisma.submission.count({ where: whereClause });
@@ -269,3 +270,61 @@ export async function upsertStudentProfileStatus(studentId: string, isPublic: bo
     create: { studentId, isPublic },
   });
 }
+
+export async function executeAcademicYearPromotion(params: {
+  targetYear: string;
+  adminEmail: string;
+  force?: boolean;
+}): Promise<{ graduated: number; promoted: number; targetYear: string }> {
+  return prisma.$transaction(async (tx) => {
+    const maxYearResult = await tx.student.aggregate({
+      where: { status: 'ACTIVE' },
+      _max: { year: true },
+    });
+    const maxYear = maxYearResult._max.year;
+
+    if (maxYear === null) {
+      throw new AcademicYearPromotionError('NO_ACTIVE_STUDENTS');
+    }
+
+    const promotionSetting = await tx.portalSettings.findUnique({
+      where: { key: 'promoted_academic_year' },
+    });
+
+    if (promotionSetting?.value === params.targetYear && !params.force) {
+      throw new AcademicYearPromotionError('ALREADY_PROMOTED', params.targetYear);
+    }
+
+
+    const graduatedResult = await tx.student.updateMany({
+      where: { status: 'ACTIVE', year: { gte: 4 } },
+      data: { status: 'GRADUATED', graduatedAt: new Date() },
+    });
+    const promotedResult = await tx.student.updateMany({
+      where: { status: 'ACTIVE', year: { gte: 1, lt: 4 } },
+      data: { year: { increment: 1 } },
+    });
+
+    await tx.portalSettings.upsert({
+      where: { key: 'promoted_academic_year' },
+      update: {
+        value: params.targetYear,
+        group: 'academic_year',
+        updatedBy: params.adminEmail,
+      },
+      create: {
+        key: 'promoted_academic_year',
+        value: params.targetYear,
+        group: 'academic_year',
+        updatedBy: params.adminEmail,
+      },
+    });
+
+    return {
+      graduated: graduatedResult.count,
+      promoted: promotedResult.count,
+      targetYear: params.targetYear,
+    };
+  });
+}
+

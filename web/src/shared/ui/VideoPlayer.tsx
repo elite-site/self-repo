@@ -100,7 +100,7 @@ export const VideoPlayer = React.forwardRef<HTMLDivElement, VideoPlayerProps>(fu
     nativeControls = false,
     className,
   },
-  forwardedRef,
+  _forwardedRef,
 ) {
   const shouldReduce = useReducedMotion();
   const containerRef = useRef<HTMLDivElement>(null);

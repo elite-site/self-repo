@@ -1,10 +1,11 @@
 import fs from 'fs';
 import path from 'path';
 import { env } from '../../../config/env';
+import { logger } from '../../../utils/logger';
 import { mediaRepo } from '../index';
 import { DriveContext } from './types';
-import { streamDriveFile as doStreamDriveFile, DriveStreamResult } from '../../../services/drive.stream';
-import { generateThumbnail as doGenerateThumbnail } from '../../../services/drive.thumbnail';
+import { streamDriveFile as doStreamDriveFile, DriveStreamResult } from './stream';
+import { generateThumbnail as doGenerateThumbnail } from './thumbnail';
 
 const ANYONE_READABLE_TTL_MS = 10 * 60_000;
 const MAX_TRACKED_ANYONE_FILES = 500;
@@ -244,7 +245,10 @@ export async function checkFileExists(ctx: DriveContext, fileId?: string | null,
           try {
             const meta = JSON.parse(fs.readFileSync(path.join(dirPath, f), 'utf-8'));
             if (meta.id === fileId) return true;
-          } catch (_) {}
+          } catch (err) {
+            // Non-fatal: ignore unparseable mock meta file
+            logger.warn('Failed to parse mock metadata file in exists check', { error: err });
+          }
         }
       }
     }

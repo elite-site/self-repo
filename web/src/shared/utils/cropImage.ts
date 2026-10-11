@@ -92,7 +92,7 @@ export async function getCroppedImg(
   ctx.imageSmoothingEnabled = true;
 
   // Fill canvas background with clean white to avoid dark edges on JPEG compression
-  ctx.fillStyle = '#FFFFFF';
+  ctx.fillStyle = canvasBackground();
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   // Draw the selected crop area from the source image onto the canvas

@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { Readable } from 'stream';
 import { env } from '../../../config/env';
+import { logger } from '../../../utils/logger';
 import { DriveContext, UploadedFileData, StudentFolderMeta, DriveUploadResult } from './types';
 
 export async function uploadFile(
@@ -34,7 +35,10 @@ export async function uploadFile(
             fs.rmSync(path.join(dirPath, entry), { force: true });
           }
         }
-      } catch (_) {}
+      } catch (err) {
+        // Non-fatal: mock photo cleanup failure
+        logger.warn('Failed cleaning previous mock photos', { error: err });
+      }
     }
     const filePath = path.join(dirPath, fileName);
     fs.writeFileSync(filePath, file.buffer);

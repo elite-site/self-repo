@@ -11,7 +11,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { Submission, IntroVideoState } from '@/types';
-import { adminApi } from '@/services/api';
+import { moderationApi } from '../../api';
 
 const VIDEO_STATUS_BADGE: Record<string, { label: string; cls: string }> = {
   PENDING: { label: 'Pending review', cls: 'badge badge-pending' },
@@ -48,7 +48,7 @@ export const SubmissionVideoSection: React.FC<SubmissionVideoSectionProps> = ({
   const [videoRetryKey, setVideoRetryKey] = useState(0);
 
   const videoUrl = hasVideo
-    ? adminApi.getMediaUrl(submission.id, 'video', submission.videoDriveId || submission.submittedAt)
+    ? moderationApi.getMediaUrl(submission.id, 'video', submission.videoDriveId || submission.submittedAt)
     : null;
 
   const handleSubmitRequest = async () => {

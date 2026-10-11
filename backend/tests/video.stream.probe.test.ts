@@ -4,10 +4,10 @@ import jwt from 'jsonwebtoken';
 import { Readable } from 'stream';
 import app from '../src/server';
 import { env } from '../src/config/env';
-import { prisma } from '../src/lib/prisma';
-import { driveService } from '../src/services/drive.service';
+import { prisma } from '../src/infrastructure/prisma';
+import { driveService } from '../src/modules/media/drive';
 
-vi.mock('../src/lib/prisma', () => ({
+vi.mock('../src/infrastructure/prisma', () => ({
   prisma: {
     student: {
       findUnique: vi.fn(),
@@ -24,7 +24,7 @@ vi.mock('../src/lib/prisma', () => ({
   },
 }));
 
-vi.mock('../src/services/drive.service', () => ({
+vi.mock('../src/modules/media/drive', () => ({
   driveService: {
     canRedirectToDrive: vi.fn(() => true),
     getDirectLink: vi.fn((fileId?: string | null) => (fileId ? `https://drive.usercontent.google.com/download?id=${fileId}&export=download&confirm=t` : null)),

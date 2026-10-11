@@ -1,5 +1,6 @@
 import React from 'react';
 import { ChevronUp } from 'lucide-react';
+import { ErrorState } from '@/shared/ui/ErrorState';
 import { PublicProfileProps } from '../types';
 import { usePublicStudentProfile } from '../hooks/usePublicStudentProfile';
 import {
@@ -18,6 +19,8 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
   const {
     student,
     loading,
+    error,
+    retry,
     name,
     firstName,
     restOfName,
@@ -45,6 +48,18 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
 
   if (loading) {
     return <PublicProfileSkeleton />;
+  }
+
+  if (error && !student) {
+    return (
+      <div className="min-h-[100dvh] bg-[#070B16] text-slate-100 flex items-center justify-center p-6">
+        <ErrorState
+          title="Unable to load profile"
+          message={error}
+          onRetry={retry}
+        />
+      </div>
+    );
   }
 
   if (!student) {

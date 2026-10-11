@@ -254,23 +254,23 @@ describe('the request the bootstrap actually issues', () => {
   });
 
   it('is not issued for a visitor with no token', async () => {
-    const { api } = await import('@/services/api');
-    const getMe = vi.spyOn(api, 'getMe').mockResolvedValue({ student: {} as never });
+    const { profileApi } = await import('@/features/profile/api');
+    const getMe = vi.spyOn(profileApi, 'getMe').mockResolvedValue({ student: {} as never });
 
     const plan = planSessionBootstrap({ storedToken: hasStoredToken() ? 'jwt' : null });
-    if (plan.needsVerification) await api.getMe();
+    if (plan.needsVerification) await profileApi.getMe();
 
     expect(plan.needsVerification).toBe(false);
     expect(getMe).not.toHaveBeenCalled();
   });
 
   it('is issued exactly once for a stored token', async () => {
-    const { api } = await import('@/services/api');
+    const { profileApi } = await import('@/features/profile/api');
     localStorage.setItem(TOKEN_STORAGE_KEY, 'jwt');
-    const getMe = vi.spyOn(api, 'getMe').mockResolvedValue({ student: {} as never });
+    const getMe = vi.spyOn(profileApi, 'getMe').mockResolvedValue({ student: {} as never });
 
     const plan = planSessionBootstrap({ storedToken: localStorage.getItem(TOKEN_STORAGE_KEY) });
-    if (plan.needsVerification) await api.getMe();
+    if (plan.needsVerification) await profileApi.getMe();
 
     expect(plan.needsVerification).toBe(true);
     expect(getMe).toHaveBeenCalledTimes(1);

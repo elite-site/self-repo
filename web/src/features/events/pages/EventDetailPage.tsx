@@ -36,7 +36,6 @@ export const EventDetailPage: React.FC = () => {
     creatingTeam,
     teamError,
     teamSuccess,
-    loadEventAndReg,
     handleRegister,
     handleCancelRegistration,
     handleCreateTeam,

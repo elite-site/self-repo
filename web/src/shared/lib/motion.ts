@@ -1,5 +1,5 @@
 import { useReducedMotion } from '../hooks/useReducedMotion';
-import type { Easing, MotionStyle, TargetAndTransition, Transition, Variants } from 'framer-motion';
+import type { Easing, TargetAndTransition, Transition, Variants } from 'framer-motion';
 
 // ============================================================================
 // Shared motion vocabulary — REDESIGN_PLAN §4.7 + Appendix C

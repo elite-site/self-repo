@@ -15,7 +15,7 @@ export const PortfolioPage: React.FC = () => {
   const activeTab = tabs.find((tab) => location.pathname.startsWith(tab.href))?.id ?? 'projects';
 
   const handleKeyDown = (e: React.KeyboardEvent, index: number) => {
-    let newIndex = index;
+    let newIndex: number;
     if (e.key === 'ArrowRight') {
       newIndex = (index + 1) % tabs.length;
     } else if (e.key === 'ArrowLeft') {

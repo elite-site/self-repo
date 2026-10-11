@@ -3,13 +3,16 @@ import { requireStudentAuth } from '../../middleware/studentAuth';
 import { submissionRateLimiter } from '../../middleware/rateLimiter';
 import { certificateUpload, proofUpload } from '../../middleware/upload';
 import { asyncHandler } from '../../utils/asyncHandler';
+import { AppError } from '../../utils/appError';
 import * as controller from './portfolio.controller';
 
-const handleProofUpload = (req: Request, res: Response, next: NextFunction) => {
+const handleProofUpload = (req: Request, res: Response, next: NextFunction): void => {
   const contentType = req.headers['content-type'] || '';
   if (contentType.includes('multipart/form-data')) {
-    return proofUpload(req, res, (err: any) => {
-      if (err) return res.status(400).json({ error: 'UPLOAD_ERROR', message: err.message });
+    proofUpload(req, res, (err: any) => {
+      if (err) {
+        return next(new AppError('UPLOAD_ERROR', err.message || 'Proof upload failed', 400));
+      }
       if (req.files) {
         const files = req.files as Record<string, Express.Multer.File[]>;
         const f = files['proof']?.[0] || files['file']?.[0];
@@ -17,6 +20,7 @@ const handleProofUpload = (req: Request, res: Response, next: NextFunction) => {
       }
       next();
     });
+    return;
   }
   next();
 };
