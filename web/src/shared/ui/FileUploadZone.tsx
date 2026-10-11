@@ -3,9 +3,9 @@ import { motion } from 'framer-motion';
 import { AlertCircle, CheckCircle2, Loader2, RefreshCw, UploadCloud, X } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
-import { cn } from '../../lib/cn';
-import { useReducedMotion } from '../../hooks/useReducedMotion';
-import { transitionQuick, transitionReduced } from '../../lib/motion';
+import { cn } from '@/shared/lib/cn';
+import { useReducedMotion } from '@/shared/hooks/useReducedMotion';
+import { transitionQuick, transitionReduced } from '@/shared/lib/motion';
 
 // ============================================================================
 // File upload zone — REDESIGN_PLAN §4.8 "File Upload Zone"

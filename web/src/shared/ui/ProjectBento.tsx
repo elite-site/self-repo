@@ -1,6 +1,6 @@
 import React from 'react';
 import { Project } from '../types';
-import { safeUrl } from '../utils/safeUrl';
+import { safeUrl } from '@/shared/utils/safeUrl';
 import { Pencil, Trash2 } from 'lucide-react';
 
 interface ProjectBentoProps {

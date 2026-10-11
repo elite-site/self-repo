@@ -12,9 +12,9 @@ import type { AnimationPlaybackControls, Variants } from 'framer-motion';
 import { AlertCircle, AlertTriangle, CheckCircle2, Info, X } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
-import { useReducedMotion } from '../../hooks/useReducedMotion';
-import { cn } from '../../lib/cn';
-import { MOTION_EASINGS, selectVariantsByName } from '../../lib/motion';
+import { useReducedMotion } from '@/shared/hooks/useReducedMotion';
+import { cn } from '@/shared/lib/cn';
+import { MOTION_EASINGS, selectVariantsByName } from '@/shared/lib/motion';
 
 // ============================================================================
 // Toast — REDESIGN_PLAN §4.8 (Toast / Notification Toast) + §4.7 (item 9)

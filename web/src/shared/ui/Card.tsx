@@ -1,9 +1,9 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import type { TargetAndTransition, Transition, HTMLMotionProps } from 'framer-motion';
-import { cn } from '../../lib/cn';
-import { useReducedMotion } from '../../hooks/useReducedMotion';
-import { selectVariantsByName } from '../../lib/motion';
+import { cn } from '@/shared/lib/cn';
+import { useReducedMotion } from '@/shared/hooks/useReducedMotion';
+import { selectVariantsByName } from '@/shared/lib/motion';
 
 /**
  * The portal's content container. REDESIGN_PLAN §4.8.

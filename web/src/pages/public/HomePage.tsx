@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
-import { StudentSession } from '../../types';
-import { api } from '../../services/api';
-import { Navbar } from '../../components/Navbar';
-import { Footer } from '../../components/Footer';
+import { StudentSession } from '@/shared/types';
+import { api } from '@/services/api';
+import { Navbar } from '@/shared/layout/Navbar';
+import { Footer } from '@/shared/layout/Footer';
 import { HomeHero } from './components/HomeHero';
 import { HomeSearchBand } from './components/HomeSearchBand';
 import { HomeEventsBand } from './components/HomeEventsBand';

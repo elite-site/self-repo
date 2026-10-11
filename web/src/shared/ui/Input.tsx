@@ -1,5 +1,5 @@
 import React, { forwardRef, useId } from 'react';
-import { cn } from '../../lib/cn';
+import { cn } from '@/shared/lib/cn';
 
 export interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'id'> {
   /**

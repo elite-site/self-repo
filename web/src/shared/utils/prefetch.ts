@@ -15,46 +15,46 @@ export function prefetchRoute(path: string): void {
       import('@/pages/public/HomePage');
       break;
     case '/students':
-      import('@/pages/public/StudentDirectoryPage');
+      import('@/features/directory/pages/StudentDirectoryPage');
       break;
     case '/events':
-      import('@/pages/public/PublicEventsPage');
+      import('@/features/events/pages/PublicEventsPage');
       break;
     case '/settings':
-      import('@/pages/SettingsPage');
+      import('@/features/profile/pages/SettingsPage');
       break;
     case '/login':
-      import('@/pages/LoginPage');
+      import('@/features/auth/pages/LoginPage');
       break;
     case '/dashboard':
-      import('@/pages/DashboardPage');
+      import('@/features/dashboard/pages/DashboardPage');
       break;
     case '/profile':
-      import('@/pages/ProfilePage');
+      import('@/features/profile/pages/ProfilePage');
       break;
     case '/profile/edit':
-      import('@/pages/EditProfilePage');
+      import('@/features/profile/pages/EditProfilePage');
       break;
     case '/portfolio':
-      import('@/pages/PortfolioPage');
+      import('@/features/portfolio/pages/PortfolioPage');
       break;
     case '/intro-video':
-      import('@/pages/VideoPage');
+      import('@/features/video/pages/VideoPage');
       break;
     case '/resume':
-      import('@/pages/ResumePage');
+      import('@/features/resume/pages/ResumePage');
       break;
     case '/registrations':
-      import('@/pages/RegistrationsPage');
+      import('@/features/events/pages/RegistrationsPage');
       break;
     case '/teams':
-      import('@/pages/TeamsPage');
+      import('@/features/teams/pages/TeamsPage');
       break;
     case '/voting':
-      import('@/pages/VotingPage');
+      import('@/features/voting/pages/VotingPage');
       break;
     case '/notifications':
-      import('@/pages/NotificationsPage');
+      import('@/features/notifications/pages/NotificationsPage');
       break;
     default:
       break;

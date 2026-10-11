@@ -1,14 +1,14 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { StudentSession } from '../types';
-import { api } from '../services/api';
-import { SESSION_QUERY_KEY } from '../lib/queryClient';
+import { StudentSession } from '@/shared/types';
+import { api } from '@/services/api';
+import { SESSION_QUERY_KEY } from '@/shared/lib/queryClient';
 import {
   TOKEN_STORAGE_KEY,
   bootstrapToken,
   classifySessionFailure,
   hasStoredToken,
-} from '../utils/sessionBootstrap';
+} from '@/shared/utils/sessionBootstrap';
 
 interface SessionContextValue {
   session: StudentSession | null;

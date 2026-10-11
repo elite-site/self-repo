@@ -1,9 +1,9 @@
 import React from 'react';
 import * as Progress from '@radix-ui/react-progress';
 import { motion } from 'framer-motion';
-import { cn } from '../../lib/cn';
-import { useReducedMotion } from '../../hooks/useReducedMotion';
-import { transitionNormal, transitionReduced } from '../../lib/motion';
+import { cn } from '@/shared/lib/cn';
+import { useReducedMotion } from '@/shared/hooks/useReducedMotion';
+import { transitionNormal, transitionReduced } from '@/shared/lib/motion';
 
 export interface ProgressBarProps {
   /**

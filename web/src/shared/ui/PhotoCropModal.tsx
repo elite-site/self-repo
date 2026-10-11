@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import ImageCropper, { type Area, type Point } from 'react-easy-crop';
 import { X, ZoomIn, ZoomOut, RotateCcw, Sparkles, Check, Loader2, Image as ImageIcon } from 'lucide-react';
-import { getCroppedImg } from '../utils/cropImage';
+import { getCroppedImg } from '@/shared/utils/cropImage';
 
 export interface PhotoCropModalProps {
   isOpen: boolean;

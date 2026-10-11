@@ -2,9 +2,9 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import type { TargetAndTransition, Transition, HTMLMotionProps } from 'framer-motion';
 import { Check, type LucideIcon } from 'lucide-react';
-import { cn } from '../../lib/cn';
-import { useReducedMotion } from '../../hooks/useReducedMotion';
-import { selectVariantsByName } from '../../lib/motion';
+import { cn } from '@/shared/lib/cn';
+import { useReducedMotion } from '@/shared/hooks/useReducedMotion';
+import { selectVariantsByName } from '@/shared/lib/motion';
 
 /**
  * An interactive filter or toggle. REDESIGN_PLAN §4.8 "Badge / Tag / Chip".

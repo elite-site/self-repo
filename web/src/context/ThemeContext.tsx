@@ -1,6 +1,6 @@
 import React, { createContext, useContext } from 'react';
-import { useTheme, type ThemeState } from '../hooks/useTheme';
-import { THEME_ATTRIBUTE, type ResolvedTheme } from '../lib/theme';
+import { useTheme, type ThemeState } from '@/shared/hooks/useTheme';
+import { THEME_ATTRIBUTE, type ResolvedTheme } from '@/shared/lib/theme';
 
 /**
  * One theme, one implementation. REDESIGN_PLAN §7.

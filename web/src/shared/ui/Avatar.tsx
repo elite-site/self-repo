@@ -1,5 +1,5 @@
 import React from 'react';
-import { cn } from '../../lib/cn';
+import { cn } from '@/shared/lib/cn';
 
 /**
  * A person's picture, their initials, or a presence dot. REDESIGN_PLAN §4.8

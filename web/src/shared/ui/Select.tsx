@@ -1,6 +1,6 @@
 import React, { forwardRef, useId } from 'react';
 import { ChevronDown } from 'lucide-react';
-import { cn } from '../../lib/cn';
+import { cn } from '@/shared/lib/cn';
 
 export interface SelectOption {
   value: string;

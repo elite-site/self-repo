@@ -2,11 +2,11 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import VideoPage from '../VideoPage';
-import { api } from '../../services/api';
+import VideoPage from './VideoPage';
+import { api } from '@/services/api';
 
-vi.mock('../../services/api', async () => {
-  const actual = await vi.importActual<any>('../../services/api');
+vi.mock('@/services/api', async () => {
+  const actual = await vi.importActual<any>('@/services/api');
   return {
     ...actual,
     api: {
@@ -22,19 +22,19 @@ vi.mock('../../services/api', async () => {
   };
 });
 
-vi.mock('../../context/SessionContext', () => ({
+vi.mock('@/context/SessionContext', () => ({
   useSession: () => ({
     session: { studentId: 'stud_123', rollNo: '23K61A1299', name: 'Test Student' },
   }),
 }));
 
-vi.mock('../../components/Toast', () => ({
+vi.mock('@/shared/ui/Toast', () => ({
   useToast: () => ({
     showToast: vi.fn(),
   }),
 }));
 
-vi.mock('../../components/ui/ConfirmDialog', () => ({
+vi.mock('@/shared/ui/ConfirmDialog', () => ({
   useConfirm: () => ({
     confirm: vi.fn(),
   }),

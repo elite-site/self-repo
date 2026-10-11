@@ -1,6 +1,6 @@
 import React from 'react';
 import { Check } from 'lucide-react';
-import { cn } from '../../lib/cn';
+import { cn } from '@/shared/lib/cn';
 
 /**
  * Which colour marks the step in progress. `changes` and `rejected` mean the

@@ -2,9 +2,9 @@ import React, { createContext, useContext, useId, useMemo, useState } from 'reac
 import * as TabsPrimitive from '@radix-ui/react-tabs';
 import { motion } from 'framer-motion';
 
-import { useReducedMotion } from '../../hooks/useReducedMotion';
-import { cn } from '../../lib/cn';
-import { transitionTabSpring } from '../../lib/motion';
+import { useReducedMotion } from '@/shared/hooks/useReducedMotion';
+import { cn } from '@/shared/lib/cn';
+import { transitionTabSpring } from '@/shared/lib/motion';
 
 /**
  * Tabs — REDESIGN_PLAN §4.8.

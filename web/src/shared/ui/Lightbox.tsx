@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { cn } from '../../lib/cn';
+import { cn } from '@/shared/lib/cn';
 import { Modal } from './Modal';
 
 export interface LightboxImage {

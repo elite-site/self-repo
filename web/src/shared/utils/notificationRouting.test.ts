@@ -5,7 +5,7 @@ import {
   isSafeInternalDestination,
   navigateToNotification,
   type NotificationRoutingTarget,
-} from '../utils/notificationRouting';
+} from './notificationRouting';
 
 /**
  * Security regression tests for notification link handling.

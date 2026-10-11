@@ -3,15 +3,15 @@ import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import type { Variants } from 'framer-motion';
-import { useReducedMotion } from '../../hooks/useReducedMotion';
-import { cn } from '../../lib/cn';
+import { useReducedMotion } from '@/shared/hooks/useReducedMotion';
+import { cn } from '@/shared/lib/cn';
 import {
   modalBackdropVariants,
   modalPanelVariants,
   reducedModalBackdropVariants,
   reducedModalPanelVariants,
   selectVariants,
-} from '../../lib/motion';
+} from '@/shared/lib/motion';
 
 const selectPanelVariants = (
   shouldReduce: boolean,

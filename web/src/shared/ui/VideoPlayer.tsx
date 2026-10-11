@@ -12,9 +12,9 @@ import {
   VolumeX,
 } from 'lucide-react';
 
-import { cn } from '../../lib/cn';
-import { useReducedMotion } from '../../hooks/useReducedMotion';
-import { MOTION_DURATIONS, transitionQuick, transitionReduced } from '../../lib/motion';
+import { cn } from '@/shared/lib/cn';
+import { useReducedMotion } from '@/shared/hooks/useReducedMotion';
+import { MOTION_DURATIONS, transitionQuick, transitionReduced } from '@/shared/lib/motion';
 
 // ============================================================================
 // Video player — REDESIGN_PLAN §4.8 "Video Player", §6.9

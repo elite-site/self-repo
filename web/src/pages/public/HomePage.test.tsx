@@ -5,10 +5,10 @@ import { MemoryRouter } from 'react-router-dom';
 import { HomePage } from './HomePage';
 import { api } from '../../services/api';
 
-vi.mock('../../components/Navbar', () => ({
+vi.mock('@/shared/layout/Navbar', () => ({
   Navbar: () => <nav data-testid="navbar" />,
 }));
-vi.mock('../../components/Footer', () => ({
+vi.mock('@/shared/layout/Footer', () => ({
   Footer: () => <footer data-testid="footer" />,
 }));
 
