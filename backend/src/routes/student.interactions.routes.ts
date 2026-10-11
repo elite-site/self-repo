@@ -1,4 +1,2 @@
-import router from './student/interactions.routes';
-
+export { studentInteractionsRouter as default } from '../modules/students';
 export * from './student/interactions.routes';
-export default router;
