@@ -1,3 +1,1 @@
-import router from './student/github.routes';
-
-export default router;
+export { studentGithubRouter as default } from '../modules/github';
