@@ -7,107 +7,34 @@ import {
   useLocation,
   useNavigate,
 } from 'react-router-dom';
-import { Sidebar, AdminTab, ACTIVE_EVENT_ID } from './components/Sidebar';
-import { AdminHeader } from './components/AdminHeader';
-const StatsDashboard = React.lazy(() => import('./components/StatsDashboard').then((m) => ({ default: m.StatsDashboard })));
-const StudentsTable = React.lazy(() => import('./components/StudentsTable').then((m) => ({ default: m.StudentsTable })));
-const ActivityLogView = React.lazy(() => import('./components/ActivityLogView').then((m) => ({ default: m.ActivityLogView })));
-const LoginPage = React.lazy(() => import('./components/LoginPage').then((m) => ({ default: m.LoginPage })));
-import { AdminStats, AdminUser } from './types';
-import { adminApi } from './services/api';
+import { Sidebar, AdminHeader, AdminTab } from '@/shared/layout';
+import { BrandedLoading, ConfirmProvider, LoginPage } from '@/shared/ui';
+import { AdminUser } from '@/shared/types';
+import { adminApi } from '@/services/api';
 import { useTheme } from './context/ThemeContext';
-import { BrandedLoading } from './components/BrandedLoading';
-import { ConfirmProvider } from './components/ui/ConfirmDialog';
 
 // Lazy Loaded Pages
-const Moderation = React.lazy(() => import('./pages/Moderation').then((m) => ({ default: m.Moderation })));
-const AdminEvents = React.lazy(() => import('./pages/AdminEvents').then((m) => ({ default: m.AdminEvents })));
-const EventRegistrations = React.lazy(() => import('./pages/EventRegistrations').then((m) => ({ default: m.EventRegistrations })));
-const VotingManagement = React.lazy(() => import('./pages/VotingManagement').then((m) => ({ default: m.VotingManagement })));
-const VotingResults = React.lazy(() => import('./pages/VotingResults').then((m) => ({ default: m.VotingResults })));
-const Communications = React.lazy(() => import('./pages/Communications').then((m) => ({ default: m.Communications })));
-const EmailAutomation = React.lazy(() => import('./pages/EmailAutomation').then((m) => ({ default: m.EmailAutomation })));
-const EmailHistory = React.lazy(() => import('./pages/EmailHistory').then((m) => ({ default: m.EmailHistory })));
-const Analytics = React.lazy(() => import('./pages/Analytics').then((m) => ({ default: m.Analytics })));
-const Exports = React.lazy(() => import('./pages/Exports').then((m) => ({ default: m.Exports })));
-const Storage = React.lazy(() => import('./pages/Storage').then((m) => ({ default: m.Storage })));
-const RolesPermissions = React.lazy(() => import('./pages/RolesPermissions').then((m) => ({ default: m.RolesPermissions })));
-const AuditLogs = React.lazy(() => import('./pages/AuditLogs').then((m) => ({ default: m.AuditLogs })));
-const Settings = React.lazy(() => import('./pages/Settings').then((m) => ({ default: m.Settings })));
-const StudentDetail = React.lazy(() => import('./pages/StudentDetail').then((m) => ({ default: m.StudentDetail })));
-const AdminGithubPage = React.lazy(() => import('./pages/AdminGithubPage').then((m) => ({ default: m.AdminGithubPage })));
+const DashboardPage = React.lazy(() => import('@/features/analytics').then((m) => ({ default: m.DashboardPage })));
+const StudentsPage = React.lazy(() => import('@/features/students').then((m) => ({ default: m.StudentsPage })));
+const ActivityLogPage = React.lazy(() => import('@/features/activity-log').then((m) => ({ default: m.ActivityLogPage })));
+const ModerationPage = React.lazy(() => import('@/features/moderation').then((m) => ({ default: m.ModerationPage })));
+const AdminEventsPage = React.lazy(() => import('@/features/events').then((m) => ({ default: m.AdminEventsPage })));
+const EventRegistrationsPage = React.lazy(() => import('@/features/registrations').then((m) => ({ default: m.EventRegistrationsPage })));
+const VotingManagementPage = React.lazy(() => import('@/features/events').then((m) => ({ default: m.VotingManagementPage })));
+const VotingResultsPage = React.lazy(() => import('@/features/events').then((m) => ({ default: m.VotingResultsPage })));
+const AnnouncementsPage = React.lazy(() => import('@/features/announcements').then((m) => ({ default: m.AnnouncementsPage })));
+const EmailAutomationPage = React.lazy(() => import('@/features/email-automation').then((m) => ({ default: m.EmailAutomationPage })));
+const EmailHistoryPage = React.lazy(() => import('@/features/email-automation').then((m) => ({ default: m.EmailHistoryPage })));
+const AnalyticsPage = React.lazy(() => import('@/features/analytics').then((m) => ({ default: m.AnalyticsPage })));
+const ExportsPage = React.lazy(() => import('@/features/registrations').then((m) => ({ default: m.ExportsPage })));
+const StoragePage = React.lazy(() => import('@/features/storage').then((m) => ({ default: m.StoragePage })));
+const RolesPermissionsPage = React.lazy(() => import('@/features/roles').then((m) => ({ default: m.RolesPermissionsPage })));
+const AuditLogsPage = React.lazy(() => import('@/features/activity-log').then((m) => ({ default: m.AuditLogsPage })));
+const SettingsPage = React.lazy(() => import('@/features/settings').then((m) => ({ default: m.SettingsPage })));
+const AdminGithubPage = React.lazy(() => import('@/features/github').then((m) => ({ default: m.AdminGithubPage })));
 
 const PageLoadingFallback: React.FC = () => (
   <BrandedLoading message="Loading Module" fullScreen={false} />
-);
-
-// ──────────────────────────────────────────────
-// Route components
-// ──────────────────────────────────────────────
-
-const DashboardPage: React.FC = () => {
-  const { user } = useAuth();
-  const [stats, setStats] = useState<AdminStats | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  const loadStats = useCallback(async () => {
-    if (!user) return;
-    setLoading(true);
-    try {
-      const data = await adminApi.getStats(ACTIVE_EVENT_ID);
-      setStats(data);
-    } catch (err) {
-      console.error('Failed to load stats', err);
-    } finally {
-      setLoading(false);
-    }
-  }, [user]);
-
-  useEffect(() => {
-    if (user) loadStats();
-  }, [user, loadStats]);
-
-  const navigate = useNavigate();
-
-  return (
-    <StatsDashboard
-      stats={stats}
-      loading={loading}
-      onNavigateTab={(t) => navigate(`/admin/${t}`)}
-    />
-  );
-};
-
-
-const StudentsPage: React.FC = () => {
-  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
-  const navigate = useNavigate();
-
-  if (selectedStudentId) {
-    return (
-      <StudentDetail
-        studentId={selectedStudentId}
-        onBack={() => {
-          setSelectedStudentId(null);
-          navigate('/admin/students');
-        }}
-      />
-    );
-  }
-
-  return (
-    <StudentsTable
-      activeEventId={ACTIVE_EVENT_ID}
-      onSelectStudent={(id) => {
-        setSelectedStudentId(id);
-        navigate(`/admin/students/${id}`);
-      }}
-    />
-  );
-};
-
-const ActivityPage: React.FC = () => (
-  <ActivityLogView activeEventId={ACTIVE_EVENT_ID} />
 );
 
 // ──────────────────────────────────────────────
@@ -118,8 +45,6 @@ interface AuthContextValue {
   user: AdminUser | null;
   authChecking: boolean;
   authError: string | null;
-  /** Called by `LoginPage` once the POST has succeeded. It hands us the user
-   *  rather than re-authenticating, so the form owns its own error copy. */
   completeLogin: (user: AdminUser) => void;
   logout: () => Promise<void>;
   retryAuthCheck: () => Promise<void>;
@@ -127,13 +52,13 @@ interface AuthContextValue {
 
 const AuthContext = React.createContext<AuthContextValue | null>(null);
 
-const useAuth = () => {
+export const useAuth = () => {
   const ctx = React.useContext(AuthContext);
   if (!ctx) throw new Error('useAuth must be used within AuthProvider');
   return ctx;
 };
 
-const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { setAdminUser } = useTheme();
   const [user, setUser] = useState<AdminUser | null>(null);
   const [authChecking, setAuthChecking] = useState(true);
@@ -177,10 +102,10 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     await checkAuth();
   }, [checkAuth]);
 
-  const completeLogin = (user: AdminUser) => {
+  const completeLogin = (newUser: AdminUser) => {
     setAuthError(null);
-    setUser(user);
-    setAdminUser(user);
+    setUser(newUser);
+    setAdminUser(newUser);
   };
 
   const logout = async () => {
@@ -201,7 +126,7 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   );
 };
 
-const ProtectedLayout: React.FC = () => {
+export const ProtectedLayout: React.FC = () => {
   const { user, authChecking, authError, completeLogin, logout, retryAuthCheck } = useAuth();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const location = useLocation();
@@ -221,7 +146,7 @@ const ProtectedLayout: React.FC = () => {
             <button
               type="button"
               onClick={retryAuthCheck}
-              className="btn btn-primary"
+              className="btn btn-primary cursor-pointer"
             >
               Retry
             </button>
@@ -236,7 +161,6 @@ const ProtectedLayout: React.FC = () => {
     );
   }
 
-  // Extract tab from path: /admin/dashboard -> dashboard, /admin -> dashboard
   const pathTabs: AdminTab[] = [
     'dashboard', 'submissions', 'students', 'github', 'activity', 'moderation',
     'events', 'event-registrations', 'voting', 'voting-results',
@@ -314,21 +238,21 @@ const router = createBrowserRouter([
       { path: 'students', element: <StudentsPage /> },
       { path: 'students/:studentId', element: <StudentsPage /> },
       { path: 'github', element: <AdminGithubPage /> },
-      { path: 'activity', element: <ActivityPage /> },
-      { path: 'moderation', element: <Moderation /> },
-      { path: 'events', element: <AdminEvents /> },
-      { path: 'event-registrations', element: <EventRegistrations /> },
-      { path: 'voting', element: <VotingManagement /> },
-      { path: 'voting-results', element: <VotingResults /> },
-      { path: 'communications', element: <Communications /> },
-      { path: 'email-automation', element: <EmailAutomation /> },
-      { path: 'email-history', element: <EmailHistory /> },
-      { path: 'analytics', element: <Analytics /> },
-      { path: 'exports', element: <Exports /> },
-      { path: 'storage', element: <Storage /> },
-      { path: 'roles', element: <RolesPermissions /> },
-      { path: 'audit-logs', element: <AuditLogs /> },
-      { path: 'settings', element: <Settings /> },
+      { path: 'activity', element: <ActivityLogPage /> },
+      { path: 'moderation', element: <ModerationPage /> },
+      { path: 'events', element: <AdminEventsPage /> },
+      { path: 'event-registrations', element: <EventRegistrationsPage /> },
+      { path: 'voting', element: <VotingManagementPage /> },
+      { path: 'voting-results', element: <VotingResultsPage /> },
+      { path: 'communications', element: <AnnouncementsPage /> },
+      { path: 'email-automation', element: <EmailAutomationPage /> },
+      { path: 'email-history', element: <EmailHistoryPage /> },
+      { path: 'analytics', element: <AnalyticsPage /> },
+      { path: 'exports', element: <ExportsPage /> },
+      { path: 'storage', element: <StoragePage /> },
+      { path: 'roles', element: <RolesPermissionsPage /> },
+      { path: 'audit-logs', element: <AuditLogsPage /> },
+      { path: 'settings', element: <SettingsPage /> },
       { path: '*', element: <Navigate to="/admin/dashboard" replace /> },
     ],
   },
@@ -351,12 +275,11 @@ const router = createBrowserRouter([
 ]);
 
 export const App: React.FC = () => {
-  // Wraps the router, not the other way round, so every route — including the
-  // lazy-loaded pages — can call `useConfirm()`. Mounting it inside the router
-  // would leave the login route without it.
   return (
     <ConfirmProvider>
       <RouterProvider router={router} />
     </ConfirmProvider>
   );
 };
+
+export default App;

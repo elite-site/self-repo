@@ -1,39 +1,40 @@
 import React, { useCallback, lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, Outlet, useNavigate, BrowserRouter } from 'react-router-dom';
-import { StudentSession } from './types';
+import { StudentSession } from '@/shared/types';
 import { PublicThemeProvider, StudentThemeProvider } from './context/ThemeContext';
 import { SessionProvider, useSession } from './context/SessionContext';
-import { ToastProvider } from './components/Toast';
-import { ConfirmProvider } from './components/ui/ConfirmDialog';
-import { SkeletonPage } from './components/ui/Skeleton';
-import { hasStoredToken } from './utils/sessionBootstrap';
+import { ToastProvider } from '@/shared/ui/Toast';
+import { ConfirmProvider } from '@/shared/ui/ConfirmDialog';
+import { SkeletonPage } from '@/shared/ui/Skeleton';
+import { hasStoredToken } from '@/shared/utils/sessionBootstrap';
 
 // Public Pages (isolated chunk for public visitors)
 const HomePage = lazy(() => import('./pages/public/HomePage'));
-const StudentDirectoryPage = lazy(() => import('./pages/public/StudentDirectoryPage'));
-const PublicStudentProfilePage = lazy(() => import('./pages/public/PublicStudentProfilePage'));
-const PublicResumeViewerPage = lazy(() => import('./pages/public/PublicResumeViewerPage'));
-const PublicEventsPage = lazy(() => import('./pages/public/PublicEventsPage'));
-const PublicEventDetailPage = lazy(() => import('./pages/public/PublicEventDetailPage'));
-const LoginPage = lazy(() => import('./pages/LoginPage'));
-const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+const StudentDirectoryPage = lazy(() => import('@/features/directory/pages/StudentDirectoryPage'));
+const PublicStudentProfilePage = lazy(() => import('@/features/public-profile/pages/PublicStudentProfilePage'));
+const PublicResumeViewerPage = lazy(() => import('@/features/resume/pages/PublicResumeViewerPage'));
+const PublicEventsPage = lazy(() => import('@/features/events/pages/PublicEventsPage'));
+const PublicEventDetailPage = lazy(() => import('@/features/events/pages/PublicEventDetailPage'));
+const LoginPage = lazy(() => import('@/features/auth/pages/LoginPage'));
+const SettingsPage = lazy(() => import('@/features/profile/pages/SettingsPage'));
 
 // Protected Student Portal Layout & Pages (isolated chunk for authenticated students)
-const AppLayout = lazy(() => import('./components/layout/AppLayout'));
-const DashboardPage = lazy(() => import('./pages/DashboardPage'));
-const ProfilePage = lazy(() => import('./pages/ProfilePage'));
-const EditProfilePage = lazy(() => import('./pages/EditProfilePage'));
-const PortfolioPage = lazy(() => import('./pages/PortfolioPage'));
-const GithubPage = lazy(() => import('./pages/GithubPage'));
-const VideoPage = lazy(() => import('./pages/VideoPage'));
-const ResumePage = lazy(() => import('./pages/ResumePage'));
-const EventsPage = lazy(() => import('./pages/EventsPage'));
-const EventDetailPage = lazy(() => import('./pages/EventDetailPage'));
-const RegistrationsPage = lazy(() => import('./pages/RegistrationsPage'));
-const TeamsPage = lazy(() => import('./pages/TeamsPage'));
-const VotingPage = lazy(() => import('./pages/VotingPage'));
-const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
-const AnnouncementDetailPage = lazy(() => import('./pages/AnnouncementDetailPage'));
+const AppLayout = lazy(() => import('@/shared/layout/AppLayout'));
+const DashboardPage = lazy(() => import('@/features/dashboard/pages/DashboardPage'));
+const ProfilePage = lazy(() => import('@/features/profile/pages/ProfilePage'));
+const EditProfilePage = lazy(() => import('@/features/profile/pages/EditProfilePage'));
+const PortfolioPage = lazy(() => import('@/features/portfolio/pages/PortfolioPage'));
+const GithubPage = lazy(() => import('@/features/github/pages/GithubPage'));
+const VideoPage = lazy(() => import('@/features/video/pages/VideoPage'));
+const ResumePage = lazy(() => import('@/features/resume/pages/ResumePage'));
+const EventsPage = lazy(() => import('@/features/events/pages/EventsPage'));
+const EventDetailPage = lazy(() => import('@/features/events/pages/EventDetailPage'));
+const RegistrationsPage = lazy(() => import('@/features/events/pages/RegistrationsPage'));
+const TeamsPage = lazy(() => import('@/features/teams/pages/TeamsPage'));
+const VotingPage = lazy(() => import('@/features/voting/pages/VotingPage'));
+const NotificationsPage = lazy(() => import('@/features/notifications/pages/NotificationsPage'));
+const AnnouncementDetailPage = lazy(() => import('@/features/notifications/pages/AnnouncementDetailPage'));
+
 const RouteLoadingFallback: React.FC = () => (
   <div className="min-h-[100dvh] bg-surface-canvas px-4 py-8 sm:px-6 sm:py-10">
     <div className="mx-auto w-full max-w-canvas">
@@ -83,11 +84,6 @@ const AuthWrapper: React.FC = () => {
     navigate('/', { replace: true });
   }, [logout, navigate]);
 
-  // Only the protected subtree waits on the session check. Public routes render
-  // as soon as their own code is loaded, so a visitor with no token paints
-  // immediately instead of watching a full-screen loader until a 401 returns.
-  // A server-side failure must not masquerade as a logout: offer a retry rather
-  // than silently sending the student back to the sign-in page.
   const protectedShell = () => {
     if (authChecking) {
       return <RouteLoadingFallback />;
@@ -175,12 +171,6 @@ const AuthWrapper: React.FC = () => {
           }
         />
 
-        {/* Events are readable without a login: a visitor gets the read-only
-            public page, a signed-in student gets the full registration flow
-            inside the portal chrome. Both live on the same path so a public event
-            link resolves for everyone. The one case that still waits is a stored
-            token whose session has not been verified yet, so a signed-in student
-            never sees the public version flash before being redirected. */}
         <Route
           element={
             authChecking && hasStoredToken() ? (

@@ -1,4 +1,2 @@
-import profileRoutes from './student/profile.routes';
-
+export { studentProfileRouter as default } from '../modules/students';
 export * from './student/profile.routes';
-export default profileRoutes;

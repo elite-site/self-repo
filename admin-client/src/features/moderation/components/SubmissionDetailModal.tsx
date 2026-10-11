@@ -1,0 +1,812 @@
+import React, { useState, useEffect, useRef } from 'react';
+import ReactDOM from 'react-dom';
+import { useConfirm } from '@/shared/ui/ConfirmDialog';
+import {
+  X,
+  Film,
+  Trash2,
+  VideoOff,
+  Circle,
+  MessageSquare,
+  Send,
+  Eraser,
+  UserRound,
+  Mail,
+  Phone,
+  Folder,
+  ShieldCheck,
+  Globe,
+  EyeOff,
+  RefreshCw,
+  Loader2,
+  AlertCircle,
+  ExternalLink,
+} from 'lucide-react';
+import { IntroVideoState, Submission, SubmissionRating } from '@/types';
+import { adminApi } from '@/services/api';
+
+const REVIEW_PROS = [
+  'expressive posture',
+  'commanding voice',
+  'focused mindset',
+  'perfect lighting & background',
+];
+const REVIEW_CONS = [
+  'unclear thoughts',
+  'broken voice',
+  'bad lighting',
+];
+
+const VIDEO_STATUS_BADGE: Record<string, { label: string; cls: string }> = {
+  PENDING: { label: 'Pending review', cls: 'badge badge-pending' },
+  UNDER_REVIEW: { label: 'Under review', cls: 'badge badge-review' },
+  APPROVED: { label: 'Approved', cls: 'badge badge-approved' },
+  REJECTED: { label: 'Rejected', cls: 'badge badge-rejected' },
+  CHANGES_REQUESTED: { label: 'New video requested', cls: 'badge badge-changes' },
+};
+
+interface SubmissionDetailModalProps {
+  submission: Submission | null;
+  onClose: () => void;
+  onUpdated: (updated: Submission) => void;
+  onDeleted?: (deletedId: string) => void;
+}
+
+const ratingOptions: Array<{
+  value: SubmissionRating;
+  label: string;
+  description: string;
+  activeClass: string;
+  dotClass: string;
+}> = [
+  {
+    value: 'GOOD',
+    label: 'Good',
+    description: 'Confident, clear, excellent introduction',
+    activeClass: 'bg-status-approved text-on-primary border-status-approved',
+    dotClass: 'bg-status-approved',
+  },
+  {
+    value: 'AVERAGE',
+    label: 'Average',
+    description: 'Acceptable, decent communication',
+    activeClass: 'bg-status-pending text-on-primary border-status-pending',
+    dotClass: 'bg-status-pending',
+  },
+  {
+    value: 'POOR',
+    label: 'Poor',
+    description: 'Needs improvement, weak delivery',
+    activeClass: 'bg-status-rejected text-on-primary border-status-rejected',
+    dotClass: 'bg-status-rejected',
+  },
+];
+
+export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
+  submission,
+  onClose,
+  onUpdated,
+  onDeleted,
+}) => {
+  const modalRef = useRef<HTMLDivElement>(null);
+  const previousActiveElement = useRef<HTMLElement | null>(null);
+
+  const [rating, setRating] = useState<SubmissionRating | null>(submission?.rating || null);
+  const [updating, setUpdating] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deletingVideo, setDeletingVideo] = useState(false);
+  const [hasVideo, setHasVideo] = useState<boolean>(Boolean(submission?.videoDriveId));
+  const [introVideo, setIntroVideo] = useState<IntroVideoState | null>(submission?.introVideo ?? null);
+  const [requestingVideo, setRequestingVideo] = useState(false);
+  const [showRequestForm, setShowRequestForm] = useState(false);
+  const [requestReason, setRequestReason] = useState('');
+  const [togglingPublic, setTogglingPublic] = useState(false);
+  const [videoNotice, setVideoNotice] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [reviewText, setReviewText] = useState(submission?.reviewText || '');
+  const [reviewPros, setReviewPros] = useState<string[]>(submission?.reviewPros || []);
+  const [reviewCons, setReviewCons] = useState<string[]>(submission?.reviewCons || []);
+  const [sendingReview, setSendingReview] = useState(false);
+  const [videoError, setVideoError] = useState(false);
+  const [videoRetryKey, setVideoRetryKey] = useState(0);
+
+  // Lock background body scroll and listen for Escape key
+  useEffect(() => {
+    previousActiveElement.current = document.activeElement as HTMLElement;
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+      // Focus trapping
+      if (e.key === 'Tab' && modalRef.current) {
+        const focusableElements = modalRef.current.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
+
+        if (e.shiftKey && document.activeElement === firstElement) {
+          e.preventDefault();
+          lastElement?.focus();
+        } else if (!e.shiftKey && document.activeElement === lastElement) {
+          e.preventDefault();
+          firstElement?.focus();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+      previousActiveElement.current?.focus();
+    };
+  }, [onClose]);
+
+  // Focus the close button on mount
+  useEffect(() => {
+    modalRef.current?.querySelector<HTMLElement>('button[aria-label="Close modal"]')?.focus();
+  }, []);
+
+  // Load the freshest moderation + public visibility state for this video.
+  useEffect(() => {
+    if (!submission) return;
+    let cancelled = false;
+    adminApi
+      .getSubmission(submission.id)
+      .then((data) => {
+        if (!cancelled && data?.introVideo) setIntroVideo(data.introVideo as IntroVideoState);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [submission]);
+
+  if (!submission) return null;
+
+  const videoUrl = hasVideo ? adminApi.getMediaUrl(submission.id, 'video', submission.videoDriveId || submission.submittedAt) : null;
+
+  const handleRequestNewVideo = async () => {
+    setRequestingVideo(true);
+    setVideoNotice(null);
+    try {
+      const res = await adminApi.requestNewVideo(submission.id, requestReason);
+      setVideoNotice(res.message || 'The student has been notified.');
+      setShowRequestForm(false);
+      setRequestReason('');
+      setIntroVideo((prev) =>
+        prev
+          ? {
+              ...prev,
+              status: 'CHANGES_REQUESTED',
+              changeRequestedAt: new Date().toISOString(),
+              changeRequestNote: requestReason.trim() || null,
+            }
+          : prev,
+      );
+    } catch (err) {
+      setVideoNotice('Failed to request a new video. Try again.');
+    } finally {
+      setRequestingVideo(false);
+    }
+  };
+
+  const handleTogglePublic = async () => {
+    if (!introVideo) return;
+    const next = !introVideo.isPublic;
+    setTogglingPublic(true);
+    setVideoNotice(null);
+    try {
+      const res = await adminApi.setVideoPublic(introVideo.id, next);
+      setIntroVideo((prev) => (prev ? { ...prev, isPublic: next } : prev));
+      setVideoNotice(res.message || 'Public visibility updated.');
+    } catch (err: any) {
+      setVideoNotice(err?.response?.data?.message || 'Failed to update public visibility.');
+    } finally {
+      setTogglingPublic(false);
+    }
+  };
+
+  const handleRate = async (value: SubmissionRating | null) => {
+    setUpdating(true);
+    setActionError(null);
+    try {
+      const res = await adminApi.updateRating(submission.id, value);
+      if (res.success) {
+        setRating(res.submission.rating || null);
+        onUpdated(res.submission);
+      }
+    } catch (err) {
+      setActionError('Failed to update rating.');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const confirm = useConfirm();
+
+  const handleDeleteVideo = async () => {
+    const confirmed = await confirm({
+      title: 'Delete this introduction video?',
+      description: `The video for ${submission.name} (${submission.rollNo}) and its file will be permanently removed. The student will then be able to upload a replacement.`,
+      confirmLabel: 'Delete video',
+      tone: 'danger',
+    });
+    if (!confirmed) return;
+
+    setDeletingVideo(true);
+    setActionError(null);
+    try {
+      const res = await adminApi.deleteVideo(submission.id);
+      if (res.success) {
+        setHasVideo(false);
+        onUpdated(res.submission);
+      }
+    } catch (err: any) {
+      setActionError(`Failed to delete video: ${err.message || 'Unknown error'}`);
+    } finally {
+      setDeletingVideo(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    const confirmed = await confirm({
+      title: 'Delete this submission?',
+      description: `The submission for ${submission.name} (${submission.rollNo}) will be removed from the database and all of its files deleted. This cannot be undone.`,
+      confirmLabel: 'Delete submission',
+      tone: 'danger',
+    });
+    if (!confirmed) return;
+
+    setDeleting(true);
+    setActionError(null);
+    try {
+      const res = await adminApi.deleteSubmission(submission.id);
+      if (res.success) {
+        if (onDeleted) {
+          onDeleted(submission.id);
+        }
+        onClose();
+      }
+    } catch (err: any) {
+      setActionError(`Failed to delete submission: ${err.message || 'Unknown error'}`);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const activeRating = ratingOptions.find((r) => r.value === rating);
+
+  const togglePros = (tag: string) => {
+    setReviewPros((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    );
+  };
+
+  const toggleCons = (tag: string) => {
+    setReviewCons((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    );
+  };
+
+  const handleSubmitReview = async (clear: boolean) => {
+    setSendingReview(true);
+    setActionError(null);
+    try {
+      const res = await adminApi.updateReview(submission.id, {
+        reviewText: clear ? '' : reviewText,
+        pros: clear ? [] : reviewPros,
+        cons: clear ? [] : reviewCons,
+      });
+      if (res.success) {
+        if (clear) {
+          setReviewText('');
+          setReviewPros([]);
+          setReviewCons([]);
+        } else {
+          setReviewText(res.submission.reviewText || '');
+          setReviewPros(res.submission.reviewPros || []);
+          setReviewCons(res.submission.reviewCons || []);
+        }
+        onUpdated(res.submission);
+      }
+    } catch (err: any) {
+      setActionError(`Failed to send response: ${err.message || 'Unknown error'}`);
+    } finally {
+      setSendingReview(false);
+    }
+  };
+
+  const initials = submission.name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase())
+    .join('');
+
+  return ReactDOM.createPortal(
+    <>
+      <div
+        className="fixed inset-0 z-modal bg-scrim flex items-center justify-center p-3 sm:p-4 md:p-6 animate-fade-in"
+        onClick={(e) => {
+          if (e.target === e.currentTarget) onClose();
+        }}
+        role="presentation"
+      >
+        <div
+          ref={modalRef}
+          className="surface surface-raised rounded-xl w-full max-w-5xl max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2rem)] md:max-h-[calc(100dvh-3rem)] flex flex-col shadow-modal text-left overflow-hidden my-auto animate-scale-in"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-title"
+          aria-describedby="modal-body"
+        >
+          {/* 1. STICKY MODAL HEADER */}
+          <div className="p-4 sm:p-5 border-b border-edge bg-surface-sunken flex items-center justify-between flex-none shrink-0">
+            <div className="flex items-center gap-3 min-w-0 pr-2">
+              <div className="w-11 h-11 rounded-xl bg-brand text-on-primary flex items-center justify-center text-base font-semibold shrink-0">
+                {initials || <UserRound className="w-5 h-5" />}
+              </div>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                  <h2 id="modal-title" className="text-lg sm:text-xl font-bold text-ink tracking-tight truncate">
+                    {submission.name}
+                  </h2>
+                  {activeRating ? (
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-xs font-semibold shrink-0 ${activeRating.value === 'GOOD' ? 'badge badge-approved' : activeRating.value === 'AVERAGE' ? 'badge badge-pending' : 'badge badge-rejected'}`}>
+                      <span className={`w-2 h-2 rounded-full ${activeRating.dotClass}`} />
+                      {activeRating.label}
+                    </span>
+                  ) : (
+                    <span className="badge badge-draft shrink-0">
+                      Not rated
+                    </span>
+                  )}
+                </div>
+                <div className="text-xs text-ink-secondary mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 font-mono">
+                  <span className="font-semibold">{submission.rollNo}</span>
+                  <span>•</span>
+                  <span>{submission.branch}-{submission.section} (Year {submission.year})</span>
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={onClose}
+              aria-label="Close modal"
+              className="btn btn-ghost p-2"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* 2. SCROLLABLE MODAL BODY */}
+          <div id="modal-body" className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 md:p-8 space-y-6">
+            {actionError && (
+              <div className="flex items-center justify-between gap-3 p-3.5 bg-status-bg-rejected border border-edge-strong rounded-xl text-status-rejected text-xs" role="alert">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{actionError}</span>
+                </div>
+                <button onClick={() => setActionError(null)} className="font-bold underline cursor-pointer shrink-0">
+                  Close
+                </button>
+              </div>
+            )}
+            {/* STUDENT IDENTITY CARD */}
+            <div className="surface p-4 sm:p-5">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 text-xs items-start">
+                <div className="min-w-0">
+                  <div className="text-ink-muted text-xs font-semibold">Roll number</div>
+                  <div className="text-ink font-mono font-bold mt-0.5 truncate">{submission.rollNo}</div>
+                </div>
+                <div className="min-w-0">
+                  <div className="text-ink-muted text-xs font-semibold">Section &amp; year</div>
+                  <div className="text-ink font-semibold mt-0.5 truncate">{submission.branch}-{submission.section} • Year {submission.year}</div>
+                </div>
+                <div className="min-w-0">
+                  <div className="text-ink-muted text-xs font-semibold flex items-center gap-1">
+                    <Mail className="w-3 h-3" /> Email
+                  </div>
+                  <div className="text-ink mt-0.5 break-all">{submission.email}</div>
+                </div>
+                <div className="min-w-0">
+                  <div className="text-ink-muted text-xs font-semibold flex items-center gap-1">
+                    <Phone className="w-3 h-3" /> Phone
+                  </div>
+                  <div className="text-ink font-mono font-semibold mt-0.5">{submission.phoneNo || '—'}</div>
+                </div>
+                <div className="min-w-0">
+                  <div className="text-ink-muted text-xs font-semibold flex items-center gap-1">
+                    <ShieldCheck className="w-3 h-3" /> Video status
+                  </div>
+                  <div className={`font-semibold mt-0.5 text-xs ${hasVideo ? 'text-status-approved' : 'text-status-rejected'}`}>
+                    {hasVideo ? 'Available' : 'No video'}
+                  </div>
+                </div>
+              </div>
+              <div className="mt-4 pt-3 border-t border-edge flex items-center gap-1.5 text-xs text-ink-secondary font-mono min-w-0">
+                <Folder className="w-3 h-3 text-ink-muted shrink-0" />
+                <span className="truncate">{submission.driveFolderPath}</span>
+              </div>
+            </div>
+
+            {/* VIDEO */}
+            <div className="surface p-4 sm:p-5 shadow-sm">
+              <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-brand-soft text-brand-soft-text flex items-center justify-center shrink-0">
+                    <Film className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-ink tracking-tight">
+                      Introduction video
+                    </h3>
+                    <p className="text-xs text-ink-secondary">
+                      Review the student's introduction clip below.
+                    </p>
+                  </div>
+                </div>
+                {hasVideo && (
+                  <div className="flex items-center gap-2">
+                    {introVideo?.status && (
+                      <span className={`${VIDEO_STATUS_BADGE[introVideo.status]?.cls ?? 'badge badge-draft'}`}>
+                        {VIDEO_STATUS_BADGE[introVideo.status]?.label ?? introVideo.status}
+                      </span>
+                    )}
+                    <span className="badge badge-approved">
+                      <span className="w-2 h-2 rounded-full bg-status-approved inline-block" />
+                      Uploaded
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {videoUrl ? (
+                videoError ? (
+                  <div className="surface-sunken border border-edge-strong rounded-xl p-8 text-center space-y-3">
+                    <VideoOff className="w-8 h-8 text-status-changes mx-auto" />
+                    <div>
+                      <p className="text-sm font-bold text-ink">Video player error</p>
+                      <p className="text-xs text-ink-secondary mt-0.5">Could not play video stream directly in the browser.</p>
+                    </div>
+                    <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setVideoError(false);
+                          setVideoRetryKey((k) => k + 1);
+                        }}
+                        className="btn btn-secondary text-xs inline-flex items-center gap-1.5"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        <span>Retry Playback</span>
+                      </button>
+                      {submission.videoDriveId && (
+                        <a
+                          href={`https://drive.google.com/file/d/${submission.videoDriveId.trim()}/view`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="btn btn-primary text-xs inline-flex items-center gap-1.5"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                          <span>Watch in Google Drive</span>
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-surface-inverse rounded-xl overflow-hidden shadow-md">
+                    <video
+                      key={`${submission.id}-${videoRetryKey}`}
+                      src={videoRetryKey > 0 && submission.videoDriveId
+                        ? `/api/public/media/video/${submission.videoDriveId.trim()}?stream=true&retry=${videoRetryKey}`
+                        : videoUrl}
+                      controls
+                      playsInline
+                      preload="metadata"
+                      onError={() => setVideoError(true)}
+                      className="w-full max-h-[420px] bg-black"
+                    />
+                  </div>
+                )
+              ) : (
+                <div className="surface-sunken border border-edge-strong rounded-xl p-10 text-center space-y-2">
+                  <VideoOff className="w-6 h-6 text-ink-muted mx-auto" />
+                  <p className="text-xs text-ink-secondary">
+                    No video is linked to this submission. The student can upload a replacement video.
+                  </p>
+                </div>
+              )}
+
+              {/* PUBLIC VISIBILITY + CHANGE REQUEST */}
+              <div className="mt-4 pt-4 border-t border-edge space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-start gap-2.5 min-w-0">
+                    {introVideo?.isPublic ? (
+                      <Globe className="w-4 h-4 shrink-0 text-status-approved mt-0.5" />
+                    ) : (
+                      <EyeOff className="w-4 h-4 shrink-0 text-ink-muted mt-0.5" />
+                    )}
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-ink">
+                        {introVideo?.isPublic ? 'Visible on the public page' : 'Not published publicly'}
+                      </p>
+                      <p className="text-xs text-ink-secondary mt-0.5 leading-relaxed">
+                        {introVideo?.status === 'APPROVED'
+                          ? 'Published videos are watchable by anyone on the public home page, without logging in.'
+                          : 'Only an approved video can be published to the public page.'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={handleTogglePublic}
+                      disabled={!introVideo || togglingPublic || introVideo.status !== 'APPROVED'}
+                      title={introVideo?.status === 'APPROVED' ? undefined : 'Only approved videos can be published'}
+                      className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
+                        introVideo?.isPublic
+                          ? 'btn btn-ghost'
+                          : 'btn btn-primary'
+                      }`}
+                    >
+                      {togglingPublic ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : introVideo?.isPublic ? (
+                        <EyeOff className="w-3.5 h-3.5" />
+                      ) : (
+                        <Globe className="w-3.5 h-3.5" />
+                      )}
+                      {introVideo?.isPublic ? 'Hide from public profile' : 'Show on public profile'}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setShowRequestForm((v) => !v)}
+                      className="btn btn-ghost text-status-changes hover:bg-status-bg-changes hover:text-status-changes border border-status-bg-changes"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" />
+                      Request new upload
+                    </button>
+                  </div>
+                </div>
+
+                {showRequestForm && (
+                  <div className="space-y-2 p-3 rounded-xl border border-status-bg-changes bg-status-bg-changes/50">
+                    <label className="block text-xs font-semibold text-status-changes">
+                      What should the student change? <span className="font-normal normal-case">(optional)</span>
+                    </label>
+                    <textarea
+                      value={requestReason}
+                      onChange={(e) => setRequestReason(e.target.value)}
+                      rows={3}
+                      placeholder="e.g. The audio is not clear in the second half, please re-record."
+                      className="textarea"
+                    />
+                    <p className="text-xs text-status-changes/80 leading-relaxed">
+                      The student gets a notification. Their current video stays live until they upload the
+                      replacement, which then overrides it and removes the old file.
+                    </p>
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowRequestForm(false)}
+                        className="btn btn-ghost"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleRequestNewVideo}
+                        disabled={requestingVideo}
+                        className="btn btn-primary"
+                      >
+                        {requestingVideo ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <MessageSquare className="w-3.5 h-3.5" />}
+                        Send to student
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {videoNotice && (
+                  <p className="text-xs text-ink-secondary flex items-center gap-1.5">
+                    <ShieldCheck className="w-3 h-3 shrink-0" />
+                    {videoNotice}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* RATING + RESPONSE GRID */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+              {/* RATING CONTROL */}
+              <div className="surface p-5 shadow-sm space-y-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-status-bg-approved text-status-approved flex items-center justify-center shrink-0">
+                    <Circle className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-ink tracking-tight">
+                      Introduction rating
+                    </h3>
+                    <p className="text-xs text-ink-secondary">Assess the delivery and clarity.</p>
+                  </div>
+                </div>
+
+                <div className="pt-1 space-y-2">
+                  {ratingOptions.map((opt) => {
+                    const isActive = rating === opt.value;
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        disabled={updating || deleting || deletingVideo}
+                        onClick={() => handleRate(isActive ? null : opt.value)}
+                        className={`w-full py-3 px-4 rounded-lg text-left transition-colors flex items-start gap-3 border cursor-pointer disabled:opacity-50 ${
+                          isActive
+                            ? opt.activeClass
+                            : 'bg-surface border-edge hover:border-edge-strong'
+                        }`}
+                      >
+                        <Circle className={`w-4 h-4 mt-0.5 shrink-0 ${isActive ? 'text-on-primary' : 'text-ink-muted'}`} />
+                        <div className="min-w-0">
+                          <div className={`font-semibold text-xs ${isActive ? 'text-on-primary' : 'text-ink'}`}>
+                            {opt.label}
+                          </div>
+                          <div className={`text-xs mt-0.5 ${isActive ? 'text-on-primary/80' : 'text-ink-secondary'}`}>
+                            {opt.description}
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+
+                  {updating && (
+                    <div className="text-xs text-ink-muted font-mono pt-1">Saving rating…</div>
+                  )}
+                </div>
+              </div>
+
+              {/* SEND RESPONSE */}
+              <div className="surface p-5 shadow-sm space-y-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-status-bg-rejected text-status-rejected flex items-center justify-center shrink-0">
+                    <MessageSquare className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-ink tracking-tight">
+                      Send to student
+                    </h3>
+                    <p className="text-xs text-ink-secondary">
+                      Text feedback plus hashtag keywords the student sees after submitting.
+                    </p>
+                  </div>
+                </div>
+
+                <textarea
+                  value={reviewText}
+                  onChange={(e) => setReviewText(e.target.value)}
+                  rows={3}
+                  placeholder="Write your review. What did the student do well, and what to improve?"
+                  className="textarea bg-surface-sunken"
+                />
+
+                <div className="space-y-3">
+                  <div>
+                    <div className="text-xs font-semibold text-status-approved mb-1.5">
+                      Pros, select keywords
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {REVIEW_PROS.map((tag) => {
+                        const on = reviewPros.includes(tag);
+                        return (
+                          <button
+                            key={tag}
+                            type="button"
+                            onClick={() => togglePros(tag)}
+                            className={`px-2.5 py-1 rounded-full border text-xs font-semibold transition-colors cursor-pointer ${
+                              on
+                                ? 'bg-status-approved text-on-primary border-status-approved'
+                                : 'badge badge-approved hover:border-status-approved'
+                            }`}
+                          >
+                            # {tag}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs font-semibold text-status-rejected mb-1.5">
+                      Cons, select keywords
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {REVIEW_CONS.map((tag) => {
+                        const on = reviewCons.includes(tag);
+                        return (
+                          <button
+                            key={tag}
+                            type="button"
+                            onClick={() => toggleCons(tag)}
+                            className={`px-2.5 py-1 rounded-full border text-xs font-semibold transition-colors cursor-pointer ${
+                              on
+                                ? 'bg-status-rejected text-on-primary border-status-rejected'
+                                : 'badge badge-rejected hover:border-status-rejected'
+                            }`}
+                          >
+                            # {tag}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 pt-1">
+                  <button
+                    type="button"
+                    disabled={sendingReview || deleting || deletingVideo}
+                    onClick={() => handleSubmitReview(false)}
+                    className="flex-1 btn btn-primary"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                    <span>{sendingReview ? 'Sending…' : 'Send to student'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    disabled={sendingReview || deleting || deletingVideo}
+                    onClick={() => handleSubmitReview(true)}
+                    title="Clear the response (marks the submission as not yet reviewed)"
+                    className="btn btn-secondary"
+                  >
+                    <Eraser className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Clear</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* MANAGE ACTIONS */}
+            <div className="surface p-5 shadow-sm flex flex-col sm:flex-row items-stretch sm:items-center gap-3 justify-between">
+              <div>
+                <h3 className="text-sm font-semibold text-ink tracking-tight">
+                  Open student
+                </h3>
+                <p className="text-xs text-ink-secondary mt-0.5">
+                  Deleting the video lets the student upload a replacement. Removing the record is permanent.
+                </p>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2 shrink-0">
+                <button
+                  type="button"
+                  disabled={updating || deleting || deletingVideo || !hasVideo}
+                  onClick={handleDeleteVideo}
+                  className="btn btn-danger disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <VideoOff className="w-4 h-4" />
+                  <span>{deletingVideo ? 'Deleting…' : 'Delete file'}</span>
+                </button>
+                <button
+                  type="button"
+                  disabled={updating || deleting || deletingVideo}
+                  onClick={handleDelete}
+                  className="btn btn-danger"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>{deleting ? 'Deleting…' : 'Delete record'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>,
+    document.body
+  );
+};
