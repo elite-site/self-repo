@@ -113,56 +113,32 @@ Forbidden unless explicitly requested:
 
 ```
 .
-├── web/                  Student portal. Vite + React + TypeScript + Tailwind. -> Netlify
-│   ├── src/pages/        Route-level pages (Dashboard, Profile, Video, Events, Teams, Voting, Portfolio, Resume...)
-│   ├── src/components/   Shared UI (Navbar, Footer, PhotoCropModal, PublicVideoShowcase...)
-│   ├── src/context/      React contexts
-│   ├── src/hooks/        Custom hooks
-│   ├── src/services/     API client code (talks to backend /api)
-│   ├── src/utils/        Helpers
-│   └── src/types/        TS types
-├── admin-client/         Admin UI. Vite + React + TS + Tailwind. base path /admin/.
-│   │                     Built INTO backend/public/admin (served by backend). No separate deploy.
-│   ├── src/pages/        Analytics, AuditLogs, Moderation, Exports, Settings, EmailTemplateEditor,
-│   │                     VotingManagement, EventRegistrations, StudentDetail, etc.
-│   ├── src/components/
-│   ├── src/services/     API client
-│   └── src/context/
-├── backend/              Express + Prisma + TypeScript API. -> Render
-│   ├── prisma/           schema.prisma, migrations/ (tracked SQL), seed.ts
-│   ├── src/server.ts     Entry point
-│   ├── src/config/       env.ts, constants.ts, staticAssets.ts
-│   ├── src/middleware/   auth, studentAuth, rateLimiter, upload, errorHandler, apiError
-│   ├── src/routes/       public.*, student.*, admin.* route modules
-│   ├── src/services/     sso, drive, email, validation, activity, announcement,
-│   │                     notification, limits, academicYear
-│   ├── src/jobs/         announcementScheduler.ts
-│   ├── src/lib/          prisma.ts (Prisma client)
-│   ├── scripts/          db-setup, import-roster, roster-parser, get-oauth-token, verify-*
-│   └── tests/            Vitest + supertest suites
-├── shared/               Design tokens: tokens.css, tokens.mjs, tailwind-preset.mjs
-├── tools/                Token build, contrast check, utility check, icon build, font vendoring
-├── scripts/dev.js        Runs all dev servers together
-├── docs/                 Runbooks, ADRs, onboarding, OpenAPI (reference only)
-└── .github/workflows/ci.yml
+├── web/                  Student portal (Vite + React + TS + Tailwind)
+│   ├── src/features/     Domain modules (auth, dashboard, profile, portfolio, github, events, teams, voting, etc.)
+│   └── src/shared/       Shared ui, layout, api client, hooks, lib, utils, types
+├── admin-client/         Admin UI (Vite + React + TS + Tailwind)
+│   ├── src/features/     Admin modules (moderation, students, events, registrations, roles, settings, etc.)
+│   └── src/shared/       Shared ui, layout, api client, hooks, utils, types
+├── backend/              Express + Prisma + TypeScript API
+│   ├── src/modules/      Domain modules: <m>.routes -> controller -> service -> repository
+│   │                     (auth, students, portfolio, github, events, voting, media, email, moderation, announcements, admin, public)
+│   ├── src/infrastructure/ prisma, email, drive, github clients
+│   └── src/shared/       middleware, errors, utils, types
 ```
 
 ### 3.1 Where to look for common tasks
 | Task type | Start here |
 |---|---|
-| Student login / SSO | `backend/src/services/sso.service.ts`, `backend/src/routes/student.routes.ts`, `web/src/components/StudentLogin.tsx` |
-| Admin login | `backend/src/routes/admin.auth.routes.ts`, `backend/src/middleware/auth.ts` |
-| Video upload / validation | `backend/src/services/validation.service.ts`, `backend/src/middleware/upload.ts`, `backend/src/services/drive.service.ts`, `web/src/pages/VideoPage.tsx` |
-| Email sending | `backend/src/services/email.service.ts` |
-| Student profile | `backend/src/routes/student.profile.routes.ts`, `web/src/pages/ProfilePage.tsx`, `EditProfilePage.tsx` |
-| Events / registrations | `backend/src/routes/student.events.routes.ts`, `web/src/pages/EventsPage.tsx` |
-| Teams / invitations | `web/src/pages/TeamsPage.tsx`, related backend student routes |
-| Voting | `web/src/pages/VotingPage.tsx`, `admin-client/src/pages/VotingManagement.tsx` |
-| Notifications / announcements | `backend/src/services/notification.service.ts`, `announcement.service.ts`, `jobs/announcementScheduler.ts` |
-| Rate limits / limits | `backend/src/middleware/rateLimiter.ts`, `backend/src/services/limits.service.ts` |
-| Env/config | `backend/src/config/env.ts` (and `backend/.env.example` — read only, never edit `.env`) |
-| Database schema | `backend/prisma/schema.prisma` |
-| Colors / design tokens | `shared/tokens.*` then run token build only if asked |
+| Student / Admin auth | `backend/src/modules/auth/`, `web/src/features/auth/` |
+| Student profile / directory | `backend/src/modules/students/`, `web/src/features/profile/` |
+| Video / resume / media | `backend/src/modules/media/`, `web/src/features/video/` |
+| Portfolio / achievements | `backend/src/modules/portfolio/`, `web/src/features/portfolio/` |
+| GitHub sync & skills | `backend/src/modules/github/`, `web/src/features/github/` |
+| Events & registrations | `backend/src/modules/events/`, `web/src/features/events/` |
+| Voting campaigns | `backend/src/modules/voting/`, `web/src/features/voting/` |
+| Announcements & email | `backend/src/modules/announcements/`, `backend/src/modules/email/` |
+| Admin moderation | `backend/src/modules/moderation/`, `admin-client/src/features/moderation/` |
+| Database / Prisma | `backend/src/infrastructure/prisma.ts`, `backend/prisma/schema.prisma` |
 
 Use this map to jump straight to the file. **Do not open other files to "double check."**
 
