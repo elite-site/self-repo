@@ -1,0 +1,133 @@
+import React, { useState } from 'react';
+import { Calendar, ShieldAlert, Layers, Users, Video, ClipboardList, Lock } from 'lucide-react';
+import { ACTIVE_EVENT_ID } from '@/shared/layout';
+import { registrationsApi } from '../api';
+import { ExportCard, DatasetItem } from '../components/ExportCard';
+
+export const ExportsPage: React.FC = () => {
+  const [downloading, setDownloading] = useState<string | null>(null);
+  const selectedEventId = ACTIVE_EVENT_ID;
+
+  const handleDownload = (type: string, url: string, filename: string) => {
+    setDownloading(type);
+    try {
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      console.error('Download error:', err);
+    } finally {
+      setTimeout(() => setDownloading(null), 1200);
+    }
+  };
+
+  const exportDatasets: DatasetItem[] = [
+    {
+      id: 'roster',
+      title: 'Student Master Roster',
+      category: 'Academic Directory',
+      icon: Users,
+      color: 'blue',
+      description:
+        'Complete directory of all registered students with roll numbers, contact details, year, section, and their current video submission status.',
+      fields: ['Roll Number', 'Full Name', 'Email', 'Year & Section', 'Branch', 'Submission Status', 'Rating', 'Review Notes'],
+      getUrl: () => registrationsApi.getStudentsExportUrl(selectedEventId),
+      filename: `student-roster-${selectedEventId}.xlsx`,
+    },
+    {
+      id: 'submissions',
+      title: 'Video Submissions & Faculty Reviews',
+      category: 'Evaluation Data',
+      icon: Video,
+      color: 'emerald',
+      description:
+        'Detailed breakdown of all uploaded introduction videos, qualitative review feedback, pros/cons keywords, faculty rating, and Google Drive identifiers.',
+      fields: ['Submission ID', 'Student Roll No', 'Video Drive File ID', 'Rating (GOOD/AVG/POOR)', 'Faculty Comments', 'Submitted At', 'Reviewed At'],
+      getUrl: () => registrationsApi.getSubmissionsExportUrl(selectedEventId),
+      filename: `video-submissions-${selectedEventId}.xlsx`,
+    },
+    {
+      id: 'registrations',
+      title: 'Event Registrations & Team Rosters',
+      category: 'Co-Curricular Events',
+      icon: ClipboardList,
+      color: 'purple',
+      description:
+        'Every individual and team registration across campus events, including team leaders, co-members, status flags, and custom questionnaire responses.',
+      fields: ['Registration ID', 'Event Name', 'Participant Roll No', 'Team Name & Leader', 'Members List', 'Approval Status', 'Form Answers'],
+      getUrl: () => registrationsApi.getRegistrationsExportUrl({ eventId: selectedEventId }),
+      filename: `event-registrations-${selectedEventId}.xlsx`,
+    },
+    {
+      id: 'audit',
+      title: 'Security & Activity Audit Logs',
+      category: 'Compliance & Governance',
+      icon: Lock,
+      color: 'rose',
+      description:
+        'Forensic security audit trail capturing all administrative operations, rating submissions, team removals, status overrides, and system timestamps.',
+      fields: ['Timestamp (UTC)', 'Admin Username', 'Category', 'Action Taken', 'Affected Student', 'Outcome Status', 'IP / Details'],
+      getUrl: () => registrationsApi.getActivityLogsExportUrl(),
+      filename: `activity-audit-logs-${Date.now()}.xlsx`,
+    },
+  ];
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-edge">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-ink">
+            Data Exports & Reporting Hub
+          </h1>
+          <p className="text-sm text-ink-muted mt-1">
+            Generate and download standard Microsoft Excel (.xlsx) workbooks for accreditation, departmental audits, and event logistics.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-surface-sunken border border-edge rounded-lg text-xs font-medium text-ink-secondary">
+            <Calendar className="w-3.5 h-3.5 text-ink-muted" />
+            <span>Target Event:</span>
+            <span className="font-bold text-ink">{selectedEventId}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Security notice */}
+      <div className="p-4 rounded-xl bg-status-bg-pending border border-edge flex items-start gap-3">
+        <ShieldAlert className="w-5 h-5 text-status-pending shrink-0 mt-0.5" />
+        <div className="text-xs text-ink leading-relaxed">
+          <strong className="font-semibold">Confidentiality Notice:</strong> Exported files contain Student Personally Identifiable Information (PII) including email addresses, phone contacts, and evaluation remarks. Ensure downloaded workbooks are stored in accordance with institutional data privacy policies and deleted after official tabulation.
+        </div>
+      </div>
+
+      {/* Dataset Cards Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {exportDatasets.map((dataset) => (
+          <ExportCard
+            key={dataset.id}
+            dataset={dataset}
+            isDownloading={downloading === dataset.id}
+            onDownload={handleDownload}
+          />
+        ))}
+      </div>
+
+      {/* File Delivery Architecture Details */}
+      <div className="bg-surface-sunken border border-edge rounded-xl p-5 text-xs text-ink-secondary flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <Layers className="w-4 h-4 text-ink-muted" />
+          <span>
+            Workbooks are streamed directly from the PostgreSQL engine via ExcelJS with header auto-styling and column widths.
+          </span>
+        </div>
+        <span className="font-mono text-xs text-ink-muted">Content-Type: application/vnd.openxmlformats</span>
+      </div>
+    </div>
+  );
+};
+
+export default ExportsPage;

@@ -15,27 +15,7 @@ import {
   Server,
 } from 'lucide-react';
 import { api } from '../services/api';
-
-interface ActivityLogItem {
-  id: string;
-  eventId: string;
-  category: string;
-  action: string;
-  details: string | null;
-  userEmail: string | null;
-  applicantName: string | null;
-  status: 'SUCCESS' | 'WARNING' | 'ERROR' | 'INFO';
-  errorMessage: string | null;
-  createdAt: string;
-}
-
-interface ActivityStats {
-  totalActivities: number;
-  applicationsToday: number;
-  adminActions: number;
-  errorsCount: number;
-  successRate: number;
-}
+import { ActivityLogItem, ActivityStats } from '@/features/activity-log/types';
 
 interface ActivityLogViewProps {
   activeEventId: string;
