@@ -4,7 +4,7 @@ import https from 'https';
 import fs from 'fs';
 import path from 'path';
 import { env } from '../config/env';
-import { prisma } from '../lib/prisma';
+import { mediaRepo } from '../modules/media';
 import { parseRange } from '../utils/rangeParser';
 import sharp from 'sharp';
 
@@ -109,9 +109,7 @@ export class DriveService {
     }
 
     if (cacheKey) {
-      const cached = await prisma.driveFolderCache.findUnique({
-        where: { pathKey: cacheKey },
-      });
+      const cached = await mediaRepo.findFolderCache(cacheKey);
       if (cached) {
         this.folderMemoryCache.set(memoryKey, cached.driveFolderId);
         return cached.driveFolderId;
@@ -122,11 +120,7 @@ export class DriveService {
       const folderId = `mock_folder_${cacheKey ? cacheKey.replace(/[\/\s]/g, '_') : name}`;
       this.folderMemoryCache.set(memoryKey, folderId);
       if (cacheKey) {
-        await prisma.driveFolderCache.upsert({
-          where: { pathKey: cacheKey },
-          create: { pathKey: cacheKey, driveFolderId: folderId },
-          update: { driveFolderId: folderId },
-        });
+        await mediaRepo.upsertFolderCache(cacheKey, folderId);
       }
       return folderId;
     }
@@ -146,11 +140,7 @@ export class DriveService {
       this.folderMemoryCache.set(memoryKey, folderId);
       if (cacheKey) {
         this.folderMemoryCache.set(cacheKey, folderId);
-        await prisma.driveFolderCache.upsert({
-          where: { pathKey: cacheKey },
-          create: { pathKey: cacheKey, driveFolderId: folderId },
-          update: { driveFolderId: folderId },
-        });
+        await mediaRepo.upsertFolderCache(cacheKey, folderId);
       }
       this.setViewerPermission(folderId).catch(() => {});
       return folderId;
@@ -174,11 +164,7 @@ export class DriveService {
     // Grant viewer access to the newly created folder
     this.setViewerPermission(folderId).catch(() => {});
     if (cacheKey) {
-      await prisma.driveFolderCache.upsert({
-        where: { pathKey: cacheKey },
-        create: { pathKey: cacheKey, driveFolderId: folderId },
-        update: { driveFolderId: folderId },
-      });
+      await mediaRepo.upsertFolderCache(cacheKey, folderId);
     }
     return folderId;
   }
@@ -337,114 +323,26 @@ export class DriveService {
       if (ok) count++; else failed++;
     }
 
-    // 2. Cached folders
+    // 2. All media files and cached folders
     try {
-      const cachedFolders = await prisma.driveFolderCache.findMany();
-      for (const f of cachedFolders) {
-        if (f.driveFolderId) {
-          const ok = await this.setViewerPermission(f.driveFolderId);
-          if (ok) count++; else failed++;
-        }
-      }
-    } catch (e) {
-      console.warn('[Drive] Error ensuring cached folders viewer access:', e);
-    }
-
-    // 3. Resumes
-    try {
-      const resumes = await prisma.resume.findMany({
-        where: { driveFileId: { not: null } },
-        select: { driveFileId: true },
-      });
-      for (const r of resumes) {
-        if (r.driveFileId) {
-          const ok = await this.setViewerPermission(r.driveFileId);
-          if (ok) count++; else failed++;
-        }
-      }
-    } catch (e) {
-      console.warn('[Drive] Error ensuring resumes viewer access:', e);
-    }
-
-    // 4. Certificates
-    try {
-      const certs = await prisma.certificate.findMany({
-        where: { fileDriveId: { not: null } },
-        select: { fileDriveId: true },
-      });
-      for (const c of certs) {
-        if (c.fileDriveId) {
-          const ok = await this.setViewerPermission(c.fileDriveId);
-          if (ok) count++; else failed++;
-        }
-      }
-    } catch (e) {
-      console.warn('[Drive] Error ensuring certificates viewer access:', e);
-    }
-
-    // 5. Achievements
-    try {
-      const achievements = await prisma.achievement.findMany({
-        where: { proofDriveId: { not: null } },
-        select: { proofDriveId: true },
-      });
-      for (const a of achievements) {
-        if (a.proofDriveId) {
-          const ok = await this.setViewerPermission(a.proofDriveId);
-          if (ok) count++; else failed++;
-        }
-      }
-    } catch (e) {
-      console.warn('[Drive] Error ensuring achievements viewer access:', e);
-    }
-
-    // 6. Intro Videos
-    try {
-      const introVideos = await prisma.introVideo.findMany({
-        where: { driveFileId: { not: null } },
-        select: { driveFileId: true },
-      });
-      for (const v of introVideos) {
-        if (v.driveFileId) {
-          const ok = await this.setViewerPermission(v.driveFileId);
-          if (ok) count++; else failed++;
-        }
-      }
-    } catch (e) {
-      console.warn('[Drive] Error ensuring intro videos viewer access:', e);
-    }
-
-    // 7. Submissions (photo1, photo2, photo3, video)
-    try {
-      const submissions = await prisma.submission.findMany({
-        where: { videoDriveId: { not: null } },
-        select: { videoDriveId: true, photo1DriveId: true, photo2DriveId: true, photo3DriveId: true },
-      });
-      for (const s of submissions) {
-        const ids = [s.videoDriveId, s.photo1DriveId, s.photo2DriveId, s.photo3DriveId].filter(Boolean) as string[];
-        for (const id of ids) {
+      const allFiles = await mediaRepo.findAllMediaFileDriveIds();
+      const allIds = [
+        ...allFiles.cachedFolders,
+        ...allFiles.resumes,
+        ...allFiles.certificates,
+        ...allFiles.achievements,
+        ...allFiles.introVideos,
+        ...allFiles.submissionFiles,
+        ...allFiles.profilePhotos,
+      ];
+      for (const id of allIds) {
+        if (id) {
           const ok = await this.setViewerPermission(id);
           if (ok) count++; else failed++;
         }
       }
     } catch (e) {
-      console.warn('[Drive] Error ensuring submissions viewer access:', e);
-    }
-
-    // 8. Student Profiles (photoDriveId)
-    try {
-      const profiles = await prisma.studentProfile.findMany({
-        where: { photoDriveId: { not: null } },
-        select: { photoDriveId: true },
-      });
-      for (const p of profiles) {
-        if (p.photoDriveId) {
-          const ok = await this.setViewerPermission(p.photoDriveId);
-          if (ok) count++; else failed++;
-        }
-      }
-    } catch (e) {
-      console.warn('[Drive] Error ensuring student profiles viewer access:', e);
+      console.warn('[Drive] Error ensuring media files viewer access:', e);
     }
 
     return { count, failed };
@@ -1238,39 +1136,12 @@ export class DriveService {
     const fileIds = new Set<string>();
 
     try {
-      const introVideos = await prisma.introVideo.findMany({
-        where: { driveFileId: { not: null } },
-        select: { driveFileId: true },
-      });
-      introVideos.forEach((v) => v.driveFileId && fileIds.add(v.driveFileId));
-
-      const submissions = await prisma.submission.findMany({
-        select: { videoDriveId: true, photo1DriveId: true, photo2DriveId: true, photo3DriveId: true },
-      });
-      submissions.forEach((s) => {
-        if (s.videoDriveId) fileIds.add(s.videoDriveId);
-        if (s.photo1DriveId) fileIds.add(s.photo1DriveId);
-        if (s.photo2DriveId) fileIds.add(s.photo2DriveId);
-        if (s.photo3DriveId) fileIds.add(s.photo3DriveId);
-      });
-
-      const resumes = await prisma.resume.findMany({
-        where: { driveFileId: { not: null } },
-        select: { driveFileId: true },
-      });
-      resumes.forEach((r) => r.driveFileId && fileIds.add(r.driveFileId));
-
-      const certs = await prisma.certificate.findMany({
-        where: { fileDriveId: { not: null } },
-        select: { fileDriveId: true },
-      });
-      certs.forEach((c) => c.fileDriveId && fileIds.add(c.fileDriveId));
-
-      const achs = await prisma.achievement.findMany({
-        where: { proofDriveId: { not: null } },
-        select: { proofDriveId: true },
-      });
-      achs.forEach((a) => a.proofDriveId && fileIds.add(a.proofDriveId));
+      const allFiles = await mediaRepo.findAllMediaFileDriveIds();
+      allFiles.introVideos.forEach((id) => fileIds.add(id));
+      allFiles.submissionFiles.forEach((id) => fileIds.add(id));
+      allFiles.resumes.forEach((id) => fileIds.add(id));
+      allFiles.certificates.forEach((id) => fileIds.add(id));
+      allFiles.achievements.forEach((id) => fileIds.add(id));
     } catch (e) {
       console.warn('[Drive] Error fetching files for copy protection clearing:', e);
     }
