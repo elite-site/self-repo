@@ -22,6 +22,7 @@ vi.mock('../src/lib/prisma', () => ({
     },
     student: {
       findUnique: vi.fn(),
+      findFirst: vi.fn(),
     },
     notification: {
       create: vi.fn(),
@@ -219,6 +220,7 @@ describe('Public introduction videos are approval-gated', () => {
         videoDriveId: 'drive_123',
       });
       (prisma.student.findUnique as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ id: 'stud_1' });
+      (prisma.student.findFirst as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ id: 'stud_1' });
       (prisma.introVideo.findFirst as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
         id: 'iv_1',
         isPublic: true,

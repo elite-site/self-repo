@@ -455,10 +455,15 @@ export async function streamPublicMedia(req: Request, res: Response): Promise<vo
     if (!forceStream && REDIRECTABLE_TYPES.has(type) && driveService.canRedirectToDrive()) {
       const directLink = driveService.getDirectLink(targetDriveFileId);
       if (directLink && (await driveService.isPubliclyReadable(targetDriveFileId))) {
-        res.setHeader('Cache-Control', 'private, max-age=3600');
-        res.setHeader('ETag', etag);
-        res.redirect(302, directLink);
-        return;
+        const probeOk = await driveService.probeDirectLink(directLink, targetDriveFileId);
+        if (probeOk) {
+          res.setHeader('Cache-Control', 'private, max-age=3600');
+          res.setHeader('ETag', etag);
+          res.redirect(302, directLink);
+          return;
+        } else {
+          console.warn(`[PublicMedia] Direct link probe failed for ${targetDriveFileId} (${type}), falling back to proxy stream`);
+        }
       }
     }
 
@@ -673,7 +678,7 @@ export async function getPublicStudentByRollNo(req: Request, res: Response): Pro
           }
         : null,
       achievements: student.achievements.map((a: any) => {
-        const { proofDriveId: _p, ...rest } = a;
+        const { proofDriveId: _p, thumbnail: _thumb, ...rest } = a;
         const viewUrl = a.proofDriveId
           ? `/api/public/media/achievement/${a.id}`
           : (a.proofUrl || null);
@@ -722,7 +727,7 @@ export async function getPublicStudentByRollNo(req: Request, res: Response): Pro
         repoCount: s.repoCount,
       })),
       certificates: student.certificates.map((c: any) => {
-        const { fileDriveId: _f, ...rest } = c;
+        const { fileDriveId: _f, thumbnail: _thumb, ...rest } = c;
         const viewUrl = c.fileDriveId ? `/api/public/media/certificate/${c.id}` : null;
         const previewUrl = driveService.getPreviewUrl(c.fileDriveId);
         const thumbnailUrl = c.fileDriveId
@@ -739,7 +744,7 @@ export async function getPublicStudentByRollNo(req: Request, res: Response): Pro
         };
       }),
       resumes: student.resumes.map((r: any) => {
-        const { driveFileId: _d, ...rest } = r;
+        const { driveFileId: _d, thumbnail: _thumb, ...rest } = r;
         const viewUrl = r.driveFileId ? `/api/public/media/resume/${r.id}` : null;
         const previewUrl = driveService.getPreviewUrl(r.driveFileId);
         const thumbnailUrl = r.driveFileId

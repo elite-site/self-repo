@@ -110,6 +110,8 @@ export async function streamVideo(req: Request, res: Response): Promise<void> {
           res.setHeader('ETag', etag);
           res.redirect(302, directLink);
           return;
+        } else {
+          console.warn(`[StudentMedia] Direct link probe failed for ${driveFileId}, falling back to proxy stream`);
         }
       }
     }

@@ -52,6 +52,7 @@ vi.mock('../src/services/drive.service', () => ({
     setViewerPermission: vi.fn(),
     streamDriveFile: vi.fn(),
     deleteFileById: vi.fn(),
+    getPreviewUrl: vi.fn((fileId?: string | null) => (fileId ? `https://drive.google.com/file/d/${fileId}/preview` : null)),
   },
 }));
 
