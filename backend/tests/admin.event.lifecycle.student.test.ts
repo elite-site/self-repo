@@ -5,7 +5,7 @@ import app from '../src/server';
 import { env } from '../src/config/env';
 import { prisma } from '../src/lib/prisma';
 import { notifyAllStudentsAboutEvent } from '../src/services/notification.service';
-import { invalidateStudentEventsCache } from '../src/routes/student.events.routes';
+import { invalidateStudentEventsCache } from '../src/modules/events';
 
 vi.mock('../src/lib/prisma', () => ({
   prisma: {
@@ -77,7 +77,7 @@ vi.mock('../src/services/activity.service', () => ({
   },
 }));
 
-vi.mock('../src/services/announcement.service', () => ({
+vi.mock('../src/modules/announcements', () => ({
   deliverAnnouncementNotifications: vi.fn(),
 }));
 

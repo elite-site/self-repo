@@ -1,8 +1,7 @@
 import { prisma } from '../../lib/prisma';
 import { TtlCache } from '../../utils/ttlCache';
 import { AppError } from '../../utils/appError';
-import { invalidateMediaDriveIdCache } from '../../routes/public.routes';
-import { clearVideoListCache } from '../../routes/public.videos.routes';
+import { invalidateMediaDriveIdCache, clearVideoListCache } from '../../modules/public';
 
 export const studentSubmissionVideoCache = new TtlCache<{ videoDriveId: string; driveFolderPath: string }>(120_000, 500);
 

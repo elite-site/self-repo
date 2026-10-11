@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import request from 'supertest';
 import express from 'express';
-import publicStudentsRouter, { clearPublicStudentCaches } from '../src/routes/public.students.routes';
-import portfolioRouter from '../src/routes/student.portfolio.routes';
+import { publicStudentRouter as publicStudentsRouter, clearPublicStudentCaches } from '../src/modules/public';
+import { portfolioRouter } from '../src/modules/portfolio';
 import { prisma } from '../src/lib/prisma';
 
 vi.mock('../src/lib/prisma', () => ({

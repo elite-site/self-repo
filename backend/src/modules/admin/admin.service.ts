@@ -2,7 +2,7 @@ import ExcelJS from 'exceljs';
 import { driveService } from '../../services/drive.service';
 import { ActivityService } from '../../services/activity.service';
 import { notifyStudent, notifyVideoChangeRequested } from '../../services/notification.service';
-import { deliverAnnouncementNotifications } from '../../services/announcement.service';
+import { deliverAnnouncementNotifications } from '../announcements';
 import { TtlCache } from '../../utils/ttlCache';
 import { AppError } from '../../utils/appError';
 import {

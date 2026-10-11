@@ -6,7 +6,7 @@ import app from '../src/server';
 import { env } from '../src/config/env';
 import { prisma } from '../src/lib/prisma';
 import { driveService } from '../src/services/drive.service';
-import { clearVideoListCache } from '../src/routes/public.videos.routes';
+import { clearVideoListCache } from '../src/modules/public';
 
 vi.mock('../src/lib/prisma', () => ({
   prisma: {

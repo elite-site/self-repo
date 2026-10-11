@@ -3,7 +3,7 @@ import express from 'express';
 import cookieParser from 'cookie-parser';
 import jwt from 'jsonwebtoken';
 import request from 'supertest';
-import adminPortalRouter from '../src/routes/admin.portal.routes';
+import { adminPortalRouter } from '../src/modules/admin';
 import { env } from '../src/config/env';
 import { INTERNAL_EVENT_ID } from '../src/config/constants';
 import { prisma } from '../src/lib/prisma';
@@ -52,7 +52,7 @@ vi.mock('../src/services/activity.service', () => ({
   ActivityService: { log: vi.fn().mockResolvedValue(undefined) },
 }));
 
-vi.mock('../src/services/announcement.service', () => ({
+vi.mock('../src/modules/announcements', () => ({
   deliverAnnouncementNotifications: vi.fn(),
 }));
 

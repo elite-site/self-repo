@@ -2,7 +2,7 @@ import path from 'path';
 import { prisma } from '../../lib/prisma';
 import { driveService } from '../drive.service';
 import { env } from '../../config/env';
-import { invalidateMediaDriveIdCache } from '../../routes/public.routes';
+import { invalidateMediaDriveIdCache } from '../../modules/public';
 import { AppError } from '../../utils/appError';
 
 export interface CropData {

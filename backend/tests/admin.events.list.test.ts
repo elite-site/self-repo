@@ -3,7 +3,7 @@ import express from 'express';
 import cookieParser from 'cookie-parser';
 import jwt from 'jsonwebtoken';
 import request from 'supertest';
-import adminApiRouter from '../src/routes/admin.api.routes';
+import adminApiRouter from '../src/modules/admin';
 import { env } from '../src/config/env';
 import { prisma } from '../src/lib/prisma';
 

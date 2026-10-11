@@ -5,7 +5,7 @@ import request from 'supertest';
 import jwt from 'jsonwebtoken';
 import { env } from '../src/config/env';
 import { prisma } from '../src/lib/prisma';
-import adminAcademicYearRouter from '../src/routes/admin.academic-year.routes';
+import { adminAcademicYearRouter } from '../src/modules/admin';
 import { ActivityService } from '../src/services/activity.service';
 import { promoteAcademicYear } from '../src/services/academicYear.service';
 

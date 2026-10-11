@@ -3,7 +3,7 @@ import request from 'supertest';
 import jwt from 'jsonwebtoken';
 import app from '../src/server';
 import { env } from '../src/config/env';
-import { announcementStudentWhere, resolveAnnouncementTarget } from '../src/services/announcement.service';
+import { announcementStudentWhere, resolveAnnouncementTarget } from '../src/modules/announcements';
 
 vi.mock('../src/lib/prisma', () => ({
   prisma: {
