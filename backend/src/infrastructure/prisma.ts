@@ -75,16 +75,41 @@ export function buildDatabaseUrl(base: string): string {
   }
 }
 
+import { logger } from '../utils/logger';
+import { dbTimingStorage } from './dbTiming';
+export { dbTimingStorage };
+
 const DATABASE_URL = buildDatabaseUrl(process.env.DATABASE_URL || '');
 
-export const prisma =
-  global.__prisma ||
-  new PrismaClient({
+function createPrismaClient(): PrismaClient {
+  const client = new PrismaClient({
     datasources: DATABASE_URL
       ? { db: { url: DATABASE_URL } }
       : undefined,
     log: process.env.NODE_ENV === 'development' ? ['warn', 'error'] : ['error'],
   });
+
+  client.$use(async (params, next) => {
+    const start = Date.now();
+    const result = await next(params);
+    const duration = Date.now() - start;
+
+    if (duration > 200) {
+      logger.warn(`[Prisma SLOW QUERY] ${params.model || 'Unknown'}.${params.action} took ${duration}ms`);
+    }
+
+    const store = dbTimingStorage.getStore();
+    if (store) {
+      store.dbDuration += duration;
+    }
+
+    return result;
+  });
+
+  return client;
+}
+
+export const prisma = global.__prisma || createPrismaClient();
 
 if (process.env.NODE_ENV !== 'production') {
   global.__prisma = prisma;

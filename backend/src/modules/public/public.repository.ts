@@ -162,6 +162,7 @@ export async function countPublicStudents(where: any) {
 
 export async function findPublicStudents(where: any, skip: number, take: number) {
   return prisma.student.findMany({
+    relationLoadStrategy: 'join',
     where,
     select: {
       id: true,
@@ -178,8 +179,6 @@ export async function findPublicStudents(where: any, skip: number, take: number)
           photoOffsetX: true,
           photoOffsetY: true,
           photoZoom: true,
-          biography: true,
-          specialQualities: true,
           skills: { include: { skill: true } }
         }
       }
@@ -187,6 +186,42 @@ export async function findPublicStudents(where: any, skip: number, take: number)
     orderBy: [{ year: 'desc' }, { section: 'asc' }, { rollNo: 'asc' }],
     skip,
     take
+  });
+}
+
+export async function findPublicStudentsIndex() {
+  return prisma.student.findMany({
+    relationLoadStrategy: 'join',
+    where: {
+      status: { in: ['ACTIVE', 'GRADUATED'] },
+    },
+    select: {
+      id: true,
+      rollNo: true,
+      name: true,
+      year: true,
+      section: true,
+      status: true,
+      profile: {
+        select: {
+          id: true,
+          photoUrl: true,
+          photoOffsetX: true,
+          photoOffsetY: true,
+          photoZoom: true,
+          skills: {
+            select: {
+              skill: {
+                select: {
+                  name: true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    orderBy: [{ year: 'desc' }, { section: 'asc' }, { rollNo: 'asc' }],
   });
 }
 
@@ -200,6 +235,7 @@ export async function findActiveSkills() {
 
 export async function loadPublicProfile(rollNo: string) {
   return prisma.student.findUnique({
+    relationLoadStrategy: 'join',
     where: { rollNo },
     include: {
       profile: { include: { skills: { include: { skill: true } } } },

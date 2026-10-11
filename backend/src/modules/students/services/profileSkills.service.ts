@@ -3,6 +3,7 @@ import { env } from '../../../config/env';
 import { AppError } from '../../../utils/appError';
 import { logger } from '../../../utils/logger';
 import { ChangeRequestInput } from '../schemas/profile.schema';
+import { clearPublicStudentCaches } from '../../public';
 
 export async function getActiveSkills() {
   try {
@@ -47,6 +48,7 @@ export async function updateStudentSkills(
     }
 
     const skills = await repo.updateStudentSkillsInTransaction(profile.id, resolvedIds);
+    clearPublicStudentCaches();
     return { skills: skills.map(s => s.skill) };
   } catch (err: any) {
     if (err instanceof AppError) throw err;

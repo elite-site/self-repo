@@ -341,6 +341,90 @@ describe('Public Students Routes & Visibility Overhaul', () => {
     });
   });
 
+  describe('GET /api/public/students/index (Compact Search Index)', () => {
+    it('returns compact student index with visibility rules and NO biography or specialQualities', async () => {
+      (prisma.student.findMany as any).mockResolvedValue([
+        {
+          id: 'student_compact_1',
+          rollNo: '23A91A1217',
+          name: 'Compact Student',
+          year: 3,
+          section: 'A',
+          status: 'ACTIVE',
+          profile: {
+            id: 'prof_compact_1',
+            photoUrl: 'photo.jpg',
+            photoOffsetX: 40,
+            photoOffsetY: 60,
+            photoZoom: 1.1,
+            skills: [
+              { skill: { name: 'TypeScript' } },
+              { skill: { name: 'Node.js' } },
+            ],
+          },
+        },
+      ]);
+
+      const res = await request(app).get('/api/public/students/index');
+
+      expect(res.status).toBe(200);
+      expect(res.headers['cache-control']).toBe('public, max-age=60, stale-while-revalidate=300');
+      expect(res.headers['etag']).toBeDefined();
+      expect(res.headers['server-timing']).toMatch(/db;dur=\d+/);
+
+      expect(prisma.student.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { status: { in: ['ACTIVE', 'GRADUATED'] } },
+        })
+      );
+
+      expect(Array.isArray(res.body)).toBe(true);
+      expect(res.body).toHaveLength(1);
+      const row = res.body[0];
+      expect(row.rollNo).toBe('23A91A1217');
+      expect(row.name).toBe('Compact Student');
+      expect(row.year).toBe(3);
+      expect(row.section).toBe('A');
+      expect(row.status).toBe('ACTIVE');
+      expect(row.skills).toEqual(['TypeScript', 'Node.js']);
+      expect(row.profile.photoOffsetX).toBe(40);
+      expect(row.profile.photoZoom).toBe(1.1);
+      expect(row.profile.photoUrl).toBe('/api/public/media/photo/prof_compact_1');
+
+      // Crucial: verify NO biography and NO specialQualities
+      expect(row.biography).toBeUndefined();
+      expect(row.specialQualities).toBeUndefined();
+      expect(row.profile.biography).toBeUndefined();
+      expect(row.profile.specialQualities).toBeUndefined();
+    });
+
+    it('returns 304 on repeat request via ETag', async () => {
+      (prisma.student.findMany as any).mockResolvedValue([
+        {
+          id: 'student_etag',
+          rollNo: '23A91A1218',
+          name: 'Etag Student',
+          year: 2,
+          section: 'B',
+          status: 'ACTIVE',
+          profile: null,
+        },
+      ]);
+
+      const firstRes = await request(app).get('/api/public/students/index');
+      expect(firstRes.status).toBe(200);
+      const etag = firstRes.headers['etag'];
+      expect(etag).toBeDefined();
+
+      const secondRes = await request(app)
+        .get('/api/public/students/index')
+        .set('If-None-Match', etag);
+
+      expect(secondRes.status).toBe(304);
+      expect(secondRes.text).toBe('');
+    });
+  });
+
   describe('GET /api/public/students/skills', () => {
     it('returns active skills list with Cache-Control: public, max-age=300', async () => {
       (prisma.skill.findMany as any).mockResolvedValue([

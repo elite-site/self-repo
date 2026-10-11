@@ -3,6 +3,7 @@ import { AppError } from '../../../utils/appError';
 import { logger } from '../../../utils/logger';
 import { ProfileUpdateInput } from '../schemas/profile.schema';
 import { serializeProfileView } from './profile.serializer';
+import { clearPublicStudentCaches } from '../../public';
 
 export * from './profilePhoto.service';
 export * from './profileSkills.service';
@@ -57,6 +58,7 @@ export async function updateStudentProfile(studentId: string, data: ProfileUpdat
       codechefUrl: data.normalizedLinks.codechefUrl || '',
       portfolioUrl: data.normalizedLinks.portfolioUrl || '',
     });
+    clearPublicStudentCaches();
     return profile;
   } catch (err: any) {
     if (err.code === 'P2021' || err.message?.includes('does not exist')) return {};

@@ -9,11 +9,18 @@ export async function getPortalStudents(query: PortalStudentsQueryParams) {
   if (year) where.year = parseInt(String(year), 10);
   if (section) where.section = String(section);
   if (search) {
-    where.OR = [
-      { name: { contains: String(search), mode: 'insensitive' } },
-      { rollNo: { contains: String(search), mode: 'insensitive' } },
-      { email: { contains: String(search), mode: 'insensitive' } },
-    ];
+    const term = String(search).trim();
+    if (term.length >= 2) {
+      if (/^\d+$/.test(term)) {
+        where.rollNo = { contains: term, mode: 'insensitive' };
+      } else {
+        where.OR = [
+          { name: { contains: term, mode: 'insensitive' } },
+          { rollNo: { contains: term, mode: 'insensitive' } },
+          { email: { contains: term, mode: 'insensitive' } },
+        ];
+      }
+    }
   }
   const p = Math.max(1, parseInt(String(page), 10));
   const l = Math.max(1, Math.min(100, parseInt(String(limit), 10)));

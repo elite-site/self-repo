@@ -19,6 +19,7 @@ publicRouter.get('/public/media/:type/:fileId', controller.streamPublicMedia);
 export const publicStudentRouter = Router();
 
 publicStudentRouter.get('/', controller.listPublicStudents);
+publicStudentRouter.get('/index', controller.getPublicStudentsIndex);
 publicStudentRouter.get('/skills', controller.listPublicSkills);
 publicStudentRouter.get('/events', controller.getPublicStudentsEvents);
 publicStudentRouter.get('/:rollNo', controller.getPublicStudentByRollNo);

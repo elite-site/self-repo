@@ -11,6 +11,7 @@ export const videoListCache = new TtlCache<{ items: unknown[]; total: number }>(
 export const studentListCache = new TtlCache<unknown>(20_000, 100);
 export const studentProfileCache = new TtlCache<any>(30_000, 200);
 export const skillsCache = new TtlCache<unknown>(300_000, 4);
+export const studentIndexCache = new TtlCache<{ body: string; etag: string }>(60_000, 5);
 
 export const clearVideoListCache = (): void => videoListCache.clear();
 
@@ -18,6 +19,7 @@ export const clearPublicStudentCaches = (): void => {
   studentListCache.clear();
   studentProfileCache.clear();
   skillsCache.clear();
+  studentIndexCache.clear();
 };
 
 export function invalidateMediaDriveIdCache(type: string, id: string): void {

@@ -87,10 +87,16 @@ export async function getStudentRoster(query: StudentRosterQueryParams) {
   if (section) whereClause.section = section;
   if (year) whereClause.year = year;
   if (search) {
-    whereClause.OR = [
-      { name: { contains: search, mode: 'insensitive' } },
-      { rollNo: { contains: search, mode: 'insensitive' } },
-    ];
+    if (search.length >= 2) {
+      if (/^\d+$/.test(search)) {
+        whereClause.rollNo = { contains: search, mode: 'insensitive' };
+      } else {
+        whereClause.OR = [
+          { name: { contains: search, mode: 'insensitive' } },
+          { rollNo: { contains: search, mode: 'insensitive' } },
+        ];
+      }
+    }
   }
 
   if (uploaded === 'yes') {

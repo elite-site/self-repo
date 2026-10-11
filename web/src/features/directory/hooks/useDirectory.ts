@@ -1,45 +1,58 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useDeferredValue, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { directoryApi } from '../api';
 import { DirectoryStudent, SkillItem, StatusFilter } from '../types';
+import { useStudentIndex, searchAndFilterStudents } from './useStudentIndex';
 
 export function useDirectory(limit = 24) {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialSearch = searchParams.get('search') || '';
 
-  const [students, setStudents] = useState<DirectoryStudent[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [failed, setFailed] = useState(false);
-  const [reloadKey, setReloadKey] = useState(0);
   const [search, setSearch] = useState(initialSearch);
-  const [debouncedSearch, setDebouncedSearch] = useState(initialSearch);
   const [yearFilter, setYearFilter] = useState('ALL');
   const [sectionFilter, setSectionFilter] = useState('ALL');
   const [skillFilter, setSkillFilter] = useState('');
-  const [availableSkills, setAvailableSkills] = useState<SkillItem[]>([]);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
+  const [availableSkills, setAvailableSkills] = useState<SkillItem[]>([]);
   const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(search);
-      setPage(1);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [search]);
+  // Fallback states if index request fails
+  const [fallbackStudents, setFallbackStudents] = useState<DirectoryStudent[]>([]);
+  const [fallbackTotal, setFallbackTotal] = useState(0);
+  const [fallbackTotalPages, setFallbackTotalPages] = useState(1);
+  const [fallbackLoading, setFallbackLoading] = useState(false);
+  const [fallbackFailed, setFallbackFailed] = useState(false);
 
+  // Instant index hook (React Query, staleTime 5m, localStorage)
+  const studentIndex = useStudentIndex();
+
+  // Keep deep links (?search=) working on searchParams navigation
   useEffect(() => {
     const q = searchParams.get('search') || '';
     if (q !== search) {
       setSearch(q);
-      setDebouncedSearch(q);
       setPage(1);
     }
   }, [searchParams]);
 
+  const searchParamsRef = useRef(searchParams);
+  searchParamsRef.current = searchParams;
+  useEffect(() => {
+    const currentQ = searchParamsRef.current.get('search') || '';
+    if (search !== currentQ) {
+      const nextParams = new URLSearchParams(searchParamsRef.current);
+      if (search.trim()) {
+        nextParams.set('search', search.trim());
+      } else {
+        nextParams.delete('search');
+      }
+      setSearchParams(nextParams, { replace: true });
+    }
+  }, [search, setSearchParams]);
+
+  // Load available skills for filter dropdown
   useEffect(() => {
     directoryApi
       .getPublicSkills()
@@ -49,52 +62,108 @@ export function useDirectory(limit = 24) {
       .catch(() => {});
   }, []);
 
+  // Use deferred value for instant responsive keystroke rendering
+  const deferredSearch = useDeferredValue(search);
+
+  // INSTANT IN-MEMORY PATH
+  const inMemoryFiltered = useMemo(() => {
+    if (!studentIndex.isAvailable) return [];
+    return searchAndFilterStudents(studentIndex.indexedStudents, {
+      search: deferredSearch,
+      year: yearFilter,
+      section: sectionFilter,
+      status: statusFilter,
+      skillName: skillFilter,
+    });
+  }, [
+    studentIndex.isAvailable,
+    studentIndex.indexedStudents,
+    deferredSearch,
+    yearFilter,
+    sectionFilter,
+    statusFilter,
+    skillFilter,
+  ]);
+
+  const inMemoryTotal = inMemoryFiltered.length;
+  const inMemoryTotalPages = Math.max(1, Math.ceil(inMemoryTotal / limit));
+  const inMemoryPaginated = useMemo(() => {
+    const start = (page - 1) * limit;
+    return inMemoryFiltered.slice(start, start + limit);
+  }, [inMemoryFiltered, page, limit]);
+
+  // FALLBACK SERVER SEARCH PATH (Requirement 2 & 3d: AbortController to cancel previous request)
   useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    setFailed(false);
+    // Only run server fallback if index request failed and index data is not available
+    if (studentIndex.isAvailable || (!studentIndex.isError && studentIndex.isLoading)) {
+      return;
+    }
+
+    const abortController = new AbortController();
+    setFallbackLoading(true);
+    setFallbackFailed(false);
 
     directoryApi
-      .getPublicStudents({
-        search: debouncedSearch.trim() || undefined,
-        year: yearFilter === 'ALL' ? undefined : yearFilter,
-        section: sectionFilter === 'ALL' ? undefined : sectionFilter,
-        skillName: skillFilter || undefined,
-        status: statusFilter === 'ALL' ? undefined : statusFilter,
-        page,
-        limit,
-      })
+      .getPublicStudents(
+        {
+          search: deferredSearch.trim() || undefined,
+          year: yearFilter === 'ALL' ? undefined : yearFilter,
+          section: sectionFilter === 'ALL' ? undefined : sectionFilter,
+          skillName: skillFilter || undefined,
+          status: statusFilter === 'ALL' ? undefined : statusFilter,
+          page,
+          limit,
+        },
+        abortController.signal
+      )
       .then((data) => {
-        if (cancelled) return;
         if (data && Array.isArray(data.students)) {
-          setStudents(data.students);
-          setTotal(data.total ?? 0);
-          setTotalPages(data.totalPages || Math.ceil((data.total ?? 0) / limit) || 1);
+          setFallbackStudents(data.students);
+          setFallbackTotal(data.total ?? 0);
+          setFallbackTotalPages(data.totalPages || Math.ceil((data.total ?? 0) / limit) || 1);
         } else if (Array.isArray(data)) {
-          setStudents(data as any);
-          setTotal(data.length);
-          setTotalPages(1);
+          setFallbackStudents(data as any);
+          setFallbackTotal(data.length);
+          setFallbackTotalPages(1);
         }
       })
-      .catch(() => {
-        if (cancelled) return;
-        setStudents([]);
-        setTotal(0);
-        setTotalPages(1);
-        setFailed(true);
+      .catch((err) => {
+        if (err?.name === 'CanceledError' || err?.code === 'ERR_CANCELED') return;
+        setFallbackStudents([]);
+        setFallbackTotal(0);
+        setFallbackTotalPages(1);
+        setFallbackFailed(true);
       })
       .finally(() => {
-        if (!cancelled) setLoading(false);
+        setFallbackLoading(false);
       });
 
     return () => {
-      cancelled = true;
+      abortController.abort();
     };
-  }, [debouncedSearch, yearFilter, sectionFilter, skillFilter, statusFilter, page, reloadKey, limit]);
+  }, [
+    studentIndex.isAvailable,
+    studentIndex.isError,
+    studentIndex.isLoading,
+    deferredSearch,
+    yearFilter,
+    sectionFilter,
+    skillFilter,
+    statusFilter,
+    page,
+    reloadKey,
+    limit,
+  ]);
+
+  const isUsingIndex = studentIndex.isAvailable;
+  const students = isUsingIndex ? inMemoryPaginated : fallbackStudents;
+  const total = isUsingIndex ? inMemoryTotal : fallbackTotal;
+  const totalPages = isUsingIndex ? inMemoryTotalPages : fallbackTotalPages;
+  const loading = isUsingIndex ? false : (studentIndex.isLoading || fallbackLoading);
+  const failed = isUsingIndex ? false : (studentIndex.isError && fallbackFailed);
 
   const resetFilters = () => {
     setSearch('');
-    setDebouncedSearch('');
     setYearFilter('ALL');
     setSectionFilter('ALL');
     setSkillFilter('');
@@ -105,6 +174,11 @@ export function useDirectory(limit = 24) {
       nextParams.delete('search');
       setSearchParams(nextParams, { replace: true });
     }
+  };
+
+  const updateSearch = (val: string) => {
+    setSearch(val);
+    setPage(1);
   };
 
   const updateYearFilter = (value: string) => {
@@ -127,14 +201,17 @@ export function useDirectory(limit = 24) {
     setPage(1);
   };
 
-  const retry = () => setReloadKey((k) => k + 1);
+  const retry = () => {
+    studentIndex.refetch();
+    setReloadKey((k) => k + 1);
+  };
 
   return {
     students,
     loading,
     failed,
     search,
-    setSearch,
+    setSearch: updateSearch,
     yearFilter,
     updateYearFilter,
     sectionFilter,

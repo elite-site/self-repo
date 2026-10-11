@@ -13,7 +13,7 @@ export const DirectoryStudentCard: React.FC<DirectoryStudentCardProps> = ({ stud
   const photo = st.profile?.photoUrl || st.photoUrl || null;
   const resolvedPhoto = photo ? resolveMediaUrl(photo) : null;
   const studentSkills = (st.skills || st.profile?.skills || [])
-    .map((s) => s.skill?.name || s.name)
+    .map((s: any) => (typeof s === 'string' ? s : (s.skill?.name || s.name)))
     .filter((n): n is string => Boolean(n));
   const isAlumni = st.status === 'GRADUATED';
   const name = st.name || 'Student';

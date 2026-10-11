@@ -2,7 +2,7 @@ import path from 'path';
 import * as repo from '../students.repository';
 import { driveService } from '../../media/drive';
 import { env } from '../../../config/env';
-import { invalidateMediaDriveIdCache } from '../../public';
+import { invalidateMediaDriveIdCache, clearPublicStudentCaches } from '../../public';
 import { AppError } from '../../../utils/appError';
 import { logger } from '../../../utils/logger';
 
@@ -71,6 +71,7 @@ export async function uploadProfilePhoto(
 
     invalidateMediaDriveIdCache('photo', studentId);
     if (profile.id) invalidateMediaDriveIdCache('photo', profile.id);
+    clearPublicStudentCaches();
 
     const ts = Date.now();
     const maskedPhotoUrl = `/api/public/media/photo/${profile.id || studentId}?t=${ts}`;
@@ -116,6 +117,7 @@ export async function deleteProfilePhoto(studentId: string) {
     invalidateMediaDriveIdCache('photo', studentId);
     if (student?.profile?.id) invalidateMediaDriveIdCache('photo', student.profile.id);
     await repo.clearStudentPhoto(studentId);
+    clearPublicStudentCaches();
     return { success: true, message: 'Profile photo removed.' };
   } catch (err: any) {
     logger.error(`[profilePhoto.service:deleteProfilePhoto] Internal server error for studentId=${studentId}:`, { error: err });

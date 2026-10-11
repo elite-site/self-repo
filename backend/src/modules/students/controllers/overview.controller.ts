@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { AppError } from '../../../utils/appError';
 import { getStudentMeData, getStudentDashboardData } from '../services/overview.service';
+import { dbTimingStorage } from '../../../infrastructure/dbTiming';
 
 export async function getMe(req: Request, res: Response): Promise<void> {
   const studentId = req.student!.studentId;
@@ -21,8 +22,23 @@ export async function getDashboard(req: Request, res: Response): Promise<void> {
   }
 
   const rollNo = req.student?.rollNo;
-  const result = await getStudentDashboardData(studentId, rollNo);
+  const runWithTiming = async (fn: () => Promise<void>) => {
+    if (dbTimingStorage && typeof dbTimingStorage.run === 'function') {
+      return dbTimingStorage.run({ dbDuration: 0 }, fn);
+    }
+    return fn();
+  };
 
-  res.setHeader('Cache-Control', 'private, max-age=15');
-  res.json(result);
+  await runWithTiming(async () => {
+    const dbStart = Date.now();
+    const result = await getStudentDashboardData(studentId, rollNo);
+    const store = dbTimingStorage?.getStore?.();
+    const dur = store?.dbDuration !== undefined && store.dbDuration > 0
+      ? store.dbDuration
+      : (Date.now() - dbStart);
+
+    res.setHeader('Server-Timing', `db;dur=${dur}`);
+    res.setHeader('Cache-Control', 'private, max-age=15');
+    res.json(result);
+  });
 }

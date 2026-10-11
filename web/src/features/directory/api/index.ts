@@ -3,7 +3,12 @@ import { publicProfileApi } from '@/features/public-profile/api';
 import { DirectoryStudent, SkillItem } from '../types';
 
 export const directoryApi = {
-  async getPublicStudents(params?: any): Promise<{ students: DirectoryStudent[]; total: number; page: number; totalPages: number }> {
+  async getStudentIndex(signal?: AbortSignal): Promise<DirectoryStudent[]> {
+    const res = await client.get('/public/students/index', { signal });
+    return Array.isArray(res.data) ? res.data : [];
+  },
+
+  async getPublicStudents(params?: any, signal?: AbortSignal): Promise<{ students: DirectoryStudent[]; total: number; page: number; totalPages: number }> {
     const hasFilters = params && (
       params.search ||
       (params.year && params.year !== 'ALL') ||
@@ -13,12 +18,12 @@ export const directoryApi = {
       (params.page && params.page > 1)
     );
     if (hasFilters) {
-      const res = await client.get('/public/students', { params });
+      const res = await client.get('/public/students', { params, signal });
       return res.data;
     }
     const key = `students_${JSON.stringify(params || {})}`;
     return cachedFetch(key, 30_000, async () => {
-      const res = await client.get('/public/students', { params });
+      const res = await client.get('/public/students', { params, signal });
       return res.data;
     });
   },

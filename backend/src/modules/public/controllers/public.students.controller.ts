@@ -1,7 +1,81 @@
 import { Request, Response } from 'express';
+import crypto from 'crypto';
 import * as repo from '../public.repository';
 import * as service from '../public.service';
 import { driveService } from '../../media/drive';
+import { dbTimingStorage } from '../../../infrastructure/dbTiming';
+
+async function runWithTiming(fn: () => Promise<void>): Promise<void> {
+  if (dbTimingStorage && typeof dbTimingStorage.run === 'function') {
+    return dbTimingStorage.run({ dbDuration: 0 }, fn);
+  }
+  return fn();
+}
+
+export async function getPublicStudentsIndex(req: Request, res: Response): Promise<void> {
+  try {
+    res.setHeader('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
+
+    const cached = service.studentIndexCache.get('public_index');
+    if (cached) {
+      res.setHeader('ETag', cached.etag);
+      res.setHeader('Server-Timing', 'db;dur=0');
+      if (req.headers['if-none-match'] === cached.etag) {
+        res.status(304).end();
+        return;
+      }
+      res.setHeader('Content-Type', 'application/json');
+      res.send(cached.body);
+      return;
+    }
+
+    await runWithTiming(async () => {
+      const dbStart = Date.now();
+      const students = await repo.findPublicStudentsIndex();
+      const store = dbTimingStorage?.getStore?.();
+      const dbDur = store?.dbDuration !== undefined && store.dbDuration > 0
+        ? store.dbDuration
+        : (Date.now() - dbStart);
+
+      const compactRows = students.map((s) => ({
+        id: s.id,
+        rollNo: s.rollNo,
+        name: s.name,
+        year: s.year,
+        section: s.section,
+        status: s.status,
+        profile: s.profile ? {
+          id: s.profile.id,
+          photoUrl: s.profile.photoUrl ? `/api/public/media/photo/${s.profile.id || s.id}` : null,
+          photoOffsetX: s.profile.photoOffsetX ?? null,
+          photoOffsetY: s.profile.photoOffsetY ?? null,
+          photoZoom: s.profile.photoZoom ?? null,
+        } : null,
+        skills: s.profile?.skills?.map((sk: any) => sk.skill?.name).filter(Boolean) || [],
+      }));
+
+      const body = JSON.stringify(compactRows);
+      const hash = crypto.createHash('md5').update(body).digest('hex');
+      const etag = `"${hash}"`;
+
+      service.studentIndexCache.set('public_index', { body, etag });
+
+      res.setHeader('ETag', etag);
+      res.setHeader('Server-Timing', `db;dur=${dbDur}`);
+
+      if (req.headers['if-none-match'] === etag) {
+        res.status(304).end();
+        return;
+      }
+
+      res.setHeader('Content-Type', 'application/json');
+      res.send(body);
+    });
+  } catch (err: any) {
+    console.error('Internal server error:', err);
+    res.status(500).json({ error: 'SERVER_ERROR', message: 'An unexpected error occurred. Please try again later.' });
+  }
+}
 
 export async function listPublicStudents(req: Request, res: Response): Promise<void> {
   try {
@@ -28,19 +102,29 @@ export async function listPublicStudents(req: Request, res: Response): Promise<v
 
     if (search) {
       const term = String(search).trim();
-      where.OR = [
-        { name: { contains: term, mode: 'insensitive' } },
-        { rollNo: { contains: term, mode: 'insensitive' } },
-        {
-          profile: {
-            skills: {
-              some: {
-                skill: { name: { contains: term, mode: 'insensitive' } }
+      if (term.length >= 2) {
+        if (/^\d+$/.test(term)) {
+          where.rollNo = { contains: term, mode: 'insensitive' };
+        } else {
+          const nonNumericCount = term.replace(/[0-9]/g, '').length;
+          const orConditions: any[] = [
+            { name: { contains: term, mode: 'insensitive' } },
+            { rollNo: { contains: term, mode: 'insensitive' } },
+          ];
+          if (nonNumericCount >= 3) {
+            orConditions.push({
+              profile: {
+                skills: {
+                  some: {
+                    skill: { name: { contains: term, mode: 'insensitive' } }
+                  }
+                }
               }
-            }
+            });
           }
+          where.OR = orConditions;
         }
-      ];
+      }
     }
 
     const skillsFilter = skills || skillName;
@@ -75,31 +159,39 @@ export async function listPublicStudents(req: Request, res: Response): Promise<v
       limit,
     ]);
 
-    const payload = await service.studentListCache.wrap(cacheKey, async () => {
-      const [total, students] = await Promise.all([
-        repo.countPublicStudents(where),
-        repo.findPublicStudents(where, skip, limit),
-      ]);
+    await runWithTiming(async () => {
+      const dbStart = Date.now();
+      const payload = await service.studentListCache.wrap(cacheKey, async () => {
+        const [total, students] = await Promise.all([
+          repo.countPublicStudents(where),
+          repo.findPublicStudents(where, skip, limit),
+        ]);
 
-      const mapped = students.map((s) => {
-        const profile = s.profile ? {
-          ...s.profile,
-          photoUrl: s.profile.photoUrl ? `/api/public/media/photo/${s.profile.id || s.id}` : null,
-          viewUrl: s.profile.photoUrl ? `/api/public/media/photo/${s.profile.id || s.id}` : null,
-        } : null;
-        return { ...s, profile };
+        const mapped = students.map((s) => {
+          const profile = s.profile ? {
+            ...s.profile,
+            photoUrl: s.profile.photoUrl ? `/api/public/media/photo/${s.profile.id || s.id}` : null,
+            viewUrl: s.profile.photoUrl ? `/api/public/media/photo/${s.profile.id || s.id}` : null,
+          } : null;
+          return { ...s, profile };
+        });
+
+        return {
+          students: mapped,
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit)
+        };
       });
 
-      return {
-        students: mapped,
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit)
-      };
+      const store = dbTimingStorage?.getStore?.();
+      const dbDur = store?.dbDuration !== undefined && store.dbDuration > 0
+        ? store.dbDuration
+        : (Date.now() - dbStart);
+      res.setHeader('Server-Timing', `db;dur=${dbDur}`);
+      res.json(payload);
     });
-
-    res.json(payload);
   } catch (err: any) {
     console.error('Internal server error:', err);
     res.status(500).json({ error: 'SERVER_ERROR', message: 'An unexpected error occurred. Please try again later.' });
