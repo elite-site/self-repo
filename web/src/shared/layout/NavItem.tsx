@@ -9,6 +9,7 @@ import {
   FileText,
   Github,
   Globe,
+  GraduationCap,
   LayoutDashboard,
   User,
   Users,
@@ -20,6 +21,10 @@ import { cn } from '@/shared/lib/cn';
 import { useReducedMotion } from '@/shared/hooks/useReducedMotion';
 import { selectVariantsByName, transitionTabSpring } from '@/shared/lib/motion';
 import { prefetchRoute } from '@/shared/utils/prefetch';
+
+const isLearningHubEnabled =
+  (import.meta as any).env?.VITE_FEATURE_LEARNINGHUB === 'true' ||
+  (import.meta as any).env?.FEATURE_LEARNINGHUB === 'true';
 
 // ============================================================================
 // Navigation vocabulary
@@ -44,6 +49,17 @@ export interface NavEntry {
 /** §5.1: the full desktop rail, in the order the plan draws it. */
 export const SIDEBAR_NAV: NavEntry[] = [
   { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, keywords: 'home overview' },
+  ...(isLearningHubEnabled
+    ? [
+        {
+          label: 'LearningHub',
+          path: '/learning',
+          icon: GraduationCap,
+          keywords: 'learninghub courses lessons quizzes classes education',
+          description: 'Browse courses, watch lessons, and take quizzes',
+        },
+      ]
+    : []),
   { label: 'Profile', path: '/profile', icon: User, keywords: 'roll number bio' },
   {
     label: 'Portfolio',

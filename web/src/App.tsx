@@ -35,6 +35,17 @@ const VotingPage = lazy(() => import('@/features/voting/pages/VotingPage'));
 const NotificationsPage = lazy(() => import('@/features/notifications/pages/NotificationsPage'));
 const AnnouncementDetailPage = lazy(() => import('@/features/notifications/pages/AnnouncementDetailPage'));
 
+// LearningHub Pages (gated by FEATURE_LEARNINGHUB)
+const LearningHomePage = lazy(() => import('@/features/learning/pages/LearningHomePage'));
+const CoursesGridPage = lazy(() => import('@/features/learning/pages/CoursesGridPage'));
+const CourseDetailPage = lazy(() => import('@/features/learning/pages/CourseDetailPage'));
+const LessonPlayerPage = lazy(() => import('@/features/learning/pages/LessonPlayerPage'));
+const MyLearningPage = lazy(() => import('@/features/learning/pages/MyLearningPage'));
+
+const isLearningHubEnabled =
+  (import.meta as any).env?.VITE_FEATURE_LEARNINGHUB === 'true' ||
+  (import.meta as any).env?.FEATURE_LEARNINGHUB === 'true';
+
 const RouteLoadingFallback: React.FC = () => (
   <div className="min-h-[100dvh] bg-surface-canvas px-4 py-8 sm:px-6 sm:py-10">
     <div className="mx-auto w-full max-w-canvas">
@@ -195,6 +206,15 @@ const AuthWrapper: React.FC = () => {
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/announcements/:id" element={<AnnouncementDetailPage />} />
           <Route path="/settings" element={<SettingsPage />} />
+          {isLearningHubEnabled && (
+            <>
+              <Route path="/learning" element={<LearningHomePage />} />
+              <Route path="/learning/courses" element={<CoursesGridPage />} />
+              <Route path="/learning/courses/:slugOrId" element={<CourseDetailPage />} />
+              <Route path="/learning/lessons/:id" element={<LessonPlayerPage />} />
+              <Route path="/learning/my-learning" element={<MyLearningPage />} />
+            </>
+          )}
         </Route>
       </Routes>
     </Suspense>

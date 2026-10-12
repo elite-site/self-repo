@@ -20,6 +20,7 @@ import {
   ChevronRight,
   Layers,
   HardDrive,
+  GraduationCap,
 } from 'lucide-react';
 
 /**
@@ -38,6 +39,7 @@ export type AdminTab =
   | 'github'
   | 'activity'
   | 'moderation'
+  | 'learning'
   | 'events'
   | 'event-registrations'
   | 'voting'
@@ -76,6 +78,12 @@ const navGroups: NavGroup[] = [
       { id: 'students', label: 'All students', icon: Users },
       { id: 'github', label: 'GitHub', icon: HardDrive },
       { id: 'moderation', label: 'Moderation queue', icon: ShieldCheck },
+    ],
+  },
+  {
+    label: 'Learning',
+    items: [
+      { id: 'learning', label: 'Courses & Quizzes', icon: GraduationCap },
     ],
   },
   {
