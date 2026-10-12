@@ -12,6 +12,7 @@ vi.mock('../src/infrastructure/prisma', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../src/infrastructure/prisma')>();
   return {
     ...actual,
+    checkDatabaseHealth: vi.fn().mockResolvedValue(true),
     prisma: {
       $queryRaw: vi.fn().mockResolvedValue([{ 1: 1 }]),
     },
