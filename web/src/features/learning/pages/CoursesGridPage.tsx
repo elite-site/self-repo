@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, BookOpen } from 'lucide-react';
 import { useCoursesQuery } from '../hooks';
 import { CourseCard } from '../components';
 import { Button } from '@/shared/ui/Button';
 import { Skeleton } from '@/shared/ui/Skeleton';
+import { EmptyState } from '@/shared/ui/EmptyState';
 import { cn } from '@/shared/lib/cn';
 
 const CATEGORIES = ['All', 'Web Development', 'Mobile', 'Data Science', 'AI & ML', 'DevOps'];
@@ -54,23 +55,13 @@ export const CoursesGridPage: React.FC = () => {
 
         <div className="flex flex-wrap items-center gap-2">
           {CATEGORIES.map((cat) => (
-            <button
-              key={cat}
-              type="button"
-              onClick={() => updateParam('category', cat)}
-              className={cn('rounded-full px-3 py-1 text-xs font-semibold transition-colors', category === cat ? 'bg-brand text-on-brand' : 'border border-edge bg-surface text-ink-secondary hover:bg-surface-sunken')}
-            >
+            <button key={cat} type="button" onClick={() => updateParam('category', cat)} className={cn('rounded-full px-3 py-1 text-xs font-semibold transition-colors', category === cat ? 'bg-brand text-on-brand' : 'border border-edge bg-surface text-ink-secondary hover:bg-surface-sunken')}>
               {cat}
             </button>
           ))}
           <div className="h-4 w-px bg-edge mx-1 hidden sm:block" />
           {LEVELS.map((lvl) => (
-            <button
-              key={lvl}
-              type="button"
-              onClick={() => updateParam('level', lvl)}
-              className={cn('rounded-full px-3 py-1 text-xs font-semibold transition-colors', level === lvl ? 'bg-ink text-surface' : 'border border-edge bg-surface text-ink-secondary hover:bg-surface-sunken')}
-            >
+            <button key={lvl} type="button" onClick={() => updateParam('level', lvl)} className={cn('rounded-full px-3 py-1 text-xs font-semibold transition-colors', level === lvl ? 'bg-ink text-surface' : 'border border-edge bg-surface text-ink-secondary hover:bg-surface-sunken')}>
               {lvl.charAt(0) + lvl.slice(1).toLowerCase()}
             </button>
           ))}
@@ -94,9 +85,11 @@ export const CoursesGridPage: React.FC = () => {
           ))}
         </div>
       ) : (
-        <div className="rounded-xl border border-dashed border-edge p-12 text-center text-sm text-ink-muted">
-          No courses found matching your criteria.
-        </div>
+        <EmptyState
+          icon={BookOpen}
+          title="No courses found"
+          description="Try loosening your filters or searching with different keywords."
+        />
       )}
 
       {data?.pagination && data.pagination.totalPages > 1 && (

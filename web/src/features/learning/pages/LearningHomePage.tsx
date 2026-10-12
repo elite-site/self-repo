@@ -1,10 +1,11 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Play, Sparkles } from 'lucide-react';
+import { Play, Sparkles, BookOpen } from 'lucide-react';
 import { useLearningHomeQuery } from '../hooks';
 import { CourseRow, RowSkeleton } from '../components';
 import { ProgressBar } from '@/shared/ui/ProgressBar';
 import { Button } from '@/shared/ui/Button';
+import { EmptyState } from '@/shared/ui/EmptyState';
 import { CourseCardSummary } from '../types';
 
 export const LearningHomePage: React.FC = () => {
@@ -37,6 +38,30 @@ export const LearningHomePage: React.FC = () => {
     lessonCount: 0,
     totalDurationSec: 0,
   }));
+
+  const hasRows =
+    (data.rows.continueLearning?.length ?? 0) > 0 ||
+    (data.rows.assignedToYou?.length ?? 0) > 0 ||
+    (data.rows.topCourses?.length ?? 0) > 0 ||
+    (data.rows.newCourses?.length ?? 0) > 0 ||
+    (data.rows.categories?.length ?? 0) > 0 ||
+    historyCourses.length > 0;
+
+  if (!hero && !hasRows) {
+    return (
+      <div className="space-y-6 p-4 sm:p-6 lg:p-8">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-ink sm:text-3xl">LearningHub</h1>
+          <p className="text-sm text-ink-muted">Springboard your skills with curated courses and interactive lessons.</p>
+        </div>
+        <EmptyState
+          icon={BookOpen}
+          title="No courses available yet"
+          description="Courses will appear here once published by faculty. Check back soon!"
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 p-4 sm:p-6 lg:p-8">

@@ -6,6 +6,7 @@ import { Badge } from '@/shared/ui/Badge';
 import { Button } from '@/shared/ui/Button';
 import { ProgressBar } from '@/shared/ui/ProgressBar';
 import { Skeleton } from '@/shared/ui/Skeleton';
+import { EmptyState } from '@/shared/ui/EmptyState';
 import { LessonType } from '../types';
 
 const TYPE_ICONS: Record<LessonType, React.ComponentType<{ className?: string }>> = {
@@ -76,25 +77,33 @@ export const CourseDetailPage: React.FC = () => {
 
       <div className="space-y-4">
         <h2 className="text-lg font-bold text-ink">Course Syllabus</h2>
-        <div className="divide-y divide-edge rounded-xl border border-edge bg-surface">
-          {course.lessons.map((lesson) => {
-            const Icon = TYPE_ICONS[lesson.type] || FileText;
-            return (
-              <Link
-                key={lesson.id}
-                to={`/learning/lessons/${lesson.id}`}
-                className="flex items-center justify-between p-4 transition-colors hover:bg-surface-sunken"
-              >
-                <div className="flex items-center gap-3">
-                  <span className="text-xs font-semibold text-ink-muted w-5">{lesson.order}.</span>
-                  <Icon className="size-4 text-ink-muted" />
-                  <span className="text-sm font-medium text-ink">{lesson.title}</span>
-                </div>
-                {lesson.completed && <CheckCircle2 className="size-4 text-success" />}
-              </Link>
-            );
-          })}
-        </div>
+        {course.lessons.length === 0 ? (
+          <EmptyState
+            icon={BookOpen}
+            title="No lessons published yet"
+            description="The syllabus for this course is being prepared by faculty."
+          />
+        ) : (
+          <div className="divide-y divide-edge rounded-xl border border-edge bg-surface">
+            {course.lessons.map((lesson) => {
+              const Icon = TYPE_ICONS[lesson.type] || FileText;
+              return (
+                <Link
+                  key={lesson.id}
+                  to={`/learning/lessons/${lesson.id}`}
+                  className="flex items-center justify-between p-4 transition-colors hover:bg-surface-sunken"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-semibold text-ink-muted w-5">{lesson.order}.</span>
+                    <Icon className="size-4 text-ink-muted" />
+                    <span className="text-sm font-medium text-ink">{lesson.title}</span>
+                  </div>
+                  {lesson.completed && <CheckCircle2 className="size-4 text-success" />}
+                </Link>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

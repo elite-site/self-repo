@@ -143,5 +143,28 @@ describe('LearningHub Web Experience', () => {
       expect(screen.getByRole('heading', { level: 2, name: 'New Courses' })).toBeInTheDocument();
       expect(screen.getByRole('heading', { level: 2, name: 'Cloud Engineering' })).toBeInTheDocument();
     });
+
+    it('renders empty state when LearningHub has no courses available', async () => {
+      const emptyFeed: HomeFeedResponse = {
+        hero: null,
+        rows: {
+          continueLearning: [],
+          assignedToYou: [],
+          topCourses: [],
+          newCourses: [],
+          categories: [],
+          history: [],
+        },
+      };
+
+      vi.mocked(learningApi.getHomeFeed).mockResolvedValue(emptyFeed);
+
+      renderWithProviders(<LearningHomePage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('No courses available yet')).toBeInTheDocument();
+      });
+      expect(screen.getByText(/Courses will appear here once published by faculty/i)).toBeInTheDocument();
+    });
   });
 });

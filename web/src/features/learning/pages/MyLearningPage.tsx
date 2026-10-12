@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, BookOpen, CheckCircle2, Clock } from 'lucide-react';
 import { useMyLearningQuery } from '../hooks';
 import { CourseCard } from '../components';
 import { Skeleton } from '@/shared/ui/Skeleton';
 import { Button } from '@/shared/ui/Button';
+import { EmptyState } from '@/shared/ui/EmptyState';
 import { cn } from '@/shared/lib/cn';
 
 type TabKey = 'inProgress' | 'completed' | 'deadlines';
@@ -61,9 +62,12 @@ export const MyLearningPage: React.FC = () => {
             ))}
           </div>
         ) : (
-          <div className="rounded-xl border border-dashed border-edge p-12 text-center text-sm text-ink-muted">
-            No courses currently in progress. Browse the catalog to start learning.
-          </div>
+          <EmptyState
+            icon={BookOpen}
+            title="No courses in progress"
+            description="You don't have any courses in progress right now. Explore the catalog to start learning."
+            action={<Link to="/learning/courses"><Button variant="secondary" size="sm">Browse Courses</Button></Link>}
+          />
         )
       ) : activeTab === 'completed' ? (
         data?.completed?.length ? (
@@ -73,9 +77,12 @@ export const MyLearningPage: React.FC = () => {
             ))}
           </div>
         ) : (
-          <div className="rounded-xl border border-dashed border-edge p-12 text-center text-sm text-ink-muted">
-            You haven't completed any courses yet. Keep learning!
-          </div>
+          <EmptyState
+            icon={CheckCircle2}
+            title="No completed courses yet"
+            description="Complete all lessons in a course to record your achievements here."
+            action={<Link to="/learning/courses"><Button variant="secondary" size="sm">Browse Courses</Button></Link>}
+          />
         )
       ) : data?.deadlines?.length ? (
         <div className="space-y-3 max-w-3xl">
@@ -99,9 +106,11 @@ export const MyLearningPage: React.FC = () => {
           ))}
         </div>
       ) : (
-        <div className="rounded-xl border border-dashed border-edge p-12 text-center text-sm text-ink-muted">
-          No upcoming deadlines. Great job staying on track!
-        </div>
+        <EmptyState
+          icon={Clock}
+          title="No upcoming deadlines"
+          description="Great job! You have no pending deadlines or upcoming quizzes."
+        />
       )}
     </div>
   );
