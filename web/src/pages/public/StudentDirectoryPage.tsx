@@ -5,7 +5,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Search, SlidersHorizontal, Users, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { Navbar } from '../../components/Navbar';
-import { Footer } from '../../components/Footer';
+import { FooterReveal } from '../../components/layout/FooterReveal';
 import { getPhotoStyle } from '../../utils/photoStyle';
 import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
@@ -639,7 +639,7 @@ export const StudentDirectoryPage: React.FC<StudentDirectoryProps> = ({ session,
         <FilterControls idPrefix="mobile" {...filterProps} />
       </Modal>
 
-      <Footer />
+      <FooterReveal />
     </div>
   );
 };

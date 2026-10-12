@@ -5,7 +5,7 @@ import { api } from '../../services/api';
 import { Event } from '../../types';
 import { StudentSession } from '../../types';
 import { Navbar } from '../../components/Navbar';
-import { Footer } from '../../components/Footer';
+import { FooterReveal } from '../../components/layout/FooterReveal';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
@@ -231,7 +231,7 @@ export const PublicEventsPage: React.FC<PublicEventsPageProps> = ({ session, onL
         </div>
       </main>
 
-      <Footer />
+      <FooterReveal />
     </div>
   );
 };

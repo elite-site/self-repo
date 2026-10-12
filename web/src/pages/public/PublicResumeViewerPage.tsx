@@ -5,7 +5,7 @@ import { StudentSession } from '../../types';
 import { safeUrl } from '../../utils/safeUrl';
 import { Loader2, ArrowLeft, FileText, ExternalLink, Download } from 'lucide-react';
 import { Navbar } from '../../components/Navbar';
-import { Footer } from '../../components/Footer';
+import { FooterReveal } from '../../components/layout/FooterReveal';
 
 interface PublicResumeViewerProps {
   session?: StudentSession | null;
@@ -169,7 +169,7 @@ export const PublicResumeViewerPage: React.FC<PublicResumeViewerProps> = ({ sess
         )}
       </main>
 
-      <Footer />
+      <FooterReveal />
     </div>
   );
 };

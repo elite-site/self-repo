@@ -3,7 +3,7 @@ import { Navigate, Link, useNavigate } from 'react-router-dom';
 import { StudentSession } from '../../types';
 import { api, resolveMediaUrl } from '../../services/api';
 import { Navbar } from '../../components/Navbar';
-import { Footer } from '../../components/Footer';
+import { FooterReveal } from '../../components/layout/FooterReveal';
 import { ArrowRight, Search, Users, Calendar, GraduationCap, CheckCircle2 } from 'lucide-react';
 
 interface HomePageProps {
@@ -266,7 +266,7 @@ export const HomePage: React.FC<HomePageProps> = ({ session, onLogout }) => {
         </section>
       </main>
 
-      <Footer />
+      <FooterReveal />
     </div>
   );
 };

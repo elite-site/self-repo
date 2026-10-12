@@ -4,7 +4,7 @@ import { Calendar, Clock, Users, ArrowLeft, AlertCircle, ShieldCheck } from 'luc
 import { api } from '../../services/api';
 import { StudentSession } from '../../types';
 import { Navbar } from '../../components/Navbar';
-import { Footer } from '../../components/Footer';
+import { FooterReveal } from '../../components/layout/FooterReveal';
 import { SkeletonPage } from '../../components/ui/Skeleton';
 import { useReducedMotion } from '../../hooks/useReducedMotion';
 import { selectVariantsByName } from '../../lib/motion';
@@ -229,7 +229,7 @@ export const PublicEventDetailPage: React.FC<PublicEventDetailPageProps> = ({ se
         <div className="max-w-3xl mx-auto">{renderBody()}</div>
       </main>
 
-      <Footer />
+      <FooterReveal />
     </div>
   );
 };
