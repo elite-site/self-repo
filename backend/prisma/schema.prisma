@@ -107,6 +107,7 @@ enum NotificationType {
   VOTING
   TEAM
   ANNOUNCEMENT
+  LEARNING
 }
 
 enum NotificationStatus {
@@ -168,6 +169,7 @@ enum PortalModule {
   AUDIT
   SYSTEM
   ROLES
+  LEARNING
 }
 
 enum PermissionAction {
@@ -339,6 +341,12 @@ model Student {
   notifications   Notification[]
   changeRequests  ChangeRequest[]
   skillRequests   SkillRequest[]
+
+  // LearningHub integration
+  courseEnrollments Enrollment[]
+  courseProgress    LessonProgress[]
+  quizAttempts      QuizAttempt[]
+  courseTargets     CourseTarget[]
 
   // GitHub integration
   githubReminderSnoozedUntil DateTime?
@@ -1084,4 +1092,218 @@ model GithubOAuthState {
 
   @@index([studentId])
 }
+
+// ============================================================
+// LEARNINGHUB (Springboard-style LMS)
+// ============================================================
+
+enum CourseStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum CourseLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum EnrolmentType {
+  OPEN
+  ASSIGNED_ONLY
+}
+
+enum LessonType {
+  YOUTUBE
+  LINK
+  NOTES
+  QUIZ
+}
+
+enum CourseTargetType {
+  ALL
+  STUDENT
+  BATCH
+}
+
+enum EnrollmentSource {
+  SELF
+  ASSIGNED
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  COMPLETED
+}
+
+enum QuizShowAnswers {
+  NEVER
+  AFTER_SUBMIT
+  AFTER_DEADLINE
+}
+
+enum QuizQuestionType {
+  SINGLE
+  MULTI
+  TRUE_FALSE
+}
+
+model Course {
+  id             String           @id @default(cuid())
+  title          String
+  slug           String           @unique
+  description    String           @db.Text
+  thumbnailUrl   String?
+  category       String?
+  level          CourseLevel?
+  estimatedHours Float?
+  status         CourseStatus     @default(DRAFT)
+  enrolment      EnrolmentType    @default(OPEN)
+  featured       Boolean          @default(false)
+  dueAt          DateTime?
+  createdBy      String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  lessons        Lesson[]
+  targets        CourseTarget[]
+  enrollments    Enrollment[]
+  progress       LessonProgress[]
+  quizzes        Quiz[]
+
+  @@index([status, featured])
+  @@index([category])
+  @@index([createdAt])
+}
+
+model Lesson {
+  id             String           @id @default(cuid())
+  courseId       String
+  course         Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  title          String
+  order          Int              @default(0)
+  type           LessonType       @default(YOUTUBE)
+  youtubeVideoId String?
+  url            String?
+  notes          String?          @db.Text
+  durationSec    Int?
+
+  quiz           Quiz?
+  progress       LessonProgress[]
+
+  @@index([courseId, order])
+}
+
+model CourseTarget {
+  id         String           @id @default(cuid())
+  courseId   String
+  course     Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  targetType CourseTargetType @default(ALL)
+  studentId  String?
+  student    Student?         @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  year       Int?
+  section    String?
+
+  @@index([courseId])
+  @@index([targetType, year, section])
+}
+
+model Enrollment {
+  id             String           @id @default(cuid())
+  studentId      String
+  student        Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  courseId       String
+  course         Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  source         EnrollmentSource @default(SELF)
+  status         EnrollmentStatus @default(ACTIVE)
+  enrolledAt     DateTime         @default(now())
+  completedAt    DateTime?
+  lastAccessedAt DateTime         @default(now())
+
+  @@unique([studentId, courseId])
+  @@index([courseId])
+  @@index([studentId, status])
+  @@index([studentId, lastAccessedAt])
+}
+
+model LessonProgress {
+  id             String    @id @default(cuid())
+  studentId      String
+  student        Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  lessonId       String
+  lesson         Lesson    @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  courseId       String
+  course         Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  maxPositionSec Int       @default(0)
+  secondsWatched Int       @default(0)
+  completed      Boolean   @default(false)
+  completedAt    DateTime?
+  updatedAt      DateTime  @updatedAt
+
+  @@unique([studentId, lessonId])
+  @@index([courseId, studentId])
+  @@index([studentId, updatedAt])
+}
+
+model Quiz {
+  id           String          @id @default(cuid())
+  courseId     String
+  course       Course          @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessonId     String          @unique
+  lesson       Lesson          @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  opensAt      DateTime?
+  dueAt        DateTime?
+  maxAttempts  Int             @default(1)
+  timeLimitMin Int?
+  passPercent  Int             @default(50)
+  showAnswers  QuizShowAnswers @default(AFTER_SUBMIT)
+
+  questions    QuizQuestion[]
+  attempts     QuizAttempt[]
+
+  @@index([courseId])
+}
+
+model QuizQuestion {
+  id          String           @id @default(cuid())
+  quizId      String
+  quiz        Quiz             @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  order       Int              @default(0)
+  type        QuizQuestionType @default(SINGLE)
+  text        String           @db.Text
+  explanation String?          @db.Text
+  points      Int              @default(1)
+
+  options     QuizOption[]
+
+  @@index([quizId, order])
+}
+
+model QuizOption {
+  id         String       @id @default(cuid())
+  questionId String
+  question   QuizQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  order      Int          @default(0)
+  text       String       @db.Text
+  isCorrect  Boolean      @default(false)
+
+  @@index([questionId, order])
+}
+
+model QuizAttempt {
+  id          String    @id @default(cuid())
+  quizId      String
+  quiz        Quiz      @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  studentId   String
+  student     Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  startedAt   DateTime  @default(now())
+  submittedAt DateTime?
+  score       Int       @default(0)
+  maxScore    Int       @default(0)
+  answers     Json
+
+  @@index([quizId, studentId])
+}
+
 
