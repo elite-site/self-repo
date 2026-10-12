@@ -1162,6 +1162,10 @@ model Course {
   enrolment      EnrolmentType    @default(OPEN)
   featured       Boolean          @default(false)
   dueAt          DateTime?
+  instructor     String?
+  prerequisites  String?          @db.Text
+  outcomes       String?          @db.Text
+  skills         String[]         @default([])
   createdBy      String?
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt

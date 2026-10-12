@@ -13,11 +13,13 @@ studentCoursesRouter.post(['/courses/:id/enroll', '/:id/enroll'], asyncHandler(c
 export const adminCoursesRouter = Router();
 adminCoursesRouter.use(requireAdminAuth);
 adminCoursesRouter.get(['/admin/youtube/preview', '/youtube/preview'], asyncHandler(controller.getYouTubePreview));
+adminCoursesRouter.get(['/admin/youtube/playlist', '/youtube/playlist'], asyncHandler(controller.getYouTubePlaylist));
 adminCoursesRouter.get(['/admin/courses', '/courses', '/'], asyncHandler(controller.getAdminCourses));
 adminCoursesRouter.post(['/admin/courses', '/courses', '/'], asyncHandler(controller.createCourse));
 adminCoursesRouter.get(['/admin/courses/:id', '/courses/:id', '/:id'], asyncHandler(controller.getAdminCourse));
 adminCoursesRouter.put(['/admin/courses/:id', '/courses/:id', '/:id'], asyncHandler(controller.updateCourse));
 adminCoursesRouter.delete(['/admin/courses/:id', '/courses/:id', '/:id'], asyncHandler(controller.deleteCourse));
+adminCoursesRouter.post(['/admin/courses/:id/lessons/bulk', '/courses/:id/lessons/bulk', '/:id/lessons/bulk'], asyncHandler(controller.bulkCreateLessons));
 adminCoursesRouter.post(['/admin/courses/:id/lessons', '/courses/:id/lessons', '/:id/lessons'], asyncHandler(controller.createLesson));
 adminCoursesRouter.put(['/admin/courses/:id/lessons/reorder', '/courses/:id/lessons/reorder', '/:id/lessons/reorder'], asyncHandler(controller.reorderLessons));
 adminCoursesRouter.put(['/admin/courses/:id/lessons/:lessonId', '/courses/:id/lessons/:lessonId', '/:id/lessons/:lessonId'], asyncHandler(controller.updateLesson));

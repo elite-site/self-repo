@@ -53,3 +53,15 @@ export function useReorderLessonsMutation(courseId: string) {
     },
   });
 }
+
+export function useBulkAddLessonsMutation(courseId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (lessons: Partial<AdminLessonItem>[]) => learningAdminApi.bulkAddLessons(courseId, lessons),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-course', courseId] });
+      queryClient.invalidateQueries({ queryKey: ADMIN_COURSES_KEY });
+    },
+  });
+}
+

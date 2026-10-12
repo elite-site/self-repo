@@ -12,7 +12,7 @@ type TabKey = 'inProgress' | 'completed' | 'deadlines';
 
 export const MyLearningPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabKey>('inProgress');
-  const { data, isLoading } = useMyLearningQuery();
+  const { data, isLoading, error, refetch } = useMyLearningQuery();
 
   const tabs: Array<{ key: TabKey; label: string; count?: number }> = [
     { key: 'inProgress', label: 'In Progress', count: data?.inProgress?.length },
@@ -53,6 +53,17 @@ export const MyLearningPage: React.FC = () => {
           {Array.from({ length: 4 }).map((_, i) => (
             <Skeleton key={i} className="aspect-video w-full rounded-xl" />
           ))}
+        </div>
+      ) : error ? (
+        <div className="surface border border-edge rounded-2xl p-8 text-center space-y-3 max-w-md mx-auto" role="alert">
+          <AlertCircle className="size-8 text-status-rejected mx-auto" />
+          <h2 className="text-base font-bold text-ink">Failed to load learning progress</h2>
+          <p className="text-xs text-ink-muted leading-relaxed">
+            {(error as any)?.message || 'Database connection error. Please try again.'}
+          </p>
+          <Button variant="secondary" size="sm" onClick={() => refetch()}>
+            Retry
+          </Button>
         </div>
       ) : activeTab === 'inProgress' ? (
         data?.inProgress?.length ? (

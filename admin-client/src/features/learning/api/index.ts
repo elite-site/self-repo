@@ -162,4 +162,28 @@ export const learningAdminApi = {
     const res = await apiClient.get('/admin/api/learning/youtube/preview', { params: { url } });
     return res.data;
   },
+
+  async previewYouTubePlaylist(url: string): Promise<import('../types').YouTubePlaylistResult> {
+    if (isMock()) {
+      return {
+        playlistId: 'mock-pl',
+        title: 'Mock YouTube Playlist',
+        description: 'Sample playlist description',
+        thumbnailUrl: 'https://img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg',
+        videoCount: 2,
+        videos: [
+          { videoId: 'dQw4w9WgXcQ', title: 'Lesson 1: Introduction', durationSec: 300, durationText: '5:00', thumbnailUrl: 'https://img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg' },
+          { videoId: 'dQw4w9WgXcQ', title: 'Lesson 2: Advanced Concepts', durationSec: 600, durationText: '10:00', thumbnailUrl: 'https://img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg' },
+        ],
+      };
+    }
+    const res = await apiClient.get('/admin/api/learning/youtube/playlist', { params: { url } });
+    return res.data;
+  },
+
+  async bulkAddLessons(courseId: string, lessons: Partial<AdminLessonItem>[]): Promise<{ success: boolean; count: number }> {
+    if (isMock()) return { success: true, count: lessons.length };
+    const res = await apiClient.post(`/admin/api/learning/courses/${encodeURIComponent(courseId)}/lessons/bulk`, { lessons });
+    return res.data;
+  },
 };

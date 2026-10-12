@@ -1,6 +1,12 @@
 import { Request, Response } from 'express';
 import { coursesService } from './courses.service';
-import { parseCourseInput, parseLessonInput, parseReorderLessonsInput, parseAssignInput } from './courses.schemas';
+import {
+  parseCourseInput,
+  parseLessonInput,
+  parseReorderLessonsInput,
+  parseAssignInput,
+  parseBulkLessonsInput,
+} from './courses.schemas';
 
 export async function getStudentCourses(req: Request, res: Response) {
   const result = await coursesService.listStudentCourses(req.student?.studentId || '', req.query);
@@ -50,6 +56,12 @@ export async function createLesson(req: Request, res: Response) {
   res.status(201).json(result);
 }
 
+export async function bulkCreateLessons(req: Request, res: Response) {
+  const lessons = parseBulkLessonsInput(req.body);
+  const result = await coursesService.bulkCreateLessons(req.params.id, lessons);
+  res.status(201).json(result);
+}
+
 export async function updateLesson(req: Request, res: Response) {
   const data = parseLessonInput(req.body, true);
   const result = await coursesService.updateLesson(req.params.lessonId, data);
@@ -80,5 +92,10 @@ export async function getCourseEnrollments(req: Request, res: Response) {
 
 export async function getYouTubePreview(req: Request, res: Response) {
   const result = await coursesService.getYouTubePreview(req.query.url as string);
+  res.json(result);
+}
+
+export async function getYouTubePlaylist(req: Request, res: Response) {
+  const result = await coursesService.getYouTubePlaylist(req.query.url as string);
   res.json(result);
 }

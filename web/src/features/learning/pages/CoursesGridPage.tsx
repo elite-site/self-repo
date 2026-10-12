@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Search, ChevronLeft, ChevronRight, BookOpen } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, BookOpen, AlertCircle } from 'lucide-react';
 import { useCoursesQuery } from '../hooks';
 import { CourseCard } from '../components';
 import { Button } from '@/shared/ui/Button';
@@ -26,7 +26,7 @@ export const CoursesGridPage: React.FC = () => {
     setSearchParams(next);
   };
 
-  const { data, isLoading } = useCoursesQuery({
+  const { data, isLoading, error, refetch } = useCoursesQuery({
     page,
     limit: 12,
     category: category !== 'All' ? category : undefined,
@@ -77,6 +77,17 @@ export const CoursesGridPage: React.FC = () => {
               <Skeleton className="h-3 w-1/2" />
             </div>
           ))}
+        </div>
+      ) : error ? (
+        <div className="surface border border-edge rounded-2xl p-8 text-center space-y-3 max-w-md mx-auto" role="alert">
+          <AlertCircle className="size-8 text-status-rejected mx-auto" />
+          <h2 className="text-base font-bold text-ink">Failed to load courses</h2>
+          <p className="text-xs text-ink-muted leading-relaxed">
+            {(error as any)?.message || 'Database connection error. Please try again.'}
+          </p>
+          <Button variant="secondary" size="sm" onClick={() => refetch()}>
+            Retry
+          </Button>
         </div>
       ) : data?.courses?.length ? (
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">

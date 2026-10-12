@@ -34,8 +34,9 @@ describe('Supabase Pooler & Database URL Tuning', () => {
     expect(parsed.searchParams.get('pgbouncer')).toBe('true');
     expect(parsed.searchParams.get('statement_cache_size')).toBe('0');
     expect(parsed.searchParams.get('connection_limit')).toBe('5');
-    expect(parsed.searchParams.get('pool_timeout')).toBe('15');
-    expect(parsed.searchParams.get('connect_timeout')).toBe('10');
+    expect(parsed.searchParams.get('pool_timeout')).toBe('30');
+    expect(parsed.searchParams.get('connect_timeout')).toBe('15');
+    expect(parsed.searchParams.get('socket_timeout')).toBe('45');
   });
 
   it('detects pooler by hostname containing pooler.supabase.com', () => {

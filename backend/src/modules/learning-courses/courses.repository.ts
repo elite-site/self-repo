@@ -57,6 +57,10 @@ export class CoursesRepository {
     return prisma.lesson.create({ data });
   }
 
+  async createLessonsBulk(lessons: Prisma.LessonUncheckedCreateInput[]) {
+    return prisma.lesson.createMany({ data: lessons });
+  }
+
   async updateLesson(id: string, data: Prisma.LessonUpdateInput) {
     return prisma.lesson.update({ where: { id }, data });
   }

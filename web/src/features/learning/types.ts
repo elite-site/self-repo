@@ -21,6 +21,10 @@ export interface CourseCardSummary {
   enrolment: EnrolmentType;
   featured: boolean;
   dueAt: string | null;
+  instructor?: string | null;
+  prerequisites?: string | null;
+  outcomes?: string | null;
+  skills?: string[];
   lessonCount: number;
   totalDurationSec: number;
   isEnrolled?: boolean;

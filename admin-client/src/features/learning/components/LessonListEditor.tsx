@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
-import { Video, ExternalLink, FileText, HelpCircle, ArrowUp, ArrowDown, Edit2, Trash2, Plus } from 'lucide-react';
+import { Video, ExternalLink, FileText, HelpCircle, ArrowUp, ArrowDown, Edit2, Trash2, Plus, ListVideo } from 'lucide-react';
 import { Dialog } from '@/shared/ui/Dialog';
 import { AdminLessonItem, LessonType } from '../types';
+import { PlaylistImportModal } from './PlaylistImportModal';
 
 export interface LessonListEditorProps {
   lessons: AdminLessonItem[];
   onReorder: (lessonIds: string[]) => void;
   onAddLesson: (lesson: Partial<AdminLessonItem>) => void | Promise<void>;
+  onBulkAddLessons?: (lessons: Partial<AdminLessonItem>[]) => void | Promise<void>;
   onEditLesson: (lessonId: string, lesson: Partial<AdminLessonItem>) => void | Promise<void>;
   onDeleteLesson: (lessonId: string) => void | Promise<void>;
   onOpenQuizBuilder?: (lesson: AdminLessonItem) => void;
@@ -20,9 +22,17 @@ const typeIcon = (type: LessonType) => {
 };
 
 export const LessonListEditor: React.FC<LessonListEditorProps> = ({
-  lessons, onReorder, onAddLesson, onEditLesson, onDeleteLesson, onOpenQuizBuilder,
+  lessons,
+  onReorder,
+  onAddLesson,
+  onBulkAddLessons,
+  onEditLesson,
+  onDeleteLesson,
+  onOpenQuizBuilder,
 }) => {
   const [modalOpen, setModalOpen] = useState(false);
+  const [playlistModalOpen, setPlaylistModalOpen] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
   const [editingLesson, setEditingLesson] = useState<AdminLessonItem | null>(null);
   const [title, setTitle] = useState('');
   const [type, setType] = useState<LessonType>('YOUTUBE');
@@ -44,14 +54,39 @@ export const LessonListEditor: React.FC<LessonListEditorProps> = ({
     e.preventDefault();
     if (!title.trim()) return;
     const data: Partial<AdminLessonItem> = {
-      title: title.trim(), type, durationSec: durationSec ? Number(durationSec) : null,
-      notes: type === 'NOTES' ? notes.trim() : null, url: type === 'LINK' ? url.trim() : null,
+      title: title.trim(),
+      type,
+      durationSec: durationSec ? Number(durationSec) : null,
+      notes: type === 'NOTES' ? notes.trim() : null,
+      url: type === 'LINK' ? url.trim() : null,
       youtubeVideoId: type === 'YOUTUBE' ? url.trim() : null,
       order: editingLesson ? editingLesson.order : lessons.length + 1,
     };
     if (editingLesson) onEditLesson(editingLesson.id, data);
     else onAddLesson(data);
     setModalOpen(false);
+  };
+
+  const handlePlaylistImport = async (videos: import('../types').YouTubePlaylistItem[]) => {
+    setIsImporting(true);
+    try {
+      const payloads: Partial<AdminLessonItem>[] = videos.map((v, i) => ({
+        title: v.title,
+        type: 'YOUTUBE' as LessonType,
+        youtubeVideoId: v.videoId,
+        durationSec: v.durationSec,
+        order: lessons.length + i + 1,
+      }));
+      if (onBulkAddLessons) {
+        await onBulkAddLessons(payloads);
+      } else {
+        for (const p of payloads) {
+          await onAddLesson(p);
+        }
+      }
+    } finally {
+      setIsImporting(false);
+    }
   };
 
   const move = (idx: number, dir: -1 | 1) => {
@@ -67,14 +102,27 @@ export const LessonListEditor: React.FC<LessonListEditorProps> = ({
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-ink">Course Lessons ({lessons.length})</h3>
-        <button type="button" onClick={() => openModal()} className="btn btn-primary px-2.5 py-1 text-xs inline-flex items-center gap-1 cursor-pointer">
-          <Plus className="w-3.5 h-3.5" /> Add Lesson
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setPlaylistModalOpen(true)}
+            className="btn btn-secondary px-2.5 py-1 text-xs inline-flex items-center gap-1 cursor-pointer"
+          >
+            <ListVideo className="w-3.5 h-3.5" /> Import Playlist
+          </button>
+          <button
+            type="button"
+            onClick={() => openModal()}
+            className="btn btn-primary px-2.5 py-1 text-xs inline-flex items-center gap-1 cursor-pointer"
+          >
+            <Plus className="w-3.5 h-3.5" /> Add Lesson
+          </button>
+        </div>
       </div>
 
       <div className="divide-y divide-edge border border-edge rounded-lg surface overflow-hidden">
         {lessons.length === 0 ? (
-          <div className="p-4 text-center text-xs text-ink-muted">No lessons yet. Add one above.</div>
+          <div className="p-4 text-center text-xs text-ink-muted">No lessons yet. Add one above or import an entire YouTube playlist.</div>
         ) : (
           lessons.map((lesson, idx) => (
             <div key={lesson.id} className="p-3 flex items-center justify-between gap-3 hover:bg-surface-sunken">
@@ -85,6 +133,7 @@ export const LessonListEditor: React.FC<LessonListEditorProps> = ({
                   <div className="flex items-center gap-2 mt-0.5">
                     {typeIcon(lesson.type)}
                     {lesson.durationSec && <span className="text-xs text-ink-muted">{Math.round(lesson.durationSec / 60)} min</span>}
+                    {lesson.youtubeVideoId && <span className="text-[11px] font-mono text-ink-muted truncate">ID: {lesson.youtubeVideoId}</span>}
                   </div>
                 </div>
               </div>
@@ -138,6 +187,15 @@ export const LessonListEditor: React.FC<LessonListEditorProps> = ({
           </div>
         </form>
       </Dialog>
+
+      <PlaylistImportModal
+        open={playlistModalOpen}
+        onClose={() => setPlaylistModalOpen(false)}
+        onImport={handlePlaylistImport}
+        isImporting={isImporting}
+      />
     </div>
   );
 };
+
+export default LessonListEditor;

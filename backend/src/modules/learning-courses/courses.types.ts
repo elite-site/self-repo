@@ -13,6 +13,10 @@ export interface CourseCardSummary {
   enrolment: EnrolmentType;
   featured: boolean;
   dueAt: string | null;
+  instructor?: string | null;
+  prerequisites?: string | null;
+  outcomes?: string | null;
+  skills?: string[];
   lessonCount: number;
   totalDurationSec: number;
   isEnrolled?: boolean;
@@ -27,6 +31,9 @@ export interface LessonSummary {
   title: string;
   order: number;
   type: LessonType;
+  youtubeVideoId?: string | null;
+  url?: string | null;
+  notes?: string | null;
   durationSec?: number | null;
   completed?: boolean;
   secondsWatched?: number;
@@ -54,9 +61,36 @@ export interface YouTubePreviewResult {
   embeddable: boolean;
 }
 
+export interface YouTubePlaylistItem {
+  videoId: string;
+  title: string;
+  durationSec: number | null;
+  durationText?: string | null;
+  thumbnailUrl: string;
+}
+
+export interface YouTubePlaylistResult {
+  playlistId: string;
+  title: string | null;
+  description: string | null;
+  thumbnailUrl: string | null;
+  videoCount: number;
+  videos: YouTubePlaylistItem[];
+}
+
 export interface AssignCoursePayload {
   targetType: CourseTargetType;
   studentIds?: string[];
   year?: number;
   section?: string;
+}
+
+export interface BulkLessonItem {
+  title: string;
+  type?: LessonType;
+  youtubeVideoId?: string | null;
+  url?: string | null;
+  notes?: string | null;
+  durationSec?: number | null;
+  order?: number;
 }

@@ -21,6 +21,10 @@ export interface AdminCourseItem {
   enrolment: EnrolmentType;
   featured: boolean;
   dueAt: string | null;
+  instructor?: string | null;
+  prerequisites?: string | null;
+  outcomes?: string | null;
+  skills?: string[];
   lessonCount: number;
   enrollmentCount: number;
   completionCount: number;
@@ -39,6 +43,23 @@ export interface AdminLessonItem {
   notes: string | null;
   durationSec: number | null;
   quiz?: AdminQuizItem | null;
+}
+
+export interface YouTubePlaylistItem {
+  videoId: string;
+  title: string;
+  durationSec: number | null;
+  durationText?: string | null;
+  thumbnailUrl: string;
+}
+
+export interface YouTubePlaylistResult {
+  playlistId: string;
+  title: string | null;
+  description: string | null;
+  thumbnailUrl: string | null;
+  videoCount: number;
+  videos: YouTubePlaylistItem[];
 }
 
 export interface AdminQuizOptionItem {

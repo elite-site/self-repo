@@ -61,6 +61,28 @@ export function errorHandler(
     return;
   }
 
+  // 2b. Prisma database connection / pool errors (ERR-7)
+  if (
+    err?.code === 'P1001' || // Can't reach database server
+    err?.code === 'P1002' || // Database server reached but timed out
+    err?.code === 'P1008' || // Operations timed out
+    err?.code === 'P1017' || // Server has closed the connection
+    err?.code === 'P2024'    // Timed out fetching a connection from the pool
+  ) {
+    logger.warn('Database temporarily busy or unreachable', {
+      requestId,
+      code: err.code,
+      message: err.message,
+    });
+    res.setHeader('Retry-After', '2');
+    res.status(503).json({
+      error: 'SERVICE_UNAVAILABLE',
+      message: 'The database is currently experiencing high load. Please refresh in a moment.',
+      requestId,
+    });
+    return;
+  }
+
   // 3. JWT Authentication error mapping (ERR-7)
   if (err?.name === 'JsonWebTokenError' || err?.name === 'TokenExpiredError') {
     logger.warn('JWT verification failed', { requestId, name: err.name });

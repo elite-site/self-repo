@@ -2,8 +2,8 @@ import { coursesRepository, CoursesRepository } from './courses.repository';
 import { NotFoundError, ForbiddenError } from '../../utils/appError';
 import { CourseStatus, EnrolmentType, CourseTargetType, Prisma } from '@prisma/client';
 import { ActivityService } from '../admin';
-import { AssignCoursePayload, YouTubePreviewResult } from './courses.types';
-import { fetchYouTubePreview } from './youtube';
+import { AssignCoursePayload, YouTubePreviewResult, YouTubePlaylistResult, BulkLessonItem } from './courses.types';
+import { fetchYouTubePreview, fetchYouTubePlaylist } from './youtube';
 import { mapCourseCard, mapCourseDetail } from './courses.mappers';
 
 export class CoursesService {
@@ -79,14 +79,35 @@ export class CoursesService {
   }
 
   async createCourse(data: any, adminUser?: { email?: string }) {
-    const created = await this.repo.createCourse(data);
+    const { target, lessons, ...courseData } = data;
+    const created = await this.repo.createCourse(courseData);
+
+    if (Array.isArray(lessons) && lessons.length > 0) {
+      const records = lessons.map((l: BulkLessonItem, idx: number) => ({
+        courseId: created.id,
+        title: l.title,
+        type: l.type || 'YOUTUBE',
+        youtubeVideoId: l.youtubeVideoId || null,
+        url: l.url || null,
+        notes: l.notes || null,
+        durationSec: l.durationSec || null,
+        order: l.order !== undefined ? l.order : idx + 1,
+      }));
+      await this.repo.createLessonsBulk(records);
+    }
+
+    if (target) {
+      await this.assignCourse(created.id, target, adminUser);
+    }
+
     await ActivityService.log({ category: 'ADMIN', action: 'COURSE_CREATE', userEmail: adminUser?.email, details: `Created course ${created.id}` });
     return created;
   }
 
   async updateCourse(id: string, data: any, adminUser?: { email?: string }) {
     await this.getAdminCourse(id);
-    const updated = await this.repo.updateCourse(id, data);
+    const { target, lessons, ...courseData } = data;
+    const updated = await this.repo.updateCourse(id, courseData);
     await ActivityService.log({ category: 'ADMIN', action: 'COURSE_UPDATE', userEmail: adminUser?.email, details: `Updated course ${id}` });
     return updated;
   }
@@ -102,6 +123,23 @@ export class CoursesService {
     await this.getAdminCourse(courseId);
     const order = data.order !== undefined ? data.order : (await this.repo.getLessonMaxOrder(courseId)) + 1;
     return this.repo.createLesson({ ...data, courseId, order });
+  }
+
+  async bulkCreateLessons(courseId: string, lessons: BulkLessonItem[]) {
+    await this.getAdminCourse(courseId);
+    const maxOrder = await this.repo.getLessonMaxOrder(courseId);
+    const records = lessons.map((l, idx) => ({
+      courseId,
+      title: l.title,
+      type: l.type || 'YOUTUBE',
+      youtubeVideoId: l.youtubeVideoId || null,
+      url: l.url || null,
+      notes: l.notes || null,
+      durationSec: l.durationSec || null,
+      order: l.order !== undefined ? l.order : maxOrder + idx + 1,
+    }));
+    await this.repo.createLessonsBulk(records);
+    return { success: true, count: records.length };
   }
 
   async updateLesson(lessonId: string, data: any) {
@@ -146,6 +184,10 @@ export class CoursesService {
 
   async getYouTubePreview(url: string): Promise<YouTubePreviewResult> {
     return fetchYouTubePreview(url);
+  }
+
+  async getYouTubePlaylist(urlOrId: string): Promise<YouTubePlaylistResult> {
+    return fetchYouTubePlaylist(urlOrId);
   }
 }
 

@@ -60,13 +60,13 @@ export function buildDatabaseUrl(base: string): string {
     }
 
     if (!url.searchParams.has('pool_timeout')) {
-      url.searchParams.set('pool_timeout', '15');
+      url.searchParams.set('pool_timeout', '30');
     }
     if (!url.searchParams.has('connect_timeout')) {
-      url.searchParams.set('connect_timeout', '10');
+      url.searchParams.set('connect_timeout', '15');
     }
     if (!url.searchParams.has('socket_timeout')) {
-      url.searchParams.set('socket_timeout', '30');
+      url.searchParams.set('socket_timeout', '45');
     }
 
     return url.toString();
@@ -91,19 +91,42 @@ function createPrismaClient(): PrismaClient {
 
   client.$use(async (params, next) => {
     const start = Date.now();
-    const result = await next(params);
-    const duration = Date.now() - start;
+    try {
+      const result = await next(params);
+      const duration = Date.now() - start;
 
-    if (duration > 200) {
-      logger.warn(`[Prisma SLOW QUERY] ${params.model || 'Unknown'}.${params.action} took ${duration}ms`);
+      if (duration > 200) {
+        logger.warn(`[Prisma SLOW QUERY] ${params.model || 'Unknown'}.${params.action} took ${duration}ms`);
+      }
+
+      const store = dbTimingStorage.getStore();
+      if (store) {
+        store.dbDuration += duration;
+      }
+
+      return result;
+    } catch (err: any) {
+      // Check for transient connection resets or pool exhaustion drops from Supabase pooler
+      const isTransientConnectionError =
+        err?.code === 'P1017' || // Server has closed the connection
+        err?.code === 'P1001' || // Can't reach database server
+        err?.code === 'P1002' || // Database server timed out
+        err?.code === 'P2024' || // Timed out fetching a new connection from the pool
+        /ECONNRESET|Connection terminated|server closed the connection|socket hang up/i.test(
+          err?.message || ''
+        );
+
+      if (isTransientConnectionError) {
+        logger.warn(
+          `[Prisma TRANSIENT RETRY] Retrying ${params.model || 'Unknown'}.${params.action} after transient connection error: ${err.code || err.message}`
+        );
+        // Small delay to allow the connection pool / network socket to recover
+        await new Promise((resolve) => setTimeout(resolve, 150));
+        return next(params);
+      }
+
+      throw err;
     }
-
-    const store = dbTimingStorage.getStore();
-    if (store) {
-      store.dbDuration += duration;
-    }
-
-    return result;
   });
 
   return client;

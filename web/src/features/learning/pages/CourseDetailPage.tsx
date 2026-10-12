@@ -1,6 +1,18 @@
 import React from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Clock, BookOpen, Play, CheckCircle2, FileText, HelpCircle, ExternalLink } from 'lucide-react';
+import {
+  Clock,
+  BookOpen,
+  Play,
+  CheckCircle2,
+  FileText,
+  HelpCircle,
+  ExternalLink,
+  Calendar,
+  AlertTriangle,
+  Sparkles,
+  UserCheck,
+} from 'lucide-react';
 import { useCourseDetailQuery, useEnrollCourseMutation } from '../hooks';
 import { Badge } from '@/shared/ui/Badge';
 import { Button } from '@/shared/ui/Button';
@@ -18,10 +30,10 @@ const TYPE_ICONS: Record<LessonType, React.ComponentType<{ className?: string }>
 
 export const CourseDetailPage: React.FC = () => {
   const { slugOrId } = useParams<{ slugOrId: string }>();
-  const { data, isLoading } = useCourseDetailQuery(slugOrId || '');
+  const { data, isLoading, error, refetch } = useCourseDetailQuery(slugOrId || '');
   const enrollMutation = useEnrollCourseMutation(slugOrId);
 
-  if (isLoading || !data) {
+  if (isLoading) {
     return (
       <div className="space-y-6 p-4 sm:p-6 lg:p-8" aria-busy="true">
         <Skeleton className="h-8 w-1/2" />
@@ -31,24 +43,103 @@ export const CourseDetailPage: React.FC = () => {
     );
   }
 
+  if (error || !data) {
+    return (
+      <div className="space-y-6 p-4 sm:p-6 lg:p-8">
+        <div className="surface border border-edge rounded-2xl p-8 text-center space-y-3 max-w-md mx-auto" role="alert">
+          <AlertTriangle className="size-8 text-status-rejected mx-auto" />
+          <h2 className="text-base font-bold text-ink">Course unavailable</h2>
+          <p className="text-xs text-ink-muted leading-relaxed">
+            {(error as any)?.message || 'We were unable to load this course. Please try again.'}
+          </p>
+          <div className="flex justify-center gap-2 pt-2">
+            <Link to="/learning/courses">
+              <Button variant="secondary" size="sm">Browse Courses</Button>
+            </Link>
+            <Button variant="primary" size="sm" onClick={() => refetch()}>Retry</Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const { course, enrollment } = data;
   const firstUnfinishedLesson = course.lessons.find((l) => !l.completed) || course.lessons[0];
 
+  const now = new Date();
+  const dueDate = course.dueAt ? new Date(course.dueAt) : null;
+  const isOverdue = dueDate ? dueDate < now : false;
+  const daysRemaining = dueDate ? Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : null;
+
   return (
     <div className="mx-auto max-w-5xl space-y-8 p-4 sm:p-6 lg:p-8">
+      {/* Course Hero Banner */}
       <div className="rounded-2xl border border-edge bg-surface-raised p-6 shadow-xs sm:p-8 space-y-4">
         <div className="flex flex-wrap items-center gap-2">
           {course.category && <Badge label={course.category} variant="neutral" dot={false} />}
           {course.level && <Badge label={course.level} variant="info" />}
+          {course.instructor && (
+            <span className="text-xs font-medium text-ink-muted flex items-center gap-1">
+              <UserCheck className="size-3.5 text-brand" /> {course.instructor}
+            </span>
+          )}
         </div>
+
         <h1 className="text-2xl font-bold tracking-tight text-ink sm:text-3xl">{course.title}</h1>
         <p className="text-sm leading-relaxed text-ink-secondary">{course.description}</p>
-        <div className="flex flex-wrap items-center gap-4 text-xs text-ink-muted">
+        {/* Deadline Notice */}
+        {dueDate && (
+          <div
+            className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium border ${
+              isOverdue
+                ? 'bg-status-rejected/10 border-status-rejected/30 text-status-rejected'
+                : daysRemaining !== null && daysRemaining <= 3
+                ? 'bg-warning/10 border-warning/30 text-warning-foreground'
+                : 'bg-surface-sunken border-edge text-ink-secondary'
+            }`}
+          >
+            {isOverdue ? (
+              <AlertTriangle className="size-4 shrink-0 text-status-rejected" />
+            ) : (
+              <Calendar className="size-4 shrink-0 text-brand" />
+            )}
+            <span>
+              <strong>Deadline:</strong> {dueDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} at{' '}
+              {dueDate.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
+              {isOverdue
+                ? ' • Course completion is overdue'
+                : daysRemaining !== null
+                ? ` • ${daysRemaining === 0 ? 'Due today' : `${daysRemaining} days remaining`}`
+                : ''}
+            </span>
+          </div>
+        )}
+
+        {/* Skills Tagged */}
+        {course.skills && course.skills.length > 0 && (
+          <div className="flex flex-wrap items-center gap-1.5 pt-1">
+            <span className="text-xs font-medium text-ink-muted flex items-center gap-1">
+              <Sparkles className="size-3 text-brand" /> Skills:
+            </span>
+            {course.skills.map((skill, idx) => (
+              <span key={idx} className="badge badge-draft text-xs">
+                {skill}
+              </span>
+            ))}
+          </div>
+        )}
+
+        <div className="flex flex-wrap items-center gap-4 text-xs text-ink-muted border-t border-edge pt-3">
           {course.estimatedHours !== null && course.estimatedHours !== undefined && (
-            <span className="flex items-center gap-1"><Clock className="size-3.5" /> {course.estimatedHours}h total</span>
+            <span className="flex items-center gap-1">
+              <Clock className="size-3.5" /> {course.estimatedHours}h total
+            </span>
           )}
-          <span className="flex items-center gap-1"><BookOpen className="size-3.5" /> {course.lessons.length} lessons</span>
+          <span className="flex items-center gap-1">
+            <BookOpen className="size-3.5" /> {course.lessons.length} lessons
+          </span>
         </div>
+
         <div className="pt-2">
           {enrollment.enrolled ? (
             <div className="space-y-3">
@@ -75,6 +166,29 @@ export const CourseDetailPage: React.FC = () => {
         </div>
       </div>
 
+      {/* Outcomes & Prerequisites Grid */}
+      {(course.outcomes || course.prerequisites) && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {course.outcomes && (
+            <div className="rounded-xl border border-edge bg-surface p-5 space-y-2">
+              <h3 className="text-sm font-bold text-ink flex items-center gap-1.5">
+                <CheckCircle2 className="size-4 text-status-approved" /> What You'll Learn
+              </h3>
+              <p className="text-xs text-ink-secondary whitespace-pre-line leading-relaxed">{course.outcomes}</p>
+            </div>
+          )}
+          {course.prerequisites && (
+            <div className="rounded-xl border border-edge bg-surface p-5 space-y-2">
+              <h3 className="text-sm font-bold text-ink flex items-center gap-1.5">
+                <BookOpen className="size-4 text-brand" /> Prerequisites
+              </h3>
+              <p className="text-xs text-ink-secondary whitespace-pre-line leading-relaxed">{course.prerequisites}</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Syllabus */}
       <div className="space-y-4">
         <h2 className="text-lg font-bold text-ink">Course Syllabus</h2>
         {course.lessons.length === 0 ? (
@@ -98,7 +212,16 @@ export const CourseDetailPage: React.FC = () => {
                     <Icon className="size-4 text-ink-muted" />
                     <span className="text-sm font-medium text-ink">{lesson.title}</span>
                   </div>
-                  {lesson.completed && <CheckCircle2 className="size-4 text-success" />}
+                  <div className="flex items-center gap-3">
+                    {lesson.durationSec && (
+                      <span className="text-xs text-ink-muted">{Math.round(lesson.durationSec / 60)} min</span>
+                    )}
+                    {lesson.completed ? (
+                      <CheckCircle2 className="size-4 text-status-approved" aria-label="Completed" />
+                    ) : (
+                      <span className="text-xs text-ink-muted font-medium">Not started</span>
+                    )}
+                  </div>
                 </Link>
               );
             })}

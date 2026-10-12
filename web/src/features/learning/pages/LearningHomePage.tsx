@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Play, Sparkles, BookOpen } from 'lucide-react';
+import { Play, Sparkles, BookOpen, AlertCircle } from 'lucide-react';
 import { useLearningHomeQuery } from '../hooks';
 import { CourseRow, RowSkeleton } from '../components';
 import { ProgressBar } from '@/shared/ui/ProgressBar';
@@ -9,14 +9,35 @@ import { EmptyState } from '@/shared/ui/EmptyState';
 import { CourseCardSummary } from '../types';
 
 export const LearningHomePage: React.FC = () => {
-  const { data, isLoading } = useLearningHomeQuery();
+  const { data, isLoading, error, refetch } = useLearningHomeQuery();
 
-  if (isLoading || !data) {
+  if (isLoading) {
     return (
       <div className="space-y-8 p-4 sm:p-6 lg:p-8" aria-busy="true">
         <div className="skeleton aspect-[21/9] w-full max-h-72 rounded-2xl" />
         <RowSkeleton cardsCount={4} />
         <RowSkeleton cardsCount={4} />
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div className="space-y-6 p-4 sm:p-6 lg:p-8">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-ink sm:text-3xl">LearningHub</h1>
+          <p className="text-sm text-ink-muted">Springboard your skills with curated courses and interactive lessons.</p>
+        </div>
+        <div className="surface border border-edge rounded-2xl p-8 text-center space-y-3 max-w-md mx-auto" role="alert">
+          <AlertCircle className="size-8 text-status-rejected mx-auto" />
+          <h2 className="text-base font-bold text-ink">Failed to load courses</h2>
+          <p className="text-xs text-ink-muted leading-relaxed">
+            {(error as any)?.message || 'The database is temporarily busy or unreachable. Please try again.'}
+          </p>
+          <Button variant="secondary" size="sm" onClick={() => refetch()}>
+            Retry
+          </Button>
+        </div>
       </div>
     );
   }
