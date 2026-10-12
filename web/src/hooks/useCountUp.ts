@@ -1,0 +1,28 @@
+import { useEffect, useRef, useState } from 'react';
+import { animate } from 'framer-motion';
+import { useReducedMotion } from './useReducedMotion';
+
+export function useCountUp(target: number, duration = 0.7): number {
+  const reduce = useReducedMotion();
+  const fromRef = useRef(reduce ? target : 0);
+  const [display, setDisplay] = useState(reduce ? target : 0);
+
+  useEffect(() => {
+    if (reduce) {
+      fromRef.current = target;
+      setDisplay(target);
+      return;
+    }
+    const controls = animate(fromRef.current, target, {
+      duration,
+      ease: 'easeOut',
+      onUpdate: (value) => {
+        fromRef.current = value;
+        setDisplay(Math.round(value));
+      },
+    });
+    return () => controls.stop();
+  }, [target, duration, reduce]);
+
+  return display;
+}

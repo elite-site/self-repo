@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
@@ -32,6 +32,9 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { ErrorState } from '../components/ui/ErrorState';
 import { useReducedMotion } from '../hooks/useReducedMotion';
 import { selectVariantsByName } from '../lib/motion';
+import { useCountUp } from '../hooks/useCountUp';
+import { celebrate } from '../lib/celebrate';
+import { TypewriterText } from '../components/ui/TypewriterText';
 import {
   DashboardTaskBoard,
   DashboardTaskBoardSkeleton,
@@ -423,6 +426,21 @@ export const DashboardPage: React.FC = () => {
   const remainingItems = completionItems.filter((i) => i.state === 'todo');
   const isComplete = remainingItems.length === 0;
   const completionPercentage = isComplete ? 100 : Math.round((completedCount / completionItems.length) * 100);
+  const animatedPercentage = useCountUp(completionPercentage);
+
+  useEffect(() => {
+    if (!profile || !counts) return;
+    const key = `elite:completion:${profile.rollNo ?? 'me'}`;
+    try {
+      const stored = window.localStorage.getItem(key);
+      window.localStorage.setItem(key, String(completionPercentage));
+      if (stored !== null && Number(stored) < 100 && completionPercentage === 100) {
+        void celebrate('complete');
+      }
+    } catch {
+      return;
+    }
+  }, [profile, counts, completionPercentage]);
   /** §6.2 (2): the three chips on the banner. The board still lists them all. */
   const nextMissing = remainingItems.slice(0, 3);
 
@@ -619,7 +637,8 @@ export const DashboardPage: React.FC = () => {
 
               <div className="shrink-0 text-right">
                 <p className="font-heading text-headline-lg sm:text-headline-xl tabular-nums text-ink leading-none">
-                  {completionPercentage}
+                  <span aria-hidden="true">{animatedPercentage}</span>
+                  <span className="sr-only">{completionPercentage}</span>
                   <span className="text-headline-sm sm:text-headline-md text-ink-muted">%</span>
                 </p>
               </div>
