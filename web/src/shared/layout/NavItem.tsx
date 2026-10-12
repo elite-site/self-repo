@@ -23,8 +23,8 @@ import { selectVariantsByName, transitionTabSpring } from '@/shared/lib/motion';
 import { prefetchRoute } from '@/shared/utils/prefetch';
 
 const isLearningHubEnabled =
-  (import.meta as any).env?.VITE_FEATURE_LEARNINGHUB === 'true' ||
-  (import.meta as any).env?.FEATURE_LEARNINGHUB === 'true';
+  (import.meta as any).env?.VITE_FEATURE_LEARNINGHUB !== 'false' &&
+  (import.meta as any).env?.FEATURE_LEARNINGHUB !== 'false';
 
 // ============================================================================
 // Navigation vocabulary

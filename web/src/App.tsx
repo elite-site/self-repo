@@ -43,8 +43,8 @@ const LessonPlayerPage = lazy(() => import('@/features/learning/pages/LessonPlay
 const MyLearningPage = lazy(() => import('@/features/learning/pages/MyLearningPage'));
 
 const isLearningHubEnabled =
-  (import.meta as any).env?.VITE_FEATURE_LEARNINGHUB === 'true' ||
-  (import.meta as any).env?.FEATURE_LEARNINGHUB === 'true';
+  (import.meta as any).env?.VITE_FEATURE_LEARNINGHUB !== 'false' &&
+  (import.meta as any).env?.FEATURE_LEARNINGHUB !== 'false';
 
 const RouteLoadingFallback: React.FC = () => (
   <div className="min-h-[100dvh] bg-surface-canvas px-4 py-8 sm:px-6 sm:py-10">

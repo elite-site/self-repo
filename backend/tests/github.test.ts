@@ -305,7 +305,7 @@ describe('PUT /api/student/profile/skills — blocked when FEATURE_GITHUB_PORTFO
     const res = await request(app)
       .put('/api/student/profile/skills')
       .set('Cookie', `pc_student_session=${tokenA}`)
-      .send({ skillNames: ['TypeScript'] });
+      .send({ skillNames: ['TypeScript', 'JavaScript'] });
 
     expect(res.status).toBe(403);
 

@@ -66,15 +66,15 @@ export const CourseTable: React.FC<CourseTableProps> = ({
                 courses.map((c) => (
                   <tr key={c.id} className="hover:bg-surface-sunken transition-colors">
                     <td className="px-4 py-3 font-semibold text-ink">
-                      <div>{c.title}</div>
-                      <span className="text-xs text-ink-muted">{c.slug}</span>
+                      <div>{c.title || 'Untitled Course'}</div>
+                      <span className="text-xs text-ink-muted">{c.slug || ''}</span>
                     </td>
                     <td className="px-4 py-3 text-ink-secondary">{c.category || '—'}</td>
                     <td className="px-4 py-3 text-ink-secondary text-xs uppercase">{c.level || '—'}</td>
                     <td className="px-4 py-3">{statusBadge(c.status)}</td>
                     <td className="px-4 py-3 text-xs text-ink-secondary">{c.enrolment === 'ASSIGNED_ONLY' ? 'Assigned' : 'Open'}</td>
-                    <td className="px-4 py-3 text-ink font-medium">{c.lessonCount}</td>
-                    <td className="px-4 py-3 text-ink font-medium">{c.enrollmentCount}</td>
+                    <td className="px-4 py-3 text-ink font-medium">{c.lessonCount ?? 0}</td>
+                    <td className="px-4 py-3 text-ink font-medium">{c.enrollmentCount ?? 0}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1.5" role="group" aria-label={`Actions for ${c.title}`}>
                         <button type="button" onClick={() => onEdit(c)} className="btn btn-ghost px-2 py-1 text-xs cursor-pointer inline-flex items-center gap-1" aria-label={`Edit ${c.title}`}>

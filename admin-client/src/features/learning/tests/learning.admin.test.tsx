@@ -277,3 +277,86 @@ describe('AssignModal Component', () => {
     });
   });
 });
+
+describe('AdminCoursesPage Component', () => {
+  it('renders AdminCoursesPage without crashing when query succeeds', async () => {
+    const { AdminCoursesPage } = await import('../pages/AdminCoursesPage');
+    const { QueryClient, QueryClientProvider } = await import('@tanstack/react-query');
+    const { MemoryRouter } = await import('react-router-dom');
+
+    vi.spyOn(learningAdminApi, 'getCourses').mockResolvedValue({
+      courses: mockCourses,
+      pagination: { page: 1, limit: 10, total: 2, totalPages: 1 },
+    });
+
+    const testQueryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+
+    render(
+      <QueryClientProvider client={testQueryClient}>
+        <MemoryRouter>
+          <AdminCoursesPage />
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
+
+    expect(screen.getByText('LearningHub Courses')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('Modern TypeScript Architecture')).toBeInTheDocument();
+    });
+  });
+
+  it('renders AdminCoursesPage when query errors (e.g. 404 / 500)', async () => {
+    const { AdminCoursesPage } = await import('../pages/AdminCoursesPage');
+    const { QueryClient, QueryClientProvider } = await import('@tanstack/react-query');
+    const { MemoryRouter } = await import('react-router-dom');
+
+    vi.spyOn(learningAdminApi, 'getCourses').mockRejectedValue(new Error('404 Not Found'));
+
+    const testQueryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+
+    render(
+      <QueryClientProvider client={testQueryClient}>
+        <MemoryRouter>
+          <AdminCoursesPage />
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
+
+    expect(screen.getByText('LearningHub Courses')).toBeInTheDocument();
+  });
+
+  it('renders AdminCoursesPage with various data shapes', async () => {
+    const { AdminCoursesPage } = await import('../pages/AdminCoursesPage');
+    const { QueryClient, QueryClientProvider } = await import('@tanstack/react-query');
+    const { MemoryRouter } = await import('react-router-dom');
+
+    const shapes = [
+      null,
+      undefined,
+      {},
+      { courses: [] },
+      { error: 'NOT_FOUND' },
+      '<!DOCTYPE html><html></html>',
+    ];
+
+    for (const shape of shapes) {
+      vi.spyOn(learningAdminApi, 'getCourses').mockResolvedValue(shape as any);
+      const testQueryClient = new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+      });
+
+      const { unmount } = render(
+        <QueryClientProvider client={testQueryClient}>
+          <MemoryRouter>
+            <AdminCoursesPage />
+          </MemoryRouter>
+        </QueryClientProvider>
+      );
+      unmount();
+    }
+  });
+});

@@ -12,18 +12,26 @@ export const AdminCoursesPage: React.FC = () => {
   const [page, setPage] = useState(1);
   const [modalOpen, setModalOpen] = useState(false);
 
-  const { data, isLoading } = useAdminCoursesQuery({ search: search.trim() || undefined, page, limit: 10 });
+  const { data, isLoading, error, refetch } = useAdminCoursesQuery({ search: search.trim() || undefined, page, limit: 10 });
   const createMutation = useCreateCourseMutation();
   const deleteMutation = useDeleteCourseMutation();
 
   const handleCreate = async (payload: Partial<AdminCourseItem>) => {
-    await createMutation.mutateAsync(payload);
-    setModalOpen(false);
+    try {
+      await createMutation.mutateAsync(payload);
+      setModalOpen(false);
+    } catch (err) {
+      console.error('Failed to create course', err);
+    }
   };
 
   const handleDelete = async (course: AdminCourseItem) => {
     if (window.confirm(`Are you sure you want to delete "${course.title}"?`)) {
-      await deleteMutation.mutateAsync(course.id);
+      try {
+        await deleteMutation.mutateAsync(course.id);
+      } catch (err) {
+        console.error('Failed to delete course', err);
+      }
     }
   };
 
@@ -47,6 +55,19 @@ export const AdminCoursesPage: React.FC = () => {
 
       {isLoading ? (
         <div className="p-12 text-center text-xs text-ink-muted">Loading courses...</div>
+      ) : error ? (
+        <div className="flex flex-col items-center justify-center p-12 surface rounded-xl border border-edge text-center gap-3" role="alert">
+          <p className="text-xs text-status-rejected font-medium">
+            {(error as any)?.message || 'Failed to load courses. Please try again.'}
+          </p>
+          <button
+            type="button"
+            onClick={() => refetch()}
+            className="btn btn-secondary text-xs cursor-pointer"
+          >
+            Retry
+          </button>
+        </div>
       ) : (
         <CourseTable
           courses={data?.courses ?? []}
@@ -71,3 +92,5 @@ export const AdminCoursesPage: React.FC = () => {
     </div>
   );
 };
+
+export default AdminCoursesPage;

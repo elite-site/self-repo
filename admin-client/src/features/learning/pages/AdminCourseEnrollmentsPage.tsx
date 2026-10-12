@@ -5,7 +5,8 @@ import { useAdminEnrollmentsQuery } from '../hooks/useAdminReports';
 import { EnrollmentsTable } from '../components/EnrollmentsTable';
 
 export const AdminCourseEnrollmentsPage: React.FC = () => {
-  const { courseId = '' } = useParams<{ courseId: string }>();
+  const { id: paramId, courseId: paramCourseId } = useParams<{ id?: string; courseId?: string }>();
+  const courseId = paramId || paramCourseId || '';
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -72,3 +73,5 @@ export const AdminCourseEnrollmentsPage: React.FC = () => {
     </div>
   );
 };
+
+export default AdminCourseEnrollmentsPage;

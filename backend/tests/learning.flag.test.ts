@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest';
 import request from 'supertest';
 import app from '../src/server';
 import { env } from '../src/config/env';
@@ -6,6 +6,10 @@ import { env } from '../src/config/env';
 describe('LearningHub - Feature Flag Gating (FEATURE_LEARNINGHUB=false)', () => {
   beforeEach(() => {
     env.FEATURE_LEARNINGHUB = false;
+  });
+
+  afterAll(() => {
+    env.FEATURE_LEARNINGHUB = true;
   });
 
   describe('Student Endpoints return 404 when disabled', () => {

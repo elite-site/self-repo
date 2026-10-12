@@ -5,7 +5,8 @@ import { useAdminReportsQuery } from '../hooks/useAdminReports';
 import { ReportsView } from '../components/ReportsView';
 
 export const AdminCourseReportsPage: React.FC = () => {
-  const { courseId = '' } = useParams<{ courseId: string }>();
+  const { id: paramId, courseId: paramCourseId } = useParams<{ id?: string; courseId?: string }>();
+  const courseId = paramId || paramCourseId || '';
   const navigate = useNavigate();
   const { data: report, isLoading, error } = useAdminReportsQuery(courseId);
 
@@ -35,3 +36,5 @@ export const AdminCourseReportsPage: React.FC = () => {
     </div>
   );
 };
+
+export default AdminCourseReportsPage;

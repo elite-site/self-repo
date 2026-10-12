@@ -33,9 +33,10 @@ const RolesPermissionsPage = React.lazy(() => import('@/features/roles').then((m
 const AuditLogsPage = React.lazy(() => import('@/features/activity-log').then((m) => ({ default: m.AuditLogsPage })));
 const SettingsPage = React.lazy(() => import('@/features/settings').then((m) => ({ default: m.SettingsPage })));
 const AdminGithubPage = React.lazy(() => import('@/features/github').then((m) => ({ default: m.AdminGithubPage })));
-const AdminCoursesPage = React.lazy(() => import('@/features/learning').then((m) => ({ default: m.AdminCoursesPage })));
-const AdminCourseEditPage = React.lazy(() => import('@/features/learning').then((m) => ({ default: m.AdminCourseEditPage })));
-const AdminCourseReportsPage = React.lazy(() => import('@/features/learning').then((m) => ({ default: m.AdminCourseReportsPage })));
+const AdminCoursesPage = React.lazy(() => import('@/features/learning/pages/AdminCoursesPage'));
+const AdminCourseEditPage = React.lazy(() => import('@/features/learning/pages/AdminCourseEditPage'));
+const AdminCourseEnrollmentsPage = React.lazy(() => import('@/features/learning/pages/AdminCourseEnrollmentsPage'));
+const AdminCourseReportsPage = React.lazy(() => import('@/features/learning/pages/AdminCourseReportsPage'));
 
 const PageLoadingFallback: React.FC = () => (
   <BrandedLoading message="Loading Module" fullScreen={false} />
@@ -263,6 +264,9 @@ const router = createBrowserRouter([
       { path: 'moderation', element: <ModerationPage /> },
       { path: 'learning', element: <AdminCoursesPage /> },
       { path: 'learning/courses/:id', element: <AdminCourseEditPage /> },
+      { path: 'learning/courses/:id/edit', element: <AdminCourseEditPage /> },
+      { path: 'learning/courses/:id/enrollments', element: <AdminCourseEnrollmentsPage /> },
+      { path: 'learning/courses/:id/reports', element: <AdminCourseReportsPage /> },
       { path: 'learning/reports/:id', element: <AdminCourseReportsPage /> },
       { path: 'events', element: <AdminEventsPage /> },
       { path: 'event-registrations', element: <EventRegistrationsPage /> },

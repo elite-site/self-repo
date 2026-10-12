@@ -11,7 +11,8 @@ import { InlineQuizBuilder } from '../components/InlineQuizBuilder';
 import { AdminLessonItem } from '../types';
 
 export const AdminCourseEditPage: React.FC = () => {
-  const { courseId = '' } = useParams<{ courseId: string }>();
+  const { id: paramId, courseId: paramCourseId } = useParams<{ id?: string; courseId?: string }>();
+  const courseId = paramId || paramCourseId || '';
   const navigate = useNavigate();
   const [courseModalOpen, setCourseModalOpen] = useState(false);
   const [assignModalOpen, setAssignModalOpen] = useState(false);
@@ -93,3 +94,5 @@ export const AdminCourseEditPage: React.FC = () => {
     </div>
   );
 };
+
+export default AdminCourseEditPage;

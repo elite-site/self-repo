@@ -24,9 +24,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    if (import.meta.env?.DEV) {
-      console.error('Admin ErrorBoundary caught an error:', error, errorInfo);
-    }
+    console.error('Admin ErrorBoundary caught an error:', error, errorInfo);
   }
 
   private handleReset = (): void => {
@@ -51,6 +49,11 @@ export class ErrorBoundary extends Component<Props, State> {
                 {this.props.fallbackMessage ||
                   'An unexpected error occurred in this admin panel. Please try refreshing or retry below.'}
               </p>
+              {this.state.error?.message && (
+                <p className="text-xs font-mono text-danger/80 mt-2 break-words">
+                  {this.state.error.message}
+                </p>
+              )}
             </div>
             <button
               type="button"
