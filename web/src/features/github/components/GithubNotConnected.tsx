@@ -1,6 +1,7 @@
 import React from 'react';
 import { Github, Code2, Sparkles, ShieldCheck, ChevronRight } from 'lucide-react';
 import { Card } from '@/shared/ui/Card';
+import { GithubInstructions } from './GithubInstructions';
 
 interface GithubNotConnectedProps {
   connecting: boolean;
@@ -26,7 +27,7 @@ export const GithubNotConnected: React.FC<GithubNotConnectedProps> = ({ connecti
             5 projects, and compute verified skill badges for your portfolio.
           </p>
 
-          <div className="pt-2">
+          <div className="pt-2 flex flex-wrap items-center gap-3">
             <button
               type="button"
               onClick={onConnect}
@@ -37,6 +38,8 @@ export const GithubNotConnected: React.FC<GithubNotConnectedProps> = ({ connecti
               <span>{connecting ? 'Redirecting to GitHub…' : 'Connect GitHub'}</span>
               {!connecting && <ChevronRight size={16} />}
             </button>
+
+            <GithubInstructions className="btn btn-secondary min-h-[48px] px-5 text-label-md font-semibold inline-flex items-center gap-2 cursor-pointer" />
           </div>
         </div>
       </Card>
