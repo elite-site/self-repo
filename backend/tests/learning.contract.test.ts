@@ -137,7 +137,47 @@ describe('LearningHub - Contract Verification Tests (API_CONTRACT.md)', () => {
       expect(Array.isArray(res.body.rows.topCourses)).toBe(true);
     });
 
-    it('2.2 GET /api/student/learning/courses returns paginated courses list', async () => {
+    it('2.1b GET /api/student/learning/home response is under 40 KB for 20 enrolments and single request', async () => {
+      const mock20Courses = Array.from({ length: 20 }, (_, i) => ({
+        id: `c_${i}`,
+        title: `Course Number ${i}: Advanced Fullstack Development`,
+        slug: `course-number-${i}`,
+        description: `Description of course ${i} with complete learning syllabus and curriculum topics.`,
+        thumbnailUrl: `https://img.youtube.com/vi/dQw4w9WgXcQ/hqdefault_${i}.jpg`,
+        category: i % 2 === 0 ? 'Backend' : 'Frontend',
+        level: 'INTERMEDIATE',
+        estimatedHours: 4.5,
+        status: CourseStatus.PUBLISHED,
+        enrolment: EnrolmentType.OPEN,
+        featured: i < 3,
+        dueAt: new Date(Date.now() + 86400000 * 7),
+        lessons: [{ durationSec: 600 }, { durationSec: 1200 }],
+      }));
+
+      const mock20Enrollments = mock20Courses.map((c, i) => ({
+        courseId: c.id,
+        course: c,
+        status: i % 3 === 0 ? 'COMPLETED' : 'ACTIVE',
+        completedAt: i % 3 === 0 ? new Date() : null,
+        lastAccessedAt: new Date(),
+        source: 'SELF',
+      }));
+
+      (prisma.course.findMany as any).mockResolvedValue(mock20Courses);
+      (prisma.enrollment.findMany as any).mockResolvedValue(mock20Enrollments);
+      (prisma.lessonProgress.findMany as any).mockResolvedValue([]);
+      (prisma.course.findFirst as any).mockResolvedValue(mock20Courses[0]);
+
+      const res = await request(app)
+        .get('/api/student/learning/home')
+        .set('Cookie', studentCookie);
+
+      expect(res.status).toBe(200);
+      const payloadBytes = Buffer.byteLength(JSON.stringify(res.body), 'utf8');
+      expect(payloadBytes).toBeLessThan(40 * 1024); // strictly under 40 KB
+    });
+
+    it('2.2 GET /api/student/learning/courses returns paginated courses list and caps limit at 100', async () => {
       (prisma.course.findMany as any).mockResolvedValue([
         {
           id: 'c1',
@@ -176,6 +216,13 @@ describe('LearningHub - Contract Verification Tests (API_CONTRACT.md)', () => {
         title: 'Intro to React',
         slug: 'intro-to-react',
       });
+
+      // Verify limit cap: query with limit=500 caps at 100
+      const cappedRes = await request(app)
+        .get('/api/student/learning/courses?limit=500')
+        .set('Cookie', studentCookie);
+      expect(cappedRes.status).toBe(200);
+      expect(cappedRes.body.pagination.limit).toBe(100);
     });
 
     it('2.3 GET /api/student/learning/courses/:slugOrId returns CourseDetailResponse', async () => {
