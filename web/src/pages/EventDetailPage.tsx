@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { api } from '../services/api';
@@ -22,6 +22,8 @@ import {
 import { SkeletonPage } from '../components/ui/Skeleton';
 import { useReducedMotion } from '../hooks/useReducedMotion';
 import { selectVariantsByName } from '../lib/motion';
+import { flyToTarget } from '../lib/flyToTarget';
+import { celebrate } from '../lib/celebrate';
 
 export const EventDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -39,6 +41,7 @@ export const EventDetailPage: React.FC = () => {
 
   // Registration modal
   const [modalOpen, setModalOpen] = useState(false);
+  const registerButtonRef = useRef<HTMLButtonElement>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [regError, setRegError] = useState<string | null>(null);
@@ -97,6 +100,7 @@ export const EventDetailPage: React.FC = () => {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!id) return;
+    const fromRect = registerButtonRef.current?.getBoundingClientRect() ?? null;
     setSubmitting(true);
     setRegError(null);
 
@@ -113,6 +117,8 @@ export const EventDetailPage: React.FC = () => {
       });
       setModalOpen(false);
       showToast('Registered successfully.', 'success');
+      const flight = !shouldReduce && fromRect ? flyToTarget(fromRect) : Promise.resolve(false);
+      void flight.then(() => celebrate('success'));
       // Silently refresh in the background
       loadEventAndReg(false);
     } catch (err: any) {
@@ -326,6 +332,7 @@ export const EventDetailPage: React.FC = () => {
                   </div>
                 ) : (
                   <button
+                    ref={registerButtonRef}
                     onClick={async () => {
                       const authed = await requireSession();
                       if (!authed) return;

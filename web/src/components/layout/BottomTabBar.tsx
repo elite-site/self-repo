@@ -46,6 +46,7 @@ export const BottomTabBar: React.FC<{
           <li className="flex-1">
             <button
               id="more-sheet-trigger"
+              data-nav-target="more"
               type="button"
               onClick={() => setSheetOpen((open) => !open)}
               aria-expanded={sheetOpen}
