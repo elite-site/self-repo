@@ -80,6 +80,11 @@ import { dbTimingStorage } from './dbTiming';
 export { dbTimingStorage };
 
 const DATABASE_URL = buildDatabaseUrl(process.env.DATABASE_URL || '');
+const SLOW_QUERY_THRESHOLD_MS = parseInt(
+  process.env.PRISMA_SLOW_QUERY_THRESHOLD_MS ||
+    (process.env.NODE_ENV === 'production' ? '1500' : '200'),
+  10
+);
 
 function createPrismaClient(): PrismaClient {
   const client = new PrismaClient({
@@ -95,7 +100,7 @@ function createPrismaClient(): PrismaClient {
       const result = await next(params);
       const duration = Date.now() - start;
 
-      if (duration > 200) {
+      if (duration > SLOW_QUERY_THRESHOLD_MS) {
         logger.warn(`[Prisma SLOW QUERY] ${params.model || 'Unknown'}.${params.action} took ${duration}ms`);
       }
 

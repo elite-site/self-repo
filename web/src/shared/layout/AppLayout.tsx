@@ -145,11 +145,20 @@ function lockBodyScroll(open: boolean): void {
  * Deliberately a plain effect rather than a query: Batch 5 owns the data layer
  * and this hook is the one place to replace when `QueryClientProvider` lands.
  */
+const MIN_UNREAD_POLL_INTERVAL_MS = 15_000;
+let lastUnreadFetchTimestamp = 0;
+
 function useUnreadCount(pathname: string): number {
   const [unreadCount, setUnreadCount] = useState(0);
 
-  const refresh = useCallback(() => {
+  const refresh = useCallback((force = false) => {
     if (isNotificationPollingPaused()) return;
+    const now = Date.now();
+    if (!force && now - lastUnreadFetchTimestamp < MIN_UNREAD_POLL_INTERVAL_MS) {
+      return;
+    }
+    lastUnreadFetchTimestamp = now;
+
     notificationsApi
       .getNotifications({ limit: 10, isBackgroundPoll: true })
       .then((data: unknown) => {

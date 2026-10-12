@@ -1,6 +1,7 @@
 import { findPortalSettingByKey } from '../modules/admin/repositories/settings.repository';
 import { env } from '../config/env';
 import { logger } from '../utils/logger';
+import { TtlCache } from '../utils/ttlCache';
 
 /**
  * Portal-wide operational limits.
@@ -17,6 +18,12 @@ import { logger } from '../utils/logger';
  * same value that gets enforced.
  */
 export const VIDEO_SIZE_SETTING_KEY = 'max_video_size_mb';
+
+const limitsCache = new TtlCache<number>(60 * 1000, 10);
+
+export function clearLimitsCache(): void {
+  limitsCache.clear();
+}
 
 /** Hard ceiling on an upload body, independent of the configured limit. */
 export function getMaxVideoHardCapMb(): number {
@@ -35,11 +42,7 @@ export function getDefaultMaxVideoSizeMb(): number {
   return parsePositiveInt(env.MAX_VIDEO_SIZE_MB) ?? 25;
 }
 
-/**
- * The effective video upload limit in megabytes: the administrator's value when
- * set, otherwise the environment default. Never exceeds the hard cap.
- */
-export async function getMaxVideoSizeMb(): Promise<number> {
+async function fetchMaxVideoSizeMb(): Promise<number> {
   const fallback = Math.min(getDefaultMaxVideoSizeMb(), getMaxVideoHardCapMb());
 
   try {
@@ -51,5 +54,17 @@ export async function getMaxVideoSizeMb(): Promise<number> {
     logger.warn('Failed to fetch portal video size limit from settings, falling back to default', { err });
     return fallback;
   }
+}
+
+/**
+ * The effective video upload limit in megabytes: the administrator's value when
+ * set, otherwise the environment default. Never exceeds the hard cap.
+ * Cached in-memory with a 60s TTL to prevent database roundtrips on hot student endpoints.
+ */
+export async function getMaxVideoSizeMb(): Promise<number> {
+  if (process.env.NODE_ENV === 'test') {
+    return fetchMaxVideoSizeMb();
+  }
+  return limitsCache.wrap('max_video_size_mb', fetchMaxVideoSizeMb);
 }
 

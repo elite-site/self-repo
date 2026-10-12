@@ -3,6 +3,8 @@ import { deliverAnnouncementNotifications } from '../../announcements';
 import * as adminRepo from '../admin.repository';
 import type { CreateAnnouncementInput } from '../admin.types';
 
+import { clearLimitsCache } from '../../../services/limits.service';
+
 export async function getSettings() {
   return adminRepo.findAllPortalSettings();
 }
@@ -10,6 +12,7 @@ export async function getSettings() {
 export async function saveSetting(key: string, value: any, group?: string) {
   if (key) {
     await adminRepo.upsertPortalSetting(key, String(value), group || 'general');
+    clearLimitsCache();
   }
 }
 
@@ -37,6 +40,7 @@ export async function savePortalSettings(body: Record<string, any>, updatedBy: s
   );
   if (validEntries.length > 0) {
     await adminRepo.batchUpsertPortalSettings(validEntries, updatedBy);
+    clearLimitsCache();
   }
 }
 
