@@ -65,12 +65,14 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
   }
 
   const portal = stats.portal;
-  const submitted = stats.totalVideos;
-  const rated = stats.totalRated;
+  const submitted = stats.totalVideos ?? 0;
+  const rated = stats.totalRated ?? 0;
   const ratedPct = submitted > 0 ? Math.round((rated / submitted) * 100) : 0;
-  const maxSectionSubmitted = Math.max(1, ...stats.bySection.map((s) => s.submitted));
+  const bySection = Array.isArray(stats.bySection) ? stats.bySection : [];
+  const maxSectionSubmitted = Math.max(1, ...bySection.map((s) => s.submitted ?? 0));
   const pendingModeration = portal?.pendingModeration ?? 0;
-  const hasRatings = Boolean(stats.byRating.GOOD || stats.byRating.AVERAGE || stats.byRating.POOR);
+  const byRating = stats.byRating || {};
+  const hasRatings = Boolean(byRating.GOOD || byRating.AVERAGE || byRating.POOR);
 
   const kpis = [
     {
@@ -224,10 +226,10 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
 
           <div className="mt-5 space-y-3">
             <h3 className="text-label-sm font-semibold text-ink-muted">Submissions by section</h3>
-            {stats.bySection.length === 0 ? (
+            {bySection.length === 0 ? (
               <p className="py-3 text-body-sm text-ink-muted">No video submissions recorded yet.</p>
             ) : (
-              stats.bySection.map((sec, idx) => {
+              bySection.map((sec, idx) => {
                 const widthPct =
                   sec.submitted > 0
                     ? Math.max(6, Math.round((sec.submitted / maxSectionSubmitted) * 100))
@@ -258,7 +260,7 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
                   return (
                     <div key={rating}>
                       <dd className={`font-heading text-headline-md tabular-nums ${meta.text}`}>
-                        {stats.byRating[rating] || 0}
+                        {byRating[rating] || 0}
                       </dd>
                       <dt className="mt-0.5 flex items-center gap-1.5 text-label-md text-ink-secondary">
                         <span className={`h-2 w-2 rounded-full ${meta.dot}`} aria-hidden="true" />

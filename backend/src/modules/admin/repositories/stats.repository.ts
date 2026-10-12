@@ -80,6 +80,14 @@ export async function getAdminStatsCounts(eventId: string) {
     totalAchievements,
     totalCertificates,
     totalResumes,
+    totalEvents,
+    totalRegistrations,
+    totalCampaigns,
+    totalVotes,
+    pendingProjects,
+    pendingAchievements,
+    pendingCertificates,
+    pendingResumes,
   ] = await Promise.all([
     prisma.student.count(),
     prisma.studentProfile.count(),
@@ -87,6 +95,14 @@ export async function getAdminStatsCounts(eventId: string) {
     prisma.achievement.count(),
     prisma.certificate.count(),
     prisma.resume.count(),
+    prisma.event.count({ where: EXCLUDE_INTERNAL_EVENT }),
+    prisma.eventRegistration.count(),
+    prisma.votingCampaign.count(),
+    prisma.vote.count(),
+    prisma.project.count({ where: { status: 'PENDING' } }),
+    prisma.achievement.count({ where: { status: 'PENDING' } }),
+    prisma.certificate.count({ where: { status: 'PENDING' } }),
+    prisma.resume.count({ where: { status: 'PENDING' } }),
   ]);
 
   return {
@@ -101,6 +117,14 @@ export async function getAdminStatsCounts(eventId: string) {
     totalAchievements,
     totalCertificates,
     totalResumes,
+    totalEvents,
+    totalRegistrations,
+    totalCampaigns,
+    totalVotes,
+    pendingProjects,
+    pendingAchievements,
+    pendingCertificates,
+    pendingResumes,
   };
 }
 
