@@ -8,9 +8,6 @@ export async function getStudentDashboardData(studentId: string, rollNo?: string
     const [
       student,
       submission,
-      introVideo,
-      portfolioCounts,
-      resume,
       events,
       registrations,
       votingCampaigns,
@@ -21,9 +18,6 @@ export async function getStudentDashboardData(studentId: string, rollNo?: string
       rollNo
         ? repo.findSubmissionReview(rollNo)
         : Promise.resolve(null),
-      repo.findIntroVideoReview(studentId),
-      repo.countStudentPortfolioItems(studentId),
-      repo.findStudentResume(studentId),
       repo.findOpenEventsForDashboard(EXCLUDE_INTERNAL_EVENT),
       repo.findStudentRegistrations(studentId),
       repo.findActiveVotingCampaigns(),
@@ -43,6 +37,10 @@ export async function getStudentDashboardData(studentId: string, rollNo?: string
     if (!effectiveSubmission && student.rollNo) {
       effectiveSubmission = await repo.findSubmissionReview(student.rollNo);
     }
+
+    const introVideo = student.introVideos?.[0] || null;
+    const resume = student.resumes?.[0] || null;
+    const portfolioCounts = (student as any)._count || { projects: 0, achievements: 0, certificates: 0 };
 
     const video = introVideo
       ? { status: introVideo.status }

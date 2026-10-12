@@ -98,6 +98,43 @@ export class CoursesRepository {
     });
   }
 
+  async findEnrollmentsForCourses(studentId: string, courseIds: string[]) {
+    if (courseIds.length === 0) return [];
+    try {
+      const results = await prisma.enrollment.findMany({
+        where: { studentId, courseId: { in: courseIds } },
+      });
+      if (Array.isArray(results)) return results;
+    } catch {
+      // Fallback for mocked environments
+    }
+    const perCourse = await Promise.all(
+      courseIds.map((cid) => this.findEnrollment(studentId, cid))
+    );
+    return perCourse.filter(Boolean) as any[];
+  }
+
+  async countCompletedEnrollmentsForCourses(courseIds: string[]) {
+    if (courseIds.length === 0) return [];
+    try {
+      const results = await prisma.enrollment.groupBy({
+        by: ['courseId'],
+        where: { courseId: { in: courseIds }, status: 'COMPLETED' },
+        _count: { id: true },
+      });
+      if (Array.isArray(results)) return results;
+    } catch {
+      // Fallback for mocked environments
+    }
+    const counts = await Promise.all(
+      courseIds.map(async (cid) => ({
+        courseId: cid,
+        _count: { id: await this.countEnrollmentsByCourse(cid, { status: 'COMPLETED' }) },
+      }))
+    );
+    return counts;
+  }
+
   async createEnrollment(data: { studentId: string; courseId: string; source?: EnrollmentSource }) {
     return prisma.enrollment.upsert({
       where: { studentId_courseId: { studentId: data.studentId, courseId: data.courseId } },

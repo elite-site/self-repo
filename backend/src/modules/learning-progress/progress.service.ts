@@ -124,9 +124,18 @@ export class ProgressService {
     const completed: any[] = [];
     const deadlines: StudentDeadlineItem[] = [];
 
+    const courseIds = enrollments.map((e) => e.courseId || e.course?.id).filter(Boolean) as string[];
+    const allProgress = await this.repo.findStudentProgressForCourses(studentId, courseIds);
+    const progressByCourse = new Map<string, Array<{ lessonId: string; completed: boolean; secondsWatched: number }>>();
+    for (const p of allProgress) {
+      const list = progressByCourse.get(p.courseId) || [];
+      list.push(p);
+      progressByCourse.set(p.courseId, list);
+    }
+
     for (const enrollment of enrollments) {
       const course = enrollment.course;
-      const progressList = await this.repo.findStudentProgressForCourse(studentId, course.id);
+      const progressList = progressByCourse.get(course.id) || [];
       const completedCount = progressList.filter((p) => p.completed).length;
       const totalLessons = course.lessons.length;
       const progressPercent = totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0;

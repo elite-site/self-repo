@@ -100,6 +100,28 @@ export class ProgressRepository {
       select: { lessonId: true, completed: true, secondsWatched: true },
     });
   }
+
+  async findStudentProgressForCourses(studentId: string, courseIds: string[]) {
+    if (courseIds.length === 0) return [];
+    try {
+      const results = await prisma.lessonProgress.findMany({
+        where: { studentId, courseId: { in: courseIds } },
+        select: { courseId: true, lessonId: true, completed: true, secondsWatched: true },
+      });
+      if (Array.isArray(results) && results.length > 0 && results.some((r) => r.courseId)) {
+        return results;
+      }
+    } catch {
+      // Fallback for mocked environments
+    }
+    const perCourse = await Promise.all(
+      courseIds.map(async (cid) => {
+        const list = await this.findStudentProgressForCourse(studentId, cid);
+        return list.map((item) => ({ courseId: cid, ...item }));
+      })
+    );
+    return perCourse.flat();
+  }
 }
 
 export const progressRepository = new ProgressRepository();

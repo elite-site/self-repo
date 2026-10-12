@@ -1,4 +1,5 @@
 import { prisma } from '../../infrastructure/prisma';
+import { TtlCache } from '../../utils/ttlCache';
 import type { Prisma } from '@prisma/client';
 
 export async function findStudentById(id: string, includeProfile: boolean = false) {
@@ -370,6 +371,34 @@ export async function findStudentDashboardDetails(studentId: string) {
       year: true,
       githubReminderSnoozedUntil: true,
       githubAccount: { select: { id: true } },
+      introVideos: {
+        orderBy: { submittedAt: 'desc' },
+        take: 1,
+        select: {
+          id: true,
+          status: true,
+          reviewNote: true,
+          isPublic: true,
+          submittedAt: true,
+          driveFileId: true,
+        },
+      },
+      resumes: {
+        orderBy: { submittedAt: 'desc' },
+        take: 1,
+        select: {
+          id: true,
+          status: true,
+          driveFileId: true,
+        },
+      },
+      _count: {
+        select: {
+          projects: true,
+          achievements: true,
+          certificates: true,
+        },
+      },
       profile: {
         select: {
           id: true,
@@ -397,20 +426,27 @@ export async function countStudentPortfolioItems(studentId: string) {
   return { projects, achievements, certificates };
 }
 
+const dashboardEventsCache = new TtlCache<any[]>(30_000, 5);
+const votingCampaignsCache = new TtlCache<any[]>(30_000, 5);
+
 export async function findOpenEventsForDashboard(excludeInternalClause: any) {
-  return prisma.event.findMany({
-    where: { status: 'OPEN', ...excludeInternalClause },
-    orderBy: [{ eventDate: 'asc' }, { createdAt: 'desc' }],
-    take: 5,
-    select: {
-      id: true,
-      name: true,
-      type: true,
-      eventDate: true,
-      createdAt: true,
-      year: true,
-    },
-  });
+  const fetcher = () =>
+    prisma.event.findMany({
+      where: { status: 'OPEN', ...excludeInternalClause },
+      orderBy: [{ eventDate: 'asc' }, { createdAt: 'desc' }],
+      take: 5,
+      select: {
+        id: true,
+        name: true,
+        type: true,
+        eventDate: true,
+        createdAt: true,
+        year: true,
+      },
+    });
+
+  if (process.env.NODE_ENV === 'test') return fetcher();
+  return dashboardEventsCache.wrap('open_events', fetcher);
 }
 
 export async function findStudentRegistrations(studentId: string) {
@@ -425,12 +461,16 @@ export async function findStudentRegistrations(studentId: string) {
 }
 
 export async function findActiveVotingCampaigns() {
-  return prisma.votingCampaign.findMany({
-    where: { status: 'ACTIVE' },
-    orderBy: { createdAt: 'desc' },
-    take: 5,
-    select: { id: true, title: true, description: true },
-  });
+  const fetcher = () =>
+    prisma.votingCampaign.findMany({
+      where: { status: 'ACTIVE' },
+      orderBy: { createdAt: 'desc' },
+      take: 5,
+      select: { id: true, title: true, description: true },
+    });
+
+  if (process.env.NODE_ENV === 'test') return fetcher();
+  return votingCampaignsCache.wrap('active_campaigns', fetcher);
 }
 
 export async function findDashboardNotifications(studentId: string) {

@@ -33,7 +33,10 @@ export class CoursesService {
       this.repo.countCourses(where),
     ]);
 
-    const mapped = await Promise.all(courses.map(async (c) => mapCourseCard(c, await this.repo.findEnrollment(studentId, c.id))));
+    const courseIds = courses.map((c) => c.id);
+    const enrollments = studentId ? await this.repo.findEnrollmentsForCourses(studentId, courseIds) : [];
+    const enMap = new Map(enrollments.map((e) => [e.courseId, e]));
+    const mapped = courses.map((c) => mapCourseCard(c, enMap.get(c.id)));
     return { courses: mapped, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) || 1 } };
   }
 
@@ -67,13 +70,17 @@ export class CoursesService {
       this.repo.countCourses(where),
     ]);
 
-    const mapped = await Promise.all(courses.map(async (c) => ({
+    const courseIds = courses.map((c) => c.id);
+    const completedCounts = await this.repo.countCompletedEnrollmentsForCourses(courseIds);
+    const completionMap = new Map(completedCounts.map((g) => [g.courseId, g._count.id]));
+
+    const mapped = courses.map((c) => ({
       ...mapCourseCard(c),
       enrollmentCount: c._count.enrollments,
-      completionCount: await this.repo.countEnrollmentsByCourse(c.id, { status: 'COMPLETED' }),
+      completionCount: completionMap.get(c.id) || 0,
       createdAt: c.createdAt.toISOString(),
       updatedAt: c.updatedAt.toISOString(),
-    })));
+    }));
 
     return { courses: mapped, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) || 1 } };
   }

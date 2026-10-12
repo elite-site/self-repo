@@ -38,27 +38,26 @@ export class LearningHomeRepository {
   }
 
   async getCategoriesWithCourses(limitPerCat = 12) {
-    const rawCategories = await prisma.course.findMany({
+    const courses = await prisma.course.findMany({
       where: { status: CourseStatus.PUBLISHED, category: { not: null } },
-      select: { category: true },
-      distinct: ['category'],
+      select: narrowCourseSelect,
+      orderBy: { createdAt: 'desc' },
     });
 
-    const categories = rawCategories.map((c) => c.category!).filter(Boolean);
-    const result: Array<{ category: string; courses: any[] }> = [];
-
-    for (const cat of categories) {
-      const courses = await prisma.course.findMany({
-        where: { status: CourseStatus.PUBLISHED, category: cat },
-        select: narrowCourseSelect,
-        orderBy: { createdAt: 'desc' },
-        take: limitPerCat,
-      });
-      if (courses.length > 0) {
-        result.push({ category: cat, courses });
+    const categoryMap = new Map<string, any[]>();
+    for (const c of courses) {
+      if (!c.category) continue;
+      const list = categoryMap.get(c.category) || [];
+      if (list.length < limitPerCat) {
+        list.push(c);
+        categoryMap.set(c.category, list);
       }
     }
-    return result;
+
+    return Array.from(categoryMap.entries()).map(([category, courses]) => ({
+      category,
+      courses,
+    }));
   }
 
   async getStudentEnrollments(studentId: string) {
@@ -94,15 +93,25 @@ export class LearningHomeRepository {
       take: limit,
     });
 
-    const historyItems = [];
-    for (const en of enrollments) {
-      const lastProgress = await prisma.lessonProgress.findFirst({
-        where: { studentId, courseId: en.courseId },
-        orderBy: { updatedAt: 'desc' },
-        include: { lesson: { select: { id: true, title: true } } },
-      });
+    if (enrollments.length === 0) return [];
 
-      historyItems.push({
+    const courseIds = enrollments.map((en) => en.courseId);
+    const recentProgress = await prisma.lessonProgress.findMany({
+      where: { studentId, courseId: { in: courseIds } },
+      orderBy: { updatedAt: 'desc' },
+      include: { lesson: { select: { id: true, title: true } } },
+    });
+
+    const lastProgressByCourse = new Map<string, typeof recentProgress[0]>();
+    for (const p of recentProgress) {
+      if (!lastProgressByCourse.has(p.courseId)) {
+        lastProgressByCourse.set(p.courseId, p);
+      }
+    }
+
+    return enrollments.map((en) => {
+      const lastProgress = lastProgressByCourse.get(en.courseId);
+      return {
         courseId: en.course.id,
         courseTitle: en.course.title,
         courseSlug: en.course.slug,
@@ -111,9 +120,8 @@ export class LearningHomeRepository {
         lastLessonTitle: lastProgress?.lesson?.title,
         lastLessonId: lastProgress?.lesson?.id,
         lastAccessedAt: en.lastAccessedAt.toISOString(),
-      });
-    }
-    return historyItems;
+      };
+    });
   }
 
   async getFeaturedCourse() {
