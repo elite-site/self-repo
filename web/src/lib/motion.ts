@@ -146,9 +146,9 @@ export const modalBackdropVariants: Variants = {
 export const reducedModalBackdropVariants: Variants = modalBackdropVariants;
 
 export const modalPanelVariants: Variants = {
-  hidden: { opacity: 0, scale: 0.95, y: 16 },
-  visible: { opacity: 1, scale: 1, y: 0, transition: transitionQuick },
-  exit: { opacity: 0, scale: 0.95, y: 16, transition: transitionFast },
+  hidden: { opacity: 0, scale: 0.96, y: 20 },
+  visible: { opacity: 1, scale: 1, y: 0, transition: transitionSpring },
+  exit: { opacity: 0, scale: 0.98, y: 8, transition: transitionFast },
 };
 export const reducedModalPanelVariants: Variants = {
   hidden: { opacity: 0 },
