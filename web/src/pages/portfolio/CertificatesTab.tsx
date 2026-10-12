@@ -8,6 +8,7 @@ import { Modal } from '../../components/ui/Modal';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { FileField } from '../../components/ui/FileField';
+import { celebrate } from '../../lib/celebrate';
 
 const statusBadge = (status: string) => {
   switch (status) {
@@ -102,6 +103,7 @@ export const CertificatesTab: React.FC = () => {
       await api.uploadCertificate(formData);
       setModalOpen(false);
       showToast(`${title.trim()} added.`);
+      void celebrate('success');
       loadCertificates();
     } catch (err: any) {
       const notice =
