@@ -4,9 +4,15 @@ import { GithubSkill } from '../types';
 
 interface PublicProfileSkillsProps {
   skills: GithubSkill[];
+  profileSkills?: string[];
 }
 
-export const PublicProfileSkills: React.FC<PublicProfileSkillsProps> = ({ skills }) => {
+export const PublicProfileSkills: React.FC<PublicProfileSkillsProps> = ({ skills, profileSkills = [] }) => {
+  const extraProfileSkills = profileSkills.filter(
+    (ps) => !skills.some((gs) => gs.name.toLowerCase() === ps.toLowerCase())
+  );
+  const hasSkills = skills.length > 0 || extraProfileSkills.length > 0;
+
   return (
     <section id="skills" className="scroll-mt-24 pt-6">
       <div className="mb-6">
@@ -14,7 +20,7 @@ export const PublicProfileSkills: React.FC<PublicProfileSkillsProps> = ({ skills
         <h2 className="mt-1 font-heading text-2xl sm:text-3xl font-bold tracking-tight text-white">Skills & Technologies</h2>
       </div>
 
-      {skills.length > 0 ? (
+      {hasSkills ? (
         <div className="flex flex-wrap gap-2.5">
           {skills.map((skill, index) => (
             <span
@@ -26,6 +32,14 @@ export const PublicProfileSkills: React.FC<PublicProfileSkillsProps> = ({ skills
               <span className="text-[10px] text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded font-mono">
                 {skill.repoCount} {skill.repoCount === 1 ? 'repo' : 'repos'}
               </span>
+            </span>
+          ))}
+          {extraProfileSkills.map((skill, index) => (
+            <span
+              key={`profile-${skill}-${index}`}
+              className="inline-flex items-center rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-1.5 text-xs font-medium text-slate-300 shadow-sm hover:border-slate-700 hover:bg-slate-800/80 transition-all duration-200 cursor-default"
+            >
+              <span>{skill}</span>
             </span>
           ))}
         </div>

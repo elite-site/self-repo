@@ -22,6 +22,7 @@ router.post('/photo', profilePhotoUpload, asyncHandler(uploadPhoto));
 router.delete('/photo', asyncHandler(deletePhoto));
 router.get('/skills', asyncHandler(getSkills));
 router.put('/skills', asyncHandler(updateSkills));
+router.post('/skills', asyncHandler(updateSkills));
 router.post('/change-request', asyncHandler(submitChangeRequest));
 router.get('/change-requests', asyncHandler(getChangeRequests));
 
