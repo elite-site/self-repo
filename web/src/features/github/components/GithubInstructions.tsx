@@ -3,8 +3,6 @@ import {
   BookOpen,
   Copy,
   Check,
-  GitBranch,
-  ArrowRight,
   Terminal,
 } from 'lucide-react';
 import { Modal } from '@/shared/ui/Modal';
