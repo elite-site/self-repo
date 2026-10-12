@@ -171,7 +171,6 @@ export function usePublicStudentProfile() {
   const rawSpecialQualities = profile.specialQualities || '';
   const specialQualities = PLACEHOLDER_REGEX.test(rawSpecialQualities) ? '' : rawSpecialQualities.trim();
 
-  const profileSkills = (student?.profile?.skills || []).map((s: any) => typeof s === 'string' ? s : s.skill?.name || s.name).filter(Boolean);
   const githubSkills = student?.githubSkills || [];
 
   const manualProjects = (student?.projects || [])
@@ -206,7 +205,6 @@ export function usePublicStudentProfile() {
     profile,
     bio,
     specialQualities,
-    profileSkills,
     githubSkills,
     allProjects,
     achievements,

@@ -20,10 +20,6 @@ export function useEditProfile(onPhotoChangeProp?: (newUrl: string | null) => vo
   const [success, setSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [skills, setSkills] = useState<string[]>([]);
-  const [skillInput, setSkillInput] = useState('');
-  const [skillError, setSkillError] = useState<string | null>(null);
-
   const [bio, setBio] = useState('');
   const [specialQualities, setSpecialQualities] = useState('');
   const [githubUrl, setGithubUrl] = useState('');
@@ -54,8 +50,6 @@ export function useEditProfile(onPhotoChangeProp?: (newUrl: string | null) => vo
       setProfile(data);
       setBio(data.bio || '');
       setSpecialQualities(data.specialQualities || '');
-      const rawSkills = (data.skills || []).map((s: any) => typeof s === 'string' ? s : s.skill?.name || s.name).filter(Boolean);
-      setSkills(rawSkills);
       setGithubUrl(data.githubUrl || '');
       setLinkedinUrl(data.linkedinUrl || '');
       setLeetcodeUrl(data.leetcodeUrl || '');
@@ -72,64 +66,23 @@ export function useEditProfile(onPhotoChangeProp?: (newUrl: string | null) => vo
     loadProfile();
   }, [loadProfile]);
 
-  const addSkill = (nameToAdd?: string) => {
-    const value = nameToAdd !== undefined ? nameToAdd : skillInput;
-    const trimmed = value.trim();
-    if (!trimmed) return;
-
-    if (trimmed.length < 1 || trimmed.length > 30) {
-      setSkillError('Skill must be between 1 and 30 characters');
-      return;
-    }
-
-    if (skills.some((s) => s.toLowerCase() === trimmed.toLowerCase())) {
-      setSkillError(`"${trimmed}" is already added`);
-      return;
-    }
-
-    if (skills.length >= 10) {
-      setSkillError('Maximum 10 skills reached');
-      return;
-    }
-
-    setSkills((prev) => [...prev, trimmed]);
-    setSkillInput('');
-    setSkillError(null);
-  };
-
-  const removeSkill = (skillToRemove: string) => {
-    setSkills((prev) => prev.filter((s) => s !== skillToRemove));
-    setSkillError(null);
-  };
-
   const handleSave = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-
-    if (skills.length < 2) {
-      setSkillError('Add at least 2 skills');
-      setError('Add at least 2 skills');
-      return;
-    }
-
     setSaving(true);
     setError(null);
-    setSkillError(null);
     setSuccess(false);
 
     try {
-      const [updated] = await Promise.all([
-        profileApi.updateProfile({
-          bio,
-          specialQualities,
-          githubUrl: githubUrl.trim() || undefined,
-          linkedinUrl: linkedinUrl.trim() || undefined,
-          leetcodeUrl: leetcodeUrl.trim() || undefined,
-          codechefUrl: codechefUrl.trim() || undefined,
-          portfolioUrl: portfolioUrl.trim() || undefined,
-        }),
-        profileApi.updateSkills(skills),
-      ]);
-      setProfile((prev) => (prev ? { ...prev, ...updated, skills } : null));
+      const updated = await profileApi.updateProfile({
+        bio,
+        specialQualities,
+        githubUrl: githubUrl.trim() || undefined,
+        linkedinUrl: linkedinUrl.trim() || undefined,
+        leetcodeUrl: leetcodeUrl.trim() || undefined,
+        codechefUrl: codechefUrl.trim() || undefined,
+        portfolioUrl: portfolioUrl.trim() || undefined,
+      });
+      setProfile(updated);
       setSuccess(true);
       showToast('Profile updated successfully!');
       invalidateApiCache();
@@ -224,14 +177,6 @@ export function useEditProfile(onPhotoChangeProp?: (newUrl: string | null) => vo
     setBio,
     specialQualities,
     setSpecialQualities,
-    skills,
-    setSkills,
-    skillInput,
-    setSkillInput,
-    skillError,
-    setSkillError,
-    addSkill,
-    removeSkill,
     githubUrl,
     setGithubUrl,
     linkedinUrl,

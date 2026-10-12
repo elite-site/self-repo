@@ -28,7 +28,6 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
     profile,
     bio,
     specialQualities,
-    profileSkills,
     githubSkills,
     allProjects,
     achievements,
@@ -119,7 +118,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
           introVideo={introVideo}
         />
 
-        <PublicProfileSkills skills={githubSkills} profileSkills={profileSkills} />
+        <PublicProfileSkills skills={githubSkills} />
 
         <PublicProfileProjects projects={allProjects} />
 

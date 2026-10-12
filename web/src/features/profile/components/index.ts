@@ -4,4 +4,3 @@ export * from './ProfileBioSection';
 export * from './ProfilePortfolioSection';
 export * from './PhotoUploadSection';
 export * from './SocialLinksForm';
-export * from './ProfileSkillsSection';

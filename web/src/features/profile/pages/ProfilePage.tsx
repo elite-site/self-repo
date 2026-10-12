@@ -5,7 +5,6 @@ import { useProfile } from '../hooks/useProfile';
 import {
   ProfileHeader,
   ProfileBioSection,
-  ProfileSkillsSection,
   ProfilePortfolioSection,
   AcademicChangeRequestModal,
 } from '../components';
@@ -60,8 +59,6 @@ export const ProfilePage: React.FC = () => {
       />
 
       <ProfileBioSection profile={profile} />
-
-      <ProfileSkillsSection skills={profile.skills} />
 
       <ProfilePortfolioSection
         projects={projects}

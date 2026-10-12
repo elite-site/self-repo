@@ -65,39 +65,14 @@ export interface SkillsPayloadInput {
 }
 
 export function validateSkillsPayload(body: any): SkillsPayloadInput {
-  const rawList = body?.skillNames ?? body?.skills ?? body?.skillIds;
-
-  if (!Array.isArray(rawList)) {
-    throw new AppError('VALIDATION_ERROR', 'Skills must be an array of strings', 400, 'profile.schema:validateSkillsPayload');
+  const { skillIds, skillNames } = body || {};
+  if (skillIds !== undefined && !Array.isArray(skillIds)) {
+    throw new AppError('VALIDATION_ERROR', 'skillIds must be an array', 400, 'profile.schema:validateSkillsPayload');
   }
-
-  const trimmedList: string[] = [];
-  const seen = new Set<string>();
-
-  for (const item of rawList) {
-    if (typeof item !== 'string') {
-      throw new AppError('VALIDATION_ERROR', 'Each skill must be between 1 and 30 characters', 400, 'profile.schema:validateSkillsPayload');
-    }
-    const trimmed = item.trim();
-    if (trimmed.length < 1 || trimmed.length > 30) {
-      throw new AppError('VALIDATION_ERROR', 'Each skill must be between 1 and 30 characters', 400, 'profile.schema:validateSkillsPayload');
-    }
-    const lower = trimmed.toLowerCase();
-    if (seen.has(lower)) {
-      throw new AppError('VALIDATION_ERROR', `Duplicate skill: "${trimmed}"`, 400, 'profile.schema:validateSkillsPayload');
-    }
-    seen.add(lower);
-    trimmedList.push(trimmed);
+  if (skillNames !== undefined && !Array.isArray(skillNames)) {
+    throw new AppError('VALIDATION_ERROR', 'skillNames must be an array', 400, 'profile.schema:validateSkillsPayload');
   }
-
-  if (trimmedList.length < 2) {
-    throw new AppError('VALIDATION_ERROR', 'Add at least 2 skills', 400, 'profile.schema:validateSkillsPayload');
-  }
-  if (trimmedList.length > 10) {
-    throw new AppError('VALIDATION_ERROR', 'Maximum 10 skills allowed', 400, 'profile.schema:validateSkillsPayload');
-  }
-
-  return { skillNames: trimmedList };
+  return { skillIds, skillNames };
 }
 
 export interface ChangeRequestInput {
