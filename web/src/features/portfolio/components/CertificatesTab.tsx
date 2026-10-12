@@ -9,6 +9,7 @@ import { Modal } from '@/shared/ui/Modal';
 import { EmptyState } from '@/shared/ui/EmptyState';
 import { ErrorState } from '@/shared/ui/ErrorState';
 import { FileField } from '@/shared/ui/FileField';
+import { celebrate } from '@/shared/lib/celebrate';
 
 const statusBadge = (status: string) => {
   switch (status) {
@@ -103,6 +104,7 @@ export const CertificatesTab: React.FC = () => {
       await portfolioApi.uploadCertificate(formData);
       setModalOpen(false);
       showToast(`${title.trim()} added.`);
+      void celebrate('success');
       loadCertificates();
     } catch (err: any) {
       const notice =
