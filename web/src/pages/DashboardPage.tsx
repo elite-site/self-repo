@@ -516,7 +516,12 @@ export const DashboardPage: React.FC = () => {
       >
         <div className="min-w-0">
           <h1 className="font-heading text-headline-xl-mobile text-ink sm:text-headline-xl">
-            {greetingFor(new Date().getHours())}, {firstName}{' '}
+            <TypewriterText
+              text={`${greetingFor(new Date().getHours())}, ${firstName}`}
+              ready={Boolean(profile) || Boolean(profileError)}
+              animate={Boolean(profile?.name)}
+              storageKey="elite:greeting-typed"
+            />{' '}
             <span aria-hidden="true">👋</span>
           </h1>
           {!profileError && <p className="mt-1 text-body-md text-ink-secondary">{contextLine}</p>}
