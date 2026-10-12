@@ -89,7 +89,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, className, onCli
         <div className="mt-auto pt-3">
           <div className="flex items-center justify-between text-xs text-ink-secondary">
             <div className="flex items-center gap-3">
-              {course.estimatedHours != null && (
+              {course.estimatedHours !== null && course.estimatedHours !== undefined && (
                 <span className="inline-flex items-center gap-1">
                   <Clock className="size-3.5 text-ink-muted" aria-hidden="true" />
                   {course.estimatedHours}h

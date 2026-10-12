@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   BookOpen,
   Copy,
@@ -398,14 +398,181 @@ export const GithubInstructionsModal: React.FC<GithubInstructionsModalProps> = (
   onClose,
 }) => {
   const [activeId, setActiveId] = useState<string>(INSTRUCTION_STEPS[0].id);
+  const [scrollContainer, setScrollContainer] = useState<HTMLElement | null>(null);
+  const sidebarRef = useRef<HTMLElement>(null);
+  const mobileTabsRef = useRef<HTMLDivElement>(null);
+  const isClickScrollingRef = useRef(false);
+  const clickTimeoutRef = useRef<number | null>(null);
 
-  const handleJump = (id: string) => {
+  const containerCallbackRef = useCallback((node: HTMLDivElement | null) => {
+    if (node) {
+      const parentContainer =
+        node.closest<HTMLElement>('.overflow-y-auto') ?? node.parentElement;
+      setScrollContainer(parentContainer);
+    } else {
+      setScrollContainer(null);
+    }
+  }, []);
+
+  // Reset active step to step 1 when opening the modal
+  useEffect(() => {
+    if (open) {
+      setActiveId(INSTRUCTION_STEPS[0].id);
+    }
+  }, [open]);
+
+  // Keep active step in view inside sidebar and mobile tabs when activeId changes
+  useEffect(() => {
+    if (!open) return;
+
+    // Desktop sidebar
+    const sidebar = sidebarRef.current;
+    if (sidebar) {
+      const activeBtn = sidebar.querySelector<HTMLButtonElement>(`[data-step-id="${activeId}"]`);
+      if (activeBtn) {
+        const sRect = sidebar.getBoundingClientRect();
+        const bRect = activeBtn.getBoundingClientRect();
+        if (bRect.top < sRect.top) {
+          sidebar.scrollTop -= sRect.top - bRect.top + 8;
+        } else if (bRect.bottom > sRect.bottom) {
+          sidebar.scrollTop += bRect.bottom - sRect.bottom + 8;
+        }
+      }
+    }
+
+    // Mobile tabs
+    const mobileTabs = mobileTabsRef.current;
+    if (mobileTabs) {
+      const activeTab = mobileTabs.querySelector<HTMLButtonElement>(`[data-step-id="${activeId}"]`);
+      if (activeTab) {
+        const mRect = mobileTabs.getBoundingClientRect();
+        const bRect = activeTab.getBoundingClientRect();
+        if (bRect.left < mRect.left) {
+          mobileTabs.scrollLeft -= mRect.left - bRect.left + 16;
+        } else if (bRect.right > mRect.right) {
+          mobileTabs.scrollLeft += bRect.right - mRect.right + 16;
+        }
+      }
+    }
+  }, [activeId, open]);
+
+  // Scroll spy to sync activeId as the user scrolls through the instructions
+  useEffect(() => {
+    if (!scrollContainer) return;
+    const container = scrollContainer;
+
+    const updateActiveStep = () => {
+      // 1. If at the top of the scroll container
+      if (container.scrollTop <= 10) {
+        setActiveId(INSTRUCTION_STEPS[0].id);
+        return;
+      }
+
+      // 2. If scrolled near the bottom of the container, highlight the last step
+      const isAtBottom =
+        container.scrollHeight > container.clientHeight &&
+        container.scrollHeight - container.scrollTop - container.clientHeight <= 24;
+      if (isAtBottom) {
+        setActiveId(INSTRUCTION_STEPS[INSTRUCTION_STEPS.length - 1].id);
+        return;
+      }
+
+      // 3. Find which section is currently at the reading threshold
+      const containerRect = container.getBoundingClientRect();
+      const READING_OFFSET_PX = 100;
+
+      let matchedId = INSTRUCTION_STEPS[0].id;
+      let hasMeasuredLayout = false;
+
+      for (const step of INSTRUCTION_STEPS) {
+        const el = document.getElementById(step.id);
+        if (!el) continue;
+        const rect = el.getBoundingClientRect();
+        const hasDimension = rect.height > 0 || rect.top !== 0;
+
+        let relativeTop: number;
+        if (hasDimension) {
+          hasMeasuredLayout = true;
+          relativeTop = rect.top - containerRect.top;
+        } else if (el.offsetTop) {
+          hasMeasuredLayout = true;
+          relativeTop = el.offsetTop - container.scrollTop;
+        } else {
+          continue;
+        }
+
+        if (relativeTop <= READING_OFFSET_PX) {
+          matchedId = step.id;
+        } else {
+          break;
+        }
+      }
+
+      if (hasMeasuredLayout) {
+        setActiveId(matchedId);
+      }
+    };
+
+    let rafId: number | null = null;
+    const onScroll = () => {
+      if (isClickScrollingRef.current) return;
+      if (typeof window !== 'undefined' && 'requestAnimationFrame' in window) {
+        if (rafId !== null) return;
+        rafId = window.requestAnimationFrame(() => {
+          rafId = null;
+          updateActiveStep();
+        });
+      } else {
+        updateActiveStep();
+      }
+    };
+
+    const onUserInteraction = () => {
+      if (clickTimeoutRef.current) {
+        window.clearTimeout(clickTimeoutRef.current);
+        clickTimeoutRef.current = null;
+      }
+      isClickScrollingRef.current = false;
+    };
+
+    container.addEventListener('scroll', onScroll, { passive: true });
+    container.addEventListener('wheel', onUserInteraction, { passive: true });
+    container.addEventListener('touchmove', onUserInteraction, { passive: true });
+    window.addEventListener('resize', onScroll, { passive: true });
+
+    // Initial check
+    updateActiveStep();
+
+    return () => {
+      if (rafId !== null) {
+        window.cancelAnimationFrame(rafId);
+      }
+      if (clickTimeoutRef.current) {
+        window.clearTimeout(clickTimeoutRef.current);
+      }
+      container.removeEventListener('scroll', onScroll);
+      container.removeEventListener('wheel', onUserInteraction);
+      container.removeEventListener('touchmove', onUserInteraction);
+      window.removeEventListener('resize', onScroll);
+    };
+  }, [scrollContainer]);
+
+  const handleJump = useCallback((id: string) => {
+    if (clickTimeoutRef.current) {
+      window.clearTimeout(clickTimeoutRef.current);
+    }
+    isClickScrollingRef.current = true;
     setActiveId(id);
+
     const el = document.getElementById(id);
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
-  };
+
+    clickTimeoutRef.current = window.setTimeout(() => {
+      isClickScrollingRef.current = false;
+    }, 800);
+  }, []);
 
   return (
     <Modal
@@ -416,9 +583,12 @@ export const GithubInstructionsModal: React.FC<GithubInstructionsModalProps> = (
       size="xl"
       className="max-h-[80vh] h-[80vh] md:max-w-4xl"
     >
-      <div className="flex flex-col md:flex-row gap-6 relative">
+      <div ref={containerCallbackRef} className="flex flex-col md:flex-row gap-6 relative">
         {/* Desktop Sticky Sidebar */}
-        <aside className="hidden md:block w-48 shrink-0 sticky top-0 self-start max-h-[calc(80vh-8rem)] overflow-y-auto pr-2 border-r border-edge space-y-1 text-label-xs">
+        <aside
+          ref={sidebarRef}
+          className="hidden md:block w-48 shrink-0 sticky top-0 self-start max-h-[calc(80vh-8rem)] overflow-y-auto pr-2 border-r border-edge space-y-1 text-label-xs"
+        >
           <div className="font-bold text-ink-muted uppercase tracking-wider px-2 py-1 mb-1 text-[10px]">
             Steps & Topics
           </div>
@@ -428,6 +598,8 @@ export const GithubInstructionsModal: React.FC<GithubInstructionsModalProps> = (
               <button
                 key={step.id}
                 type="button"
+                data-step-id={step.id}
+                aria-current={isActive ? 'true' : undefined}
                 onClick={() => handleJump(step.id)}
                 className={cn(
                   'w-full text-left px-2.5 py-1.5 rounded-lg transition-colors truncate block cursor-pointer',
@@ -445,13 +617,18 @@ export const GithubInstructionsModal: React.FC<GithubInstructionsModalProps> = (
         </aside>
 
         {/* Mobile Top Tabs (Sticky) */}
-        <div className="md:hidden sticky -top-5 -mt-5 -mx-5 px-4 py-2 bg-surface/95 backdrop-blur border-b border-edge z-10 overflow-x-auto flex gap-1.5 shrink-0 scrollbar-none">
+        <div
+          ref={mobileTabsRef}
+          className="md:hidden sticky -top-5 -mt-5 -mx-5 px-4 py-2 bg-surface/95 backdrop-blur border-b border-edge z-10 overflow-x-auto flex gap-1.5 shrink-0 scrollbar-none"
+        >
           {INSTRUCTION_STEPS.map((step) => {
             const isActive = activeId === step.id;
             return (
               <button
                 key={step.id}
                 type="button"
+                data-step-id={step.id}
+                aria-current={isActive ? 'true' : undefined}
                 onClick={() => handleJump(step.id)}
                 className={cn(
                   'shrink-0 px-2.5 py-1 rounded-full text-label-xs font-semibold border transition-colors cursor-pointer whitespace-nowrap',

@@ -44,7 +44,7 @@ export const CourseDetailPage: React.FC = () => {
         <h1 className="text-2xl font-bold tracking-tight text-ink sm:text-3xl">{course.title}</h1>
         <p className="text-sm leading-relaxed text-ink-secondary">{course.description}</p>
         <div className="flex flex-wrap items-center gap-4 text-xs text-ink-muted">
-          {course.estimatedHours != null && (
+          {course.estimatedHours !== null && course.estimatedHours !== undefined && (
             <span className="flex items-center gap-1"><Clock className="size-3.5" /> {course.estimatedHours}h total</span>
           )}
           <span className="flex items-center gap-1"><BookOpen className="size-3.5" /> {course.lessons.length} lessons</span>

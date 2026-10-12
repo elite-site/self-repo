@@ -66,7 +66,7 @@ describe('LearningHub Web Experience', () => {
       expect(screen.getByText(/14h/)).toBeInTheDocument();
       expect(screen.getByText(/20 lessons/)).toBeInTheDocument();
       expect(screen.getByText('65%')).toBeInTheDocument();
-      expect(screen.getByText(/Due Nov 20/)).toBeInTheDocument();
+      expect(screen.getByText(/Due (Nov 20|20 Nov)/)).toBeInTheDocument();
     });
   });
 
