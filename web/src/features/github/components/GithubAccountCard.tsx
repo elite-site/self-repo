@@ -8,6 +8,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { Card } from '@/shared/ui/Card';
+import { GithubInstructions } from './GithubInstructions';
 import { GithubAccountInfo, GithubSkillItem } from '../types';
 
 interface GithubAccountCardProps {
@@ -94,6 +95,8 @@ export const GithubAccountCard: React.FC<GithubAccountCardProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
+          <GithubInstructions />
+
           <button
             type="button"
             onClick={onSync}
