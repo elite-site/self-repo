@@ -1,0 +1,16 @@
+import { Router } from 'express';
+import { asyncHandler } from '../../utils/asyncHandler';
+import { requireStudentAuth } from '../../middleware/studentAuth';
+import * as controller from './progress.controller';
+
+export const studentProgressRouter = Router();
+studentProgressRouter.use(requireStudentAuth);
+
+studentProgressRouter.get('/my-learning', asyncHandler(controller.getMyLearning));
+studentProgressRouter.get(['/lessons/:id', '/:id'], asyncHandler(controller.getLesson));
+studentProgressRouter.post(['/lessons/:id/progress', '/:id/progress'], asyncHandler(controller.updateLessonProgress));
+
+export const progressRouter = Router();
+progressRouter.use(studentProgressRouter);
+
+export default progressRouter;
