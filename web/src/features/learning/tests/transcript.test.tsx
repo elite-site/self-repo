@@ -428,4 +428,47 @@ describe('LessonPlayerPage with Transcript Companion', () => {
       expect.objectContaining({ completed: true })
     );
   });
+
+  it('loads lesson properly when route parameter is :id instead of :lessonId', async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/learning/lessons/lesson-1']}>
+          <Routes>
+            <Route path="/learning/lessons/:id" element={<LessonPlayerPage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Introduction & System Overview')).toBeInTheDocument();
+    });
+  });
+
+  it('renders ErrorState when lesson fails to load', async () => {
+    vi.mocked(learningApi.getLesson).mockRejectedValueOnce(new Error('Network error loading lesson'));
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/learning/lessons/non-existent-lesson']}>
+          <Routes>
+            <Route path="/learning/lessons/:id" element={<LessonPlayerPage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Could not load lesson')).toBeInTheDocument();
+      expect(screen.getByText(/Network error loading lesson/)).toBeInTheDocument();
+    });
+  });
 });

@@ -29,6 +29,7 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/shared/ui/Tabs';
 import { Button } from '@/shared/ui/Button';
 import { Skeleton } from '@/shared/ui/Skeleton';
+import { ErrorState } from '@/shared/ui/ErrorState';
 import { celebrate } from '@/shared/lib/celebrate';
 import { cn } from '@/shared/lib/cn';
 
@@ -46,10 +47,17 @@ function formatDuration(sec?: number | null): string {
 }
 
 export const LessonPlayerPage: React.FC = () => {
-  const { lessonId = '' } = useParams<{ lessonId: string }>();
+  const params = useParams<{ id?: string; lessonId?: string }>();
+  const lessonId = params.lessonId || params.id || '';
   const navigate = useNavigate();
 
-  const { data: lesson, isLoading } = useLessonQuery(lessonId);
+  const {
+    data: lesson,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useLessonQuery(lessonId);
   const { data: courseData } = useCourseDetailQuery(
     lesson?.courseSlug || lesson?.courseId || ''
   );
@@ -111,7 +119,7 @@ export const LessonPlayerPage: React.FC = () => {
     playerRef.current?.seekTo(seconds);
   }, []);
 
-  if (isLoading || !lesson) {
+  if (isLoading) {
     return (
       <div
         className="grid grid-cols-1 gap-6 p-4 lg:grid-cols-12 lg:p-8"
@@ -120,6 +128,24 @@ export const LessonPlayerPage: React.FC = () => {
       >
         <Skeleton className="h-96 rounded-xl lg:col-span-8" />
         <Skeleton className="h-96 rounded-xl lg:col-span-4" />
+      </div>
+    );
+  }
+
+  if (isError || !lesson) {
+    return (
+      <div className="mx-auto max-w-4xl p-6 sm:p-12">
+        <ErrorState
+          title="Could not load lesson"
+          message={
+            error instanceof Error
+              ? error.message
+              : !lessonId
+              ? 'No lesson ID was provided in the URL.'
+              : 'The requested lesson could not be found or you do not have permission to view it.'
+          }
+          onRetry={() => refetch()}
+        />
       </div>
     );
   }

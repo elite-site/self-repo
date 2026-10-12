@@ -69,6 +69,12 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
   onToggleTheater,
   className,
 }) => {
+  const cleanVideoId = (() => {
+    if (!videoId) return '';
+    const match = videoId.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([\w-]{11})/);
+    return match ? match[1] : videoId;
+  })();
+
   const containerRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const playerRef = useRef<any>(null);
@@ -79,7 +85,7 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
   const durationRef = useRef(0);
   const lastReportedTimeRef = useRef(initialSeconds);
   const isCompletedRef = useRef(false);
-  const prevVideoIdRef = useRef(videoId);
+  const prevVideoIdRef = useRef(cleanVideoId);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(initialSeconds);
@@ -338,8 +344,8 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
   }, [createPlayerHandle, initialSeconds, reportProgress]);
 
   useEffect(() => {
-    if (prevVideoIdRef.current !== videoId) {
-      prevVideoIdRef.current = videoId;
+    if (prevVideoIdRef.current !== cleanVideoId) {
+      prevVideoIdRef.current = cleanVideoId;
       currentTimeRef.current = initialSeconds;
       lastReportedTimeRef.current = initialSeconds;
       isCompletedRef.current = false;
@@ -351,12 +357,12 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
 
       if (playerRef.current?.loadVideoById) {
         playerRef.current.loadVideoById({
-          videoId,
+          videoId: cleanVideoId,
           startSeconds: initialSeconds,
         });
       }
     }
-  }, [videoId, initialSeconds]);
+  }, [cleanVideoId, initialSeconds]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
@@ -416,7 +422,7 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
           The owner does not allow embedded playback on external sites.
         </p>
         <a
-          href={`https://www.youtube.com/watch?v=${videoId}`}
+          href={`https://www.youtube.com/watch?v=${cleanVideoId}`}
           target="_blank"
           rel="noopener noreferrer"
           className="mt-4"
@@ -457,8 +463,8 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
       >
         <iframe
           ref={iframeRef}
-          id={`yt-player-${videoId}`}
-          src={`https://www.youtube-nocookie.com/embed/${videoId}?enablejsapi=1&origin=${encodeURIComponent(
+          id={`yt-player-${cleanVideoId}`}
+          src={`https://www.youtube-nocookie.com/embed/${cleanVideoId}?enablejsapi=1&origin=${encodeURIComponent(
             typeof window !== 'undefined' ? window.location.origin : ''
           )}&rel=0&iv_load_policy=3&playsinline=1`}
           title="YouTube lesson player"
