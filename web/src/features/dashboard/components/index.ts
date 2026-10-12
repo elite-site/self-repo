@@ -5,3 +5,4 @@ export * from './DashboardGithubBanner';
 export * from './DashboardActivityFeed';
 export * from './DashboardSidebar';
 export * from './DashboardQuickActions';
+export * from './DashboardLearningCard';

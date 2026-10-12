@@ -4,7 +4,7 @@ import { eventsApi } from '../api';
 import { Event } from '../types';
 import { StudentSession } from '@/shared/types';
 import { Navbar } from '@/shared/layout/Navbar';
-import { Footer } from '@/shared/layout/Footer';
+import { FooterReveal } from '@/shared/layout/FooterReveal';
 import { EmptyState } from '@/shared/ui/EmptyState';
 import { ErrorState } from '@/shared/ui/ErrorState';
 import { SkeletonPage } from '@/shared/ui/Skeleton';
@@ -106,7 +106,7 @@ export const PublicEventsPage: React.FC<PublicEventsPageProps> = ({ session, onL
         </div>
       </main>
 
-      <Footer />
+      <FooterReveal />
     </div>
   );
 };

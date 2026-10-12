@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { learningApi } from '../api';
-import { LessonDetailResponse } from '../types';
+import { LessonDetailResponse, LessonTranscriptResponse } from '../types';
 
 export function useLessonQuery(id: string) {
   return useQuery<LessonDetailResponse>({
@@ -8,6 +8,15 @@ export function useLessonQuery(id: string) {
     queryFn: () => learningApi.getLesson(id),
     enabled: Boolean(id),
     staleTime: 60_000,
+  });
+}
+
+export function useLessonTranscriptQuery(lessonId: string) {
+  return useQuery<LessonTranscriptResponse>({
+    queryKey: ['learning', 'transcript', lessonId],
+    queryFn: () => learningApi.getLessonTranscript(lessonId),
+    enabled: Boolean(lessonId),
+    staleTime: 5 * 60_000,
   });
 }
 

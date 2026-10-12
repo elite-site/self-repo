@@ -26,3 +26,4 @@ export * from './PlatformIcons';
 export * from './GuidelinesSection';
 export * from './ProjectBento';
 export * from './PublicVideoShowcase';
+export * from './TypewriterText';

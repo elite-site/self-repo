@@ -35,6 +35,7 @@ export const DoorsMenu: React.FC<DoorsMenuProps> = ({
         {open && (
           <DialogPrimitive.Portal forceMount>
             <DialogPrimitive.Content
+              forceMount
               aria-describedby={undefined}
               onCloseAutoFocus={(event) => {
                 event.preventDefault();

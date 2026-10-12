@@ -4,13 +4,14 @@ import { useTypewriter } from '../hooks/useTypewriter';
 
 interface TypewriterTextProps {
   text: string;
-  ready: boolean;
-  animate: boolean;
-  storageKey: string;
+  ready?: boolean;
+  animate?: boolean;
+  storageKey?: string;
   className?: string;
 }
 
-const readFlag = (key: string): boolean => {
+const readFlag = (key?: string): boolean => {
+  if (!key) return false;
   try {
     return window.sessionStorage.getItem(key) === '1';
   } catch {
@@ -18,7 +19,8 @@ const readFlag = (key: string): boolean => {
   }
 };
 
-const writeFlag = (key: string): void => {
+const writeFlag = (key?: string): void => {
+  if (!key) return;
   try {
     window.sessionStorage.setItem(key, '1');
   } catch {
@@ -28,8 +30,8 @@ const writeFlag = (key: string): void => {
 
 export const TypewriterText: React.FC<TypewriterTextProps> = ({
   text,
-  ready,
-  animate,
+  ready = true,
+  animate = true,
   storageKey,
   className,
 }) => {

@@ -5,7 +5,7 @@ import { useReducedMotion } from '@/shared/hooks/useReducedMotion';
 import { cn } from '@/shared/lib/cn';
 import { selectVariantsByName, transitionTabSpring } from '@/shared/lib/motion';
 import { BOTTOM_TAB_NAV, NavItem } from './NavItem';
-import { MoreSheet } from './MoreSheet';
+import { DoorsMenu } from './DoorsMenu';
 
 /**
  * §5.2 — the mobile tab bar: four route tabs plus "More", `md:hidden` so it is
@@ -46,6 +46,7 @@ export const BottomTabBar: React.FC<{
           <li className="flex-1">
             <button
               id="more-sheet-trigger"
+              data-nav-target="more"
               type="button"
               onClick={() => setSheetOpen((open) => !open)}
               aria-expanded={sheetOpen}
@@ -96,7 +97,7 @@ export const BottomTabBar: React.FC<{
         </ul>
       </nav>
 
-      <MoreSheet
+      <DoorsMenu
         open={sheetOpen}
         onClose={() => setSheetOpen(false)}
         unreadCount={unreadCount}

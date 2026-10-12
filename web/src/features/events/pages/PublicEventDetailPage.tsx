@@ -5,7 +5,7 @@ import { eventsApi } from '../api';
 import { PublicEventDetail } from '../types';
 import { StudentSession } from '@/shared/types';
 import { Navbar } from '@/shared/layout/Navbar';
-import { Footer } from '@/shared/layout/Footer';
+import { FooterReveal } from '@/shared/layout/FooterReveal';
 import { SkeletonPage } from '@/shared/ui/Skeleton';
 import { authApi } from '@/features/auth/api';
 
@@ -115,7 +115,7 @@ export const PublicEventDetailPage: React.FC<PublicEventDetailPageProps> = ({ se
         </div>
       </main>
 
-      <Footer />
+      <FooterReveal />
     </div>
   );
 };

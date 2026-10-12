@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { CheckCircle2, Plus } from 'lucide-react';
 import { Card } from '@/shared/ui/Card';
 import { ProgressBar } from '@/shared/ui/ProgressBar';
+import { useCountUp } from '@/shared/hooks/useCountUp';
 import { DashboardTask } from '../types';
 
 interface DashboardBannerProps {
@@ -22,6 +23,8 @@ export const DashboardBanner: React.FC<DashboardBannerProps> = ({
   nextMissing,
   isComplete,
 }) => {
+  const animatedPercentage = useCountUp(completionPercentage);
+
   return (
     <Card
       variant="brand"
@@ -54,7 +57,7 @@ export const DashboardBanner: React.FC<DashboardBannerProps> = ({
 
         <div className="shrink-0 text-right">
           <p className="font-heading text-headline-lg sm:text-headline-xl tabular-nums text-ink leading-none">
-            {completionPercentage}
+            {animatedPercentage}
             <span className="text-headline-sm sm:text-headline-md text-ink-muted">%</span>
           </p>
         </div>

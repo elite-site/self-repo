@@ -1,5 +1,12 @@
 import { ValidationError } from '../../utils/appError';
-import { YouTubePreviewResult, YouTubePlaylistResult, YouTubePlaylistItem } from './courses.types';
+import { TtlCache } from '../../utils/ttlCache';
+import {
+  YouTubePreviewResult,
+  YouTubePlaylistResult,
+  YouTubePlaylistItem,
+  YouTubeTranscriptResult,
+  TranscriptSegment,
+} from './courses.types';
 
 export function parseDurationText(text?: string | null): number | null {
   if (!text) return null;
@@ -151,4 +158,212 @@ export async function fetchYouTubePlaylist(urlOrId: string): Promise<YouTubePlay
     videoCount: videos.length,
     videos,
   };
+}
+
+function decodeHtmlEntities(text: string): string {
+  return text
+    .replace(/&amp;/g, '&')
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'")
+    .replace(/&#x27;/gi, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(parseInt(dec, 10)))
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+}
+
+function parseAttributes(attrString: string): Record<string, string> {
+  const attrs: Record<string, string> = {};
+  const regex = /([a-zA-Z0-9_-]+)=(?:["']([^"']*)["']|([^\s>]+))/g;
+  let match: RegExpExecArray | null;
+  while ((match = regex.exec(attrString)) !== null) {
+    attrs[match[1].toLowerCase()] = match[2] !== undefined ? match[2] : match[3];
+  }
+  return attrs;
+}
+
+function parseXmlTranscript(xml: string): TranscriptSegment[] {
+  const segments: TranscriptSegment[] = [];
+
+  // Format 3: <p t="ms" d="ms">text</p>
+  const pRegex = /<p\b([^>]*)>([\s\S]*?)<\/p>/gi;
+  let pMatch: RegExpExecArray | null;
+  while ((pMatch = pRegex.exec(xml)) !== null) {
+    const attrs = parseAttributes(pMatch[1]);
+    const rawContent = pMatch[2];
+    if (attrs.t === undefined) continue;
+
+    const startMs = parseFloat(attrs.t);
+    const durMs = attrs.d !== undefined ? parseFloat(attrs.d) : 0;
+    if (isNaN(startMs)) continue;
+
+    const cleanText = decodeHtmlEntities(rawContent.replace(/<[^>]+>/g, ''))
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (!cleanText) continue;
+
+    segments.push({
+      text: cleanText,
+      offset: parseFloat((startMs / 1000).toFixed(3)),
+      duration: parseFloat(((isNaN(durMs) ? 0 : durMs) / 1000).toFixed(3)),
+    });
+  }
+
+  if (segments.length > 0) {
+    return segments;
+  }
+
+  // Classic format: <text start="s" dur="s">text</text>
+  const textRegex = /<text\b([^>]*)>([\s\S]*?)<\/text>/gi;
+  let textMatch: RegExpExecArray | null;
+  while ((textMatch = textRegex.exec(xml)) !== null) {
+    const attrs = parseAttributes(textMatch[1]);
+    const rawContent = textMatch[2];
+    if (attrs.start === undefined) continue;
+
+    const startSec = parseFloat(attrs.start);
+    const durSec = attrs.dur !== undefined ? parseFloat(attrs.dur) : 0;
+    if (isNaN(startSec)) continue;
+
+    const cleanText = decodeHtmlEntities(rawContent.replace(/<[^>]+>/g, ''))
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (!cleanText) continue;
+
+    segments.push({
+      text: cleanText,
+      offset: parseFloat(startSec.toFixed(3)),
+      duration: parseFloat((isNaN(durSec) ? 0 : durSec).toFixed(3)),
+    });
+  }
+
+  return segments;
+}
+
+interface CaptionTrack {
+  baseUrl?: string;
+  languageCode?: string;
+  kind?: string;
+  name?: { simpleText?: string; runs?: Array<{ text: string }> };
+}
+
+function selectCaptionTrack(tracks: CaptionTrack[], requestedLang?: string): CaptionTrack | null {
+  if (!tracks || tracks.length === 0) return null;
+
+  if (requestedLang) {
+    const exact = tracks.find((t) => t.languageCode?.toLowerCase() === requestedLang.toLowerCase());
+    if (exact) return exact;
+    const prefix = tracks.find((t) => t.languageCode?.toLowerCase().startsWith(requestedLang.toLowerCase()));
+    if (prefix) return prefix;
+  }
+
+  const english = tracks.find(
+    (t) => t.languageCode?.toLowerCase() === 'en' || t.languageCode?.toLowerCase().startsWith('en')
+  );
+  if (english) return english;
+
+  return tracks[0] || null;
+}
+
+export const transcriptCache = new TtlCache<YouTubeTranscriptResult>(24 * 60 * 60 * 1000, 200);
+
+export function clearTranscriptCache(): void {
+  transcriptCache.clear();
+}
+
+async function doFetchYouTubeTranscript(
+  videoId: string,
+  lang?: string
+): Promise<YouTubeTranscriptResult> {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 6000);
+
+    const playerRes = await fetch('https://www.youtube.com/youtubei/v1/player?prettyPrint=false', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': 'com.google.android.youtube/20.10.38 (Linux; U; Android 14)',
+      },
+      body: JSON.stringify({
+        context: {
+          client: {
+            clientName: 'ANDROID',
+            clientVersion: '20.10.38',
+            hl: lang || 'en',
+          },
+        },
+        videoId,
+      }),
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+
+    if (!playerRes.ok) {
+      return { segments: [], language: lang || 'en', available: false };
+    }
+
+    const playerData = (await playerRes.json()) as any;
+    const tracks: CaptionTrack[] = playerData?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
+    if (!Array.isArray(tracks) || tracks.length === 0) {
+      return { segments: [], language: lang || 'en', available: false };
+    }
+
+    const selectedTrack = selectCaptionTrack(tracks, lang);
+    if (!selectedTrack?.baseUrl) {
+      return { segments: [], language: lang || 'en', available: false };
+    }
+
+    const resolvedLanguage = selectedTrack.languageCode || lang || 'en';
+
+    const trackController = new AbortController();
+    const trackTimeout = setTimeout(() => trackController.abort(), 6000);
+    const trackRes = await fetch(selectedTrack.baseUrl, {
+      headers: {
+        'User-Agent': 'com.google.android.youtube/20.10.38 (Linux; U; Android 14)',
+      },
+      signal: trackController.signal,
+    });
+    clearTimeout(trackTimeout);
+
+    if (!trackRes.ok) {
+      return { segments: [], language: resolvedLanguage, available: false };
+    }
+
+    const xml = await trackRes.text();
+    const segments = parseXmlTranscript(xml);
+
+    if (segments.length === 0) {
+      return { segments: [], language: resolvedLanguage, available: false };
+    }
+
+    return {
+      segments,
+      language: resolvedLanguage,
+      available: true,
+    };
+  } catch {
+    return { segments: [], language: lang || 'en', available: false };
+  }
+}
+
+export async function fetchYouTubeTranscript(
+  videoId: string,
+  lang?: string
+): Promise<YouTubeTranscriptResult> {
+  if (!videoId || typeof videoId !== 'string') {
+    return { segments: [], language: lang || 'en', available: false };
+  }
+
+  let cleanId = videoId.trim();
+  const match = cleanId.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([\w-]{11})/);
+  if (match) {
+    cleanId = match[1];
+  }
+
+  const cacheKey = lang ? `${cleanId}:${lang}` : cleanId;
+
+  return transcriptCache.wrap(cacheKey, () => doFetchYouTubeTranscript(cleanId, lang));
 }

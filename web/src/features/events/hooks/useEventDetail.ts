@@ -3,6 +3,8 @@ import { eventsApi } from '../api';
 import { Event, EventRegistration, isActiveRegistration } from '../types';
 import { useToast } from '@/shared/ui/Toast';
 import { useConfirm } from '@/shared/ui/ConfirmDialog';
+import { celebrate } from '@/shared/lib/celebrate';
+import { flyToTarget } from '@/shared/lib/flyToTarget';
 import { teamsApi } from '@/features/teams/api';
 
 export function useEventDetail(id?: string) {
@@ -57,6 +59,10 @@ export function useEventDetail(id?: string) {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!id) return;
+    const triggerEl =
+      (e.target as HTMLElement)?.querySelector('button[type="submit"]') ||
+      (document.activeElement as HTMLElement | null);
+    const fromRect = triggerEl?.getBoundingClientRect?.();
     setSubmitting(true);
     setRegError(null);
 
@@ -65,6 +71,10 @@ export function useEventDetail(id?: string) {
       setRegistration(res);
       setModalOpen(false);
       showToast('Successfully registered for the event!');
+      if (fromRect) {
+        void flyToTarget(fromRect);
+      }
+      void celebrate('success');
       loadEventAndReg(false);
     } catch (err: any) {
       setRegError(err.response?.data?.message || 'Failed to register. Please try again.');

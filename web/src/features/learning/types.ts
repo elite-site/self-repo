@@ -163,3 +163,18 @@ export interface QuizAttemptResult {
     explanation?: string | null;
   }>;
 }
+
+export interface TranscriptSegment {
+  text: string;
+  offset: number; // in seconds
+  duration: number; // in seconds
+}
+
+export interface LessonTranscriptResponse {
+  lessonId: string;
+  videoId: string;
+  available: boolean;
+  language?: string;
+  segments: TranscriptSegment[];
+  message?: string;
+}

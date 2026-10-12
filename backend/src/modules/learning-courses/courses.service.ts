@@ -2,8 +2,14 @@ import { coursesRepository, CoursesRepository } from './courses.repository';
 import { NotFoundError, ForbiddenError } from '../../utils/appError';
 import { CourseStatus, EnrolmentType, CourseTargetType, Prisma } from '@prisma/client';
 import { ActivityService } from '../admin';
-import { AssignCoursePayload, YouTubePreviewResult, YouTubePlaylistResult, BulkLessonItem } from './courses.types';
-import { fetchYouTubePreview, fetchYouTubePlaylist } from './youtube';
+import {
+  AssignCoursePayload,
+  YouTubePreviewResult,
+  YouTubePlaylistResult,
+  BulkLessonItem,
+  LessonTranscriptResponse,
+} from './courses.types';
+import { fetchYouTubePreview, fetchYouTubePlaylist, fetchYouTubeTranscript } from './youtube';
 import { mapCourseCard, mapCourseDetail } from './courses.mappers';
 
 export class CoursesService {
@@ -188,6 +194,30 @@ export class CoursesService {
 
   async getYouTubePlaylist(urlOrId: string): Promise<YouTubePlaylistResult> {
     return fetchYouTubePlaylist(urlOrId);
+  }
+
+  async getLessonTranscript(lessonId: string, _studentId?: string): Promise<LessonTranscriptResponse> {
+    const lesson = await this.repo.findLessonById(lessonId);
+    if (!lesson) {
+      throw new NotFoundError('Lesson not found');
+    }
+
+    if (lesson.type !== 'YOUTUBE' || !lesson.youtubeVideoId) {
+      return {
+        available: false,
+        segments: [],
+        message: 'Lesson is not a YouTube video',
+      };
+    }
+
+    const transcript = await fetchYouTubeTranscript(lesson.youtubeVideoId);
+    return {
+      lessonId: lesson.id,
+      videoId: lesson.youtubeVideoId,
+      available: transcript.available,
+      language: transcript.language,
+      segments: transcript.segments,
+    };
   }
 }
 

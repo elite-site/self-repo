@@ -6,6 +6,7 @@ import {
   LessonDetailResponse,
   QuizDetailResponse,
   QuizAttemptResult,
+  LessonTranscriptResponse,
 } from '../types';
 import {
   mockHomeFeed,
@@ -14,6 +15,7 @@ import {
   mockLessonDetail,
   mockQuizDetail,
   mockQuizResult,
+  mockTranscript,
 } from './fixtures';
 
 const isMock = (): boolean => {
@@ -130,6 +132,12 @@ export const learningApi = {
   async getQuizAttempts(quizId: string): Promise<{ attempts: any[] }> {
     if (isMock()) return { attempts: [mockQuizResult] };
     const res = await client.get(`/student/learning/quizzes/${quizId}/attempts`);
+    return res.data;
+  },
+
+  async getLessonTranscript(lessonId: string): Promise<LessonTranscriptResponse> {
+    if (isMock()) return mockTranscript;
+    const res = await client.get(`/student/learning/lessons/${lessonId}/transcript`);
     return res.data;
   },
 };

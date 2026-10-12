@@ -5,6 +5,7 @@ import {
   LessonDetailResponse,
   QuizDetailResponse,
   QuizAttemptResult,
+  LessonTranscriptResponse,
 } from '../types';
 
 export const mockCourses: CourseCardSummary[] = [
@@ -239,5 +240,23 @@ export const mockQuizResult: QuizAttemptResult = {
       correctOptionIds: ['opt-6'],
       explanation: 'Controllers must delegate to services and never touch Prisma.',
     },
+  ],
+};
+
+export const mockTranscript: LessonTranscriptResponse = {
+  lessonId: 'lesson-1',
+  videoId: 'dQw4w9WgXcQ',
+  available: true,
+  language: 'en',
+  segments: [
+    { text: 'Welcome to Modern TypeScript & Node.js Architecture.', offset: 0, duration: 5 },
+    { text: 'In this module, we will explore modular monolith patterns and clean layering.', offset: 5, duration: 6 },
+    { text: 'We enforce strict layer boundaries: route to controller, service, repository, database.', offset: 11, duration: 7 },
+    { text: 'Controllers only handle HTTP request parsing, status codes, and response shaping.', offset: 18, duration: 6 },
+    { text: 'Services encapsulate business rules, domain orchestration, and transactions.', offset: 24, duration: 6 },
+    { text: 'Prisma queries are strictly confined within repositories.', offset: 30, duration: 5 },
+    { text: 'Never call Prisma directly inside controllers or services.', offset: 35, duration: 5 },
+    { text: 'Shared utilities like AppError and asyncHandler ensure unified error handling.', offset: 40, duration: 7 },
+    { text: 'Let us build reliable and maintainable backend architectures together.', offset: 47, duration: 8 },
   ],
 };

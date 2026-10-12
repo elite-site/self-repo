@@ -23,6 +23,11 @@ export async function enrollCourse(req: Request, res: Response) {
   res.status(201).json(result);
 }
 
+export async function getLessonTranscript(req: Request, res: Response) {
+  const result = await coursesService.getLessonTranscript(req.params.id, req.student?.studentId);
+  res.json(result);
+}
+
 export async function getAdminCourses(req: Request, res: Response) {
   const result = await coursesService.listAdminCourses(req.query);
   res.json(result);

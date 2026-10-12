@@ -69,6 +69,12 @@ export class CoursesRepository {
     return prisma.lesson.delete({ where: { id } });
   }
 
+  async findLessonById(id: string) {
+    return prisma.lesson.findUnique({
+      where: { id },
+    });
+  }
+
   async reorderLessons(lessonIds: string[]) {
     return prisma.$transaction(
       lessonIds.map((id, index) =>

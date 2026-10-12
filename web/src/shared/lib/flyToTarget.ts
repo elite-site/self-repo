@@ -14,6 +14,12 @@ const findTarget = (): HTMLElement | null => {
 };
 
 export async function flyToTarget(from: DOMRect): Promise<boolean> {
+  if (
+    typeof window !== 'undefined' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  ) {
+    return false;
+  }
   const target = findTarget();
   if (!target) return false;
 

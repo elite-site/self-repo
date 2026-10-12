@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Users } from 'lucide-react';
+import { TypewriterText } from '@/shared/ui';
 import { HomeSpotlightCard } from './HomeSpotlightCard';
 
 interface HomeHeroProps {
@@ -26,7 +27,10 @@ export const HomeHero: React.FC<HomeHeroProps> = ({
             Department of Information Technology
           </p>
           <h1 className="mt-4 font-heading text-headline-xl-mobile font-extrabold tracking-tight text-ink sm:text-headline-xl">
-            Meet the department, one student at a time.
+            <TypewriterText
+              text="Meet the department, one student at a time."
+              storageKey="elite-home-title-played"
+            />
           </h1>
           <p className="mt-5 max-w-[52ch] text-body-lg text-ink-secondary">
             Browse verified profiles, explore student portfolios, and register for department

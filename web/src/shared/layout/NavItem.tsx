@@ -221,6 +221,7 @@ export const NavItem: React.FC<NavItemProps> = ({
   return (
     <NavLink
       to={entry.path}
+      data-nav-target={entry.path}
       onClick={onNavigate}
       onMouseEnter={() => prefetchRoute(entry.path)}
       onFocus={() => prefetchRoute(entry.path)}

@@ -7,7 +7,7 @@ import { StudentSession } from '@/shared/types';
 import { safeUrl } from '@/shared/utils/safeUrl';
 import { resolveMediaUrl } from '@/shared/api';
 import { Navbar } from '@/shared/layout/Navbar';
-import { Footer } from '@/shared/layout/Footer';
+import { FooterReveal } from '@/shared/layout/FooterReveal';
 
 interface PublicResumeViewerProps {
   session?: StudentSession | null;
@@ -168,7 +168,7 @@ export const PublicResumeViewerPage: React.FC<PublicResumeViewerProps> = ({ sess
         )}
       </div>
 
-      <Footer />
+      <FooterReveal />
     </div>
   );
 };

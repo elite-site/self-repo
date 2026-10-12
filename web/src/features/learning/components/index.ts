@@ -5,3 +5,4 @@ export * from './YouTubePlayer';
 export * from './NotesView';
 export * from './QuizView';
 export * from './LessonSidebar';
+export * from './TranscriptViewer';

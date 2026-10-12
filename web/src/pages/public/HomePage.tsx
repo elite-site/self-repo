@@ -4,7 +4,8 @@ import { StudentSession } from '@/shared/types';
 import { directoryApi } from '@/features/directory/api';
 import { authApi } from '@/features/auth/api';
 import { Navbar } from '@/shared/layout/Navbar';
-import { Footer } from '@/shared/layout/Footer';
+import { FooterReveal } from '@/shared/layout/FooterReveal';
+import { useCountUp } from '@/shared/hooks/useCountUp';
 import { HomeHero } from './components/HomeHero';
 import { HomeSearchBand } from './components/HomeSearchBand';
 import { HomeEventsBand } from './components/HomeEventsBand';
@@ -89,12 +90,7 @@ export const HomePage: React.FC<HomePageProps> = ({ session, onLogout }) => {
             <div className="mx-auto max-w-canvas px-6 py-10 sm:px-10">
               <dl className="grid grid-cols-1 gap-8 sm:grid-cols-2">
                 {stats.map((stat) => (
-                  <div key={stat.label}>
-                    <dd className="font-heading text-headline-lg font-extrabold tabular-nums text-ink">
-                      {stat.value}
-                    </dd>
-                    <dt className="mt-1 text-body-sm text-ink-secondary">{stat.label}</dt>
-                  </div>
+                  <HomeStatCounter key={stat.label} label={stat.label} value={stat.value} />
                 ))}
               </dl>
             </div>
@@ -110,7 +106,19 @@ export const HomePage: React.FC<HomePageProps> = ({ session, onLogout }) => {
         <HomeEventsBand />
       </main>
 
-      <Footer />
+      <FooterReveal />
+    </div>
+  );
+};
+
+const HomeStatCounter: React.FC<{ label: string; value: number }> = ({ label, value }) => {
+  const animatedValue = useCountUp(value);
+  return (
+    <div>
+      <dd className="font-heading text-headline-lg font-extrabold tabular-nums text-ink">
+        {animatedValue}
+      </dd>
+      <dt className="mt-1 text-body-sm text-ink-secondary">{label}</dt>
     </div>
   );
 };

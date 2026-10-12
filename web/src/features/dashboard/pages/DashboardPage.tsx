@@ -9,6 +9,7 @@ import { useDashboard } from '../hooks/useDashboard';
 import {
   DashboardSkeleton,
   DashboardBanner,
+  DashboardLearningCard,
   DashboardGithubBanner,
   DashboardTaskBoard,
   DashboardActivityFeed,
@@ -112,6 +113,8 @@ export const DashboardPage: React.FC = () => {
             nextMissing={nextMissing}
             isComplete={isComplete}
           />
+
+          <DashboardLearningCard />
 
           <DashboardTaskBoard tasks={tasks} />
 

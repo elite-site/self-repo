@@ -4,6 +4,7 @@ import { QuizDetailResponse, QuizAttemptResult } from '../types';
 import { Button } from '@/shared/ui/Button';
 import { Badge } from '@/shared/ui/Badge';
 import { cn } from '@/shared/lib/cn';
+import { celebrate } from '@/shared/lib/celebrate';
 
 export interface QuizViewProps {
   quiz: QuizDetailResponse;
@@ -59,6 +60,9 @@ export const QuizView: React.FC<QuizViewProps> = ({
       const payload = quiz.questions.map((q) => ({ questionId: q.id, selectedOptionIds: answers[q.id] || [] }));
       const res = await onSubmit(payload);
       setResult(res);
+      if (res?.passed) {
+        void celebrate('complete');
+      }
     } finally {
       setSubmitting(false);
     }

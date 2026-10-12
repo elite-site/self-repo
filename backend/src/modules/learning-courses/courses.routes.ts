@@ -6,6 +6,7 @@ import * as controller from './courses.controller';
 
 export const studentCoursesRouter = Router();
 studentCoursesRouter.use(requireStudentAuth);
+studentCoursesRouter.get(['/lessons/:id/transcript', '/courses/lessons/:id/transcript'], asyncHandler(controller.getLessonTranscript));
 studentCoursesRouter.get(['/courses', '/'], asyncHandler(controller.getStudentCourses));
 studentCoursesRouter.get(['/courses/:slugOrId', '/:slugOrId'], asyncHandler(controller.getStudentCourse));
 studentCoursesRouter.post(['/courses/:id/enroll', '/:id/enroll'], asyncHandler(controller.enrollCourse));

@@ -94,3 +94,24 @@ export interface BulkLessonItem {
   durationSec?: number | null;
   order?: number;
 }
+
+export interface TranscriptSegment {
+  text: string;
+  offset: number;
+  duration: number;
+}
+
+export interface YouTubeTranscriptResult {
+  segments: TranscriptSegment[];
+  language: string;
+  available: boolean;
+}
+
+export interface LessonTranscriptResponse {
+  lessonId?: string;
+  videoId?: string;
+  available: boolean;
+  language?: string;
+  segments: TranscriptSegment[];
+  message?: string;
+}

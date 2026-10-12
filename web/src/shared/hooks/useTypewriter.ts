@@ -1,4 +1,4 @@
-import { useLayoutEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { animate } from 'framer-motion';
 
 export function useTypewriter(
@@ -6,22 +6,32 @@ export function useTypewriter(
   enabled: boolean,
   msPerChar = 35,
 ): { shown: string; done: boolean } {
-  const [count, setCount] = useState(text.length);
+  const [count, setCount] = useState(() => (enabled && text.length > 0 ? 0 : text.length));
+  const [isFinished, setIsFinished] = useState(() => !enabled || text.length === 0);
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     if (!enabled || text.length === 0) {
       setCount(text.length);
+      setIsFinished(true);
       return;
     }
+
     setCount(0);
+    setIsFinished(false);
+
     const controls = animate(0, text.length, {
       duration: (text.length * msPerChar) / 1000,
       ease: 'linear',
       onUpdate: (value) => setCount(Math.floor(value)),
-      onComplete: () => setCount(text.length),
+      onComplete: () => {
+        setCount(text.length);
+        setIsFinished(true);
+      },
     });
+
     return () => controls.stop();
   }, [text, enabled, msPerChar]);
 
-  return { shown: text.slice(0, count), done: count >= text.length };
+  const done = !enabled || isFinished;
+  return { shown: text.slice(0, count), done };
 }

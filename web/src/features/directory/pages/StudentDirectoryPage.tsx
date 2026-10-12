@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { Search, SlidersHorizontal, Users } from 'lucide-react';
 import { StudentSession } from '@/shared/types';
 import { Navbar } from '@/shared/layout/Navbar';
-import { Footer } from '@/shared/layout/Footer';
+import { FooterReveal } from '@/shared/layout/FooterReveal';
 import { Card } from '@/shared/ui/Card';
 import { Modal } from '@/shared/ui/Modal';
 import { Button } from '@/shared/ui/Button';
@@ -171,7 +171,7 @@ export const StudentDirectoryPage: React.FC<StudentDirectoryProps> = ({ session,
         </div>
       </Modal>
 
-      <Footer />
+      <FooterReveal />
     </div>
   );
 };
