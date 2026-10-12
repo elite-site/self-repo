@@ -1,6 +1,6 @@
 import React from 'react';
 import { Mail, FileText, Github, Linkedin, Globe } from 'lucide-react';
-import { LeetCodeIcon, CodeChefIcon } from '@/shared/ui/PlatformIcons';
+import { LeetCodeIcon, CodeChefIcon, HackerRankIcon, CodeforcesIcon } from '@/shared/ui/PlatformIcons';
 import { safeUrl } from '@/shared/utils/safeUrl';
 import { resolveMediaUrl } from '@/shared/api';
 import { getPhotoStyle } from '@/shared/utils/photoStyle';
@@ -137,6 +137,28 @@ export const PublicProfileHero: React.FC<PublicProfileHeroProps> = ({
                 title="CodeChef"
               >
                 <CodeChefIcon className="size-4 text-amber-600" />
+              </a>
+            )}
+            {safeUrl(profile.hackerrankUrl) && (
+              <a
+                href={safeUrl(profile.hackerrankUrl)}
+                target="_blank"
+                rel="noreferrer"
+                className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-slate-800 bg-slate-900/80 text-slate-300 hover:border-slate-700 hover:text-emerald-500 transition-colors"
+                title="HackerRank"
+              >
+                <HackerRankIcon className="size-4 text-emerald-500" />
+              </a>
+            )}
+            {safeUrl(profile.codeforcesUrl) && (
+              <a
+                href={safeUrl(profile.codeforcesUrl)}
+                target="_blank"
+                rel="noreferrer"
+                className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-slate-800 bg-slate-900/80 text-slate-300 hover:border-slate-700 hover:text-blue-500 transition-colors"
+                title="Codeforces"
+              >
+                <CodeforcesIcon className="size-4 text-blue-500" />
               </a>
             )}
             {safeUrl(profile.portfolioUrl) && (

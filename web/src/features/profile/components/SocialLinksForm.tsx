@@ -1,17 +1,21 @@
 import React from 'react';
 import { Github, Linkedin, Globe } from 'lucide-react';
-import { LeetCodeIcon, CodeChefIcon } from '@/shared/ui/PlatformIcons';
+import { LeetCodeIcon, CodeChefIcon, HackerRankIcon, CodeforcesIcon } from '@/shared/ui/PlatformIcons';
 
 interface SocialLinksFormProps {
   githubUrl: string;
   linkedinUrl: string;
   leetcodeUrl: string;
   codechefUrl: string;
+  hackerrankUrl: string;
+  codeforcesUrl: string;
   portfolioUrl: string;
   onGithubChange: (val: string) => void;
   onLinkedinChange: (val: string) => void;
   onLeetcodeChange: (val: string) => void;
   onCodechefChange: (val: string) => void;
+  onHackerrankChange: (val: string) => void;
+  onCodeforcesChange: (val: string) => void;
   onPortfolioChange: (val: string) => void;
 }
 
@@ -20,11 +24,15 @@ export const SocialLinksForm: React.FC<SocialLinksFormProps> = ({
   linkedinUrl,
   leetcodeUrl,
   codechefUrl,
+  hackerrankUrl,
+  codeforcesUrl,
   portfolioUrl,
   onGithubChange,
   onLinkedinChange,
   onLeetcodeChange,
   onCodechefChange,
+  onHackerrankChange,
+  onCodeforcesChange,
   onPortfolioChange,
 }) => {
   return (
@@ -87,6 +95,34 @@ export const SocialLinksForm: React.FC<SocialLinksFormProps> = ({
             value={codechefUrl}
             onChange={(e) => onCodechefChange(e.target.value)}
             placeholder="https://codechef.com/users/username"
+            className="input"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="hackerrank-url-input" className="label inline-flex items-center gap-1.5">
+            <HackerRankIcon className="w-4 h-4" /> HackerRank
+          </label>
+          <input
+            id="hackerrank-url-input"
+            type="url"
+            value={hackerrankUrl}
+            onChange={(e) => onHackerrankChange(e.target.value)}
+            placeholder="https://hackerrank.com"
+            className="input"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="codeforces-url-input" className="label inline-flex items-center gap-1.5">
+            <CodeforcesIcon className="w-4 h-4" /> Codeforces
+          </label>
+          <input
+            id="codeforces-url-input"
+            type="url"
+            value={codeforcesUrl}
+            onChange={(e) => onCodeforcesChange(e.target.value)}
+            placeholder="https://codeforces.com"
             className="input"
           />
         </div>

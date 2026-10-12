@@ -1,6 +1,6 @@
 import React from 'react';
 import { Github, Linkedin, Globe, RefreshCw, ExternalLink, ArrowLeft } from 'lucide-react';
-import { LeetCodeIcon, CodeChefIcon } from '@/shared/ui/PlatformIcons';
+import { LeetCodeIcon, CodeChefIcon, HackerRankIcon, CodeforcesIcon } from '@/shared/ui/PlatformIcons';
 
 interface StudentDetailHeaderProps {
   student: any;
@@ -132,6 +132,26 @@ export const StudentDetailHeader: React.FC<StudentDetailHeaderProps> = ({
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-edge hover:bg-surface-sunken text-xs font-semibold text-ink-secondary"
               >
                 <CodeChefIcon className="w-3.5 h-3.5" /> CodeChef
+              </a>
+            )}
+            {profile.hackerrankUrl && (
+              <a
+                href={profile.hackerrankUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-edge hover:bg-surface-sunken text-xs font-semibold text-ink-secondary"
+              >
+                <HackerRankIcon className="w-3.5 h-3.5 text-status-approved" /> HackerRank
+              </a>
+            )}
+            {profile.codeforcesUrl && (
+              <a
+                href={profile.codeforcesUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-edge hover:bg-surface-sunken text-xs font-semibold text-ink-secondary"
+              >
+                <CodeforcesIcon className="w-3.5 h-3.5 text-brand" /> Codeforces
               </a>
             )}
             {profile.portfolioUrl && (

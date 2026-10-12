@@ -23,6 +23,8 @@ export interface PublicProfileFields {
   linkedinUrl?: string | null;
   leetcodeUrl?: string | null;
   codechefUrl?: string | null;
+  hackerrankUrl?: string | null;
+  codeforcesUrl?: string | null;
   portfolioUrl?: string | null;
   specialQualities?: string | null;
 }

@@ -24,6 +24,8 @@ export function serializeProfileView(student: any, submission: any, introVideo: 
     linkedinUrl: student.profile?.linkedinUrl || '',
     leetcodeUrl: student.profile?.leetcodeUrl || '',
     codechefUrl: student.profile?.codechefUrl || '',
+    hackerrankUrl: student.profile?.hackerrankUrl || '',
+    codeforcesUrl: student.profile?.codeforcesUrl || '',
     portfolioUrl: student.profile?.portfolioUrl || '',
     skills: (student.profile?.skills || []).map((s: any) => s.skill.name),
     skillObjects: (student.profile?.skills || []).map((s: any) => s.skill),

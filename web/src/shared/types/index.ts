@@ -69,6 +69,8 @@ export interface StudentProfile {
   linkedinUrl?: string;
   leetcodeUrl?: string;
   codechefUrl?: string;
+  hackerrankUrl?: string;
+  codeforcesUrl?: string;
   portfolioUrl?: string;
   status?: 'ACTIVE' | 'GRADUATED';
   graduatedAt?: string | null;

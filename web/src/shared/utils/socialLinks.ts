@@ -11,35 +11,43 @@
  * genuinely not a link is rejected with a message instead of being saved broken.
  */
 
-export type SocialLinkKind = 'github' | 'linkedin' | 'leetcode' | 'codechef' | 'portfolio';
+export type SocialLinkKind = 'github' | 'linkedin' | 'leetcode' | 'codechef' | 'hackerrank' | 'codeforces' | 'portfolio';
 
-const PLATFORM_HOST: Record<'github' | 'linkedin' | 'leetcode' | 'codechef', string> = {
+const PLATFORM_HOST: Record<'github' | 'linkedin' | 'leetcode' | 'codechef' | 'hackerrank' | 'codeforces', string> = {
   github: 'github.com',
   linkedin: 'www.linkedin.com',
   leetcode: 'leetcode.com',
   codechef: 'www.codechef.com',
+  hackerrank: 'www.hackerrank.com',
+  codeforces: 'codeforces.com',
 };
 
-const PLATFORM_PATH_PREFIX: Record<'github' | 'linkedin' | 'leetcode' | 'codechef', string> = {
+const PLATFORM_PATH_PREFIX: Record<'github' | 'linkedin' | 'leetcode' | 'codechef' | 'hackerrank' | 'codeforces', string> = {
   github: '',
   linkedin: '/in',
   leetcode: '/u',
   codechef: '/users',
+  hackerrank: '/profile',
+  codeforces: '/profile',
 };
 
 /** Hosts that identify a value as a link to the platform rather than a username. */
-const PLATFORM_HOSTS: Record<'github' | 'linkedin' | 'leetcode' | 'codechef', string[]> = {
+const PLATFORM_HOSTS: Record<'github' | 'linkedin' | 'leetcode' | 'codechef' | 'hackerrank' | 'codeforces', string[]> = {
   github: ['github.com'],
   linkedin: ['linkedin.com'],
   leetcode: ['leetcode.com'],
   codechef: ['codechef.com'],
+  hackerrank: ['hackerrank.com'],
+  codeforces: ['codeforces.com'],
 };
 
-const PLATFORM_LABELS: Record<'github' | 'linkedin' | 'leetcode' | 'codechef', string> = {
+const PLATFORM_LABELS: Record<'github' | 'linkedin' | 'leetcode' | 'codechef' | 'hackerrank' | 'codeforces', string> = {
   github: 'GitHub',
   linkedin: 'LinkedIn',
   leetcode: 'LeetCode',
   codechef: 'CodeChef',
+  hackerrank: 'HackerRank',
+  codeforces: 'Codeforces',
 };
 
 /** A bare username: alphanumerics plus `.`, `_`, `-`, not starting/ending on a dot. */
@@ -150,6 +158,10 @@ export function normalizeSocialLink(kind: SocialLinkKind, input: string | null |
       handle = segments[0] === 'u' ? segments[1] : segments[0];
     } else if (kind === 'codechef') {
       handle = segments[0] === 'users' ? segments[1] : segments[0];
+    } else if (kind === 'hackerrank') {
+      handle = segments[0] === 'profile' ? segments[1] : segments[0];
+    } else if (kind === 'codeforces') {
+      handle = segments[0] === 'profile' ? segments[1] : segments[0];
     } else {
       handle = segments[0];
     }

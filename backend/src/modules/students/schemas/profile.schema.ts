@@ -27,7 +27,7 @@ export function validateProfileUpdate(body: any): ProfileUpdateInput {
     throw new AppError('VALIDATION_ERROR', 'Special qualities max 300 chars', 400, 'profile.schema:validateProfileUpdate');
   }
 
-  const linkFields = ['githubUrl', 'linkedinUrl', 'leetcodeUrl', 'codechefUrl', 'portfolioUrl'] as const;
+  const linkFields = ['githubUrl', 'linkedinUrl', 'leetcodeUrl', 'codechefUrl', 'hackerrankUrl', 'codeforcesUrl', 'portfolioUrl'] as const;
   const normalizedLinks: Record<string, string> = {};
   for (const field of linkFields) {
     if (body?.[field] === undefined) continue;

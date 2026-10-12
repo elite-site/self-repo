@@ -46,6 +46,8 @@ export async function updateStudentProfile(studentId: string, data: ProfileUpdat
     if (data.normalizedLinks.linkedinUrl !== undefined) updateData.linkedinUrl = data.normalizedLinks.linkedinUrl;
     if (data.normalizedLinks.leetcodeUrl !== undefined) updateData.leetcodeUrl = data.normalizedLinks.leetcodeUrl;
     if (data.normalizedLinks.codechefUrl !== undefined) updateData.codechefUrl = data.normalizedLinks.codechefUrl;
+    if (data.normalizedLinks.hackerrankUrl !== undefined) updateData.hackerrankUrl = data.normalizedLinks.hackerrankUrl;
+    if (data.normalizedLinks.codeforcesUrl !== undefined) updateData.codeforcesUrl = data.normalizedLinks.codeforcesUrl;
     if (data.normalizedLinks.portfolioUrl !== undefined) updateData.portfolioUrl = data.normalizedLinks.portfolioUrl;
 
     const profile = await repo.upsertStudentProfileFromInput(studentId, updateData, {
@@ -56,6 +58,8 @@ export async function updateStudentProfile(studentId: string, data: ProfileUpdat
       linkedinUrl: data.normalizedLinks.linkedinUrl || '',
       leetcodeUrl: data.normalizedLinks.leetcodeUrl || '',
       codechefUrl: data.normalizedLinks.codechefUrl || '',
+      hackerrankUrl: data.normalizedLinks.hackerrankUrl || '',
+      codeforcesUrl: data.normalizedLinks.codeforcesUrl || '',
       portfolioUrl: data.normalizedLinks.portfolioUrl || '',
     });
     clearPublicStudentCaches();

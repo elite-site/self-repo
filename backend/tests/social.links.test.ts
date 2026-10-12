@@ -94,6 +94,50 @@ describe('professional link normalisation', () => {
     });
   });
 
+  describe('accepted input formats (HackerRank)', () => {
+    it('places a bare username under /profile/', () => {
+      expect(normalizeSocialLink('hackerrank', 'jane').value).toBe('https://www.hackerrank.com/profile/jane');
+    });
+
+    it('keeps an explicit /profile/ path', () => {
+      expect(normalizeSocialLink('hackerrank', 'hackerrank.com/profile/jane').value).toBe(
+        'https://www.hackerrank.com/profile/jane',
+      );
+    });
+
+    it('handles hackerrank.com/<username> without /profile/ prefix', () => {
+      expect(normalizeSocialLink('hackerrank', 'https://hackerrank.com/jane').value).toBe(
+        'https://www.hackerrank.com/profile/jane',
+      );
+    });
+
+    it('accepts @username for HackerRank', () => {
+      expect(normalizeSocialLink('hackerrank', '@jane').value).toBe('https://www.hackerrank.com/profile/jane');
+    });
+  });
+
+  describe('accepted input formats (Codeforces)', () => {
+    it('places a bare username under /profile/', () => {
+      expect(normalizeSocialLink('codeforces', 'jane').value).toBe('https://codeforces.com/profile/jane');
+    });
+
+    it('keeps an explicit /profile/ path', () => {
+      expect(normalizeSocialLink('codeforces', 'codeforces.com/profile/jane').value).toBe(
+        'https://codeforces.com/profile/jane',
+      );
+    });
+
+    it('handles codeforces.com/<username> without /profile/ prefix', () => {
+      expect(normalizeSocialLink('codeforces', 'https://codeforces.com/jane').value).toBe(
+        'https://codeforces.com/profile/jane',
+      );
+    });
+
+    it('accepts @username for Codeforces', () => {
+      expect(normalizeSocialLink('codeforces', '@jane').value).toBe('https://codeforces.com/profile/jane');
+    });
+  });
+
   describe('portfolio field', () => {
     it('keeps a full URL host and path', () => {
       expect(normalizeSocialLink('portfolio', 'https://jane.dev/projects').value).toBe(

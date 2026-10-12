@@ -30,6 +30,10 @@ export const EditProfilePage: React.FC = () => {
     setLeetcodeUrl,
     codechefUrl,
     setCodechefUrl,
+    hackerrankUrl,
+    setHackerrankUrl,
+    codeforcesUrl,
+    setCodeforcesUrl,
     portfolioUrl,
     setPortfolioUrl,
     fileInputRef,
@@ -115,11 +119,15 @@ export const EditProfilePage: React.FC = () => {
         linkedinUrl={linkedinUrl}
         leetcodeUrl={leetcodeUrl}
         codechefUrl={codechefUrl}
+        hackerrankUrl={hackerrankUrl}
+        codeforcesUrl={codeforcesUrl}
         portfolioUrl={portfolioUrl}
         onGithubChange={setGithubUrl}
         onLinkedinChange={setLinkedinUrl}
         onLeetcodeChange={setLeetcodeUrl}
         onCodechefChange={setCodechefUrl}
+        onHackerrankChange={setHackerrankUrl}
+        onCodeforcesChange={setCodeforcesUrl}
         onPortfolioChange={setPortfolioUrl}
       />
 

@@ -4,7 +4,7 @@ import { Edit3, ExternalLink, GraduationCap, Github, Linkedin, Globe } from 'luc
 import { resolveMediaUrl } from '@/shared/api';
 import { getPhotoStyle } from '@/shared/utils/photoStyle';
 import { StudentProfile } from '../types';
-import { LeetCodeIcon, CodeChefIcon } from '@/shared/ui/PlatformIcons';
+import { LeetCodeIcon, CodeChefIcon, HackerRankIcon, CodeforcesIcon } from '@/shared/ui/PlatformIcons';
 
 interface ProfileHeaderProps {
   profile: StudentProfile;
@@ -81,6 +81,16 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({ profile: p, onRequ
           {p.codechefUrl && (
             <a href={p.codechefUrl} target="_blank" rel="noopener noreferrer" className="hover:text-ink transition-colors flex items-center gap-1.5 text-body-sm font-medium">
               <CodeChefIcon className="w-4 h-4" /> CodeChef
+            </a>
+          )}
+          {p.hackerrankUrl && (
+            <a href={p.hackerrankUrl} target="_blank" rel="noopener noreferrer" className="hover:text-ink transition-colors flex items-center gap-1.5 text-body-sm font-medium">
+              <HackerRankIcon className="w-4 h-4" /> HackerRank
+            </a>
+          )}
+          {p.codeforcesUrl && (
+            <a href={p.codeforcesUrl} target="_blank" rel="noopener noreferrer" className="hover:text-ink transition-colors flex items-center gap-1.5 text-body-sm font-medium">
+              <CodeforcesIcon className="w-4 h-4" /> Codeforces
             </a>
           )}
           {p.portfolioUrl && (

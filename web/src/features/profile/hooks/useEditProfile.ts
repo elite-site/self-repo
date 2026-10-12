@@ -26,6 +26,8 @@ export function useEditProfile(onPhotoChangeProp?: (newUrl: string | null) => vo
   const [linkedinUrl, setLinkedinUrl] = useState('');
   const [leetcodeUrl, setLeetcodeUrl] = useState('');
   const [codechefUrl, setCodechefUrl] = useState('');
+  const [hackerrankUrl, setHackerrankUrl] = useState('');
+  const [codeforcesUrl, setCodeforcesUrl] = useState('');
   const [portfolioUrl, setPortfolioUrl] = useState('');
   const [linkErrors] = useState<Partial<Record<SocialLinkKind, string>>>({});
 
@@ -54,6 +56,8 @@ export function useEditProfile(onPhotoChangeProp?: (newUrl: string | null) => vo
       setLinkedinUrl(data.linkedinUrl || '');
       setLeetcodeUrl(data.leetcodeUrl || '');
       setCodechefUrl(data.codechefUrl || '');
+      setHackerrankUrl(data.hackerrankUrl || '');
+      setCodeforcesUrl(data.codeforcesUrl || '');
       setPortfolioUrl(data.portfolioUrl || '');
     } catch {
       setError('Could not load profile. Please refresh.');
@@ -80,6 +84,8 @@ export function useEditProfile(onPhotoChangeProp?: (newUrl: string | null) => vo
         linkedinUrl: linkedinUrl.trim() || undefined,
         leetcodeUrl: leetcodeUrl.trim() || undefined,
         codechefUrl: codechefUrl.trim() || undefined,
+        hackerrankUrl: hackerrankUrl.trim() || undefined,
+        codeforcesUrl: codeforcesUrl.trim() || undefined,
         portfolioUrl: portfolioUrl.trim() || undefined,
       });
       setProfile(updated);
@@ -185,6 +191,10 @@ export function useEditProfile(onPhotoChangeProp?: (newUrl: string | null) => vo
     setLeetcodeUrl,
     codechefUrl,
     setCodechefUrl,
+    hackerrankUrl,
+    setHackerrankUrl,
+    codeforcesUrl,
+    setCodeforcesUrl,
     portfolioUrl,
     setPortfolioUrl,
     linkErrors,
