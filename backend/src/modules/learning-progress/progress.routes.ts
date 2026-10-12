@@ -7,8 +7,8 @@ export const studentProgressRouter = Router();
 studentProgressRouter.use(requireStudentAuth);
 
 studentProgressRouter.get('/my-learning', asyncHandler(controller.getMyLearning));
-studentProgressRouter.get(['/lessons/:id', '/:id'], asyncHandler(controller.getLesson));
-studentProgressRouter.post(['/lessons/:id/progress', '/:id/progress'], asyncHandler(controller.updateLessonProgress));
+studentProgressRouter.get('/lessons/:id', asyncHandler(controller.getLesson));
+studentProgressRouter.post('/lessons/:id/progress', asyncHandler(controller.updateLessonProgress));
 
 export const progressRouter = Router();
 progressRouter.use(studentProgressRouter);

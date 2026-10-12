@@ -29,6 +29,8 @@ import { adminAuthRouter as adminAuthRoutes } from './modules/auth';
 import adminApiRoutes, { adminPortalRouter as adminPortalRoutes, adminAcademicYearRouter as adminAcademicYearRoutes } from './modules/admin';
 import { startAnnouncementScheduler } from './jobs/announcementScheduler';
 import { startGithubSyncScheduler } from './jobs/githubSyncScheduler';
+import { startQuizReminderScheduler } from './jobs/quizReminder.job';
+import { studentLearningRouter, adminLearningRouter } from './modules/learning-home';
 import { mountFrontend } from './config/staticAssets';
 import { requestIdMiddleware } from './middleware/requestId';
 import { logger } from './utils/logger';
@@ -157,16 +159,31 @@ app.use('/api', publicRoutes);
 app.use('/api/public/students', publicStudentRoutes);
 app.use('/api/public/videos', publicVideoRoutes);   // approved + published intro videos
 
-// 1b. Student portal API routes
-app.use('/api/student', studentRoutes);                         // existing: SSO, me, video upload
+// Guard: when LearningHub is disabled, return 404
+const learningFlagGuard = (_req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (!env.FEATURE_LEARNINGHUB) {
+    res.status(404).json({ error: 'NOT_FOUND', message: 'LearningHub is disabled' });
+    return;
+  }
+  next();
+};
+
+// 1b. Student LearningHub routes (gated by FEATURE_LEARNINGHUB - mounted before generic /api/student)
+app.use('/api/student/learning', learningFlagGuard, studentLearningRouter);
+
+// 1c. Student portal API routes
 app.use('/api/student/profile', studentProfileRoutes);          // Phase 1: profile
 app.use('/api/student/portfolio', studentPortfolioRoutes);      // Phase 2: projects/achievements/certs
 app.use('/api/student/github', studentGithubRoutes);            // Phase 2: GitHub portfolio & sync
 app.use('/api/student/events', studentEventsRoutes);            // Phase 4: events
+app.use('/api/student', studentRoutes);                         // existing: SSO, me, video upload
 app.use('/api/student', studentInteractionsRoutes);             // Phase 5: voting, notifications, registrations, teams
 
 // 2. Admin Auth routes (login, logout, me)
 app.use('/admin', adminAuthRoutes);
+
+// 2b. Admin LearningHub routes (gated by FEATURE_LEARNINGHUB - mounted before generic /admin/api)
+app.use('/admin/api/learning', learningFlagGuard, adminLearningRouter);
 
 // 3. Admin API routes — existing (stats, submissions, media proxy, email)
 app.use('/admin/api', adminApiRoutes);
@@ -279,6 +296,9 @@ if (env.NODE_ENV !== 'test') {
 
       // Start background GitHub sync scheduler
       startGithubSyncScheduler();
+
+      // Start background Quiz reminder scheduler
+      startQuizReminderScheduler();
 
       // Run backlog auto-approval migration only when explicitly enabled via env var
       if (env.AUTO_MIGRATE_PENDING) {

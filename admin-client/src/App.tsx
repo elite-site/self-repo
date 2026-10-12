@@ -33,6 +33,9 @@ const RolesPermissionsPage = React.lazy(() => import('@/features/roles').then((m
 const AuditLogsPage = React.lazy(() => import('@/features/activity-log').then((m) => ({ default: m.AuditLogsPage })));
 const SettingsPage = React.lazy(() => import('@/features/settings').then((m) => ({ default: m.SettingsPage })));
 const AdminGithubPage = React.lazy(() => import('@/features/github').then((m) => ({ default: m.AdminGithubPage })));
+const AdminCoursesPage = React.lazy(() => import('@/features/learning').then((m) => ({ default: m.AdminCoursesPage })));
+const AdminCourseEditPage = React.lazy(() => import('@/features/learning').then((m) => ({ default: m.AdminCourseEditPage })));
+const AdminCourseReportsPage = React.lazy(() => import('@/features/learning').then((m) => ({ default: m.AdminCourseReportsPage })));
 
 const PageLoadingFallback: React.FC = () => (
   <BrandedLoading message="Loading Module" fullScreen={false} />
@@ -164,13 +167,14 @@ export const ProtectedLayout: React.FC = () => {
 
   const pathTabs: AdminTab[] = [
     'dashboard', 'submissions', 'students', 'github', 'activity', 'moderation',
+    'learning',
     'events', 'event-registrations', 'voting', 'voting-results',
     'communications', 'email-automation', 'email-history', 'analytics',
     'exports', 'storage', 'roles', 'audit-logs', 'settings'
   ];
 
   const currentPath = location.pathname.replace('/admin', '') || '/dashboard';
-  const currentTab = pathTabs.find(t => currentPath === `/${t}` || currentPath === `/${t}/`) || 'dashboard';
+  const currentTab = pathTabs.find(t => currentPath === `/${t}` || currentPath === `/${t}/` || currentPath.startsWith(`/${t}/`)) || 'dashboard';
 
   return (
     <div className="min-h-[100dvh] bg-surface flex flex-row w-full overflow-hidden">
@@ -257,6 +261,9 @@ const router = createBrowserRouter([
       { path: 'github', element: <AdminGithubPage /> },
       { path: 'activity', element: <ActivityLogPage /> },
       { path: 'moderation', element: <ModerationPage /> },
+      { path: 'learning', element: <AdminCoursesPage /> },
+      { path: 'learning/courses/:id', element: <AdminCourseEditPage /> },
+      { path: 'learning/reports/:id', element: <AdminCourseReportsPage /> },
       { path: 'events', element: <AdminEventsPage /> },
       { path: 'event-registrations', element: <EventRegistrationsPage /> },
       { path: 'voting', element: <VotingManagementPage /> },
