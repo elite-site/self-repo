@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { dashboardApi } from '../api';
@@ -8,6 +8,7 @@ import { getNotificationDestination, navigateToNotification } from '@/shared/uti
 import { formatContentStatus } from '@/shared/utils/status';
 import { notificationsApi } from '@/features/notifications/api';
 import { githubApi } from '@/features/github/api';
+import { celebrate } from '@/shared/lib/celebrate';
 import { User, FileText, Plus, FolderOpen, Video, Calendar, Users } from 'lucide-react';
 import { QuickActionItem } from '../components/DashboardQuickActions';
 
@@ -240,6 +241,20 @@ export function useDashboard() {
   const isComplete = remainingItems.length === 0;
   const completionPercentage = isComplete ? 100 : Math.round((completedCount / tasks.length) * 100);
   const nextMissing = remainingItems.slice(0, 3);
+
+  useEffect(() => {
+    if (!profile || !dashboardData) return;
+    const key = `elite:completion:${profile.rollNo ?? 'me'}`;
+    try {
+      const stored = window.localStorage.getItem(key);
+      window.localStorage.setItem(key, String(completionPercentage));
+      if (stored !== null && Number(stored) < 100 && completionPercentage === 100) {
+        void celebrate('complete');
+      }
+    } catch {
+      return;
+    }
+  }, [profile, dashboardData, completionPercentage]);
 
   const upcomingEvents = useMemo(() => {
     return [...events]

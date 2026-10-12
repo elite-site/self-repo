@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { ExternalLink } from 'lucide-react';
 import { ErrorState } from '@/shared/ui/ErrorState';
 import { useReducedMotion } from '@/shared/hooks/useReducedMotion';
+import { TypewriterText } from '@/shared/ui/TypewriterText';
 import { selectVariantsByName } from '@/shared/lib/motion';
 import { useDashboard } from '../hooks/useDashboard';
 import {
@@ -68,7 +69,12 @@ export const DashboardPage: React.FC = () => {
       >
         <div className="min-w-0">
           <h1 className="font-heading text-headline-xl-mobile text-ink sm:text-headline-xl">
-            {greeting}, {firstName}{' '}
+            <TypewriterText
+              text={`${greeting}, ${firstName}`}
+              ready={Boolean(profile) || Boolean(profileError)}
+              animate={Boolean(profile?.name)}
+              storageKey="elite:greeting-typed"
+            />{' '}
             <span aria-hidden="true">👋</span>
           </h1>
           {!profileError && <p className="mt-1 text-body-md text-ink-secondary">{contextLine}</p>}
