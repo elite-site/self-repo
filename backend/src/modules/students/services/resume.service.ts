@@ -145,7 +145,7 @@ export async function withdrawStudentResume(studentId: string): Promise<void> {
     }
   }
 
-  await ActivityService.log({
+  ActivityService.logNonBlocking({
     eventId: EVENT_ID,
     category: 'FILE_UPLOAD',
     action: 'Student deleted resume',
@@ -153,7 +153,5 @@ export async function withdrawStudentResume(studentId: string): Promise<void> {
     applicantName: student.name,
     userEmail: student.rollNo,
     status: 'SUCCESS',
-  }).catch((err) => {
-    logger.warn('Failed to log withdrawStudentResume activity', { error: err });
   });
 }

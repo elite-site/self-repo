@@ -37,6 +37,15 @@ export class QuizzesRepository {
     return prisma.quizAttempt.findMany({
       where: { quizId, studentId },
       orderBy: { startedAt: 'desc' },
+      select: {
+        id: true,
+        quizId: true,
+        studentId: true,
+        startedAt: true,
+        submittedAt: true,
+        score: true,
+        maxScore: true,
+      },
     });
   }
 

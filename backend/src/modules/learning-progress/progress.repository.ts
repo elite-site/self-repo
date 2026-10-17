@@ -1,5 +1,5 @@
 import { prisma } from '../../infrastructure/prisma';
-import { EnrollmentStatus } from '@prisma/client';
+import { EnrollmentStatus, LessonType } from '@prisma/client';
 
 export class ProgressRepository {
   async findLessonWithCourse(lessonId: string) {
@@ -12,11 +12,25 @@ export class ProgressRepository {
     });
   }
 
+  async findLessonMetadata(lessonId: string): Promise<{ id: string; type: LessonType; durationSec: number | null; courseId: string } | null> {
+    const res = await prisma.lesson.findUnique({
+      where: { id: lessonId },
+      select: { id: true, type: true, durationSec: true, courseId: true },
+    });
+    if (!res) return null;
+    return {
+      id: res.id,
+      type: res.type,
+      durationSec: res.durationSec,
+      courseId: res.courseId || (res as any).course?.id,
+    };
+  }
+
   async findCourseLessons(courseId: string) {
     return prisma.lesson.findMany({
       where: { courseId },
       orderBy: { order: 'asc' },
-      select: { id: true, order: true, type: true, durationSec: true },
+      select: { id: true, order: true },
     });
   }
 

@@ -30,6 +30,7 @@ import adminApiRoutes, { adminPortalRouter as adminPortalRoutes, adminAcademicYe
 import { startAnnouncementScheduler } from './jobs/announcementScheduler';
 import { startGithubSyncScheduler } from './jobs/githubSyncScheduler';
 import { startQuizReminderScheduler } from './jobs/quizReminder.job';
+import { startRetentionScheduler } from './jobs/retentionJob';
 import { studentLearningRouter, adminLearningRouter } from './modules/learning-home';
 import { mountFrontend } from './config/staticAssets';
 import { requestIdMiddleware } from './middleware/requestId';
@@ -299,6 +300,9 @@ if (env.NODE_ENV !== 'test') {
 
       // Start background Quiz reminder scheduler
       startQuizReminderScheduler();
+
+      // Start background Retention scheduler (daily cleanup)
+      startRetentionScheduler();
 
       // Run backlog auto-approval migration only when explicitly enabled via env var
       if (env.AUTO_MIGRATE_PENDING) {

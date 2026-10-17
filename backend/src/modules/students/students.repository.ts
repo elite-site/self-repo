@@ -722,7 +722,7 @@ export async function findStudentsForEventNotification(where: any) {
 }
 
 export async function createManyNotifications(data: any[]) {
-  return prisma.notification.createMany({ data });
+  return prisma.notification.createMany({ data, skipDuplicates: true });
 }
 
 // --- Teams Operations ---

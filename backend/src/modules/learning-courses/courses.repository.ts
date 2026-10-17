@@ -217,6 +217,25 @@ export class CoursesRepository {
   }
 
   async bulkEnrollStudents(courseId: string, studentIds: string[]) {
+    if (studentIds.length === 0) return { count: 0 };
+    if (typeof prisma.enrollment.createMany === 'function') {
+      const CHUNK_SIZE = 500;
+      let totalCount = 0;
+      for (let i = 0; i < studentIds.length; i += CHUNK_SIZE) {
+        const slice = studentIds.slice(i, i + CHUNK_SIZE);
+        const res = await prisma.enrollment.createMany({
+          data: slice.map((studentId) => ({
+            studentId,
+            courseId,
+            source: EnrollmentSource.ASSIGNED,
+            status: EnrollmentStatus.ACTIVE,
+          })),
+          skipDuplicates: true,
+        });
+        totalCount += (res?.count ?? slice.length);
+      }
+      return { count: totalCount };
+    }
     return prisma.$transaction(
       studentIds.map((studentId) =>
         prisma.enrollment.upsert({

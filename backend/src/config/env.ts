@@ -111,6 +111,7 @@ export const env = {
   SYNC_DRIVE_PERMISSIONS: process.env.SYNC_DRIVE_PERMISSIONS === 'true',
   MAX_VIDEO_SIZE_HARD_CAP_MB: parseInt(process.env.MAX_VIDEO_SIZE_HARD_CAP_MB || '100', 10),
   DB_CONNECTION_LIMIT: process.env.DB_CONNECTION_LIMIT || '5',
+  SLOW_QUERY_THRESHOLD_MS: parseInt(process.env.SLOW_QUERY_THRESHOLD_MS || process.env.PRISMA_SLOW_QUERY_THRESHOLD_MS || '500', 10),
 };
 
 

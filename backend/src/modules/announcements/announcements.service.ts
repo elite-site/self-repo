@@ -52,8 +52,11 @@ export async function countAnnouncementAudience(target: AnnouncementTarget): Pro
   return repo.countStudentsByTarget(announcementStudentWhere(target));
 }
 
+export const ANNOUNCEMENT_FANOUT_BATCH_SIZE = 500;
+
 export async function deliverAnnouncementNotifications(
   announcement: AnnouncementNotificationTarget,
+  batchSize: number = ANNOUNCEMENT_FANOUT_BATCH_SIZE
 ): Promise<void> {
   const studentWhere = announcementStudentWhere({
     targetAll: announcement.targetAll,
@@ -61,18 +64,31 @@ export async function deliverAnnouncementNotifications(
     targetSection: announcement.targetSection,
   });
 
-  const students = await repo.findAudienceStudents(studentWhere);
-  if (students.length === 0) return;
+  let cursorId: string | undefined = undefined;
 
-  await repo.createAnnouncementNotifications(
-    students.map((student) => ({
+  while (true) {
+    const students = await repo.findAudienceStudentsBatch(studentWhere, batchSize, cursorId);
+    if (!students || students.length === 0) {
+      break;
+    }
+
+    const notifications: Prisma.NotificationCreateManyInput[] = students.map((student) => ({
+      id: `notif_${announcement.id}_${student.id}`,
       studentId: student.id,
       title: `Announcement: ${announcement.title}`,
       message: announcement.message,
       type: 'ANNOUNCEMENT',
       actionUrl: announcementActionUrl(announcement.id),
-    }))
-  );
+    }));
+
+    await repo.createAnnouncementNotifications(notifications);
+
+    if (students.length < batchSize) {
+      break;
+    }
+
+    cursorId = students[students.length - 1].id;
+  }
 }
 
 export async function listAnnouncements() {

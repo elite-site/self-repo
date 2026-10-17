@@ -10,4 +10,5 @@ export * from './services/storage.service';
 export * from './services/activity-log.service';
 export * from './services/academicYear.service';
 export * from './services/activity.service';
+export * from './services/retention.service';
 

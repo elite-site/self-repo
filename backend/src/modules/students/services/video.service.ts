@@ -7,7 +7,6 @@ import { driveService } from '../../media/drive';
 import { ActivityService } from '../../admin/services/activity.service';
 import { getMaxVideoSizeMb } from '../../../services/limits.service';
 import { AppError } from '../../../utils/appError';
-import { logger } from '../../../utils/logger';
 import { deleteStoredFile, recordStudentVideoSubmission } from './videoRecord.service';
 import { invalidateAllVideoCaches } from './videoStream.service';
 import {
@@ -60,7 +59,7 @@ export async function withdrawStudentVideo(studentId: string): Promise<void> {
     driveFileIds: Array.from(fileIds),
   });
 
-  await ActivityService.log({
+  ActivityService.logNonBlocking({
     eventId: EVENT_ID,
     category: 'APPLICATION',
     action: 'Student deleted introduction video',
@@ -68,8 +67,6 @@ export async function withdrawStudentVideo(studentId: string): Promise<void> {
     applicantName: student.name,
     userEmail: student.rollNo,
     status: 'SUCCESS',
-  }).catch((err) => {
-    logger.warn('Activity log failed during video deletion', { err });
   });
 }
 

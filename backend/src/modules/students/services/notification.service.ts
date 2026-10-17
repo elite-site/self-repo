@@ -91,17 +91,24 @@ export async function notifyAllStudentsAboutEvent(
     const desc = event.description ? `: ${event.description}` : '';
     const message = `A new event "${event.name}" has been published${desc}. Click to view details and register!`;
 
-    const result = await repo.createManyNotifications(
-      students.map((student) => ({
-        studentId: student.id,
-        title: `New Event: ${event.name}`,
-        message,
-        type: 'EVENT' as const,
-        actionUrl,
-      }))
-    );
+    const CHUNK_SIZE = 500;
+    let totalCount = 0;
+    for (let i = 0; i < students.length; i += CHUNK_SIZE) {
+      const slice = students.slice(i, i + CHUNK_SIZE);
+      const result = await repo.createManyNotifications(
+        slice.map((student) => ({
+          id: `notif_event_${event.id}_${student.id}`,
+          studentId: student.id,
+          title: `New Event: ${event.name}`,
+          message,
+          type: 'EVENT' as const,
+          actionUrl,
+        }))
+      );
+      totalCount += result.count;
+    }
 
-    return result.count;
+    return totalCount;
   } catch (err) {
     logger.warn('[notification] failed to fan out event notifications to students:', { error: err });
     return 0;

@@ -325,6 +325,6 @@ export async function executeAcademicYearPromotion(params: {
       promoted: promotedResult.count,
       targetYear: params.targetYear,
     };
-  });
+  }, { maxWait: 2000, timeout: 5000 });
 }
 

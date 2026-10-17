@@ -1,27 +1,46 @@
 import { progressRepository, ProgressRepository } from './progress.repository';
 import { NotFoundError, ForbiddenError } from '../../utils/appError';
-import { EnrollmentStatus, CourseStatus, EnrolmentType } from '@prisma/client';
+import { EnrollmentStatus, CourseStatus, EnrolmentType, LessonType } from '@prisma/client';
 import { LessonProgressPayload, LessonDetailResponse, MyLearningResponse, StudentDeadlineItem } from './progress.types';
 import { mapCourseCard } from '../learning-courses/courses.mappers';
+import { TtlCache } from '../../utils/ttlCache';
 
 export class ProgressService {
+  private readonly lessonMetadataCache = new TtlCache<{
+    id: string;
+    type: LessonType;
+    durationSec: number | null;
+    courseId: string;
+  }>(5 * 60 * 1000, 500);
+
+  private readonly courseProgressCache = new TtlCache<number>(60 * 1000, 1000);
+
   constructor(private repo: ProgressRepository = progressRepository) {}
+
+  clearCaches(): void {
+    this.lessonMetadataCache.clear();
+    this.courseProgressCache.clear();
+  }
 
   async getLessonDetail(lessonId: string, studentId: string): Promise<LessonDetailResponse> {
     const lesson = await this.repo.findLessonWithCourse(lessonId);
     if (!lesson || lesson.course.status === CourseStatus.DRAFT) throw new NotFoundError('Lesson not found');
 
-    const enrollment = await this.repo.findEnrollment(studentId, lesson.course.id);
+    const [enrollment, courseLessons, initialProgress] = await Promise.all([
+      this.repo.findEnrollment(studentId, lesson.course.id),
+      this.repo.findCourseLessons(lesson.course.id),
+      this.repo.findLessonProgress(studentId, lessonId),
+    ]);
+
     if (!enrollment && lesson.course.enrolment === EnrolmentType.ASSIGNED_ONLY) {
       throw new ForbiddenError('You are not enrolled in this course');
     }
 
-    const courseLessons = await this.repo.findCourseLessons(lesson.course.id);
     const currentIndex = courseLessons.findIndex((l) => l.id === lessonId);
     const prevLessonId = currentIndex > 0 ? courseLessons[currentIndex - 1].id : null;
     const nextLessonId = currentIndex >= 0 && currentIndex < courseLessons.length - 1 ? courseLessons[currentIndex + 1].id : null;
 
-    let progress = await this.repo.findLessonProgress(studentId, lessonId);
+    let progress = initialProgress;
     const isAutoCompletedType = lesson.type === 'NOTES' || lesson.type === 'LINK';
 
     if (isAutoCompletedType && !progress?.completed) {
@@ -38,8 +57,18 @@ export class ProgressService {
     }
 
     if (enrollment) {
-      await this.repo.updateEnrollment(studentId, lesson.course.id, { lastAccessedAt: new Date() });
+      const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
+      if (!enrollment.lastAccessedAt || enrollment.lastAccessedAt.getTime() < fiveMinutesAgo) {
+        await this.repo.updateEnrollment(studentId, lesson.course.id, { lastAccessedAt: new Date() });
+      }
     }
+
+    this.lessonMetadataCache.set(lesson.id, {
+      id: lesson.id,
+      type: lesson.type,
+      durationSec: lesson.durationSec,
+      courseId: lesson.course.id,
+    });
 
     return {
       id: lesson.id,
@@ -65,41 +94,83 @@ export class ProgressService {
   }
 
   async updateProgress(lessonId: string, studentId: string, payload: LessonProgressPayload) {
-    const lesson = await this.repo.findLessonWithCourse(lessonId);
-    if (!lesson) throw new NotFoundError('Lesson not found');
+    const lesson = await this.lessonMetadataCache.wrap(lessonId, async () => {
+      const meta = await this.repo.findLessonMetadata(lessonId);
+      if (!meta) throw new NotFoundError('Lesson not found');
+      return meta;
+    });
 
-    const existing = await this.repo.findLessonProgress(studentId, lessonId);
+    const [existing, enrollment] = await Promise.all([
+      this.repo.findLessonProgress(studentId, lessonId),
+      this.repo.findEnrollment(studentId, lesson.courseId),
+    ]);
+
     const secondsWatched = Math.max(existing?.secondsWatched || 0, payload.secondsWatched);
     const maxPositionSec = Math.max(existing?.maxPositionSec || 0, payload.maxPositionSec);
 
-    const isVideoComplete = lesson.type === 'YOUTUBE' && !!lesson.durationSec && lesson.durationSec > 0 && secondsWatched / lesson.durationSec >= 0.9;
+    const isVideoComplete =
+      lesson.type === 'YOUTUBE' &&
+      !!lesson.durationSec &&
+      lesson.durationSec > 0 &&
+      secondsWatched / lesson.durationSec >= 0.9;
     const isCompleted = existing?.completed || isVideoComplete || Boolean(payload.completed);
     const completedAt = isCompleted ? (existing?.completedAt || new Date()) : null;
+    const justCompleted = isCompleted && !existing?.completed;
 
     await this.repo.upsertLessonProgress({
       studentId,
       lessonId,
-      courseId: lesson.course.id,
+      courseId: lesson.courseId,
       secondsWatched,
       maxPositionSec,
       completed: isCompleted,
       completedAt,
     });
 
-    const [totalLessons, completedLessons] = await Promise.all([
-      this.repo.countCourseLessons(lesson.course.id),
-      this.repo.countCompletedLessons(studentId, lesson.course.id),
-    ]);
+    const cacheKey = `${studentId}:${lesson.courseId}`;
+    let courseProgressPercent: number;
 
-    const courseProgressPercent = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
-    if (isCompleted && totalLessons > 0 && completedLessons >= totalLessons) {
-      await this.repo.updateEnrollment(studentId, lesson.course.id, {
-        status: EnrollmentStatus.COMPLETED,
-        completedAt: new Date(),
-        lastAccessedAt: new Date(),
-      });
+    const shouldCheckCourseCompletion =
+      justCompleted || (isCompleted && enrollment?.status !== EnrollmentStatus.COMPLETED);
+
+    if (shouldCheckCourseCompletion) {
+      const [totalLessons, completedLessons] = await Promise.all([
+        this.repo.countCourseLessons(lesson.courseId),
+        this.repo.countCompletedLessons(studentId, lesson.courseId),
+      ]);
+
+      courseProgressPercent = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
+      this.courseProgressCache.set(cacheKey, courseProgressPercent);
+
+      if (totalLessons > 0 && completedLessons >= totalLessons) {
+        await this.repo.updateEnrollment(studentId, lesson.courseId, {
+          status: EnrollmentStatus.COMPLETED,
+          completedAt: new Date(),
+          lastAccessedAt: new Date(),
+        });
+      } else {
+        const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
+        if (!enrollment?.lastAccessedAt || enrollment.lastAccessedAt.getTime() < fiveMinutesAgo) {
+          await this.repo.updateEnrollment(studentId, lesson.courseId, { lastAccessedAt: new Date() });
+        }
+      }
     } else {
-      await this.repo.updateEnrollment(studentId, lesson.course.id, { lastAccessedAt: new Date() });
+      const cached = this.courseProgressCache.get(cacheKey);
+      if (cached !== undefined) {
+        courseProgressPercent = cached;
+      } else {
+        const [totalLessons, completedLessons] = await Promise.all([
+          this.repo.countCourseLessons(lesson.courseId),
+          this.repo.countCompletedLessons(studentId, lesson.courseId),
+        ]);
+        courseProgressPercent = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
+        this.courseProgressCache.set(cacheKey, courseProgressPercent);
+      }
+
+      const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
+      if (!enrollment?.lastAccessedAt || enrollment.lastAccessedAt.getTime() < fiveMinutesAgo) {
+        await this.repo.updateEnrollment(studentId, lesson.courseId, { lastAccessedAt: new Date() });
+      }
     }
 
     return { success: true, completed: isCompleted, courseProgressPercent };

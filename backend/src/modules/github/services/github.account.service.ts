@@ -196,7 +196,7 @@ export class GithubAccountService {
       await tx.githubRepo.deleteMany({ where: { studentId } });
       await tx.githubAccount.deleteMany({ where: { studentId } });
       await tx.githubOAuthState.deleteMany({ where: { studentId } });
-    });
+    }, { maxWait: 2000, timeout: 5000 });
   }
 
   /**

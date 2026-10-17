@@ -327,7 +327,7 @@ export async function deleteEventWithCascade(id: string, deps: { registrations: 
       await tx.emailLog.deleteMany({ where: { eventId: id } });
     }
     return tx.event.delete({ where: { id } });
-  }, { timeout: 20000, maxWait: 10000 });
+  }, { maxWait: 2000, timeout: 5000 });
 }
 
 export async function findPortalEventRegistrations(eventId: string) {

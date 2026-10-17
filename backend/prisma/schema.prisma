@@ -358,7 +358,6 @@ model Student {
 
   @@index([name])
   @@index([section, year])
-  @@index([status])
   @@index([status, year, section])
 }
 
@@ -548,7 +547,6 @@ model Achievement {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([studentId])
   @@index([status])
   @@index([studentId, achievedAt])
   @@index([categoryId])
@@ -576,7 +574,6 @@ model Certificate {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([studentId])
   @@index([studentId, issuedAt])
   @@index([isPublic, status])
 }
@@ -850,6 +847,7 @@ model Notification {
 
   @@index([studentId, status])
   @@index([studentId, createdAt])
+  @@index([createdAt])
 }
 
 // ── Announcements ────────────────────────────────────────────
@@ -1081,6 +1079,7 @@ model GithubSyncLog {
   error         String?
 
   @@index([studentId, startedAt])
+  @@index([startedAt])
 }
 
 model GithubOAuthState {

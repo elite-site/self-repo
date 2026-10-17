@@ -127,19 +127,26 @@ export async function findResumesQueue(take: number = 200) {
   });
 }
 
-export async function findAchievementsQueue() {
+export async function findAchievementsQueue(take: number = 200) {
   return prisma.achievement.findMany({
     where: { status: { in: ['PENDING', 'UNDER_REVIEW'] } },
-    include: { student: true, category: true },
-    orderBy: { createdAt: 'desc' }
+    include: {
+      student: { select: studentSelect },
+      category: true,
+    },
+    take,
+    orderBy: { createdAt: 'desc' },
   });
 }
 
-export async function findCertificatesQueue() {
+export async function findCertificatesQueue(take: number = 200) {
   return prisma.certificate.findMany({
     where: { status: { in: ['PENDING', 'UNDER_REVIEW'] } },
-    include: { student: true },
-    orderBy: { createdAt: 'desc' }
+    include: {
+      student: { select: studentSelect },
+    },
+    take,
+    orderBy: { createdAt: 'desc' },
   });
 }
 
@@ -186,34 +193,38 @@ export async function updateCertificate(id: string, data: any) {
 }
 
 // Portal pending items
-export async function findPortalPendingVideos() {
+export async function findPortalPendingVideos(take: number = 200) {
   return prisma.introVideo.findMany({
     where: { status: { in: ['PENDING', 'UNDER_REVIEW'] } },
-    include: { student: true },
+    include: { student: { select: studentSelect } },
+    take,
     orderBy: { submittedAt: 'desc' },
   });
 }
 
-export async function findPortalPendingResumes() {
+export async function findPortalPendingResumes(take: number = 200) {
   return prisma.resume.findMany({
     where: { status: { in: ['PENDING', 'UNDER_REVIEW'] } },
-    include: { student: true },
+    include: { student: { select: studentSelect } },
+    take,
     orderBy: { submittedAt: 'desc' },
   });
 }
 
-export async function findPortalPendingAchievements() {
+export async function findPortalPendingAchievements(take: number = 200) {
   return prisma.achievement.findMany({
     where: { status: 'PENDING' },
-    include: { student: true, category: true },
+    include: { student: { select: studentSelect }, category: true },
+    take,
     orderBy: { createdAt: 'desc' },
   });
 }
 
-export async function findPortalPendingCertificates() {
+export async function findPortalPendingCertificates(take: number = 200) {
   return prisma.certificate.findMany({
     where: { status: 'PENDING' },
-    include: { student: true },
+    include: { student: { select: studentSelect } },
+    take,
     orderBy: { createdAt: 'desc' },
   });
 }

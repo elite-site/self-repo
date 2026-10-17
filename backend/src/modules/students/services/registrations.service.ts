@@ -51,7 +51,7 @@ export async function cancelRegistration(id: string, studentId: string) {
 
     const updated = await repo.updateRegistrationStatus(existing.id, 'CANCELLED');
 
-    await ActivityService.log({
+    ActivityService.logNonBlocking({
       eventId: existing.eventId,
       category: 'APPLICATION',
       action: `Student cancelled registration for ${existing.event?.name || 'event'}`,

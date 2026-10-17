@@ -95,7 +95,7 @@ export async function executeVoteTransaction(
   };
 
   if (typeof prisma.$transaction === 'function') {
-    const txResult = await prisma.$transaction(async (tx) => runVote(tx));
+    const txResult = await prisma.$transaction(async (tx) => runVote(tx), { maxWait: 2000, timeout: 5000 });
     return txResult !== undefined ? txResult : await runVote(prisma);
   }
   return await runVote(prisma);

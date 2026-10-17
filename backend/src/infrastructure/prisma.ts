@@ -76,15 +76,12 @@ export function buildDatabaseUrl(base: string): string {
 }
 
 import { logger } from '../utils/logger';
+import { env } from '../config/env';
 import { dbTimingStorage } from './dbTiming';
 export { dbTimingStorage };
 
 const DATABASE_URL = buildDatabaseUrl(process.env.DATABASE_URL || '');
-const SLOW_QUERY_THRESHOLD_MS = parseInt(
-  process.env.PRISMA_SLOW_QUERY_THRESHOLD_MS ||
-    (process.env.NODE_ENV === 'production' ? '1500' : '200'),
-  10
-);
+const SLOW_QUERY_THRESHOLD_MS = env.SLOW_QUERY_THRESHOLD_MS;
 
 function createPrismaClient(): PrismaClient {
   const client = new PrismaClient({
@@ -101,7 +98,11 @@ function createPrismaClient(): PrismaClient {
       const duration = Date.now() - start;
 
       if (duration > SLOW_QUERY_THRESHOLD_MS) {
-        logger.warn(`[Prisma SLOW QUERY] ${params.model || 'Unknown'}.${params.action} took ${duration}ms`);
+        logger.warn(`[Prisma SLOW QUERY] ${params.model || 'Unknown'}.${params.action} took ${duration}ms`, {
+          model: params.model || 'Unknown',
+          action: params.action,
+          durationMs: duration,
+        });
       }
 
       const store = dbTimingStorage.getStore();

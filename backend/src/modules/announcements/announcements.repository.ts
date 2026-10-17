@@ -41,11 +41,27 @@ export async function findAudienceStudents(where: Prisma.StudentWhereInput) {
   });
 }
 
+export async function findAudienceStudentsBatch(
+  where: Prisma.StudentWhereInput,
+  take: number,
+  cursorId?: string
+) {
+  return prisma.student.findMany({
+    where,
+    select: { id: true },
+    take,
+    skip: cursorId ? 1 : 0,
+    cursor: cursorId ? { id: cursorId } : undefined,
+    orderBy: { id: 'asc' },
+  });
+}
+
 export async function createAnnouncementNotifications(
   notifications: Prisma.NotificationCreateManyInput[]
 ) {
   return prisma.notification.createMany({
     data: notifications,
+    skipDuplicates: true,
   });
 }
 

@@ -151,7 +151,7 @@ export async function recordStudentVideoSubmission(params: {
     logger.warn('[videoRecord.service:recordStudentVideoSubmission] introVideo sync failed:', { error: e });
   }
 
-  ActivityService.log({
+  ActivityService.logNonBlocking({
     eventId: EVENT_ID,
     category: 'APPLICATION',
     action: existing ? `Student re-uploaded video (${source})` : `Application submitted (${source})`,
@@ -159,8 +159,6 @@ export async function recordStudentVideoSubmission(params: {
     applicantName: student.name,
     userEmail: student.rollNo,
     status: 'SUCCESS',
-  }).catch((err) => {
-    logger.warn('Failed to log student video activity', { error: err });
   });
 
   return { id: submission.id, videoDriveId: driveFileId };

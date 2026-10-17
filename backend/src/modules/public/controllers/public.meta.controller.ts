@@ -115,7 +115,7 @@ export async function submitLegacyApplication(req: Request, res: Response): Prom
 
     const vVideo = await ValidationService.validateVideo(videoFile.buffer, videoFile.originalname, videoFile.size);
     if (!vVideo.valid) {
-      await ActivityService.log({
+      ActivityService.logNonBlocking({
         eventId: EVENT_ID,
         category: 'FILE_UPLOAD',
         action: 'File validation failed (Video)',
@@ -131,7 +131,7 @@ export async function submitLegacyApplication(req: Request, res: Response): Prom
 
     const existing = await repo.findSubmissionByEventAndStudent(EVENT_ID, rollNo, year, branch, section);
     if (existing && existing.videoDriveId) {
-      await ActivityService.log({
+      ActivityService.logNonBlocking({
         eventId: EVENT_ID,
         category: 'APPLICATION',
         action: 'Submission rejected (Video already uploaded)',
@@ -239,7 +239,7 @@ export async function submitLegacyApplication(req: Request, res: Response): Prom
       }
     }
 
-    await ActivityService.log({
+    ActivityService.logNonBlocking({
       eventId: EVENT_ID,
       category: 'APPLICATION',
       action: existing ? 'Submission video re-uploaded' : 'Application submitted',
@@ -256,7 +256,7 @@ export async function submitLegacyApplication(req: Request, res: Response): Prom
     });
   } catch (err: any) {
     console.error('Error handling submission:', err);
-    await ActivityService.log({
+    ActivityService.logNonBlocking({
       eventId: EVENT_ID,
       category: 'APPLICATION',
       action: 'Application submission failed',

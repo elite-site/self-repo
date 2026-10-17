@@ -66,17 +66,27 @@ export async function processGoogleCallback(code: string, state: string): Promis
     { expiresIn: '12h' }
   );
 
-  await ActivityService.log({
-    eventId: EVENT_ID,
-    category: 'APPLICATION',
-    action: 'Student logged in via Google',
-    details: `Email: ${identity.email}`,
-    applicantName: student.name,
-    userEmail: identity.email,
-    status: 'SUCCESS',
-  }).catch((err) => {
-    console.error(`[auth.service:processGoogleCallback] Activity log failure for student ${student.id}:`, err);
-  });
+  if (typeof ActivityService.logNonBlocking === 'function') {
+    ActivityService.logNonBlocking({
+      eventId: EVENT_ID,
+      category: 'APPLICATION',
+      action: 'Student logged in via Google',
+      details: `Email: ${identity.email}`,
+      applicantName: student.name,
+      userEmail: identity.email,
+      status: 'SUCCESS',
+    });
+  } else if (typeof ActivityService.log === 'function') {
+    void ActivityService.log({
+      eventId: EVENT_ID,
+      category: 'APPLICATION',
+      action: 'Student logged in via Google',
+      details: `Email: ${identity.email}`,
+      applicantName: student.name,
+      userEmail: identity.email,
+      status: 'SUCCESS',
+    });
+  }
 
   let redirectBase = env.STUDENT_APP_LOGIN_URL;
   if (

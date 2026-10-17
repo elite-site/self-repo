@@ -64,8 +64,10 @@ describe('Announcement notification routing', () => {
 
     expect(response.status).toBe(201);
     expect(prisma.notification.createMany).toHaveBeenCalledWith({
+      skipDuplicates: true,
       data: [
         {
+          id: 'notif_ann_123_student-1',
           studentId: 'student-1',
           title: 'Announcement: Registration update',
           message: 'Registration opens today.',
@@ -73,6 +75,7 @@ describe('Announcement notification routing', () => {
           actionUrl: '/announcements/ann_123',
         },
         {
+          id: 'notif_ann_123_student-2',
           studentId: 'student-2',
           title: 'Announcement: Registration update',
           message: 'Registration opens today.',
@@ -114,8 +117,10 @@ describe('Announcement notification routing', () => {
 
     expect(response.status).toBe(200);
     expect(prisma.notification.createMany).toHaveBeenCalledWith({
+      skipDuplicates: true,
       data: [
         {
+          id: 'notif_ann_scheduled_student-1',
           studentId: 'student-1',
           title: 'Announcement: Scheduled update',
           message: 'The scheduled update is now live.',
