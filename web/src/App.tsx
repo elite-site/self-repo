@@ -212,7 +212,6 @@ const AuthWrapper: React.FC = () => {
               <Route path="/learning/courses" element={<CoursesGridPage />} />
               <Route path="/learning/courses/:slugOrId" element={<CourseDetailPage />} />
               <Route path="/learning/lessons/:id" element={<LessonPlayerPage />} />
-              <Route path="/learning/lessons/:lessonId" element={<LessonPlayerPage />} />
               <Route path="/learning/my-learning" element={<MyLearningPage />} />
             </>
           )}

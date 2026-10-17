@@ -18,12 +18,11 @@ export interface DashboardLearningCardProps {
 
 export const DashboardLearningCard: React.FC<DashboardLearningCardProps> = ({ className }) => {
   const [imageError, setImageError] = useState(false);
+  const { data, isLoading, isError } = useLearningHomeQuery({ enabled: isLearningHubEnabled });
 
   if (!isLearningHubEnabled) {
     return null;
   }
-
-  const { data, isLoading, isError } = useLearningHomeQuery();
 
   if (isLoading) {
     return (

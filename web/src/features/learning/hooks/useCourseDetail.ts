@@ -7,7 +7,7 @@ export function useCourseDetailQuery(slugOrId: string) {
     queryKey: ['learning', 'course', slugOrId],
     queryFn: () => learningApi.getCourse(slugOrId),
     enabled: Boolean(slugOrId),
-    staleTime: 60_000,
+    staleTime: 10 * 60_000,
   });
 }
 

@@ -7,7 +7,7 @@ export function useQuizQuery(quizId: string) {
     queryKey: ['learning', 'quiz', quizId],
     queryFn: () => learningApi.getQuiz(quizId),
     enabled: Boolean(quizId),
-    staleTime: 60_000,
+    staleTime: 10 * 60_000,
   });
 }
 

@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   ChevronLeft,
   ChevronRight,
@@ -18,6 +19,7 @@ import {
   useQuizQuery,
   useSubmitQuizMutation,
 } from '../hooks';
+import { learningApi } from '../api';
 import {
   YouTubePlayer,
   YouTubePlayerHandle,
@@ -50,6 +52,7 @@ export const LessonPlayerPage: React.FC = () => {
   const params = useParams<{ id?: string; lessonId?: string }>();
   const lessonId = params.lessonId || params.id || '';
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const {
     data: lesson,
@@ -82,6 +85,30 @@ export const LessonPlayerPage: React.FC = () => {
       setCurrentTime(0);
     }
   }, [lesson?.id, lesson?.progress?.secondsWatched]);
+
+  // Prefetch adjacent lessons so next/prev transitions are instantaneous
+  useEffect(() => {
+    if (!lesson) return;
+    if (lesson.nextLessonId) {
+      void queryClient.prefetchQuery({
+        queryKey: ['learning', 'lesson', lesson.nextLessonId],
+        queryFn: () => learningApi.getLesson(lesson.nextLessonId!),
+        staleTime: 5 * 60_000,
+      });
+      void queryClient.prefetchQuery({
+        queryKey: ['learning', 'transcript', lesson.nextLessonId],
+        queryFn: () => learningApi.getLessonTranscript(lesson.nextLessonId!),
+        staleTime: 30 * 60_000,
+      });
+    }
+    if (lesson.prevLessonId) {
+      void queryClient.prefetchQuery({
+        queryKey: ['learning', 'lesson', lesson.prevLessonId],
+        queryFn: () => learningApi.getLesson(lesson.prevLessonId!),
+        staleTime: 5 * 60_000,
+      });
+    }
+  }, [lesson, queryClient]);
 
   // Adjust active tab if current lesson is not a video
   useEffect(() => {
@@ -119,7 +146,7 @@ export const LessonPlayerPage: React.FC = () => {
     playerRef.current?.seekTo(seconds);
   }, []);
 
-  if (isLoading) {
+  if (isLoading && !lesson) {
     return (
       <div
         className="grid grid-cols-1 gap-6 p-4 lg:grid-cols-12 lg:p-8"

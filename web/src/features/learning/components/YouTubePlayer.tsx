@@ -86,6 +86,10 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
   const lastReportedTimeRef = useRef(initialSeconds);
   const isCompletedRef = useRef(false);
   const prevVideoIdRef = useRef(cleanVideoId);
+  const initialVideoIdRef = useRef(cleanVideoId);
+  if (!initialVideoIdRef.current && cleanVideoId) {
+    initialVideoIdRef.current = cleanVideoId;
+  }
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(initialSeconds);
@@ -345,6 +349,9 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
 
   useEffect(() => {
     if (prevVideoIdRef.current !== cleanVideoId) {
+      if (prevVideoIdRef.current) {
+        sendBeaconProgress();
+      }
       prevVideoIdRef.current = cleanVideoId;
       currentTimeRef.current = initialSeconds;
       lastReportedTimeRef.current = initialSeconds;
@@ -362,7 +369,7 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
         });
       }
     }
-  }, [cleanVideoId, initialSeconds]);
+  }, [cleanVideoId, initialSeconds, sendBeaconProgress]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
@@ -463,8 +470,8 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
       >
         <iframe
           ref={iframeRef}
-          id={`yt-player-${cleanVideoId}`}
-          src={`https://www.youtube-nocookie.com/embed/${cleanVideoId}?enablejsapi=1&origin=${encodeURIComponent(
+          id="yt-player-iframe"
+          src={`https://www.youtube-nocookie.com/embed/${initialVideoIdRef.current || cleanVideoId}?enablejsapi=1&origin=${encodeURIComponent(
             typeof window !== 'undefined' ? window.location.origin : ''
           )}&rel=0&iv_load_policy=3&playsinline=1`}
           title="YouTube lesson player"

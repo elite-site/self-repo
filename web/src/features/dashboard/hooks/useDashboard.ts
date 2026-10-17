@@ -95,7 +95,7 @@ export function useDashboard() {
   } = useQuery<StudentDashboardResponse>({
     queryKey: ['dashboard'],
     queryFn: () => dashboardApi.getDashboard(),
-    staleTime: 60_000,
+    staleTime: 5 * 60_000,
   });
 
   const profile = dashboardData?.profile ?? null;
@@ -114,8 +114,18 @@ export function useDashboard() {
 
   const markNotificationMutation = useMutation({
     mutationFn: (id: string) => notificationsApi.markNotificationRead(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    onSuccess: (_res, id) => {
+      queryClient.setQueryData<StudentDashboardResponse>(['dashboard'], (prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          notifications: (prev.notifications || []).map((n) =>
+            n.id === id ? { ...n, isRead: true, status: 'READ' as const } : n
+          ),
+          unreadNotificationsCount: Math.max(0, (prev.unreadNotificationsCount || 1) - 1),
+        };
+      });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
     },
   });
 
@@ -146,8 +156,18 @@ export function useDashboard() {
   const handleSnoozeGithub = async () => {
     setGithubBannerDismissed(true);
     try {
-      await githubApi.snoozeGithubReminder();
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      const res = await githubApi.snoozeGithubReminder();
+      queryClient.setQueryData<StudentDashboardResponse>(['dashboard'], (prev) => {
+        if (!prev || !prev.github) return prev;
+        return {
+          ...prev,
+          github: {
+            ...prev.github,
+            reminderSnoozedUntil:
+              res.snoozedUntil || new Date(Date.now() + 7 * 86400000).toISOString(),
+          },
+        };
+      });
     } catch {
       // Optimistic dismiss remains active
     }

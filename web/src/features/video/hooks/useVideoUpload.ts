@@ -191,7 +191,6 @@ export function useVideoUpload() {
       setPreviewError(false);
     }
     setLoading(false);
-    loadSubmission(false);
   }, [loadSubmission, session]);
 
   const inspectVideoFile = (file: File): Promise<VideoMeta> => {

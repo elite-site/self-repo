@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { StudentSession } from '@/shared/types';
 import { profileApi } from '@/features/profile/api';
 import { authApi } from '@/features/auth/api';
-import { SESSION_QUERY_KEY } from '@/shared/lib/queryClient';
+import { SESSION_QUERY_KEY, clearPersistedQueryCache } from '@/shared/lib/queryClient';
 import {
   TOKEN_STORAGE_KEY,
   bootstrapToken,
@@ -148,6 +148,7 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     // verification cannot leave the "Unable to verify your session" screen showing for
     // a visitor who is now signed out.
     queryClient.removeQueries();
+    clearPersistedQueryCache();
   }, [queryClient]);
 
   return (
