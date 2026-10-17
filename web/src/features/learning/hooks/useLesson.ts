@@ -18,6 +18,7 @@ export function useLessonTranscriptQuery(lessonId: string) {
     queryFn: () => learningApi.getLessonTranscript(lessonId),
     enabled: Boolean(lessonId),
     staleTime: 30 * 60_000,
+    placeholderData: keepPreviousData,
   });
 }
 

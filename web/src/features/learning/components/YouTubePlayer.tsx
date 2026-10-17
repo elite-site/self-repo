@@ -377,10 +377,16 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
       setHasError(false);
 
       if (playerRef.current?.loadVideoById) {
-        playerRef.current.loadVideoById({
-          videoId: cleanVideoId,
-          startSeconds: initialSeconds,
-        });
+        try {
+          playerRef.current.loadVideoById({
+            videoId: cleanVideoId,
+            startSeconds: initialSeconds,
+          });
+        } catch {
+          playerRef.current.loadVideoById(cleanVideoId, initialSeconds);
+        }
+      } else {
+        initialVideoIdRef.current = cleanVideoId;
       }
     }
   }, [cleanVideoId, initialSeconds, sendBeaconProgress]);

@@ -58,6 +58,17 @@ function pathDepth(pathname: string): number {
  * arrives without a transition: the student navigated here, so animating it would
  * delay what they came for.
  */
+/**
+ * Route paths that share the same view component and should not trigger
+ * full page unmounts/exit animations when navigating between internal resources (e.g. lessons in a course).
+ */
+export function getTransitionKey(pathname: string): string {
+  if (pathname.startsWith('/learning/lessons/')) {
+    return '/learning/lessons';
+  }
+  return pathname;
+}
+
 export const PageTransition: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { pathname } = useLocation();
   const direction = useNavigationDirection();
@@ -66,7 +77,7 @@ export const PageTransition: React.FC<{ children: React.ReactNode }> = ({ childr
   return (
     <AnimatePresence mode="wait" initial={false}>
       <motion.div
-        key={pathname}
+        key={getTransitionKey(pathname)}
         variants={variants}
         initial="initial"
         animate="animate"
