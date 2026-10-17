@@ -110,12 +110,19 @@ export const LessonPlayerPage: React.FC = () => {
     }
   }, [lesson, queryClient]);
 
-  // Adjust active tab if current lesson is not a video
+  // Adjust active tab if current lesson is not a video or transcript is unavailable
   useEffect(() => {
     if (lesson && lesson.type !== 'YOUTUBE' && activeTab === 'transcript') {
       setActiveTab('syllabus');
+    } else if (
+      !isTranscriptLoading &&
+      transcriptData &&
+      !transcriptData.available &&
+      activeTab === 'transcript'
+    ) {
+      setActiveTab('syllabus');
     }
-  }, [lesson, activeTab]);
+  }, [lesson, activeTab, isTranscriptLoading, transcriptData]);
 
   const handleProgress = useCallback(
     (seconds: number, completed: boolean) => {
@@ -135,7 +142,7 @@ export const LessonPlayerPage: React.FC = () => {
     [lesson, progressMutation]
   );
 
-  const handleMarkComplete = useCallback(() => {
+  const handleMarkAsComplete = useCallback(() => {
     if (!lesson) return;
     void celebrate('success');
     handleProgress(lesson.durationSec || 60, true);
@@ -180,44 +187,10 @@ export const LessonPlayerPage: React.FC = () => {
   const durationStr = formatDuration(lesson.durationSec);
 
   const renderHeaderAndControls = () => (
-    <div className="space-y-4">
-      {/* Course link & Breadcrumb */}
-      <div className="flex items-center justify-between">
-        <Link
-          to={`/learning/courses/${lesson.courseSlug || lesson.courseId}`}
-          className="inline-flex items-center gap-1.5 text-xs font-medium text-ink-muted transition-colors hover:text-ink"
-        >
-          <ChevronLeft className="size-3.5" aria-hidden="true" />
-          <span>Back to {lesson.courseTitle}</span>
-        </Link>
-
-        {lesson.type === 'YOUTUBE' && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setIsTheater((prev) => !prev)}
-            className="h-8 gap-1.5 text-xs text-ink-secondary hover:text-ink"
-            aria-label={isTheater ? 'Exit theater mode' : 'Theater mode'}
-            title={isTheater ? 'Exit theater mode' : 'Theater mode'}
-          >
-            {isTheater ? (
-              <>
-                <Minimize2 className="size-3.5" aria-hidden="true" />
-                <span className="hidden sm:inline">Exit Theater</span>
-              </>
-            ) : (
-              <>
-                <Maximize2 className="size-3.5" aria-hidden="true" />
-                <span className="hidden sm:inline">Theater Mode</span>
-              </>
-            )}
-          </Button>
-        )}
-      </div>
-
+    <div className="space-y-4 rounded-xl border border-edge bg-surface p-4 sm:p-5 shadow-xs">
       {/* Lesson Title & Metadata */}
       <div>
-        <h1 className="text-xl font-bold tracking-tight text-ink sm:text-2xl">
+        <h1 className="text-lg font-bold tracking-tight text-ink sm:text-xl">
           {lesson.title}
         </h1>
         <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-ink-muted">
@@ -238,7 +211,7 @@ export const LessonPlayerPage: React.FC = () => {
       </div>
 
       {/* Navigation & Action Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-edge pt-4">
+      <div className="flex items-center justify-between gap-3 border-t border-edge pt-4">
         <Button
           variant="secondary"
           size="sm"
@@ -253,20 +226,17 @@ export const LessonPlayerPage: React.FC = () => {
           <span>Previous</span>
         </Button>
 
-        {!lesson.progress.completed ? (
+        {/* Manual completion only for non-video lessons (e.g. NOTES, LINK) when not completed.
+            Video lessons auto-complete upon reaching 100% watched. */}
+        {lesson.type !== 'YOUTUBE' && !lesson.progress.completed && (
           <Button
             variant="secondary"
             size="sm"
-            onClick={handleMarkComplete}
+            onClick={handleMarkAsComplete}
             className="text-xs"
           >
             Mark as Completed
           </Button>
-        ) : (
-          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-success">
-            <CheckCircle2 className="size-4" aria-hidden="true" />
-            Completed
-          </span>
         )}
 
         <Button
@@ -308,6 +278,7 @@ export const LessonPlayerPage: React.FC = () => {
             onSeek={handleSeek}
             isLoading={isTranscriptLoading}
             available={transcriptData?.available}
+            onViewSyllabus={() => setActiveTab('syllabus')}
             className={tabClassName}
           />
         </TabsContent>
@@ -380,6 +351,54 @@ export const LessonPlayerPage: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-6 p-4 sm:p-6 lg:p-8">
+      {/* Top Header / Breadcrumb Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-edge pb-4">
+        <Link
+          to={`/learning/courses/${lesson.courseSlug || lesson.courseId}`}
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-ink-secondary transition-colors hover:text-ink"
+        >
+          <ChevronLeft className="size-4" aria-hidden="true" />
+          <span>Back to {lesson.courseTitle}</span>
+        </Link>
+
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-semibold text-ink-muted">
+            Lesson {lesson.order}
+          </span>
+          {lesson.progress.completed ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-success-soft/30 px-2.5 py-0.5 text-xs font-semibold text-success">
+              <CheckCircle2 className="size-3.5" aria-hidden="true" />
+              Completed
+            </span>
+          ) : (
+            <span className="text-xs text-ink-muted">In Progress</span>
+          )}
+
+          {lesson.type === 'YOUTUBE' && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsTheater((prev) => !prev)}
+              className="h-8 gap-1.5 text-xs text-ink-secondary hover:text-ink"
+              aria-label={isTheater ? 'Exit theater mode' : 'Theater mode'}
+              title={isTheater ? 'Exit theater mode' : 'Theater mode'}
+            >
+              {isTheater ? (
+                <>
+                  <Minimize2 className="size-3.5" aria-hidden="true" />
+                  <span className="hidden sm:inline">Exit Theater</span>
+                </>
+              ) : (
+                <>
+                  <Maximize2 className="size-3.5" aria-hidden="true" />
+                  <span className="hidden sm:inline">Theater Mode</span>
+                </>
+              )}
+            </Button>
+          )}
+        </div>
+      </div>
+
       {isTheater ? (
         /* Theater Mode: Full-width player, tabs arranged below */
         <div className="space-y-6">

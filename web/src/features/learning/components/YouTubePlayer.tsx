@@ -4,6 +4,8 @@ import {
   Pause,
   RotateCcw,
   RotateCw,
+  Volume2,
+  VolumeX,
   Maximize,
   Minimize,
   Maximize2,
@@ -95,6 +97,7 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
   const [currentTime, setCurrentTime] = useState(initialSeconds);
   const [duration, setDuration] = useState(0);
   const [playbackRate, setPlaybackRate] = useState<number>(1);
+  const [isMuted, setIsMuted] = useState(false);
   const [isSpeedOpen, setIsSpeedOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isInternalTheater, setIsInternalTheater] = useState(false);
@@ -151,6 +154,17 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
       playerRef.current.playVideo?.();
     }
   }, [isPlaying]);
+
+  const toggleMute = useCallback(() => {
+    if (!playerRef.current) return;
+    if (isMuted) {
+      playerRef.current.unMute?.();
+      setIsMuted(false);
+    } else {
+      playerRef.current.mute?.();
+      setIsMuted(true);
+    }
+  }, [isMuted]);
 
   const seekDelta = useCallback(
     (delta: number) => {
@@ -410,6 +424,11 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
         e.preventDefault();
         toggleFullscreen();
         break;
+      case 'm':
+      case 'M':
+        e.preventDefault();
+        toggleMute();
+        break;
       default:
         break;
     }
@@ -473,7 +492,7 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
           id="yt-player-iframe"
           src={`https://www.youtube-nocookie.com/embed/${initialVideoIdRef.current || cleanVideoId}?enablejsapi=1&origin=${encodeURIComponent(
             typeof window !== 'undefined' ? window.location.origin : ''
-          )}&rel=0&iv_load_policy=3&playsinline=1`}
+          )}&rel=0&iv_load_policy=3&playsinline=1&controls=0`}
           title="YouTube lesson player"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-picture"
           allowFullScreen
@@ -556,6 +575,20 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
               <span className="mx-1 text-ink-muted">/</span>
               <span>{formatTime(duration)}</span>
             </div>
+
+            <button
+              type="button"
+              onClick={toggleMute}
+              aria-label={isMuted ? 'Unmute video (m)' : 'Mute video (m)'}
+              title={isMuted ? 'Unmute (m)' : 'Mute (m)'}
+              className="inline-flex size-11 items-center justify-center rounded-lg text-ink-secondary hover:text-ink hover:bg-surface-raised active:scale-95 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-ring"
+            >
+              {isMuted ? (
+                <VolumeX className="size-4" aria-hidden="true" />
+              ) : (
+                <Volume2 className="size-4" aria-hidden="true" />
+              )}
+            </button>
           </div>
 
           {/* Right: Playback speed, Theater mode, Fullscreen */}

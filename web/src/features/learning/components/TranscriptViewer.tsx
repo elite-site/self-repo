@@ -12,6 +12,7 @@ import {
 import { TranscriptSegment } from '../types';
 import { Button } from '@/shared/ui/Button';
 import { Skeleton } from '@/shared/ui/Skeleton';
+import { EmptyState } from '@/shared/ui/EmptyState';
 import { cn } from '@/shared/lib/cn';
 
 export interface TranscriptViewerProps {
@@ -21,6 +22,7 @@ export interface TranscriptViewerProps {
   isLoading?: boolean;
   available?: boolean;
   className?: string;
+  onViewSyllabus?: () => void;
 }
 
 export function formatTimestamp(seconds: number): string {
@@ -68,6 +70,7 @@ export const TranscriptViewer: React.FC<TranscriptViewerProps> = ({
   isLoading = false,
   available = true,
   className,
+  onViewSyllabus,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [autoScroll, setAutoScroll] = useState(true);
@@ -165,15 +168,28 @@ export const TranscriptViewer: React.FC<TranscriptViewerProps> = ({
     return (
       <div
         className={cn(
-          'flex flex-col items-center justify-center rounded-xl border border-dashed border-edge bg-surface-sunken/40 p-8 text-center',
+          'flex flex-col items-center justify-center rounded-xl border border-edge bg-surface p-6 sm:p-8 text-center shadow-xs',
           className
         )}
       >
-        <FileText className="mb-3 size-10 text-ink-muted" aria-hidden="true" />
-        <h4 className="text-sm font-semibold text-ink">No transcript available</h4>
-        <p className="mt-1 max-w-xs text-xs text-ink-muted">
-          Transcripts and captions have not been generated for this lesson yet.
-        </p>
+        <EmptyState
+          icon={FileText}
+          title="No transcript available"
+          description="Transcripts and captions have not been generated for this lesson yet."
+          action={
+            onViewSyllabus ? (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={onViewSyllabus}
+                className="text-xs"
+              >
+                View Course Syllabus
+              </Button>
+            ) : undefined
+          }
+          bare
+        />
       </div>
     );
   }

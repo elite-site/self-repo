@@ -411,9 +411,27 @@ describe('LessonPlayerPage with Transcript Companion', () => {
     });
   });
 
-  it('marks lesson as completed and celebrates with success confetti', async () => {
-    const user = userEvent.setup();
+  it('auto-completes video lessons without manual mark-as-completed button', async () => {
     renderLessonPlayer('lesson-1');
+
+    await waitFor(() => {
+      expect(screen.getByText('Introduction & System Overview')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByRole('button', { name: /Mark as Completed/i })).not.toBeInTheDocument();
+  });
+
+  it('marks non-video lesson as completed and celebrates with success confetti', async () => {
+    vi.mocked(learningApi.getLesson).mockResolvedValueOnce({
+      ...mockLessonDetail,
+      id: 'lesson-2',
+      title: 'TypeScript Monolith Architecture Notes',
+      type: 'NOTES',
+      progress: { completed: false, secondsWatched: 0, maxPositionSec: 0 },
+    });
+
+    const user = userEvent.setup();
+    renderLessonPlayer('lesson-2');
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /Mark as Completed/i })).toBeInTheDocument();
@@ -424,7 +442,7 @@ describe('LessonPlayerPage with Transcript Companion', () => {
 
     expect(celebrate).toHaveBeenCalledWith('success');
     expect(learningApi.saveProgress).toHaveBeenCalledWith(
-      'lesson-1',
+      'lesson-2',
       expect.objectContaining({ completed: true })
     );
   });
