@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/shared/ui/Button';
 import { cn } from '@/shared/lib/cn';
+import { getApiBaseUrl } from '@/shared/api/client';
 
 export interface YouTubePlayerHandle {
   seekTo: (seconds: number) => void;
@@ -80,8 +81,15 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const playerRef = useRef<any>(null);
+  const isReadyRef = useRef(false);
+  const pendingVideoRef = useRef<{ videoId: string; startSeconds: number } | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const speedMenuRef = useRef<HTMLDivElement>(null);
+
+  const lessonIdRef = useRef(lessonId);
+  useEffect(() => {
+    lessonIdRef.current = lessonId;
+  }, [lessonId]);
 
   const currentTimeRef = useRef(initialSeconds);
   const durationRef = useRef(0);
@@ -123,56 +131,90 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
   }, []);
 
   const sendBeaconProgress = useCallback(() => {
-    if (!lessonId || typeof navigator === 'undefined' || !navigator.sendBeacon) return;
-    const body = JSON.stringify({
-      secondsWatched: Math.floor(currentTimeRef.current),
-      maxPositionSec: Math.floor(currentTimeRef.current),
-      completed: isCompletedRef.current,
-    });
-    navigator.sendBeacon(
-      `/api/student/learning/lessons/${lessonId}/progress`,
-      new Blob([body], { type: 'application/json' })
-    );
-  }, [lessonId]);
+    const activeLessonId = lessonIdRef.current;
+    if (!activeLessonId || typeof navigator === 'undefined' || typeof navigator.sendBeacon !== 'function') return;
+    try {
+      const body = JSON.stringify({
+        secondsWatched: Math.floor(currentTimeRef.current),
+        maxPositionSec: Math.floor(currentTimeRef.current),
+        completed: isCompletedRef.current,
+      });
+      const url = `${getApiBaseUrl()}/student/learning/lessons/${activeLessonId}/progress`;
+      navigator.sendBeacon(url, new Blob([body], { type: 'application/json' }));
+    } catch {
+      // non-fatal beacon failure
+    }
+  }, []);
 
+  // Cleanup exclusively on component unmount
   useEffect(() => {
     const handleBeforeUnload = () => sendBeaconProgress();
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
       sendBeaconProgress();
-      if (timerRef.current) clearInterval(timerRef.current);
-      if (playerRef.current?.destroy) playerRef.current.destroy();
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      if (playerRef.current) {
+        try {
+          playerRef.current.destroy?.();
+        } catch {
+          // non-fatal
+        }
+        playerRef.current = null;
+      }
+      isReadyRef.current = false;
     };
   }, [sendBeaconProgress]);
 
   const togglePlayPause = useCallback(() => {
     if (!playerRef.current) return;
-    if (isPlaying) {
-      playerRef.current.pauseVideo?.();
-    } else {
-      playerRef.current.playVideo?.();
+    try {
+      if (isPlaying) {
+        playerRef.current.pauseVideo?.();
+      } else {
+        playerRef.current.playVideo?.();
+      }
+    } catch {
+      // non-fatal
     }
   }, [isPlaying]);
 
   const toggleMute = useCallback(() => {
     if (!playerRef.current) return;
-    if (isMuted) {
-      playerRef.current.unMute?.();
-      setIsMuted(false);
-    } else {
-      playerRef.current.mute?.();
-      setIsMuted(true);
+    try {
+      if (isMuted) {
+        playerRef.current.unMute?.();
+        setIsMuted(false);
+      } else {
+        playerRef.current.mute?.();
+        setIsMuted(true);
+      }
+    } catch {
+      // non-fatal
     }
   }, [isMuted]);
 
   const seekDelta = useCallback(
     (delta: number) => {
-      if (!playerRef.current) return;
-      const curr = playerRef.current.getCurrentTime?.() ?? currentTimeRef.current;
-      const maxDur = durationRef.current || playerRef.current.getDuration?.() || 0;
+      let curr = currentTimeRef.current;
+      let maxDur = durationRef.current;
+      if (playerRef.current) {
+        try {
+          curr = playerRef.current.getCurrentTime?.() ?? currentTimeRef.current;
+          maxDur = durationRef.current || playerRef.current.getDuration?.() || 0;
+        } catch {
+          // fallback to refs
+        }
+      }
       const target = Math.max(0, maxDur > 0 ? Math.min(curr + delta, maxDur) : curr + delta);
-      playerRef.current.seekTo?.(target, true);
+      try {
+        playerRef.current?.seekTo?.(target, true);
+      } catch {
+        // non-fatal
+      }
       currentTimeRef.current = target;
       setCurrentTime(target);
       onTimeUpdateRef.current?.(target);
@@ -187,7 +229,11 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
       if (!Number.isFinite(target)) return;
       currentTimeRef.current = target;
       setCurrentTime(target);
-      playerRef.current?.seekTo?.(target, true);
+      try {
+        playerRef.current?.seekTo?.(target, true);
+      } catch {
+        // non-fatal
+      }
       onTimeUpdateRef.current?.(target);
       reportProgress(target, false);
     },
@@ -196,7 +242,11 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
 
   const handleSpeedChange = useCallback((speed: number) => {
     setPlaybackRate(speed);
-    playerRef.current?.setPlaybackRate?.(speed);
+    try {
+      playerRef.current?.setPlaybackRate?.(speed);
+    } catch {
+      // non-fatal
+    }
     setIsSpeedOpen(false);
   }, []);
 
@@ -245,33 +295,71 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
   const createPlayerHandle = useCallback(
     () => ({
       seekTo: (sec: number) => {
-        playerRef.current?.seekTo?.(sec, true);
+        try {
+          playerRef.current?.seekTo?.(sec, true);
+        } catch {
+          // non-fatal
+        }
         currentTimeRef.current = sec;
         setCurrentTime(sec);
         onTimeUpdateRef.current?.(sec);
       },
-      play: () => playerRef.current?.playVideo?.(),
-      pause: () => playerRef.current?.pauseVideo?.(),
+      play: () => {
+        try {
+          playerRef.current?.playVideo?.();
+        } catch {
+          // non-fatal
+        }
+      },
+      pause: () => {
+        try {
+          playerRef.current?.pauseVideo?.();
+        } catch {
+          // non-fatal
+        }
+      },
       setPlaybackRate: (rate: number) => {
-        playerRef.current?.setPlaybackRate?.(rate);
+        try {
+          playerRef.current?.setPlaybackRate?.(rate);
+        } catch {
+          // non-fatal
+        }
         setPlaybackRate(rate);
       },
     }),
     []
   );
 
-  useEffect(() => {
-    setHasError(false);
+  const initPlayer = useCallback(() => {
+    if (!iframeRef.current || !window.YT?.Player) return;
+    if (playerRef.current) return;
 
-    const initPlayer = () => {
-      if (!iframeRef.current || !window.YT?.Player) return;
-      if (playerRef.current) return;
-
+    try {
       playerRef.current = new window.YT.Player(iframeRef.current, {
         events: {
           onReady: () => {
-            if (initialSeconds > 0 && playerRef.current?.seekTo) {
-              playerRef.current.seekTo(initialSeconds, true);
+            isReadyRef.current = true;
+            if (pendingVideoRef.current) {
+              const pending = pendingVideoRef.current;
+              pendingVideoRef.current = null;
+              try {
+                playerRef.current?.loadVideoById?.({
+                  videoId: pending.videoId,
+                  startSeconds: pending.startSeconds,
+                });
+              } catch {
+                try {
+                  playerRef.current?.loadVideoById?.(pending.videoId, pending.startSeconds);
+                } catch {
+                  // non-fatal
+                }
+              }
+            } else if (initialSeconds > 0 && playerRef.current?.seekTo) {
+              try {
+                playerRef.current.seekTo(initialSeconds, true);
+              } catch {
+                // non-fatal
+              }
             }
             const dur = playerRef.current?.getDuration?.() ?? 0;
             if (dur > 0) {
@@ -283,11 +371,17 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
           },
           onStateChange: (event: { data: number }) => {
             if (timerRef.current) clearInterval(timerRef.current);
-            const YTState = window.YT.PlayerState;
+            const YTState = window.YT?.PlayerState;
+            if (!YTState) return;
 
             if (event.data === YTState.PLAYING) {
               setIsPlaying(true);
-              const dur = playerRef.current?.getDuration?.() ?? 0;
+              let dur = 0;
+              try {
+                dur = playerRef.current?.getDuration?.() ?? 0;
+              } catch {
+                // fallback
+              }
               if (dur > 0 && dur !== durationRef.current) {
                 durationRef.current = dur;
                 setDuration(dur);
@@ -296,34 +390,48 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
 
               timerRef.current = setInterval(() => {
                 if (!playerRef.current?.getCurrentTime) return;
-                const curr = playerRef.current.getCurrentTime();
-                currentTimeRef.current = curr;
-                setCurrentTime(curr);
-                onTimeUpdateRef.current?.(curr);
+                try {
+                  const curr = playerRef.current.getCurrentTime();
+                  currentTimeRef.current = curr;
+                  setCurrentTime(curr);
+                  onTimeUpdateRef.current?.(curr);
 
-                if (curr - lastReportedTimeRef.current >= 30) {
-                  reportProgress(curr, false);
-                }
-
-                if (durationRef.current <= 0) {
-                  const currentDur = playerRef.current.getDuration?.() ?? 0;
-                  if (currentDur > 0) {
-                    durationRef.current = currentDur;
-                    setDuration(currentDur);
-                    onDurationRef.current?.(currentDur);
+                  if (curr - lastReportedTimeRef.current >= 30) {
+                    reportProgress(curr, false);
                   }
+
+                  if (durationRef.current <= 0) {
+                    const currentDur = playerRef.current.getDuration?.() ?? 0;
+                    if (currentDur > 0) {
+                      durationRef.current = currentDur;
+                      setDuration(currentDur);
+                      onDurationRef.current?.(currentDur);
+                    }
+                  }
+                } catch {
+                  // non-fatal
                 }
               }, 250);
             } else if (event.data === YTState.PAUSED) {
               setIsPlaying(false);
-              const curr = playerRef.current?.getCurrentTime?.() ?? currentTimeRef.current;
+              let curr = currentTimeRef.current;
+              try {
+                curr = playerRef.current?.getCurrentTime?.() ?? currentTimeRef.current;
+              } catch {
+                // fallback
+              }
               currentTimeRef.current = curr;
               setCurrentTime(curr);
               onTimeUpdateRef.current?.(curr);
               reportProgress(curr, false);
             } else if (event.data === YTState.ENDED) {
               setIsPlaying(false);
-              const dur = playerRef.current?.getDuration?.() ?? currentTimeRef.current;
+              let dur = currentTimeRef.current;
+              try {
+                dur = playerRef.current?.getDuration?.() ?? currentTimeRef.current;
+              } catch {
+                // fallback
+              }
               currentTimeRef.current = dur;
               setCurrentTime(dur);
               onTimeUpdateRef.current?.(dur);
@@ -336,13 +444,20 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
             }
           },
           onError: (event: { data: number }) => {
-            if (event.data === 101 || event.data === 150) {
+            if (event.data === 101 || event.data === 150 || event.data === 2 || event.data === 5) {
               setHasError(true);
             }
           },
         },
       });
-    };
+    } catch {
+      // non-fatal initialization
+      isReadyRef.current = false;
+    }
+  }, [createPlayerHandle, initialSeconds, reportProgress]);
+
+  useEffect(() => {
+    setHasError(false);
 
     if (window.YT?.Player) {
       initPlayer();
@@ -359,12 +474,12 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
         document.body.appendChild(tag);
       }
     }
-  }, [createPlayerHandle, initialSeconds, reportProgress]);
+  }, [initPlayer]);
 
   useEffect(() => {
     if (prevVideoIdRef.current !== cleanVideoId) {
-      if (prevVideoIdRef.current) {
-        sendBeaconProgress();
+      if (prevVideoIdRef.current && currentTimeRef.current > 0) {
+        reportProgress(currentTimeRef.current, isCompletedRef.current);
       }
       prevVideoIdRef.current = cleanVideoId;
       currentTimeRef.current = initialSeconds;
@@ -376,20 +491,36 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
       setIsPlaying(false);
       setHasError(false);
 
-      if (playerRef.current?.loadVideoById) {
+      if (isReadyRef.current && playerRef.current) {
         try {
-          playerRef.current.loadVideoById({
-            videoId: cleanVideoId,
-            startSeconds: initialSeconds,
-          });
+          if (typeof playerRef.current.loadVideoById === 'function') {
+            playerRef.current.loadVideoById({
+              videoId: cleanVideoId,
+              startSeconds: initialSeconds,
+            });
+          }
         } catch {
-          playerRef.current.loadVideoById(cleanVideoId, initialSeconds);
+          try {
+            playerRef.current.loadVideoById?.(cleanVideoId, initialSeconds);
+          } catch {
+            // Player instance was in an invalid internal state; reset and reinit
+            isReadyRef.current = false;
+            try {
+              playerRef.current?.destroy?.();
+            } catch {
+              // ignore
+            }
+            playerRef.current = null;
+            pendingVideoRef.current = { videoId: cleanVideoId, startSeconds: initialSeconds };
+            initPlayer();
+          }
         }
       } else {
+        pendingVideoRef.current = { videoId: cleanVideoId, startSeconds: initialSeconds };
         initialVideoIdRef.current = cleanVideoId;
       }
     }
-  }, [cleanVideoId, initialSeconds, sendBeaconProgress]);
+  }, [cleanVideoId, initialSeconds, reportProgress, initPlayer]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
@@ -500,7 +631,7 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
             typeof window !== 'undefined' ? window.location.origin : ''
           )}&rel=0&iv_load_policy=3&playsinline=1&controls=0`}
           title="YouTube lesson player"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-picture"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
           allowFullScreen
           className="h-full w-full border-0"
         />

@@ -128,4 +128,82 @@ describe('YouTubePlayer component', () => {
     );
     expect(onDuration).toHaveBeenCalledWith(300);
   });
+
+  it('switches video in-place using loadVideoById without destroying the player', () => {
+    let capturedEvents: any = null;
+    const mockDestroy = vi.fn();
+    const mockLoadVideoById = vi.fn();
+
+    function MockPlayer(this: any, _elem: any, options: any) {
+      capturedEvents = options.events;
+      this.loadVideoById = mockLoadVideoById;
+      this.destroy = mockDestroy;
+      this.getCurrentTime = vi.fn().mockReturnValue(10);
+      this.getDuration = vi.fn().mockReturnValue(200);
+      return this;
+    }
+
+    (window as any).YT = {
+      Player: vi.fn(MockPlayer),
+      PlayerState: { PLAYING: 1, PAUSED: 2, ENDED: 0 },
+    };
+
+    const onProgress = vi.fn();
+    const { rerender, unmount } = render(
+      <YouTubePlayer videoId="video-1" lessonId="lesson-1" onProgress={onProgress} />
+    );
+
+    act(() => {
+      capturedEvents.onReady();
+    });
+
+    // Re-render with new lesson and video
+    rerender(<YouTubePlayer videoId="video-2" lessonId="lesson-2" onProgress={onProgress} />);
+
+    // Player should NOT be destroyed on lesson transition
+    expect(mockDestroy).not.toHaveBeenCalled();
+
+    // loadVideoById should have been called with the new video ID
+    expect(mockLoadVideoById).toHaveBeenCalledWith(
+      expect.objectContaining({ videoId: 'video-2', startSeconds: 0 })
+    );
+
+    // Destroy should only be called upon true unmount
+    unmount();
+    expect(mockDestroy).toHaveBeenCalledTimes(1);
+  });
+
+  it('safely catches errors in loadVideoById and reinitializes without crashing React', () => {
+    let capturedEvents: any = null;
+    let initCount = 0;
+
+    function MockPlayer(this: any, _elem: any, options: any) {
+      initCount++;
+      capturedEvents = options.events;
+      this.loadVideoById = vi.fn().mockImplementation(() => {
+        throw new TypeError("Cannot read properties of null (reading 'src')");
+      });
+      this.destroy = vi.fn();
+      return this;
+    }
+
+    (window as any).YT = {
+      Player: vi.fn(MockPlayer),
+      PlayerState: { PLAYING: 1, PAUSED: 2, ENDED: 0 },
+    };
+
+    const { rerender } = render(<YouTubePlayer videoId="video-1" lessonId="lesson-1" />);
+
+    act(() => {
+      capturedEvents.onReady();
+    });
+
+    // Rerender with video-2; loadVideoById will throw TypeError
+    expect(() => {
+      rerender(<YouTubePlayer videoId="video-2" lessonId="lesson-2" />);
+    }).not.toThrow();
+
+    // The component recovered by re-initializing the player rather than letting React crash
+    expect(initCount).toBeGreaterThanOrEqual(2);
+  });
 });
