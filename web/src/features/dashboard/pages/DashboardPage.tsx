@@ -1,21 +1,19 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ExternalLink } from 'lucide-react';
 import { ErrorState } from '@/shared/ui/ErrorState';
 import { useReducedMotion } from '@/shared/hooks/useReducedMotion';
-import { TypewriterText } from '@/shared/ui/TypewriterText';
 import { selectVariantsByName } from '@/shared/lib/motion';
 import { useDashboard } from '../hooks/useDashboard';
 import {
   DashboardSkeleton,
-  DashboardBanner,
-  DashboardLearningCard,
+  DashboardHeader,
+  ProfileCompletionCard,
+  QuickActions,
+  ResumeLearningCard,
+  SetupBoard,
+  UpcomingEvents,
   DashboardGithubBanner,
-  DashboardTaskBoard,
   DashboardActivityFeed,
-  DashboardSidebar,
-  DashboardQuickActions,
 } from '../components';
 
 export const DashboardPage: React.FC = () => {
@@ -56,62 +54,47 @@ export const DashboardPage: React.FC = () => {
   }
 
   return (
-    <motion.div
-      className="space-y-6"
-      variants={staggerContainer}
-      initial="hidden"
-      animate="show"
-    >
-      {/* 1. GREETING */}
-      <motion.header
-        variants={staggerItem}
-        className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"
+    <div className="relative min-h-[100dvh] overflow-x-hidden text-white bg-black">
+      {/* Soft purple-red ambient corner glows */}
+      <div className="ambient-glow-blob-1" aria-hidden="true" />
+      <div className="ambient-glow-blob-2" aria-hidden="true" />
+
+      <motion.div
+        className="relative z-10 mx-auto w-full max-w-[1400px] p-4 sm:p-6 space-y-6"
+        variants={staggerContainer}
+        initial="hidden"
+        animate="show"
       >
-        <div className="min-w-0">
-          <h1 className="font-heading text-headline-xl-mobile text-ink sm:text-headline-xl">
-            <TypewriterText
-              text={`${greeting}, ${firstName}`}
-              ready={Boolean(profile) || Boolean(profileError)}
-              animate={Boolean(profile?.name)}
-              storageKey="elite:greeting-typed"
-            />{' '}
-            <span aria-hidden="true">👋</span>
-          </h1>
-          {!profileError && <p className="mt-1 text-body-md text-ink-secondary">{contextLine}</p>}
-        </div>
-        {profile?.rollNo && (
-          <Link to={`/students/${profile.rollNo}`} className="btn btn-secondary shrink-0 self-start text-sm">
-            <span>Public showcase</span>
-            <ExternalLink size={14} strokeWidth={2} aria-hidden="true" />
-          </Link>
-        )}
-      </motion.header>
-
-      {showGithubBanner && (
+        {/* 1. Header row: greeting + context on left, public showcase on right */}
         <motion.div variants={staggerItem}>
-          <DashboardGithubBanner onSnooze={handleSnoozeGithub} />
-        </motion.div>
-      )}
-
-      {profileError && (
-        <motion.div variants={staggerItem}>
-          <ErrorState
-            title="We could not load your profile"
-            message={profileError}
-            onRetry={() => refetch()}
+          <DashboardHeader
+            greeting={greeting}
+            firstName={firstName}
+            profile={profile}
+            profileError={profileError}
+            contextLine={contextLine}
           />
         </motion.div>
-      )}
 
-      {/* 2. QUICK ACTIONS BAR */}
-      <motion.div variants={staggerItem}>
-        <DashboardQuickActions actions={quickActions} />
-      </motion.div>
+        {showGithubBanner && (
+          <motion.div variants={staggerItem}>
+            <DashboardGithubBanner onSnooze={handleSnoozeGithub} />
+          </motion.div>
+        )}
 
-      {/* 3. MAIN + SIDEBAR */}
-      <motion.div variants={staggerItem} className="grid grid-cols-1 gap-6 lg:grid-cols-3 xl:grid-cols-4">
-        <div className="min-w-0 space-y-6 lg:col-span-2 xl:col-span-3">
-          <DashboardBanner
+        {profileError && (
+          <motion.div variants={staggerItem}>
+            <ErrorState
+              title="We could not load your profile"
+              message={profileError}
+              onRetry={() => refetch()}
+            />
+          </motion.div>
+        )}
+
+        {/* 2. Profile completion card (full width) */}
+        <motion.div variants={staggerItem}>
+          <ProfileCompletionCard
             tasks={tasks}
             completedCount={completedCount}
             completionPercentage={completionPercentage}
@@ -119,29 +102,41 @@ export const DashboardPage: React.FC = () => {
             nextMissing={nextMissing}
             isComplete={isComplete}
           />
+        </motion.div>
 
-          <DashboardLearningCard />
+        {/* 3. Six quick-action cards */}
+        <motion.div variants={staggerItem}>
+          <QuickActions actions={quickActions} />
+        </motion.div>
 
-          <DashboardTaskBoard tasks={tasks} />
+        {/* 4, 5, 6. 12-column grid: Left 8 cols (Learning + Setup), Right 4 cols (Upcoming events) */}
+        <motion.div variants={staggerItem} className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          <div className="lg:col-span-8 space-y-6 min-w-0">
+            <ResumeLearningCard />
+            <SetupBoard tasks={tasks} />
+            {notifications.length > 0 && (
+              <DashboardActivityFeed
+                notifications={notifications}
+                error={notifError}
+                onRetry={() => refetch()}
+                onNotificationClick={handleNotificationClick}
+              />
+            )}
+          </div>
 
-          <DashboardActivityFeed
-            notifications={notifications}
-            error={notifError}
-            onRetry={() => refetch()}
-            onNotificationClick={handleNotificationClick}
-          />
-        </div>
-
-        <DashboardSidebar
-          events={upcomingEvents}
-          registrations={registrations}
-          eventsError={eventsError}
-          votingCampaigns={votingCampaigns}
-          votingError={votingError}
-          onRetry={() => refetch()}
-        />
+          <div className="lg:col-span-4 min-w-0 lg:sticky lg:top-20">
+            <UpcomingEvents
+              events={upcomingEvents}
+              registrations={registrations}
+              eventsError={eventsError}
+              votingCampaigns={votingCampaigns}
+              votingError={votingError}
+              onRetry={() => refetch()}
+            />
+          </div>
+        </motion.div>
       </motion.div>
-    </motion.div>
+    </div>
   );
 };
 
