@@ -34,7 +34,7 @@ export const BottomTabBar: React.FC<{
     <>
       <nav
         aria-label="Primary"
-        className="fixed inset-x-3 bottom-[calc(0.5rem+env(safe-area-inset-bottom,0px))] z-sticky rounded-2xl border border-white/10 bg-[#0a0a10]/95 backdrop-blur-md shadow-[0_4px_24px_rgba(0,0,0,0.6)] py-1 md:hidden"
+        className="safe-area-pb fixed inset-x-0 bottom-0 z-sticky border-t border-edge bg-surface pt-1 md:hidden"
       >
         <ul className="flex items-stretch px-1">
           {BOTTOM_TAB_NAV.map((entry) => (

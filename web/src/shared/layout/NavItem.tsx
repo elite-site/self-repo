@@ -130,11 +130,10 @@ export const SIDEBAR_NAV: NavEntry[] = [
  * is a button rather than a link, so it is not in this list.
  */
 export const BOTTOM_TAB_NAV: NavEntry[] = [
-  { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-  { label: 'Learning', path: '/learning', icon: GraduationCap },
-  { label: 'Events', path: '/events', icon: Calendar },
-  { label: 'Teams', path: '/teams', icon: Users },
+  { label: 'Home', path: '/dashboard', icon: LayoutDashboard },
+  { label: 'Portfolio', path: '/portfolio', icon: Briefcase },
   { label: 'Profile', path: '/profile', icon: User },
+  { label: 'Events', path: '/events', icon: Calendar },
 ];
 
 const TAB_PATHS = new Set(BOTTOM_TAB_NAV.map((entry) => entry.path));
