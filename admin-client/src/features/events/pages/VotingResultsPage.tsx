@@ -78,13 +78,25 @@ export const VotingResultsPage: React.FC = () => {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center h-64 bg-surface rounded-lg border border-edge">
-          <Loader2 className="w-8 h-8 animate-spin text-status-rejected" />
+        <div className="space-y-6" aria-busy="true">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="skeleton h-24 rounded-lg" />
+            ))}
+          </div>
+          <div className="skeleton h-64 rounded-lg" />
         </div>
       ) : !result ? (
-        <div className="flex flex-col items-center justify-center h-64 bg-surface rounded-lg border border-edge gap-3">
-          <BarChart3 className="w-10 h-10 text-ink-muted" />
-          <p className="text-sm text-ink-muted">No results to display</p>
+        <div className="flex flex-col items-center justify-center p-12 bg-surface rounded-xl border border-edge gap-3 text-center">
+          <div className="w-12 h-12 rounded-full bg-surface-sunken flex items-center justify-center text-ink-muted">
+            <BarChart3 className="w-6 h-6" />
+          </div>
+          <div>
+            <h3 className="text-base font-semibold text-ink">No Election Results Available</h3>
+            <p className="text-xs text-ink-muted mt-1 max-w-sm">
+              There are no voting campaigns currently open or finalized with tallied ballots.
+            </p>
+          </div>
         </div>
       ) : (
         <VotingResultsView
