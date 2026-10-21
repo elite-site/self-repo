@@ -11,16 +11,17 @@ export const VotingResultsView: React.FC<VotingResultsViewProps> = ({
   result,
   onShowFinalizeConfirm,
 }) => {
-  const maxVotes = Math.max(...result.candidates.map(c => c.votes), 1);
+  const candidates = result?.candidates || [];
+  const maxVotes = Math.max(...candidates.map(c => c.votes), 1);
 
   return (
     <>
       {/* Stats row */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
-          { label: 'Total Votes Cast', value: result.totalVotes, icon: Trophy },
-          { label: 'Eligible Voters', value: result.totalEligible, icon: Users },
-          { label: 'Participation Rate', value: `${Math.round(result.participationRate)}%`, icon: BarChart3 },
+          { label: 'Total Votes Cast', value: result.totalVotes ?? 0, icon: Trophy },
+          { label: 'Eligible Voters', value: result.totalEligible ?? 0, icon: Users },
+          { label: 'Participation Rate', value: `${Math.round(result.participationRate ?? 0)}%`, icon: BarChart3 },
         ].map(({ label, value, icon: Icon }) => (
           <div key={label} className="bg-surface rounded-lg border border-edge p-4 flex items-center gap-4 shadow-sm">
             <div className="w-10 h-10 rounded-xl bg-status-bg-rejected text-status-rejected flex items-center justify-center">
@@ -50,8 +51,15 @@ export const VotingResultsView: React.FC<VotingResultsViewProps> = ({
             {result.status === 'FINALIZED' ? '✓ Finalized' : result.status === 'ACTIVE' ? '● Live' : result.status}
           </span>
         </div>
-        {[...result.candidates]
-          .sort((a, b) => b.votes - a.votes)
+        {candidates.length === 0 ? (
+          <div className="p-8 text-center bg-surface-sunken rounded-lg border border-edge">
+            <Trophy className="w-8 h-8 text-ink-muted mx-auto mb-2" />
+            <p className="text-sm font-semibold text-ink">No candidates registered</p>
+            <p className="text-xs text-ink-muted mt-1">This voting campaign does not have any candidates listed yet.</p>
+          </div>
+        ) : (
+          [...candidates]
+            .sort((a, b) => b.votes - a.votes)
           .map((c, i) => (
             <div key={c.id} className="space-y-1.5">
               <div className="flex items-center justify-between">
