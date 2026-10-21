@@ -73,29 +73,14 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
-    label: 'Students',
+    label: 'Core Features',
     items: [
       { id: 'students', label: 'All students', icon: Users },
-      { id: 'github', label: 'GitHub', icon: HardDrive },
       { id: 'moderation', label: 'Moderation queue', icon: ShieldCheck },
-    ],
-  },
-  {
-    label: 'Learning',
-    items: [
+      { id: 'submissions', label: 'Video submissions', icon: Layers },
       { id: 'learning', label: 'Courses & Quizzes', icon: GraduationCap },
-    ],
-  },
-  {
-    label: 'Events',
-    items: [
       { id: 'events', label: 'All events', icon: CalendarDays },
       { id: 'event-registrations', label: 'Registrations', icon: Layers },
-    ],
-  },
-  {
-    label: 'Voting',
-    items: [
       { id: 'voting', label: 'Voting Management', icon: Vote },
       { id: 'voting-results', label: 'Voting Results', icon: BarChart3 },
     ],
@@ -109,19 +94,15 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
-    label: 'Data',
+    label: 'System & Data',
     items: [
       { id: 'analytics', label: 'Analytics', icon: BarChart3 },
       { id: 'exports', label: 'Exports', icon: Download },
-    ],
-  },
-  {
-    label: 'System',
-    items: [
+      { id: 'github', label: 'GitHub', icon: HardDrive },
       { id: 'storage', label: 'Storage', icon: HardDrive },
       { id: 'roles', label: 'Roles & Permissions', icon: Lock },
-      { id: 'audit-logs', label: 'Audit Logs', icon: ScrollText },
       { id: 'activity', label: 'Activity Log', icon: Clock },
+      { id: 'audit-logs', label: 'Audit Logs', icon: ScrollText },
       { id: 'settings', label: 'Settings', icon: Settings },
     ],
   },
@@ -138,7 +119,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab, onLogo
       <div className="flex flex-col h-full overflow-y-auto">
         {/* BRAND */}
         <div className="p-4 border-b border-edge flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-brand-soft text-brand-soft-text flex items-center justify-center shrink-0 border border-brand-soft">
+          <div className="w-9 h-9 rounded-lg bg-indigo-500/10 text-indigo-500 dark:text-indigo-400 flex items-center justify-center shrink-0 border border-indigo-500/20">
             <UserRound strokeWidth={1.75} className="w-4 h-4" />
           </div>
           <div>
@@ -163,13 +144,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab, onLogo
                     onClick={() => onSelectTab(item.id)}
                     className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                       isActive
-                        ? 'bg-brand-soft text-brand-soft-text font-semibold'
+                        ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-semibold border-l-2 border-indigo-600 dark:border-indigo-400'
                         : 'text-ink-secondary hover:text-ink hover:bg-surface-sunken'
                     }`}
                     aria-current={isActive ? 'page' : undefined}
                     aria-pressed={isActive}
                   >
-                    <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-brand' : 'text-ink-muted'}`} aria-hidden="true" />
+                    <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-indigo-600 dark:text-indigo-400' : 'text-ink-muted'}`} aria-hidden="true" />
                     <span className="truncate">{item.label}</span>
                   </button>
                 </div>
@@ -188,7 +169,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab, onLogo
                   aria-expanded={isOpen}
                   aria-controls={`nav-group-${group.label.replace(/\s+/g, '-').toLowerCase()}`}
                 >
-                  <span id={`nav-group-label-${group.label.replace(/\s+/g, '-').toLowerCase()}`} className={hasActive ? 'text-brand' : ''}>{group.label}</span>
+                  <span id={`nav-group-label-${group.label.replace(/\s+/g, '-').toLowerCase()}`} className={hasActive ? 'text-indigo-600 dark:text-indigo-400 font-semibold' : ''}>{group.label}</span>
                   {isOpen ? (
                     <ChevronDown className="w-3 h-3" aria-hidden="true" />
                   ) : (
@@ -206,13 +187,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab, onLogo
                           onClick={() => onSelectTab(item.id)}
                           className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                             isActive
-                              ? 'bg-brand-soft text-brand-soft-text font-semibold'
+                              ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-semibold border-l-2 border-indigo-600 dark:border-indigo-400'
                               : 'text-ink-secondary hover:text-ink hover:bg-surface-sunken'
                           }`}
                           aria-current={isActive ? 'page' : undefined}
                           aria-pressed={isActive}
                         >
-                          <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-brand' : 'text-ink-muted'}`} aria-hidden="true" />
+                          <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-indigo-600 dark:text-indigo-400' : 'text-ink-muted'}`} aria-hidden="true" />
                           <span className="truncate">{item.label}</span>
                         </button>
                       );
