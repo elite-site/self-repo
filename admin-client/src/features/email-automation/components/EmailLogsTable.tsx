@@ -7,8 +7,19 @@ interface EmailLogsTableProps {
 }
 
 export const EmailLogsTable: React.FC<EmailLogsTableProps> = ({ logs }) => {
-  if (logs.length === 0) {
-    return <div className="p-8 text-center text-xs text-ink-muted">No recipient dispatch logs found.</div>;
+  const safeLogs = logs || [];
+  if (safeLogs.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 text-center">
+        <div className="w-12 h-12 rounded-full bg-surface-sunken flex items-center justify-center text-ink-muted mb-3">
+          <Clock className="w-6 h-6" />
+        </div>
+        <h4 className="text-sm font-semibold text-ink">No Recipient Dispatch Logs Found</h4>
+        <p className="text-xs text-ink-muted mt-1 max-w-sm">
+          Individual delivery receipts and delivery confirmations will populate here.
+        </p>
+      </div>
+    );
   }
 
   return (

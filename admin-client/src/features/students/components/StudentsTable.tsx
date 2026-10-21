@@ -239,20 +239,20 @@ export const StudentsTable: React.FC<StudentsTableProps> = ({
                             e.stopPropagation();
                             handleView(student);
                           }}
-                          className="cursor-pointer text-left font-heading text-label-lg font-semibold text-ink hover:text-ink-brand"
+                          className="cursor-pointer text-left font-sans text-sm font-semibold text-ink hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
                         >
                           {student.name}
                         </button>
-                        <span className="mt-0.5 block text-label-md text-ink-secondary">
+                        <span className="mt-0.5 block text-xs font-medium text-slate-700 dark:text-slate-200">
                           {studentYearLabel(student.year)} year · Section {student.section} · {student.branch}
                         </span>
                       </th>
 
-                      <td className="py-3.5 px-4 font-semibold text-ink-secondary">
+                      <td className="py-3.5 px-4 font-mono text-xs font-semibold text-slate-700 dark:text-slate-200">
                         {student.rollNo}
                       </td>
 
-                      <td className="py-3.5 px-4 text-ink-secondary">
+                      <td className="py-3.5 px-4 text-xs font-medium text-slate-700 dark:text-slate-200">
                         <span className="font-semibold text-ink">{studentYearLabel(student.year)}</span>
                         <span className="text-ink-muted mx-1.5">•</span>
                         <span>Sec {student.section}</span>
@@ -265,7 +265,7 @@ export const StudentsTable: React.FC<StudentsTableProps> = ({
                             {formatTime(student.submission.submittedAt)}
                           </span>
                         ) : (
-                          <span className="text-ink-muted text-xs font-semibold">Not submitted</span>
+                          <span className="text-slate-600 dark:text-slate-300 text-xs font-medium">Not submitted</span>
                         )}
                       </td>
 

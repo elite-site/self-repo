@@ -151,7 +151,7 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
       {/* 1. OVERVIEW. The page says what it is, then gets out of the way. */}
       <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <h1 className="font-heading text-headline-lg-mobile text-ink sm:text-headline-lg">
+          <h1 className="font-sans font-bold text-2xl sm:text-3xl text-ink tracking-tight">
             Operations dashboard
           </h1>
           <p className="mt-1 text-body-md text-ink-secondary">

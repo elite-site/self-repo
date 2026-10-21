@@ -7,8 +7,19 @@ interface EmailRunsTableProps {
 }
 
 export const EmailRunsTable: React.FC<EmailRunsTableProps> = ({ runs }) => {
-  if (runs.length === 0) {
-    return <div className="p-8 text-center text-xs text-ink-muted">No automation execution runs found.</div>;
+  const safeRuns = runs || [];
+  if (safeRuns.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 text-center">
+        <div className="w-12 h-12 rounded-full bg-surface-sunken flex items-center justify-center text-ink-muted mb-3">
+          <AlertTriangle className="w-6 h-6" />
+        </div>
+        <h4 className="text-sm font-semibold text-ink">No Automation Execution Runs Found</h4>
+        <p className="text-xs text-ink-muted mt-1 max-w-sm">
+          Workflow triggers will appear here once automated batches or event listeners are dispatched.
+        </p>
+      </div>
+    );
   }
 
   return (

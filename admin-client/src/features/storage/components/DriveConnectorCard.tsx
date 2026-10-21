@@ -11,7 +11,8 @@ interface DriveConnectorCardProps {
   onClearCache: () => void;
 }
 
-const formatUptime = (seconds: number) => {
+const formatUptime = (seconds?: number) => {
+  if (typeof seconds !== 'number' || !Number.isFinite(seconds) || seconds <= 0) return '—';
   const d = Math.floor(seconds / (3600 * 24));
   const h = Math.floor((seconds % (3600 * 24)) / 3600);
   const m = Math.floor((seconds % 3600) / 60);
@@ -111,7 +112,7 @@ export const DriveConnectorCard: React.FC<DriveConnectorCardProps> = ({
             </span>
           </div>
           <span className="text-xs text-ink-muted mt-1 block">
-            Node.js memory RSS: {system.memoryUsedMb} MB
+            Node.js memory RSS: {typeof system?.memoryUsedMb === 'number' && Number.isFinite(system.memoryUsedMb) ? `${system.memoryUsedMb} MB` : '—'}
           </span>
         </div>
       </div>

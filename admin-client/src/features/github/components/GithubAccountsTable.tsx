@@ -75,25 +75,25 @@ export const GithubAccountsTable: React.FC<GithubAccountsTableProps> = ({
               accounts.map((acc) => (
                 <tr key={acc.id} className="hover:bg-surface-canvas/30 transition-colors">
                   <td className="p-3.5 pl-5">
-                    <div className="font-semibold text-ink">{acc.student?.name}</div>
-                    <div className="text-[11px] text-ink-muted font-mono">{acc.student?.rollNo}</div>
+                    <div className="font-semibold text-sm text-ink">{acc.student?.name}</div>
+                    <div className="text-xs text-slate-700 dark:text-slate-200 font-mono font-medium mt-0.5">{acc.student?.rollNo}</div>
                   </td>
                   <td className="p-3.5">
                     <a
                       href={`https://github.com/${acc.login}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex items-center gap-1 text-brand hover:underline font-mono"
+                      className="inline-flex items-center gap-1 text-indigo-600 dark:text-indigo-400 hover:underline font-mono text-xs font-medium"
                     >
                       @{acc.login}
-                      <ExternalLink size={10} />
+                      <ExternalLink size={11} />
                     </a>
                   </td>
-                  <td className="p-3.5 font-medium">{acc.reposCount}</td>
-                  <td className="p-3.5 font-medium">{acc.showcasedCount}</td>
+                  <td className="p-3.5 font-medium text-xs text-slate-700 dark:text-slate-200">{acc.reposCount}</td>
+                  <td className="p-3.5 font-medium text-xs text-slate-700 dark:text-slate-200">{acc.showcasedCount}</td>
                   <td className="p-3.5">
                     <span
-                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                      className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
                         acc.syncStatus === 'COMPLETED'
                           ? 'bg-success/10 text-success'
                           : acc.syncStatus === 'FAILED'
@@ -106,12 +106,12 @@ export const GithubAccountsTable: React.FC<GithubAccountsTableProps> = ({
                       {acc.syncStatus}
                     </span>
                     {acc.syncError && (
-                      <div className="text-[10px] text-danger truncate max-w-xs mt-0.5" title={acc.syncError}>
+                      <div className="text-xs text-danger truncate max-w-xs mt-0.5" title={acc.syncError}>
                         {acc.syncError}
                       </div>
                     )}
                   </td>
-                  <td className="p-3.5 text-ink-muted">
+                  <td className="p-3.5 text-xs text-slate-600 dark:text-slate-300 font-mono">
                     {acc.lastSyncedAt ? new Date(acc.lastSyncedAt).toLocaleString() : 'Never'}
                   </td>
                   <td className="p-3.5 pr-5 text-right">

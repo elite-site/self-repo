@@ -22,9 +22,17 @@ export const StoragePage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[450px]">
-        <div className="w-10 h-10 border-3 border-brand border-t-transparent rounded-full animate-spin mb-4" />
-        <p className="text-sm font-medium text-ink-muted">Inspecting Google Drive & file inventory…</p>
+      <div className="space-y-6" aria-busy="true">
+        <div className="space-y-2">
+          <div className="skeleton h-8 w-72 rounded-lg" />
+          <div className="skeleton h-4 w-96 rounded-lg" />
+        </div>
+        <div className="skeleton h-48 rounded-xl" />
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+          {[0, 1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="skeleton h-28 rounded-xl" />
+          ))}
+        </div>
       </div>
     );
   }

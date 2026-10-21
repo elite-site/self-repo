@@ -21,9 +21,16 @@ export const EmailHistoryPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[450px]">
-        <div className="w-10 h-10 border-3 border-brand border-t-transparent rounded-full animate-spin mb-4" />
-        <p className="text-sm font-medium text-ink-muted">Loading outbound communication logs…</p>
+      <div className="space-y-6" aria-busy="true">
+        <div className="space-y-2">
+          <div className="skeleton h-8 w-64 rounded-lg" />
+          <div className="skeleton h-4 w-96 rounded-lg" />
+        </div>
+        <div className="flex flex-col sm:flex-row justify-between gap-4">
+          <div className="skeleton h-9 w-64 rounded-lg" />
+          <div className="skeleton h-9 w-72 rounded-lg" />
+        </div>
+        <div className="skeleton h-80 rounded-xl" />
       </div>
     );
   }

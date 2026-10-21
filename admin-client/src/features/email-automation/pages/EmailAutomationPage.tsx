@@ -28,9 +28,21 @@ export const EmailAutomationPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[450px]">
-        <div className="w-10 h-10 border-3 border-brand border-t-transparent rounded-full animate-spin mb-4" />
-        <p className="text-sm font-medium text-ink-muted">Loading automation workflows...</p>
+      <div className="space-y-6" aria-busy="true">
+        <div className="space-y-2">
+          <div className="skeleton h-8 w-72 rounded-lg" />
+          <div className="skeleton h-4 w-96 rounded-lg" />
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="skeleton h-24 rounded-xl" />
+          ))}
+        </div>
+        <div className="space-y-4">
+          {[0, 1].map((i) => (
+            <div key={i} className="skeleton h-44 rounded-xl" />
+          ))}
+        </div>
       </div>
     );
   }
