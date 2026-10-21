@@ -57,11 +57,13 @@ export const AnnouncementsPage: React.FC = () => {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center h-48 bg-surface rounded-lg border border-edge">
-          <Loader2 className="w-7 h-7 animate-spin text-status-rejected" />
+        <div className="space-y-3" aria-busy="true">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="skeleton h-32 rounded-xl" />
+          ))}
         </div>
       ) : error ? (
-        <div className="flex flex-col items-center gap-2 h-48 justify-center bg-surface rounded-lg border border-edge">
+        <div className="flex flex-col items-center gap-2 p-10 justify-center bg-surface rounded-xl border border-edge text-center">
           <AlertCircle className="w-8 h-8 text-status-rejected" />
           <p className="text-sm text-ink-muted">{error}</p>
           <button
@@ -71,20 +73,28 @@ export const AnnouncementsPage: React.FC = () => {
             Retry
           </button>
         </div>
-      ) : announcements.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-48 bg-surface rounded-lg border border-edge gap-3">
-          <Inbox className="w-10 h-10 text-ink-muted" />
-          <p className="text-sm font-semibold text-ink-muted">No announcements yet</p>
+      ) : (announcements || []).length === 0 ? (
+        <div className="flex flex-col items-center justify-center p-12 bg-surface rounded-xl border border-edge gap-3 text-center">
+          <div className="w-12 h-12 rounded-full bg-surface-sunken flex items-center justify-center text-ink-muted">
+            <Inbox className="w-6 h-6" />
+          </div>
+          <div>
+            <h3 className="text-base font-semibold text-ink">No Broadcast Announcements</h3>
+            <p className="text-xs text-ink-muted mt-1 max-w-sm">
+              Keep students updated with important notices, deadline reminders, and campus event alerts.
+            </p>
+          </div>
           <button
             onClick={() => setShowCompose(true)}
-            className="text-xs text-status-rejected font-semibold hover:underline cursor-pointer"
+            className="btn btn-secondary text-xs mt-2"
           >
-            Write the first one
+            <Plus className="w-4 h-4 mr-1.5" />
+            Write the first announcement
           </button>
         </div>
       ) : (
         <div className="space-y-3">
-          {announcements.map((a) => (
+          {(announcements || []).map((a) => (
             <AnnouncementCard
               key={a.id}
               announcement={a}
