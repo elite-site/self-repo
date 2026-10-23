@@ -38,6 +38,7 @@ export interface PublicIntroVideo {
   name: string;
   rollNo: string;
   year: number;
+  semester?: number;
   section: string;
   submittedAt: string;
   publishedAt: string | null;
@@ -55,6 +56,7 @@ export interface StudentProfile {
   email: string | null;
   rollNo: string;
   year: number;
+  semester?: number;
   section: string;
   branch: string;
   bio?: string;
@@ -375,6 +377,32 @@ export interface GithubSummaryResponse {
   reminderSnoozedUntil?: string | null;
   repoCount: number;
   showcasedCount: number;
+}
+
+export type ResourceType =
+  | 'NOTES'
+  | 'PPT'
+  | 'QUESTION_PAPER'
+  | 'LAB_MANUAL'
+  | 'SYLLABUS'
+  | 'OTHER';
+
+export interface StudyResource {
+  id: string;
+  title: string;
+  year: number;
+  semester: number;
+  subject: string;
+  type: ResourceType;
+  driveLink: string;
+  drive_link?: string;
+  previewUrl: string;
+  downloadUrl: string;
+  uploadedBy: string;
+  uploaded_by?: string;
+  createdAt: string;
+  created_at?: string;
+  isNew: boolean;
 }
 
 

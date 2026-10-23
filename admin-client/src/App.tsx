@@ -37,6 +37,7 @@ const AdminCoursesPage = React.lazy(() => import('@/features/learning/pages/Admi
 const AdminCourseEditPage = React.lazy(() => import('@/features/learning/pages/AdminCourseEditPage'));
 const AdminCourseEnrollmentsPage = React.lazy(() => import('@/features/learning/pages/AdminCourseEnrollmentsPage'));
 const AdminCourseReportsPage = React.lazy(() => import('@/features/learning/pages/AdminCourseReportsPage'));
+const AdminResourcesPage = React.lazy(() => import('@/features/resources').then((m) => ({ default: m.AdminResourcesPage })));
 
 const PageLoadingFallback: React.FC = () => (
   <BrandedLoading message="Loading Module" fullScreen={false} />
@@ -168,7 +169,7 @@ export const ProtectedLayout: React.FC = () => {
 
   const pathTabs: AdminTab[] = [
     'dashboard', 'submissions', 'students', 'github', 'activity', 'moderation',
-    'learning',
+    'learning', 'resources',
     'events', 'event-registrations', 'voting', 'voting-results',
     'communications', 'email-automation', 'email-history', 'analytics',
     'exports', 'storage', 'roles', 'audit-logs', 'settings'
@@ -268,6 +269,7 @@ const router = createBrowserRouter([
       { path: 'learning/courses/:id/enrollments', element: <AdminCourseEnrollmentsPage /> },
       { path: 'learning/courses/:id/reports', element: <AdminCourseReportsPage /> },
       { path: 'learning/reports/:id', element: <AdminCourseReportsPage /> },
+      { path: 'resources', element: <AdminResourcesPage /> },
       { path: 'events', element: <AdminEventsPage /> },
       { path: 'event-registrations', element: <EventRegistrationsPage /> },
       { path: 'voting', element: <VotingManagementPage /> },

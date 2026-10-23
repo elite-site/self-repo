@@ -4,6 +4,7 @@ export function serializeProfileView(student: any, submission: any, introVideo: 
     rollNo: student.rollNo,
     name: student.name,
     year: student.year,
+    semester: student.semester ?? ((student.year || 1) * 2),
     section: student.section,
     branch: student.branch,
     email: student.email,

@@ -9,7 +9,7 @@ import { formatContentStatus } from '@/shared/utils/status';
 import { notificationsApi } from '@/features/notifications/api';
 import { githubApi } from '@/features/github/api';
 import { celebrate } from '@/shared/lib/celebrate';
-import { User, FileText, Plus, FolderOpen, Video, Calendar, Users } from 'lucide-react';
+import { User, FileText, Plus, FolderOpen, Video, Calendar, Users, BookOpen } from 'lucide-react';
 import { QuickActionItem } from '../components/DashboardQuickActions';
 
 const SETUP_ITEMS = [
@@ -298,6 +298,12 @@ export function useDashboard() {
   const greeting = greetingFor(new Date().getHours());
 
   const quickActions: QuickActionItem[] = [
+    {
+      label: 'Resources',
+      hint: 'Semester study materials',
+      to: '/resources',
+      icon: BookOpen,
+    },
     {
       label: 'Upload video',
       hint: videoStatus.label,

@@ -170,6 +170,7 @@ enum PortalModule {
   SYSTEM
   ROLES
   LEARNING
+  RESOURCES
 }
 
 enum PermissionAction {
@@ -208,6 +209,15 @@ enum SkillSourceType {
   LANGUAGE
   DEPENDENCY
   TOPIC
+}
+
+enum ResourceType {
+  NOTES
+  PPT
+  QUESTION_PAPER
+  LAB_MANUAL
+  SYLLABUS
+  OTHER
 }
 
 
@@ -321,6 +331,7 @@ model Student {
   email       String?       @unique
   name        String
   year        Int
+  semester    Int?
   status      StudentStatus @default(ACTIVE)
   graduatedAt DateTime?
   section     String
@@ -1309,6 +1320,26 @@ model QuizAttempt {
   answers     Json
 
   @@index([quizId, studentId])
+}
+
+model Resource {
+  id         String       @id @default(cuid())
+  title      String
+  year       Int
+  semester   Int
+  subject    String
+  type       ResourceType @default(NOTES)
+  driveLink  String       @map("drive_link")
+  uploadedBy String       @map("uploaded_by")
+  createdAt  DateTime     @default(now()) @map("created_at")
+  updatedAt  DateTime     @updatedAt @map("updated_at")
+
+  @@index([semester])
+  @@index([year, semester])
+  @@index([subject])
+  @@index([type])
+  @@index([createdAt])
+  @@map("resources")
 }
 
 

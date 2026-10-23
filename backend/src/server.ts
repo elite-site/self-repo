@@ -32,6 +32,7 @@ import { startGithubSyncScheduler } from './jobs/githubSyncScheduler';
 import { startQuizReminderScheduler } from './jobs/quizReminder.job';
 import { startRetentionScheduler } from './jobs/retentionJob';
 import { studentLearningRouter, adminLearningRouter } from './modules/learning-home';
+import { studentResourcesRouter, adminResourcesRouter } from './modules/resources';
 import { mountFrontend } from './config/staticAssets';
 import { requestIdMiddleware } from './middleware/requestId';
 import { logger } from './utils/logger';
@@ -173,6 +174,7 @@ const learningFlagGuard = (_req: express.Request, res: express.Response, next: e
 app.use('/api/student/learning', learningFlagGuard, studentLearningRouter);
 
 // 1c. Student portal API routes
+app.use('/api/student/resources', studentResourcesRouter);      // Study resources (year/semester restricted)
 app.use('/api/student/profile', studentProfileRoutes);          // Phase 1: profile
 app.use('/api/student/portfolio', studentPortfolioRoutes);      // Phase 2: projects/achievements/certs
 app.use('/api/student/github', studentGithubRoutes);            // Phase 2: GitHub portfolio & sync
@@ -185,6 +187,10 @@ app.use('/admin', adminAuthRoutes);
 
 // 2b. Admin LearningHub routes (gated by FEATURE_LEARNINGHUB - mounted before generic /admin/api)
 app.use('/admin/api/learning', learningFlagGuard, adminLearningRouter);
+
+// 2c. Admin Study Resources routes
+app.use('/admin/api/resources', adminResourcesRouter);
+app.use('/api/admin/resources', adminResourcesRouter);
 
 // 3. Admin API routes — existing (stats, submissions, media proxy, email)
 app.use('/admin/api', adminApiRoutes);

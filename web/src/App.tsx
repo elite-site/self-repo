@@ -30,6 +30,7 @@ const ResumePage = lazy(() => import('@/features/resume/pages/ResumePage'));
 const EventsPage = lazy(() => import('@/features/events/pages/EventsPage'));
 const EventDetailPage = lazy(() => import('@/features/events/pages/EventDetailPage'));
 const RegistrationsPage = lazy(() => import('@/features/events/pages/RegistrationsPage'));
+const ResourcesPage = lazy(() => import('@/features/resources/pages/ResourcesPage'));
 const TeamsPage = lazy(() => import('@/features/teams/pages/TeamsPage'));
 const VotingPage = lazy(() => import('@/features/voting/pages/VotingPage'));
 const NotificationsPage = lazy(() => import('@/features/notifications/pages/NotificationsPage'));
@@ -192,6 +193,7 @@ const AuthWrapper: React.FC = () => {
         {/* Protected Student Portal Routes: Isolated Student Theme */}
         <Route element={protectedShell()}>
           <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/resources" element={<ResourcesPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/profile/edit" element={<EditProfilePage />} />
           <Route path="/portfolio/*" element={<PortfolioPage />} />

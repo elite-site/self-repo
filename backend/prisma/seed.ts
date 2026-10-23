@@ -5,6 +5,7 @@ import { PrismaClient } from '@prisma/client';
 import { importRoster } from '../scripts/import-roster';
 import { INTERNAL_EVENT_ID, INTERNAL_EVENT_SLUG } from '../src/config/constants';
 import { seedSkills } from './seedSkillsData';
+import { seedResources } from './seedResources';
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
@@ -66,6 +67,7 @@ async function main() {
 
   await seedAdmin();
   await seedSkills(prisma);
+  await seedResources(prisma);
 }
 
 main()

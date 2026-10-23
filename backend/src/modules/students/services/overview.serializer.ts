@@ -6,6 +6,7 @@ export interface StudentProfileData {
   email: string | null;
   name: string;
   year: number;
+  semester?: number | null;
   section: string;
   branch: string;
   status: StudentStatus;
@@ -37,6 +38,7 @@ export function serializeStudentView(
     email: student.email ?? null,
     name: student.name,
     year: student.year,
+    semester: student.semester ?? ((student.year || 1) * 2),
     section: student.section,
     branch: student.branch,
     status: student.status,

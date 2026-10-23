@@ -3,6 +3,7 @@ import { NavLink } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   Bell,
+  BookOpen,
   Briefcase,
   Calendar,
   ClipboardList,
@@ -60,6 +61,13 @@ export const SIDEBAR_NAV: NavEntry[] = [
         },
       ]
     : []),
+  {
+    label: 'Resources',
+    path: '/resources',
+    icon: BookOpen,
+    keywords: 'study materials notes question papers syllabus lab manuals drive',
+    description: 'Semester study materials, notes, and question papers',
+  },
   { label: 'Profile', path: '/profile', icon: User, keywords: 'roll number bio' },
   {
     label: 'Portfolio',

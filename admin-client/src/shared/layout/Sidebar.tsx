@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import {
   Home,
+  BookOpen,
   Users,
   Clock,
   LogOut,
@@ -40,6 +41,7 @@ export type AdminTab =
   | 'activity'
   | 'moderation'
   | 'learning'
+  | 'resources'
   | 'events'
   | 'event-registrations'
   | 'voting'
@@ -79,6 +81,12 @@ const navGroups: NavGroup[] = [
       { id: 'moderation', label: 'Moderation queue', icon: ShieldCheck },
       { id: 'submissions', label: 'Video submissions', icon: Layers },
       { id: 'learning', label: 'Courses & Quizzes', icon: GraduationCap },
+      { id: 'resources', label: 'Study Resources', icon: BookOpen },
+    ],
+  },
+  {
+    label: 'Events',
+    items: [
       { id: 'events', label: 'All events', icon: CalendarDays },
       { id: 'event-registrations', label: 'Registrations', icon: Layers },
       { id: 'voting', label: 'Voting Management', icon: Vote },
