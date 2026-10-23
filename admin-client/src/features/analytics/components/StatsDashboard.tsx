@@ -10,6 +10,7 @@ import {
   ArrowRight,
   Clapperboard,
   ShieldCheck,
+  LucideIcon,
 } from 'lucide-react';
 import { AdminStats } from '../types';
 import { AdminTab } from '@/shared/layout/Sidebar';
@@ -112,7 +113,7 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
     label: string;
     description: string;
     tab: AdminTab;
-    icon: React.FC<{ size?: number; strokeWidth?: number; className?: string }>;
+    icon: LucideIcon;
   }[] = [
     {
       label: 'Moderation queue',

@@ -145,18 +145,16 @@ export const learningAdminApi = {
     return res.data;
   },
 
-  async previewYouTube(url: string): Promise<{
-    videoId: string;
-    title: string | null;
-    thumbnailUrl: string | null;
-    embeddable: boolean;
-  }> {
+  async previewYouTube(url: string): Promise<import('../types').YouTubePreviewResult> {
     if (isMock()) {
       return {
         videoId: 'dQw4w9WgXcQ',
         title: 'Mock Video Preview',
+        description: 'Comprehensive overview and hands-on walkthrough of the core concepts.',
         thumbnailUrl: 'https://img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg',
         embeddable: true,
+        authorName: 'Dr. Jane Doe',
+        durationSec: 600,
       };
     }
     const res = await apiClient.get('/admin/api/learning/youtube/preview', { params: { url } });

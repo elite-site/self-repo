@@ -96,7 +96,8 @@ export const VotingResultsView: React.FC<VotingResultsViewProps> = ({
                 />
               </div>
             </div>
-          ))}
+          ))
+        )}
       </div>
 
       {/* Finalize button */}

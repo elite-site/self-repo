@@ -20,29 +20,79 @@ export function parseDurationText(text?: string | null): number | null {
 
 export async function fetchYouTubePreview(url: string): Promise<YouTubePreviewResult> {
   if (!url || typeof url !== 'string') throw new ValidationError('YouTube URL is required');
-  const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([\w-]{11})/);
+  const match =
+    url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([\w-]{11})/) ||
+    url.trim().match(/^([\w-]{11})$/);
   if (!match) throw new ValidationError('Invalid YouTube URL');
 
   const videoId = match[1];
   let title: string | null = null;
+  let description: string | null = null;
+  let authorName: string | null = null;
+  let durationSec: number | null = null;
+
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 2500);
-    const res = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`, { signal: controller.signal });
+    const timeout = setTimeout(() => controller.abort(), 4000);
+    const playerRes = await fetch('https://www.youtube.com/youtubei/v1/player?prettyPrint=false', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': 'com.google.android.youtube/20.10.38 (Linux; U; Android 14)',
+      },
+      body: JSON.stringify({
+        context: {
+          client: {
+            clientName: 'ANDROID',
+            clientVersion: '20.10.38',
+            hl: 'en',
+          },
+        },
+        videoId,
+      }),
+      signal: controller.signal,
+    });
     clearTimeout(timeout);
-    if (res.ok) {
-      const data = (await res.json()) as any;
-      title = data?.title || null;
+    if (playerRes.ok) {
+      const playerData = (await playerRes.json()) as any;
+      if (playerData?.videoDetails) {
+        title = playerData.videoDetails.title || null;
+        description = playerData.videoDetails.shortDescription || null;
+        authorName = playerData.videoDetails.author || null;
+        if (playerData.videoDetails.lengthSeconds) {
+          const parsed = parseInt(playerData.videoDetails.lengthSeconds, 10);
+          if (!isNaN(parsed) && parsed > 0) durationSec = parsed;
+        }
+      }
     }
   } catch {
     // Network fallback
   }
 
+  if (!title) {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 2500);
+      const res = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`, { signal: controller.signal });
+      clearTimeout(timeout);
+      if (res.ok) {
+        const data = (await res.json()) as any;
+        title = data?.title || null;
+        if (!authorName && data?.author_name) authorName = data.author_name;
+      }
+    } catch {
+      // Network fallback
+    }
+  }
+
   return {
     videoId,
     title,
+    description: description || (title ? `Complete instructional video on ${title}.` : null),
     thumbnailUrl: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
     embeddable: true,
+    authorName,
+    durationSec,
   };
 }
 

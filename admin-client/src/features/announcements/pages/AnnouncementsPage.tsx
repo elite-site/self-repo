@@ -1,5 +1,5 @@
 import React from 'react';
-import { Megaphone, Plus, Loader2, AlertCircle, Inbox } from 'lucide-react';
+import { Megaphone, Plus, AlertCircle, Inbox } from 'lucide-react';
 import { useAnnouncements } from '../hooks/useAnnouncements';
 import { ComposeAnnouncementDialog } from '../components/ComposeAnnouncementDialog';
 import { AnnouncementCard } from '../components/AnnouncementCard';

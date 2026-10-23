@@ -57,8 +57,11 @@ export interface CourseDetailResponse {
 export interface YouTubePreviewResult {
   videoId: string;
   title: string | null;
+  description?: string | null;
   thumbnailUrl: string | null;
   embeddable: boolean;
+  authorName?: string | null;
+  durationSec?: number | null;
 }
 
 export interface YouTubePlaylistItem {

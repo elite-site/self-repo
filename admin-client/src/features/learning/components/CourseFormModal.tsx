@@ -32,6 +32,42 @@ const CATEGORY_SUGGESTIONS = [
   'Core Computer Science',
 ];
 
+export function parseYouTubeVideoId(url: string): string | null {
+  if (!url || typeof url !== 'string') return null;
+  const trimmed = url.trim();
+  const regexMatch = trimmed.match(
+    /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([\w-]{11})/
+  );
+  if (regexMatch && regexMatch[1]) return regexMatch[1];
+  try {
+    const parsed = new URL(trimmed.startsWith('http') ? trimmed : `https://${trimmed}`);
+    if (parsed.hostname.includes('youtube.com')) {
+      const v = parsed.searchParams.get('v');
+      if (v && /^[\w-]{11}$/.test(v)) return v;
+      const pathParts = parsed.pathname.split('/').filter(Boolean);
+      if (
+        (pathParts[0] === 'embed' || pathParts[0] === 'v' || pathParts[0] === 'shorts') &&
+        pathParts[1] &&
+        /^[\w-]{11}$/.test(pathParts[1])
+      ) {
+        return pathParts[1];
+      }
+    } else if (parsed.hostname.includes('youtu.be')) {
+      const pathParts = parsed.pathname.split('/').filter(Boolean);
+      if (pathParts[0] && /^[\w-]{11}$/.test(pathParts[0])) return pathParts[0];
+    }
+  } catch {
+    // ignore
+  }
+  return null;
+}
+
+export function isYouTubePlaylist(url: string): boolean {
+  if (!url || typeof url !== 'string') return false;
+  const trimmed = url.trim();
+  return /[?&]list=([a-zA-Z0-9_-]+)/.test(trimmed) || /^(PL[a-zA-Z0-9_-]+)$/.test(trimmed);
+}
+
 export const CourseFormModal: React.FC<CourseFormModalProps> = ({
   open,
   onClose,
@@ -66,11 +102,11 @@ export const CourseFormModal: React.FC<CourseFormModalProps> = ({
   const [targetYear, setTargetYear] = useState<number | ''>('');
   const [targetSection, setTargetSection] = useState('');
 
-  // YouTube Playlist Quick Import
-  const [playlistUrl, setPlaylistUrl] = useState('');
-  const [playlistLoading, setPlaylistLoading] = useState(false);
-  const [playlistSuccess, setPlaylistSuccess] = useState<string | null>(null);
-  const [playlistError, setPlaylistError] = useState<string | null>(null);
+  // YouTube Video / Playlist Quick Import
+  const [quickStartUrl, setQuickStartUrl] = useState('');
+  const [quickStartLoading, setQuickStartLoading] = useState(false);
+  const [quickStartSuccess, setQuickStartSuccess] = useState<string | null>(null);
+  const [quickStartError, setQuickStartError] = useState<string | null>(null);
   const [stagedLessons, setStagedLessons] = useState<YouTubePlaylistItem[]>([]);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -97,9 +133,9 @@ export const CourseFormModal: React.FC<CourseFormModalProps> = ({
       setTargetYear('');
       setTargetSection('');
       setStagedLessons([]);
-      setPlaylistUrl('');
-      setPlaylistSuccess(null);
-      setPlaylistError(null);
+      setQuickStartUrl('');
+      setQuickStartSuccess(null);
+      setQuickStartError(null);
     } else {
       setTitle('');
       setSlug('');
@@ -121,9 +157,9 @@ export const CourseFormModal: React.FC<CourseFormModalProps> = ({
       setTargetYear('');
       setTargetSection('');
       setStagedLessons([]);
-      setPlaylistUrl('');
-      setPlaylistSuccess(null);
-      setPlaylistError(null);
+      setQuickStartUrl('');
+      setQuickStartSuccess(null);
+      setQuickStartError(null);
     }
     setErrors({});
     setActiveTab('general');
@@ -141,37 +177,98 @@ export const CourseFormModal: React.FC<CourseFormModalProps> = ({
     }
   };
 
-  const handleFetchPlaylist = async () => {
-    if (!playlistUrl.trim()) return;
-    setPlaylistLoading(true);
-    setPlaylistError(null);
-    setPlaylistSuccess(null);
+  const handleAutoFill = async () => {
+    const trimmed = quickStartUrl.trim();
+    if (!trimmed) return;
+
+    setQuickStartLoading(true);
+    setQuickStartError(null);
+    setQuickStartSuccess(null);
+
+    const isPlaylist = isYouTubePlaylist(trimmed);
+    const videoId = parseYouTubeVideoId(trimmed);
+
+    if (!isPlaylist && !videoId) {
+      setQuickStartLoading(false);
+      setQuickStartError(
+        'Invalid YouTube URL. Please enter a valid YouTube video (watch, youtu.be, embed) or playlist link.'
+      );
+      return;
+    }
 
     try {
-      const data = await learningAdminApi.previewYouTubePlaylist(playlistUrl.trim());
-      if (data.title && !title) {
-        setTitle(data.title);
+      if (isPlaylist) {
+        // Case A (Playlist Link detected): Maintain existing workflow
+        const data = await learningAdminApi.previewYouTubePlaylist(trimmed);
+        if (data.title && !title) {
+          setTitle(data.title);
+          if (!course) {
+            setSlug(
+              data.title
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/(^-|-$)+/g, '')
+            );
+          }
+        }
+        if (data.description && !description) {
+          setDescription(data.description);
+        }
+        if (data.thumbnailUrl && !thumbnailUrl) {
+          setThumbnailUrl(data.thumbnailUrl);
+        }
+        setStagedLessons(data.videos);
+        setQuickStartSuccess(`Successfully loaded ${data.videos.length} videos from "${data.title || 'Playlist'}"!`);
+      } else if (videoId) {
+        // Case B (Single Video Link detected): Parse out specific Video ID, auto-fill Title/Description, push as Lesson 1
+        const data = await learningAdminApi.previewYouTube(trimmed);
+        const resolvedTitle = data.title || 'Lesson 1';
+        const resolvedDescription =
+          data.description ||
+          (data.title ? `In-depth instructional video covering ${data.title}.` : 'Instructional video lesson.');
+        const resolvedThumbnail = data.thumbnailUrl || `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+
+        setTitle(resolvedTitle);
         if (!course) {
           setSlug(
-            data.title
+            resolvedTitle
               .toLowerCase()
               .replace(/[^a-z0-9]+/g, '-')
               .replace(/(^-|-$)+/g, '')
           );
         }
+        setDescription(resolvedDescription);
+        if (resolvedThumbnail && !thumbnailUrl) {
+          setThumbnailUrl(resolvedThumbnail);
+        }
+        if (data.authorName && !instructor) {
+          setInstructor(data.authorName);
+        }
+        if (data.durationSec && !estimatedHours) {
+          setEstimatedHours((data.durationSec / 3600).toFixed(1));
+        }
+
+        const singleLesson: YouTubePlaylistItem = {
+          videoId,
+          title: resolvedTitle,
+          durationSec: data.durationSec || null,
+          durationText: data.durationSec
+            ? `${Math.floor(data.durationSec / 60)}:${String(data.durationSec % 60).padStart(2, '0')}`
+            : undefined,
+          thumbnailUrl: resolvedThumbnail,
+        };
+
+        setStagedLessons([singleLesson]);
+        setQuickStartSuccess(`Successfully loaded "${resolvedTitle}" and staged as Lesson 1!`);
       }
-      if (data.description && !description) {
-        setDescription(data.description);
-      }
-      if (data.thumbnailUrl && !thumbnailUrl) {
-        setThumbnailUrl(data.thumbnailUrl);
-      }
-      setStagedLessons(data.videos);
-      setPlaylistSuccess(`Successfully loaded ${data.videos.length} videos from "${data.title || 'Playlist'}"!`);
     } catch (err: any) {
-      setPlaylistError(err?.response?.data?.message || err?.message || 'Could not fetch YouTube playlist');
+      setQuickStartError(
+        err?.response?.data?.message ||
+          err?.message ||
+          (isPlaylist ? 'Could not fetch YouTube playlist' : 'Could not fetch YouTube video details')
+      );
     } finally {
-      setPlaylistLoading(false);
+      setQuickStartLoading(false);
     }
   };
 
@@ -239,51 +336,6 @@ export const CourseFormModal: React.FC<CourseFormModalProps> = ({
   return (
     <Dialog open={open} onClose={onClose} title={course ? 'Edit Course' : 'Create Course'} size="lg">
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Quick YouTube Playlist Importer Box (visible on creation or edit) */}
-        {!course && (
-          <div className="surface-raised border border-brand/20 bg-brand-soft/5 rounded-xl p-3 space-y-2">
-            <div className="flex items-center gap-2 text-xs font-semibold text-brand">
-              <ListVideo className="w-4 h-4" />
-              <span>Quick Start from YouTube Playlist (Optional)</span>
-            </div>
-            <p className="text-[11px] text-ink-muted">
-              Paste a YouTube playlist link to auto-fill course details and automatically stage all videos as lessons.
-            </p>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={playlistUrl}
-                onChange={(e) => {
-                  setPlaylistUrl(e.target.value);
-                  setPlaylistError(null);
-                }}
-                placeholder="https://www.youtube.com/playlist?list=..."
-                className="input text-xs flex-1"
-                disabled={playlistLoading}
-              />
-              <button
-                type="button"
-                onClick={handleFetchPlaylist}
-                disabled={playlistLoading || !playlistUrl.trim()}
-                className="btn btn-secondary text-xs px-3 flex items-center gap-1.5 shrink-0 disabled:opacity-50"
-              >
-                {playlistLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5 text-brand" />}
-                {playlistLoading ? 'Loading...' : 'Auto-Fill'}
-              </button>
-            </div>
-            {playlistSuccess && (
-              <p className="text-xs text-status-approved flex items-center gap-1 font-medium">
-                <Check className="w-3.5 h-3.5" /> {playlistSuccess}
-              </p>
-            )}
-            {playlistError && (
-              <p className="text-xs text-status-rejected flex items-center gap-1">
-                <AlertCircle className="w-3.5 h-3.5" /> {playlistError}
-              </p>
-            )}
-          </div>
-        )}
-
         {/* Tab Navigation */}
         <div className="flex border-b border-edge gap-2 text-xs font-medium">
           <button
@@ -303,6 +355,11 @@ export const CourseFormModal: React.FC<CourseFormModalProps> = ({
             }`}
           >
             <Sparkles className="w-3.5 h-3.5" /> Instructor & Curriculum
+            {stagedLessons.length > 0 && !course && (
+              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-brand/10 text-brand font-semibold">
+                {stagedLessons.length}
+              </span>
+            )}
           </button>
           <button
             type="button"
@@ -318,6 +375,50 @@ export const CourseFormModal: React.FC<CourseFormModalProps> = ({
         {/* Tab 1: Basic Details */}
         {activeTab === 'general' && (
           <div className="space-y-3">
+            {/* Quick Start from YouTube Video or Playlist */}
+            {!course && (
+              <div className="surface-raised border border-brand/20 bg-brand-soft/5 rounded-xl p-3 space-y-2">
+                <div className="flex items-center gap-2 text-xs font-semibold text-brand">
+                  <ListVideo className="w-4 h-4" />
+                  <span>Quick Start from YouTube Video or Playlist (Optional)</span>
+                </div>
+                <p className="text-[11px] text-ink-muted">
+                  Paste a YouTube video or playlist link to auto-fill course details and automatically stage lessons.
+                </p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={quickStartUrl}
+                    onChange={(e) => {
+                      setQuickStartUrl(e.target.value);
+                      setQuickStartError(null);
+                    }}
+                    placeholder="e.g., https://youtube.com... or https://youtube.com..."
+                    className="input text-xs flex-1"
+                    disabled={quickStartLoading}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAutoFill}
+                    disabled={quickStartLoading || !quickStartUrl.trim()}
+                    className="btn btn-secondary text-xs px-3 flex items-center gap-1.5 shrink-0 disabled:opacity-50"
+                  >
+                    {quickStartLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5 text-brand" />}
+                    {quickStartLoading ? 'Loading...' : 'Auto-Fill'}
+                  </button>
+                </div>
+                {quickStartSuccess && (
+                  <p className="text-xs text-status-approved flex items-center gap-1 font-medium">
+                    <Check className="w-3.5 h-3.5" /> {quickStartSuccess}
+                  </p>
+                )}
+                {quickStartError && (
+                  <p className="text-xs text-status-rejected flex items-center gap-1">
+                    <AlertCircle className="w-3.5 h-3.5" /> {quickStartError}
+                  </p>
+                )}
+              </div>
+            )}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-medium text-ink-muted mb-1" htmlFor="cf-title">
@@ -447,6 +548,55 @@ export const CourseFormModal: React.FC<CourseFormModalProps> = ({
         {/* Tab 2: Instructor & Curriculum */}
         {activeTab === 'curriculum' && (
           <div className="space-y-3">
+            {stagedLessons.length > 0 && !course && (
+              <div className="surface-sunken border border-brand/20 bg-brand-soft/5 rounded-xl p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-brand">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Staged Curriculum Lessons ({stagedLessons.length})</span>
+                  </div>
+                  <span className="text-[10px] text-ink-muted">Auto-created on course save</span>
+                </div>
+                <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                  {stagedLessons.map((lesson, idx) => (
+                    <div
+                      key={`${lesson.videoId}-${idx}`}
+                      className="flex items-center justify-between p-2 rounded-lg bg-surface border border-edge text-xs gap-2"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span className="w-5 h-5 rounded-full bg-brand/10 text-brand text-[10px] font-bold flex items-center justify-center shrink-0">
+                          {idx + 1}
+                        </span>
+                        {lesson.thumbnailUrl && (
+                          <img
+                            src={lesson.thumbnailUrl}
+                            alt=""
+                            className="w-10 h-7 object-cover rounded border border-edge shrink-0"
+                            onError={() => {}}
+                          />
+                        )}
+                        <div className="min-w-0">
+                          <p className="font-medium text-ink truncate">{lesson.title}</p>
+                          <p className="text-[10px] text-ink-muted flex items-center gap-1.5">
+                            <span className="font-mono">YouTube: {lesson.videoId}</span>
+                            {lesson.durationText && <span>• {lesson.durationText}</span>}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setStagedLessons((prev) => prev.filter((_, i) => i !== idx))}
+                        className="text-ink-muted hover:text-status-rejected text-[11px] px-1.5 py-0.5 rounded transition-colors shrink-0"
+                        title="Remove staged lesson"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div>
               <label className="block text-xs font-medium text-ink-muted mb-1" htmlFor="cf-instr">
                 Instructor / Faculty / Mentor Name
@@ -677,7 +827,7 @@ export const CourseFormModal: React.FC<CourseFormModalProps> = ({
           <div className="text-xs text-ink-muted">
             {stagedLessons.length > 0 && !course && (
               <span className="text-brand font-medium">
-                ✨ {stagedLessons.length} lessons will be auto-created
+                ✨ {stagedLessons.length} {stagedLessons.length === 1 ? 'lesson' : 'lessons'} will be auto-created
               </span>
             )}
           </div>

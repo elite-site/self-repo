@@ -53,6 +53,16 @@ export interface YouTubePlaylistItem {
   thumbnailUrl: string;
 }
 
+export interface YouTubePreviewResult {
+  videoId: string;
+  title: string | null;
+  description?: string | null;
+  thumbnailUrl: string | null;
+  embeddable: boolean;
+  authorName?: string | null;
+  durationSec?: number | null;
+}
+
 export interface YouTubePlaylistResult {
   playlistId: string;
   title: string | null;
