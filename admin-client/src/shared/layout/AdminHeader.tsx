@@ -86,7 +86,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
   const hasAlerts = pendingModeration > 0;
 
   return (
-    <header className="w-full bg-surface border-b border-edge py-3 px-4 sm:px-8 flex items-center justify-between sticky top-0 z-sticky shadow-card transition-colors">
+    <header className="w-full bg-surface border-b border-edge h-16 px-4 sm:px-8 flex items-center justify-between sticky top-0 z-sticky shadow-card transition-colors">
       {/* LEFT: MOBILE SIDEBAR TRIGGER */}
       <div className="flex items-center gap-3">
         {onToggleMobileSidebar && (

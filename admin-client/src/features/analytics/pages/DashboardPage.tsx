@@ -35,7 +35,7 @@ export const DashboardPage: React.FC = () => {
     <StatsDashboard
       stats={stats}
       loading={loading}
-      onNavigateTab={(t) => navigate(`/admin/${t}`)}
+      onNavigateTab={(t) => navigate(t.startsWith('/') ? t : `/admin/${t}`)}
     />
   );
 };

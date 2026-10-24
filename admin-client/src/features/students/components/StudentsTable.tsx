@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Search,
   ChevronLeft,
@@ -31,13 +32,33 @@ export const StudentsTable: React.FC<StudentsTableProps> = ({
   activeEventId,
   onSelectStudent,
 }) => {
+  const [searchParams] = useSearchParams();
+
+  const initialUploaded = searchParams.get('uploaded') || (searchParams.get('filter') === 'active' ? 'yes' : '');
+  const initialYear = searchParams.get('year') || '';
+  const initialSection = searchParams.get('section') || '';
+  const initialSearch = searchParams.get('search') || '';
+
   const [data, setData] = useState<StudentsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [search, setSearch] = useState('');
-  const [yearFilter, setYearFilter] = useState<string>('');
-  const [sectionFilter, setSectionFilter] = useState<string>('');
-  const [uploadedFilter, setUploadedFilter] = useState<string>('');
+  const [search, setSearch] = useState(initialSearch);
+  const [yearFilter, setYearFilter] = useState<string>(initialYear);
+  const [sectionFilter, setSectionFilter] = useState<string>(initialSection);
+  const [uploadedFilter, setUploadedFilter] = useState<string>(initialUploaded);
+
+  useEffect(() => {
+    const uploaded = searchParams.get('uploaded') || (searchParams.get('filter') === 'active' ? 'yes' : '');
+    const year = searchParams.get('year') || '';
+    const section = searchParams.get('section') || '';
+    const q = searchParams.get('search') || '';
+
+    setUploadedFilter(uploaded);
+    setYearFilter(year);
+    setSectionFilter(section);
+    setSearch(q);
+    setPage(1);
+  }, [searchParams]);
 
   const loadStudents = useCallback(async () => {
     setLoading(true);

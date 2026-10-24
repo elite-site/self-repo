@@ -126,28 +126,31 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab, onLogo
     <aside className="w-60 bg-surface border-r border-edge flex flex-col shrink-0 h-[100dvh] sticky top-0 text-left z-sticky select-none">
       <div className="flex flex-col h-full overflow-y-auto">
         {/* BRAND */}
-        <div className="p-4 border-b border-edge flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-indigo-500/10 text-indigo-500 dark:text-indigo-400 flex items-center justify-center shrink-0 border border-indigo-500/20">
+        <div className="h-16 px-4 border-b border-edge flex items-center gap-2.5 shrink-0">
+          <div className="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-500 dark:text-indigo-400 flex items-center justify-center shrink-0 border border-indigo-500/20">
             <UserRound strokeWidth={1.75} className="w-4 h-4" />
           </div>
-          <div>
-            <div className="flex items-center gap-1 font-heading text-sm font-semibold tracking-tight leading-tight">
+          <div className="text-left leading-tight">
+            <div className="flex items-center gap-1 font-heading text-xs font-bold tracking-tight text-ink">
               <span className="text-brand">ELITE</span>
-              <span className="text-ink">Portal</span>
+              <span>Portal</span>
             </div>
-            <div className="text-xs text-ink-muted font-semibold">Admin Control</div>
+            <div className="text-xs text-ink-muted font-medium">Admin Control</div>
           </div>
         </div>
 
         {/* NAV GROUPS */}
-        <nav className="flex-1 p-2.5 space-y-3 overflow-y-auto" aria-label="Admin navigation">
-          {navGroups.map((group) => {
+        <nav className="flex-1 p-2.5 space-y-1 overflow-y-auto" aria-label="Admin navigation">
+          {navGroups.map((group, groupIdx) => {
+            const isFirstGroup = groupIdx === 0;
+            const groupSpacingClass = isFirstGroup ? 'mb-1' : 'mb-1 mt-2';
+
             if (group.items.length === 1) {
               const item = group.items[0];
               const Icon = item.icon;
               const isActive = activeTab === item.id;
               return (
-                <div key={group.label} className="mb-1">
+                <div key={group.label} className={groupSpacingClass}>
                   <div className="px-2.5 pt-1.5 pb-1 text-[10px] uppercase font-bold tracking-wider text-ink-muted select-none">
                     {group.label}
                   </div>
@@ -178,7 +181,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab, onLogo
             // they are looking at behind a closed disclosure.
             const isOpen = hasActive || !collapsed[group.label];
             return (
-              <div key={group.label} className="mb-1">
+              <div key={group.label} className={groupSpacingClass}>
                 <button
                   onClick={() => toggle(group.label)}
                   className="w-full flex items-center justify-between px-2.5 py-1 text-[10px] uppercase font-bold tracking-wider text-ink-muted hover:text-ink-secondary transition-colors cursor-pointer select-none"
