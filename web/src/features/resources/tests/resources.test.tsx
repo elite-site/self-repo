@@ -73,9 +73,8 @@ describe('Resources Feature — Frontend Unit Tests', () => {
     expect(getAllowedSemesters({ year: 4 })).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
   });
 
-  it('SemesterTabs renders ONLY allowed semesters and never future semesters', () => {
+  it('SemesterTabs includes Semester 7 and Semester 8 with YEAR 4 subtext following Semester 6', () => {
     const onSelect = vi.fn();
-    // 3rd-year student allowed semesters: 1 to 6
     render(
       <SemesterTabs
         allowedSemesters={[1, 2, 3, 4, 5, 6]}
@@ -88,9 +87,49 @@ describe('Resources Feature — Frontend Unit Tests', () => {
     expect(screen.getByText('Semester 1')).toBeInTheDocument();
     expect(screen.getByText('Semester 6')).toBeInTheDocument();
 
-    // Should NEVER see Sem 7 or Sem 8
-    expect(screen.queryByText('Semester 7')).not.toBeInTheDocument();
-    expect(screen.queryByText('Semester 8')).not.toBeInTheDocument();
+    // Should include Semester 7 and Semester 8 pills with YEAR 4 subtext
+    expect(screen.getByText('Semester 7')).toBeInTheDocument();
+    expect(screen.getByText('Semester 8')).toBeInTheDocument();
+    const year4Badges = screen.getAllByText('YEAR 4');
+    expect(year4Badges).toHaveLength(2);
+
+    // Clicking Semester 7 triggers the onSelectSemester callback
+    fireEvent.click(screen.getByText('Semester 7'));
+    expect(onSelect).toHaveBeenCalledWith(7);
+
+    // Clicking Semester 8 triggers the onSelectSemester callback
+    fireEvent.click(screen.getByText('Semester 8'));
+    expect(onSelect).toHaveBeenCalledWith(8);
+  });
+
+  it('SemesterTabs renders active and inactive states correctly for Semester 7 and 8', () => {
+    const onSelect = vi.fn();
+    const { rerender } = render(
+      <SemesterTabs
+        allowedSemesters={[1, 2, 3, 4, 5, 6]}
+        selectedSemester={7}
+        onSelectSemester={onSelect}
+      />
+    );
+
+    const sem7Button = screen.getByRole('tab', { name: /semester 7/i });
+    expect(sem7Button).toHaveAttribute('aria-selected', 'true');
+    expect(sem7Button.className).toContain('bg-brand');
+
+    const sem8Button = screen.getByRole('tab', { name: /semester 8/i });
+    expect(sem8Button).toHaveAttribute('aria-selected', 'false');
+    expect(sem8Button.className).toContain('bg-surface');
+
+    rerender(
+      <SemesterTabs
+        allowedSemesters={[1, 2, 3, 4, 5, 6]}
+        selectedSemester={8}
+        onSelectSemester={onSelect}
+      />
+    );
+
+    expect(sem8Button).toHaveAttribute('aria-selected', 'true');
+    expect(sem8Button.className).toContain('bg-brand');
   });
 
   it('ResourceItem renders title, badge, "New" badge, and action buttons', () => {
@@ -153,6 +192,48 @@ describe('Resources Feature — Frontend Unit Tests', () => {
 
     await waitFor(() => {
       expect(screen.getByText('No materials uploaded yet for this semester')).toBeInTheDocument();
+    });
+  });
+
+  it('clicking Semester 7 or Semester 8 updates active state and filters study materials', async () => {
+    const sem7Resource: StudyResource = {
+      id: 'res-7',
+      title: 'Cloud Computing Architecture Slides',
+      year: 4,
+      semester: 7,
+      subject: 'Cloud Computing',
+      type: 'PPT',
+      driveLink: 'https://drive.google.com/file/d/sample-cloud/view',
+      previewUrl: 'https://drive.google.com/file/d/sample-cloud/preview',
+      downloadUrl: 'https://drive.google.com/uc?export=download&id=sample-cloud',
+      uploadedBy: 'Admin',
+      createdAt: new Date().toISOString(),
+      isNew: true,
+    };
+
+    vi.mocked(resourcesApi.getResources).mockResolvedValue({
+      resources: [sem7Resource],
+      allowedSemesters: [1, 2, 3, 4, 5, 6, 7, 8],
+      currentSemester: 5,
+      accessRule: 'CURRENT_YEAR_AND_EARLIER',
+      totalCount: 1,
+    });
+
+    renderWithProviders(<ResourcesPage />);
+
+    // Semester 7 and 8 tabs are available
+    await waitFor(() => {
+      expect(screen.getByText('Semester 7')).toBeInTheDocument();
+      expect(screen.getByText('Semester 8')).toBeInTheDocument();
+    });
+
+    // Clicking Semester 7 triggers resource query for semester 7
+    fireEvent.click(screen.getByText('Semester 7'));
+
+    await waitFor(() => {
+      expect(resourcesApi.getResources).toHaveBeenCalledWith(
+        expect.objectContaining({ semester: 7 })
+      );
     });
   });
 });

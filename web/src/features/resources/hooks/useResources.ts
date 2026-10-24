@@ -29,13 +29,6 @@ export function useResources() {
   const [selectedType, setSelectedType] = useState<ResourceType | 'ALL'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Keep selected semester in sync if default changes on initial load
-  useEffect(() => {
-    if (defaultSemester && !localAllowed.includes(selectedSemester)) {
-      setSelectedSemester(defaultSemester);
-    }
-  }, [defaultSemester, localAllowed, selectedSemester]);
-
   const queryParams = useMemo(() => {
     return {
       semester: selectedSemester,
@@ -57,7 +50,21 @@ export function useResources() {
     staleTime: 60_000,
   });
 
-  const allowedSemesters = data?.allowedSemesters || localAllowed;
+  // Ensure Semester 7 & 8 are available for filtering across all views
+  const allowedSemesters = useMemo(() => {
+    const base = data?.allowedSemesters || localAllowed;
+    const list = [...base];
+    if (!list.includes(7)) list.push(7);
+    if (!list.includes(8)) list.push(8);
+    return list.sort((a, b) => a - b);
+  }, [data?.allowedSemesters, localAllowed]);
+
+  // Keep selected semester in sync if default changes on initial load
+  useEffect(() => {
+    if (defaultSemester && !allowedSemesters.includes(selectedSemester)) {
+      setSelectedSemester(defaultSemester);
+    }
+  }, [defaultSemester, allowedSemesters, selectedSemester]);
   const resources: StudyResource[] = data?.resources || [];
 
   // Group resources by subject
