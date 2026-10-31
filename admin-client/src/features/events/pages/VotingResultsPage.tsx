@@ -9,12 +9,14 @@ export const VotingResultsPage: React.FC = () => {
     selectedId,
     setSelectedId,
     result,
-    loading,
+    isLoading,
     finalizing,
     showFinalizeConfirm,
     setShowFinalizeConfirm,
     handleFinalize,
   } = useVotingResults();
+
+  const isCampaignDataEmpty = !campaigns || campaigns.length === 0;
 
   return (
     <div className="space-y-6">
@@ -62,7 +64,9 @@ export const VotingResultsPage: React.FC = () => {
             <p className="text-xs text-ink-muted">Live and final vote tallies</p>
           </div>
         </div>
-        {campaigns.length > 0 && (
+        {isLoading ? (
+          <div className="skeleton h-9 w-48 rounded-lg" aria-hidden="true" />
+        ) : campaigns.length > 0 ? (
           <select
             value={selectedId}
             onChange={e => setSelectedId(e.target.value)}
@@ -74,19 +78,54 @@ export const VotingResultsPage: React.FC = () => {
               </option>
             ))}
           </select>
-        )}
+        ) : null}
       </div>
 
-      {loading ? (
-        <div className="space-y-6" aria-busy="true">
+      {isLoading ? (
+        <div className="space-y-6" aria-busy="true" aria-label="Loading election results">
+          {/* Skeleton Stats row matching 3-card grid */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {[0, 1, 2].map((i) => (
-              <div key={i} className="skeleton h-24 rounded-lg" />
+              <div
+                key={i}
+                className="bg-surface rounded-lg border border-edge p-4 flex items-center gap-4 shadow-sm"
+              >
+                <div className="w-10 h-10 rounded-xl skeleton shrink-0" />
+                <div className="space-y-2 flex-1">
+                  <div className="skeleton h-7 w-20 rounded" />
+                  <div className="skeleton h-3 w-28 rounded" />
+                </div>
+              </div>
             ))}
           </div>
-          <div className="skeleton h-64 rounded-lg" />
+
+          {/* Skeleton Candidate Results Card matching VotingResultsView card */}
+          <div className="bg-surface rounded-lg border border-edge p-6 space-y-5 shadow-sm">
+            <div className="flex items-center justify-between mb-2">
+              <div className="skeleton h-5 w-32 rounded" />
+              <div className="skeleton h-5 w-20 rounded-full" />
+            </div>
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-7 h-7 rounded-full skeleton shrink-0" />
+                    <div className="space-y-1.5">
+                      <div className="skeleton h-4 w-36 rounded" />
+                      <div className="skeleton h-3 w-24 rounded" />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5 text-right flex flex-col items-end">
+                    <div className="skeleton h-4 w-10 rounded" />
+                    <div className="skeleton h-3 w-12 rounded" />
+                  </div>
+                </div>
+                <div className="h-2 skeleton rounded-full overflow-hidden" />
+              </div>
+            ))}
+          </div>
         </div>
-      ) : !result ? (
+      ) : isCampaignDataEmpty ? (
         <div className="flex flex-col items-center justify-center p-12 bg-surface rounded-xl border border-edge gap-3 text-center">
           <div className="w-12 h-12 rounded-full bg-surface-sunken flex items-center justify-center text-ink-muted">
             <BarChart3 className="w-6 h-6" />
@@ -98,11 +137,23 @@ export const VotingResultsPage: React.FC = () => {
             </p>
           </div>
         </div>
-      ) : (
+      ) : result ? (
         <VotingResultsView
           result={result}
           onShowFinalizeConfirm={() => setShowFinalizeConfirm(true)}
         />
+      ) : (
+        <div className="flex flex-col items-center justify-center p-12 bg-surface rounded-xl border border-edge gap-3 text-center">
+          <div className="w-12 h-12 rounded-full bg-surface-sunken flex items-center justify-center text-ink-muted">
+            <BarChart3 className="w-6 h-6" />
+          </div>
+          <div>
+            <h3 className="text-base font-semibold text-ink">Election Results Unavailable</h3>
+            <p className="text-xs text-ink-muted mt-1 max-w-sm">
+              Could not load the election results for the selected campaign. Please try selecting a different campaign.
+            </p>
+          </div>
+        </div>
       )}
     </div>
   );
