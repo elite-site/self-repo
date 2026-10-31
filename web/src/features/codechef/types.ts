@@ -6,6 +6,8 @@ export interface CodeChefStatus {
   handle: string | null;
   displayName: string | null;
   avatarUrl: string | null;
+  country: string | null;
+  institution: string | null;
   verified: boolean;
   verifiedAt: string | null;
   verifyCode: string | null;
