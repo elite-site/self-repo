@@ -451,7 +451,7 @@ export async function findActiveVotingCampaigns() {
 
 export async function findDashboardNotifications(studentId: string) {
   return prisma.notification.findMany({
-    where: { studentId },
+    where: { studentId, status: 'UNREAD' },
     orderBy: { createdAt: 'desc' },
     take: 8,
     select: {

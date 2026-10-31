@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ExternalLink, ArrowRight, Clock, Calendar, CheckCircle2 } from 'lucide-react';
+import { ExternalLink, ArrowRight, Clock } from 'lucide-react';
 import { Card } from '@/shared/ui/Card';
 import { RadialRing } from '@/shared/ui/RadialRing';
 import { MetricTile } from '@/shared/ui/MetricTile';
@@ -12,7 +12,6 @@ import { useDashboard } from '../hooks/useDashboard';
 import {
   DashboardSkeleton,
   DashboardLearningCard,
-  DashboardEventSpotlight,
   DashboardGithubBanner,
   DashboardTaskBoard,
   DashboardActivityFeed,
@@ -36,15 +35,14 @@ export const DashboardPage: React.FC = () => {
     showGithubBanner,
     tasks,
     completionPercentage,
-    readinessSubLabel,
-    nextActionUrl,
     courseProgress,
-    codingStreak,
     firstName,
     contextLine,
     quickActions,
     refetch,
     handleNotificationClick,
+    handleClearAllNotifications,
+    clearingNotifs,
     handleSnoozeGithub,
   } = useDashboard();
 
@@ -131,7 +129,7 @@ export const DashboardPage: React.FC = () => {
         </motion.div>
       )}
 
-      {/* 2. THREE COMPACT METRIC TILES (Matches Reference Mockup) */}
+      {/* 2. COURSE PROGRESS METRIC TILE */}
       <motion.div variants={staggerItem} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <MetricTile
           icon={<Clock size={18} aria-hidden="true" />}
@@ -141,28 +139,11 @@ export const DashboardPage: React.FC = () => {
           subLabel={courseProgress.subLabel}
           to="/learning"
         />
-        <MetricTile
-          icon={<Calendar size={18} aria-hidden="true" />}
-          label="Coding Streak:"
-          value={codingStreak.value}
-          suffix={codingStreak.suffix}
-          subLabel={codingStreak.subLabel}
-          to="/github"
-        />
-        <MetricTile
-          icon={<CheckCircle2 size={18} aria-hidden="true" />}
-          label="Placement Readiness:"
-          value={completionPercentage}
-          suffix="/100"
-          subLabel={readinessSubLabel}
-          to={nextActionUrl}
-        />
       </motion.div>
 
-      {/* 3. TWO BALANCED STREAMLINED CARDS (Matches Reference Mockup) */}
-      <motion.div variants={staggerItem} className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
-        <DashboardLearningCard className="h-full rounded-2xl" />
-        <DashboardEventSpotlight events={upcomingEvents} registrations={registrations} />
+      {/* 3. RESUME LEARNING SPOTLIGHT CARD */}
+      <motion.div variants={staggerItem}>
+        <DashboardLearningCard className="rounded-2xl" />
       </motion.div>
 
       {/* 4. QUICK ACTIONS ROW */}
@@ -180,6 +161,8 @@ export const DashboardPage: React.FC = () => {
             error={notifError}
             onRetry={() => refetch()}
             onNotificationClick={handleNotificationClick}
+            onClearAll={handleClearAllNotifications}
+            clearing={clearingNotifs}
           />
         </div>
 

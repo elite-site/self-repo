@@ -10,6 +10,8 @@ interface DashboardActivityFeedProps {
   error: string | null;
   onRetry: () => void;
   onNotificationClick: (n: Notification) => void;
+  onClearAll?: () => void;
+  clearing?: boolean;
 }
 
 const relativeTime = (value: string | undefined) => {
@@ -30,6 +32,8 @@ export const DashboardActivityFeed: React.FC<DashboardActivityFeedProps> = ({
   error,
   onRetry,
   onNotificationClick,
+  onClearAll,
+  clearing = false,
 }) => {
   return (
     <section className="surface p-4 sm:p-5 lg:p-6" aria-labelledby="activity-heading">
@@ -37,13 +41,26 @@ export const DashboardActivityFeed: React.FC<DashboardActivityFeedProps> = ({
         <h2 id="activity-heading" className="font-heading text-headline-md text-ink">
           Recent activity
         </h2>
-        <Link
-          to="/notifications"
-          className="flex items-center gap-1 text-label-lg font-semibold text-ink-brand transition-colors hover:text-brand-hover"
-        >
-          <span>See all</span>
-          <ChevronRight size={16} strokeWidth={1.75} aria-hidden="true" />
-        </Link>
+        <div className="flex items-center gap-3">
+          {notifications.length > 0 && onClearAll && (
+            <button
+              type="button"
+              onClick={onClearAll}
+              disabled={clearing}
+              className="text-xs font-semibold text-ink-muted hover:text-ink transition-colors cursor-pointer disabled:opacity-50"
+              aria-label="Clear all recent activities"
+            >
+              {clearing ? 'Clearing...' : 'Clear all'}
+            </button>
+          )}
+          <Link
+            to="/notifications"
+            className="flex items-center gap-1 text-label-lg font-semibold text-ink-brand transition-colors hover:text-brand-hover"
+          >
+            <span>See all</span>
+            <ChevronRight size={16} strokeWidth={1.75} aria-hidden="true" />
+          </Link>
+        </div>
       </div>
 
       <div className="mt-4">

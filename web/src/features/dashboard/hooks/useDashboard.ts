@@ -175,6 +175,35 @@ export function useDashboard() {
     navigateToNotification(destination, navigate);
   };
 
+  const [clearingNotifs, setClearingNotifs] = useState(false);
+
+  const handleClearAllNotifications = async () => {
+    setClearingNotifs(true);
+    try {
+      await notificationsApi.markAllNotificationsRead();
+      queryClient.setQueryData<StudentDashboardResponse>(['dashboard'], (prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          notifications: [],
+          unreadNotificationsCount: 0,
+        };
+      });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    } catch {
+      queryClient.setQueryData<StudentDashboardResponse>(['dashboard'], (prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          notifications: [],
+          unreadNotificationsCount: 0,
+        };
+      });
+    } finally {
+      setClearingNotifs(false);
+    }
+  };
+
   const [githubBannerDismissed, setGithubBannerDismissed] = useState(false);
 
   const isReminderSnoozed = useMemo(() => {
@@ -476,6 +505,8 @@ export function useDashboard() {
     quickActions,
     refetch,
     handleNotificationClick,
+    handleClearAllNotifications,
+    clearingNotifs,
     handleSnoozeGithub,
   };
 }
