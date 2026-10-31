@@ -24,11 +24,13 @@ import publicRoutes, { publicStudentRouter as publicStudentRoutes, publicVideoRo
 import studentRoutes, { studentProfileRouter as studentProfileRoutes, studentInteractionsRouter as studentInteractionsRoutes } from './modules/students';
 import { portfolioRouter as studentPortfolioRoutes } from './modules/portfolio';
 import { studentGithubRouter as studentGithubRoutes, internalGithubRouter } from './modules/github';
+import { studentCodeChefRouter, adminCodeChefRouter, internalCodeChefRouter } from './modules/codechef';
 import { eventsRouter as studentEventsRoutes } from './modules/events';
 import { adminAuthRouter as adminAuthRoutes } from './modules/auth';
 import adminApiRoutes, { adminPortalRouter as adminPortalRoutes, adminAcademicYearRouter as adminAcademicYearRoutes } from './modules/admin';
 import { startAnnouncementScheduler } from './jobs/announcementScheduler';
 import { startGithubSyncScheduler } from './jobs/githubSyncScheduler';
+import { startCodeChefSyncScheduler } from './jobs/codechefSyncScheduler';
 import { startQuizReminderScheduler } from './jobs/quizReminder.job';
 import { startRetentionScheduler } from './jobs/retentionJob';
 import { studentLearningRouter, adminLearningRouter } from './modules/learning-home';
@@ -158,6 +160,7 @@ app.get('/ready', readyCheckHandler);
 
 // Internal routes (e.g. external-cron triggered GitHub sync tick)
 app.use('/api/internal', internalGithubRouter);
+app.use('/api/internal', internalCodeChefRouter);
 
 
 // 1. Public API routes (existing submission form + new public directory)
@@ -174,6 +177,15 @@ const learningFlagGuard = (_req: express.Request, res: express.Response, next: e
   next();
 };
 
+// Guard: when CodeChef is disabled, return 404
+const codechefFlagGuard = (_req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (!env.FEATURE_CODECHEF) {
+    res.status(404).json({ error: 'NOT_FOUND', message: 'CodeChef integration is disabled' });
+    return;
+  }
+  next();
+};
+
 // 1b. Student LearningHub routes (gated by FEATURE_LEARNINGHUB - mounted before generic /api/student)
 app.use('/api/student/learning', learningFlagGuard, studentLearningRouter);
 
@@ -182,6 +194,7 @@ app.use('/api/student/resources', studentResourcesRouter);      // study materia
 app.use('/api/student/profile', studentProfileRoutes);          // Phase 1: profile
 app.use('/api/student/portfolio', studentPortfolioRoutes);      // Phase 2: projects/achievements/certs
 app.use('/api/student/github', studentGithubRoutes);            // Phase 2: GitHub portfolio & sync
+app.use('/api/student/codechef', codechefFlagGuard, studentCodeChefRouter); // CodeChef integration
 app.use('/api/student/events', studentEventsRoutes);            // Phase 4: events
 app.use('/api/student', studentRoutes);                         // existing: SSO, me, video upload
 app.use('/api/student', studentInteractionsRoutes);             // Phase 5: voting, notifications, registrations, teams
@@ -194,6 +207,9 @@ app.use('/admin/api/learning', learningFlagGuard, adminLearningRouter);
 
 // 2c. Admin Resources routes (shared library, course materials, Drive quota)
 app.use('/admin/api/resources', adminResourcesRouter);
+
+// 2d. Admin CodeChef routes (gated by FEATURE_CODECHEF)
+app.use('/admin/api/codechef', codechefFlagGuard, adminCodeChefRouter);
 
 // 3. Admin API routes — existing (stats, submissions, media proxy, email)
 app.use('/admin/api', adminApiRoutes);
@@ -308,6 +324,9 @@ if (env.NODE_ENV !== 'test') {
 
       // Start background GitHub sync scheduler
       startGithubSyncScheduler();
+
+      // Start background CodeChef sync scheduler
+      startCodeChefSyncScheduler();
 
       // Start background Quiz reminder scheduler
       startQuizReminderScheduler();

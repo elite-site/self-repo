@@ -34,6 +34,7 @@ const RolesPermissionsPage = React.lazy(() => import('@/features/roles').then((m
 const AuditLogsPage = React.lazy(() => import('@/features/activity-log').then((m) => ({ default: m.AuditLogsPage })));
 const SettingsPage = React.lazy(() => import('@/features/settings').then((m) => ({ default: m.SettingsPage })));
 const AdminGithubPage = React.lazy(() => import('@/features/github').then((m) => ({ default: m.AdminGithubPage })));
+const AdminCodeChefPage = React.lazy(() => import('@/features/codechef').then((m) => ({ default: m.AdminCodeChefPage })));
 const AdminCoursesPage = React.lazy(() => import('@/features/learning/pages/AdminCoursesPage'));
 const AdminCourseEditPage = React.lazy(() => import('@/features/learning/pages/AdminCourseEditPage'));
 const AdminCourseEnrollmentsPage = React.lazy(() => import('@/features/learning/pages/AdminCourseEnrollmentsPage'));
@@ -168,7 +169,7 @@ export const ProtectedLayout: React.FC = () => {
   }
 
   const pathTabs: AdminTab[] = [
-    'dashboard', 'submissions', 'students', 'github', 'moderation',
+    'dashboard', 'submissions', 'students', 'github', 'codechef', 'moderation',
     'learning',
     'events', 'event-registrations', 'voting', 'voting-results',
     'communications', 'email-automation', 'email-history', 'analytics',
@@ -261,6 +262,7 @@ export const adminRoutes: RouteObject[] = [
   { path: 'students', element: <StudentsPage /> },
   { path: 'students/:studentId', element: <StudentsPage /> },
   { path: 'github', element: <AdminGithubPage /> },
+  { path: 'codechef', element: <AdminCodeChefPage /> },
   // Legacy path: existing bookmarks point here, so redirect instead of rendering
   // a second implementation of the audit trail.
   { path: 'activity', element: <Navigate to="/admin/audit-logs" replace /> },

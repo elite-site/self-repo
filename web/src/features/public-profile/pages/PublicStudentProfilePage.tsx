@@ -14,6 +14,7 @@ import {
   PublicProfileSkeleton,
   PublicProfileNotFound,
 } from '../components';
+import { CodeChefPublicSection } from '@/features/codechef';
 
 export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
   const {
@@ -119,6 +120,12 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
         />
 
         <PublicProfileSkills skills={githubSkills} />
+
+        {student?.codechef && (
+          <section className="mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8 mt-8">
+            <CodeChefPublicSection data={student.codechef} />
+          </section>
+        )}
 
         <PublicProfileProjects projects={allProjects} />
 

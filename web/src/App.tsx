@@ -35,6 +35,7 @@ const TeamsPage = lazy(() => import('@/features/teams/pages/TeamsPage'));
 const VotingPage = lazy(() => import('@/features/voting/pages/VotingPage'));
 const NotificationsPage = lazy(() => import('@/features/notifications/pages/NotificationsPage'));
 const AnnouncementDetailPage = lazy(() => import('@/features/notifications/pages/AnnouncementDetailPage'));
+const CodeChefPage = lazy(() => import('@/features/codechef/pages/CodeChefPage'));
 
 // LearningHub Pages (gated by FEATURE_LEARNINGHUB)
 const LearningHomePage = lazy(() => import('@/features/learning/pages/LearningHomePage'));
@@ -44,6 +45,7 @@ const LessonPlayerPage = lazy(() => import('@/features/learning/pages/LessonPlay
 const MyLearningPage = lazy(() => import('@/features/learning/pages/MyLearningPage'));
 
 const isLearningHubEnabled = import.meta.env.VITE_FEATURE_LEARNINGHUB !== 'false';
+const isCodeChefEnabled = import.meta.env.VITE_FEATURE_CODECHEF === 'true';
 
 const RouteLoadingFallback: React.FC = () => (
   <div className="min-h-[100dvh] bg-surface-canvas px-4 py-8 sm:px-6 sm:py-10">
@@ -196,6 +198,9 @@ const AuthWrapper: React.FC = () => {
           <Route path="/profile/edit" element={<EditProfilePage />} />
           <Route path="/portfolio/*" element={<PortfolioPage />} />
           <Route path="/github" element={<GithubPage />} />
+          {isCodeChefEnabled && (
+            <Route path="/codechef" element={<CodeChefPage />} />
+          )}
           <Route path="/intro-video" element={<VideoPage />} />
           <Route path="/video" element={<Navigate to="/intro-video" replace />} />
           <Route path="/resume" element={<ResumePage />} />

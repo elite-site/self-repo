@@ -356,6 +356,16 @@ export async function findStudentDashboardDetails(studentId: string) {
       year: true,
       githubReminderSnoozedUntil: true,
       githubAccount: { select: { id: true } },
+      codechefAccount: {
+        select: {
+          id: true,
+          handle: true,
+          verified: true,
+          currentRating: true,
+          stars: true,
+          totalSolved: true,
+        },
+      },
       introVideos: {
         orderBy: { submittedAt: 'desc' },
         take: 1,

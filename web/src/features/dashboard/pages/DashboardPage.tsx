@@ -18,6 +18,7 @@ import {
   DashboardSidebar,
   DashboardQuickActions,
 } from '../components';
+import { CodeChefDashboardCard } from '@/features/codechef';
 
 export const DashboardPage: React.FC = () => {
   const {
@@ -129,8 +130,8 @@ export const DashboardPage: React.FC = () => {
         </motion.div>
       )}
 
-      {/* 2. COURSE PROGRESS METRIC TILE */}
-      <motion.div variants={staggerItem} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {/* 2. COURSE PROGRESS & COMPETITIVE PROGRAMMING METRICS */}
+      <motion.div variants={staggerItem} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <MetricTile
           icon={<Clock size={18} aria-hidden="true" />}
           label="Course Progress:"
@@ -139,6 +140,9 @@ export const DashboardPage: React.FC = () => {
           subLabel={courseProgress.subLabel}
           to="/learning"
         />
+        {(dashboardData as any)?.codechef?.connected && (
+          <CodeChefDashboardCard data={(dashboardData as any).codechef} />
+        )}
       </motion.div>
 
       {/* 3. RESUME LEARNING SPOTLIGHT CARD */}

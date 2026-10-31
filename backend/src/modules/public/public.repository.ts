@@ -323,6 +323,18 @@ export async function loadPublicProfile(rollNo: string) {
         orderBy: [{ repoCount: 'desc' }, { totalBytes: 'desc' }],
         take: 30,
       },
+      codechefAccount: {
+        select: {
+          handle: true,
+          verified: true,
+          showPublic: true,
+          currentRating: true,
+          stars: true,
+          totalSolved: true,
+          totalContests: true,
+          globalRank: true,
+        },
+      },
     }
   });
 }

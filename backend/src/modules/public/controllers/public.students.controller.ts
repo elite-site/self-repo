@@ -337,6 +337,14 @@ export async function getPublicStudentByRollNo(req: Request, res: Response): Pro
         thumbnailUrl,
       };
     }),
+    codechef: (student.codechefAccount && student.codechefAccount.verified && student.codechefAccount.showPublic) ? {
+      handle: student.codechefAccount.handle,
+      currentRating: student.codechefAccount.currentRating ? Math.round(student.codechefAccount.currentRating) : null,
+      stars: student.codechefAccount.stars,
+      totalSolved: student.codechefAccount.totalSolved,
+      totalContests: student.codechefAccount.totalContests,
+      globalRank: student.codechefAccount.globalRank,
+    } : null,
   };
   res.json(studentWithProofs);
 }

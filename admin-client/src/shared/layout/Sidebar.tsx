@@ -21,6 +21,7 @@ import {
   HardDrive,
   GraduationCap,
   LibraryBig,
+  Terminal,
 } from 'lucide-react';
 
 /**
@@ -32,11 +33,14 @@ import {
  */
 export const ACTIVE_EVENT_ID = 'self-introduction-2026';
 
+const isCodeChefEnabled = import.meta.env.VITE_FEATURE_CODECHEF === 'true';
+
 export type AdminTab =
   | 'dashboard'
   | 'submissions'
   | 'students'
   | 'github'
+  | 'codechef'
   | 'moderation'
   | 'learning'
   | 'events'
@@ -77,6 +81,7 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
     items: [
       { id: 'students', label: 'All students', icon: Users },
       { id: 'github', label: 'GitHub', icon: HardDrive },
+      ...(isCodeChefEnabled ? [{ id: 'codechef' as AdminTab, label: 'CodeChef', icon: Terminal }] : []),
       { id: 'moderation', label: 'Moderation queue', icon: ShieldCheck },
     ],
   },

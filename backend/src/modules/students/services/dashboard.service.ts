@@ -106,6 +106,14 @@ export async function getStudentDashboardData(studentId: string, rollNo?: string
         totalCommits: student.githubAccount ? githubStats.totalCommits : 0,
         lastCommitAt: student.githubAccount ? githubStats.lastCommitAt : null,
       },
+      codechef: student.codechefAccount ? {
+        connected: true,
+        verified: student.codechefAccount.verified,
+        handle: student.codechefAccount.handle,
+        currentRating: student.codechefAccount.currentRating ? Math.round(student.codechefAccount.currentRating) : null,
+        stars: student.codechefAccount.stars,
+        totalSolved: student.codechefAccount.totalSolved,
+      } : null,
     };
   } catch (err: any) {
     if (err instanceof AppError) throw err;

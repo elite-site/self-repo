@@ -108,4 +108,12 @@ export interface PublicStudent {
   certificates?: PublicCertificate[] | null;
   resumes?: PublicResume[] | null;
   introVideo?: PublicIntroVideo | null;
+  codechef?: {
+    handle: string;
+    currentRating?: number | null;
+    stars?: number | null;
+    totalSolved?: number | null;
+    totalContests?: number | null;
+    globalRank?: number | null;
+  } | null;
 }

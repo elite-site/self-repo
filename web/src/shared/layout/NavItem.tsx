@@ -18,6 +18,7 @@ import {
   Video,
   Vote,
   type LucideIcon,
+  Terminal,
 } from 'lucide-react';
 import { cn } from '@/shared/lib/cn';
 import { useReducedMotion } from '@/shared/hooks/useReducedMotion';
@@ -25,6 +26,7 @@ import { selectVariantsByName, transitionTabSpring } from '@/shared/lib/motion';
 import { prefetchRoute } from '@/shared/utils/prefetch';
 
 const isLearningHubEnabled = import.meta.env.VITE_FEATURE_LEARNINGHUB !== 'false';
+const isCodeChefEnabled = import.meta.env.VITE_FEATURE_CODECHEF === 'true';
 
 // ============================================================================
 // Navigation vocabulary
@@ -81,6 +83,17 @@ export const SIDEBAR_NAV: NavEntry[] = [
     keywords: 'github repositories showcase sync skills code',
     description: 'Connect GitHub and showcase your top repositories',
   },
+  ...(isCodeChefEnabled
+    ? [
+        {
+          label: 'CodeChef',
+          path: '/codechef',
+          icon: Terminal,
+          keywords: 'codechef competitive programming ratings contests problems stars',
+          description: 'Connect CodeChef and track your competitive programming rank',
+        },
+      ]
+    : []),
   {
     label: 'Intro Video',
     path: '/intro-video',
