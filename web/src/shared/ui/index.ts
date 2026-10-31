@@ -27,3 +27,5 @@ export * from './GuidelinesSection';
 export * from './ProjectBento';
 export * from './PublicVideoShowcase';
 export * from './TypewriterText';
+export * from './RadialRing';
+export * from './MetricTile';

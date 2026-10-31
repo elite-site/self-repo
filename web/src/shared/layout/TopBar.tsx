@@ -147,7 +147,7 @@ export const TopBar: React.FC<TopBarProps> = ({
               aria-label="Search"
               title="Search"
               {...iconPress}
-              className="flex size-9 shrink-0 items-center justify-center rounded-md text-ink-secondary transition-colors duration-quick hover:bg-surface-sunken hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-surface md:hidden"
+              className="flex size-9 shrink-0 items-center justify-center rounded-full text-ink-secondary transition-colors duration-quick hover:bg-surface-sunken hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-surface md:hidden"
             >
               <Search size={18} strokeWidth={1.75} aria-hidden="true" />
             </motion.button>
@@ -205,17 +205,17 @@ const SearchField: React.FC<{ onOpen: () => void }> = ({ onOpen }) => (
     aria-label="Search the portal"
     aria-keyshortcuts="Meta+K Control+K"
     className={cn(
-      'flex h-9 w-full items-center gap-2 rounded-lg border border-edge bg-surface-sunken px-3',
+      'flex h-10 w-full items-center gap-2.5 rounded-full border border-edge bg-surface-sunken/80 px-4 shadow-2xs',
       'text-left transition-colors duration-quick hover:bg-surface-inset',
       'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
       'focus-visible:ring-offset-2 focus-visible:ring-offset-surface',
     )}
   >
     <Search size={16} strokeWidth={1.75} className="shrink-0 text-ink-muted" aria-hidden="true" />
-    <span className="flex-1 truncate text-label-lg font-normal text-ink-muted">Search anything…</span>
+    <span className="flex-1 truncate text-label-lg font-normal text-ink-muted">Search courses, roadmaps…</span>
     <span
       aria-hidden="true"
-      className="shrink-0 rounded border border-edge bg-surface px-1.5 py-0.5 font-mono text-label-sm text-ink-muted"
+      className="shrink-0 rounded-full border border-edge bg-surface px-2 py-0.5 font-mono text-label-xs text-ink-muted"
     >
       ⌘K
     </span>
@@ -241,7 +241,7 @@ const AccountMenu: React.FC<AccountMenuProps> = ({ name, rollNo, photo, detail, 
         <button
           type="button"
           aria-label={`Account menu for ${name}`}
-          className="ml-1 flex items-center gap-2 rounded-md p-1 transition-colors duration-quick hover:bg-surface-sunken focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
+          className="ml-1 flex items-center gap-2 rounded-full p-1 pr-2.5 transition-colors duration-quick hover:bg-surface-sunken focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
         >
           <Avatar name={name} src={photo} size="sm" />
           <span className="hidden max-w-32 truncate text-label-md font-semibold text-ink lg:inline">

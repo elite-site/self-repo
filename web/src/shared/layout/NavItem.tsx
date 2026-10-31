@@ -240,7 +240,7 @@ export const NavItem: React.FC<NavItemProps> = ({
       onFocus={() => prefetchRoute(entry.path)}
       className={({ isActive }) =>
         cn(
-          'group relative flex min-h-11 rounded-lg font-ui text-label-lg',
+          'group relative flex min-h-11 rounded-xl font-ui text-label-lg',
           'transition-colors duration-quick',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
           'focus-visible:ring-offset-2 focus-visible:ring-offset-surface',

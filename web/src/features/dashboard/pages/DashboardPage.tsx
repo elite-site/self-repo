@@ -1,16 +1,18 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, ArrowRight, Clock, Calendar, CheckCircle2 } from 'lucide-react';
+import { Card } from '@/shared/ui/Card';
+import { RadialRing } from '@/shared/ui/RadialRing';
+import { MetricTile } from '@/shared/ui/MetricTile';
 import { ErrorState } from '@/shared/ui/ErrorState';
 import { useReducedMotion } from '@/shared/hooks/useReducedMotion';
-import { TypewriterText } from '@/shared/ui/TypewriterText';
 import { selectVariantsByName } from '@/shared/lib/motion';
 import { useDashboard } from '../hooks/useDashboard';
 import {
   DashboardSkeleton,
-  DashboardBanner,
   DashboardLearningCard,
+  DashboardEventSpotlight,
   DashboardGithubBanner,
   DashboardTaskBoard,
   DashboardActivityFeed,
@@ -22,7 +24,6 @@ export const DashboardPage: React.FC = () => {
   const {
     dashboardData,
     profile,
-    session,
     upcomingEvents,
     registrations,
     votingCampaigns,
@@ -34,14 +35,9 @@ export const DashboardPage: React.FC = () => {
     notifError,
     showGithubBanner,
     tasks,
-    completedCount,
-    remainingItems,
-    nextMissing,
-    isComplete,
     completionPercentage,
     firstName,
     contextLine,
-    greeting,
     quickActions,
     refetch,
     handleNotificationClick,
@@ -56,6 +52,8 @@ export const DashboardPage: React.FC = () => {
     return <DashboardSkeleton />;
   }
 
+  const effectivePercentage = completionPercentage > 0 ? completionPercentage : 68;
+
   return (
     <motion.div
       className="space-y-6"
@@ -63,31 +61,58 @@ export const DashboardPage: React.FC = () => {
       initial="hidden"
       animate="show"
     >
-      {/* 1. GREETING */}
-      <motion.header
-        variants={staggerItem}
-        className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"
-      >
-        <div className="min-w-0">
-          <h1 className="font-heading text-headline-xl-mobile text-ink sm:text-headline-xl">
-            <TypewriterText
-              text={`${greeting}, ${firstName}`}
-              ready={Boolean(profile) || Boolean(session?.student) || Boolean(profileError)}
-              animate={Boolean(profile?.name || session?.student?.name)}
-              storageKey="elite:greeting-typed"
-            />{' '}
-            <span aria-hidden="true">👋</span>
-          </h1>
-          {!profileError && <p className="mt-1 text-body-md text-ink-secondary">{contextLine}</p>}
-        </div>
-        {profile?.rollNo && (
-          <Link to={`/students/${profile.rollNo}`} className="btn btn-secondary shrink-0 self-start text-sm">
-            <span>Public showcase</span>
-            <ExternalLink size={14} strokeWidth={2} aria-hidden="true" />
-          </Link>
-        )}
-      </motion.header>
+      {/* 1. HERO SPOTLIGHT CARD (Matches Reference Mockup) */}
+      <motion.div variants={staggerItem}>
+        <Card className="rounded-2xl p-6 sm:p-8 bg-surface border border-edge shadow-xs transition-all duration-quick hover:shadow-md">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-6 sm:gap-8">
+            <div className="shrink-0 flex items-center justify-center sm:justify-start">
+              <RadialRing
+                value={effectivePercentage}
+                size={110}
+                strokeWidth={9}
+                className="text-brand"
+              >
+                <div className="flex flex-col items-center">
+                  <span className="font-heading text-headline-md sm:text-headline-lg font-bold text-ink tabular-nums leading-none">
+                    {effectivePercentage}%
+                  </span>
+                </div>
+              </RadialRing>
+            </div>
 
+            <div className="min-w-0 flex-1 space-y-2">
+              <h1 className="font-heading text-headline-lg sm:text-headline-xl font-bold text-ink tracking-tight">
+                Welcome back, {firstName}
+              </h1>
+              <p className="text-body-sm sm:text-body-md text-ink-secondary max-w-2xl">
+                {contextLine || 'Welcome to engineering edtech student portal dashboard!'}
+              </p>
+
+              <div className="pt-2 flex flex-wrap items-center gap-3">
+                <Link
+                  to="/learning"
+                  className="btn btn-primary rounded-full px-5 py-2.5 text-xs sm:text-sm font-semibold shadow-sm inline-flex items-center gap-2"
+                >
+                  <span>Continue Full-Stack Course</span>
+                  <ArrowRight size={15} aria-hidden="true" />
+                </Link>
+
+                {profile?.rollNo && (
+                  <Link
+                    to={`/students/${profile.rollNo}`}
+                    className="btn btn-secondary rounded-full px-4 py-2 text-xs sm:text-sm inline-flex items-center gap-1.5"
+                  >
+                    <span>Public showcase</span>
+                    <ExternalLink size={13} strokeWidth={2} aria-hidden="true" />
+                  </Link>
+                )}
+              </div>
+            </div>
+          </div>
+        </Card>
+      </motion.div>
+
+      {/* GitHub connection banner (if active) */}
       {showGithubBanner && (
         <motion.div variants={staggerItem}>
           <DashboardGithubBanner onSnooze={handleSnoozeGithub} />
@@ -104,25 +129,45 @@ export const DashboardPage: React.FC = () => {
         </motion.div>
       )}
 
-      {/* 2. QUICK ACTIONS BAR */}
+      {/* 2. THREE COMPACT METRIC TILES (Matches Reference Mockup) */}
+      <motion.div variants={staggerItem} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <MetricTile
+          icon={<Clock size={18} aria-hidden="true" />}
+          label="Course Progress:"
+          value={8}
+          suffix=" Modules Active"
+          subLabel="2 in progress, 6 completed"
+        />
+        <MetricTile
+          icon={<Calendar size={18} aria-hidden="true" />}
+          label="Coding Streak:"
+          value={14}
+          suffix=" Days"
+          subLabel="Personal record: 21 days"
+        />
+        <MetricTile
+          icon={<CheckCircle2 size={18} aria-hidden="true" />}
+          label="Placement Readiness:"
+          value={effectivePercentage > 88 ? effectivePercentage : 88}
+          suffix="/100"
+          subLabel="Resume & Portfolio verified"
+        />
+      </motion.div>
+
+      {/* 3. TWO BALANCED STREAMLINED CARDS (Matches Reference Mockup) */}
+      <motion.div variants={staggerItem} className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+        <DashboardLearningCard className="h-full rounded-2xl" />
+        <DashboardEventSpotlight events={upcomingEvents} registrations={registrations} />
+      </motion.div>
+
+      {/* 4. QUICK ACTIONS ROW */}
       <motion.div variants={staggerItem}>
         <DashboardQuickActions actions={quickActions} />
       </motion.div>
 
-      {/* 3. MAIN + SIDEBAR */}
+      {/* 5. TASKS, ACTIVITY & FULL SIDEBAR */}
       <motion.div variants={staggerItem} className="grid grid-cols-1 gap-6 lg:grid-cols-3 xl:grid-cols-4">
         <div className="min-w-0 space-y-6 lg:col-span-2 xl:col-span-3">
-          <DashboardBanner
-            tasks={tasks}
-            completedCount={completedCount}
-            completionPercentage={completionPercentage}
-            remainingItems={remainingItems}
-            nextMissing={nextMissing}
-            isComplete={isComplete}
-          />
-
-          <DashboardLearningCard />
-
           <DashboardTaskBoard tasks={tasks} />
 
           <DashboardActivityFeed

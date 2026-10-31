@@ -56,7 +56,7 @@ export type IconOnlyButtonProps = CommonProps & {
 export type ButtonProps = LabelledButtonProps | IconOnlyButtonProps;
 
 const BASE =
-  'inline-flex items-center justify-center gap-2 rounded-md font-ui font-semibold ' +
+  'inline-flex items-center justify-center gap-2 rounded-full font-ui font-semibold ' +
   // §4.8 "Active/Pressed". The scale half of the press is Framer's `whileTap`
   // below — a CSS `active:scale-*` would write a transform that the inline one
   // silently overwrites, so only the colour shift lives in CSS.

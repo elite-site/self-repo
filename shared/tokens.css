@@ -6,7 +6,7 @@
  * Verify:     npm run tokens:check
  *
  * ELITE Student Portal · SASI Institute of Technology and Engineering · Department of Information Technology
- * Brand anchor #C41230 (ELITE red) · interactive brand #E11D48 light / #E11D48 dark
+ * Brand anchor #C41230 (ELITE red) · interactive brand #2563EB light / #2563EB dark
  *
  * Every value in that line is read out of the tokens below rather than typed,
  * so the header cannot describe a palette the file no longer carries.
@@ -36,6 +36,17 @@
   --red-800: #9F1239;
   --red-900: #881337;
   --red-950: #4C0519;
+  --blue-50: #EFF6FF;
+  --blue-100: #DBEAFE;
+  --blue-200: #BFDBFE;
+  --blue-300: #93C5FD;
+  --blue-400: #60A5FA;
+  --blue-500: #3B82F6;
+  --blue-600: #2563EB;
+  --blue-700: #1D4ED8;
+  --blue-800: #1E40AF;
+  --blue-900: #1E3A8A;
+  --blue-950: #172554;
   --slate-50: #F8FAFC;
   --slate-100: #F1F5F9;
   --slate-200: #E2E8F0;
@@ -57,24 +68,24 @@
   --surface-inverse: #0F172A;
   --border: #E2E8F0;
   --border-strong: #CBD5E1;
-  --border-brand: #E11D48;
+  --border-brand: #2563EB;
   --border-inverse: #334155;
   --text: #0F172A;
   --text-secondary: #475569;
   --text-muted: #64748B;
   --text-disabled: #CBD5E1;
   --text-inverse: #FFFFFF;
-  --text-brand: #E11D48;
-  --brand: #E11D48;
-  --brand-hover: #BE123C;
-  --brand-active: #9F1239;
-  --brand-soft: #FFE4E6;
-  --brand-soft-text: #BE123C;
-  --brand-ring: #F43F5E;
+  --text-brand: #2563EB;
+  --brand: #2563EB;
+  --brand-hover: #1D4ED8;
+  --brand-active: #1E40AF;
+  --brand-soft: #EFF6FF;
+  --brand-soft-text: #1D4ED8;
+  --brand-ring: #3B82F6;
   --accent: #0F172A;
   --accent-hover: #1E293B;
   --on-primary: #FFFFFF;
-  --focus: #E11D48;
+  --focus: #2563EB;
   --overlay-scrim: rgba(15, 23, 42, 0.44);
   --success: #16A34A;
   --success-subtle: #DCFCE7;
@@ -111,16 +122,16 @@
   --color-bg-inset: #E2E8F0;
   --color-border-base: #E2E8F0;
   --color-border-strong: #CBD5E1;
-  --color-border-brand: #E11D48;
+  --color-border-brand: #2563EB;
   --color-text-primary: #0F172A;
   --color-text-secondary: #475569;
   --color-text-muted: #64748B;
   --color-text-disabled: #CBD5E1;
   --color-text-on-brand: #FFFFFF;
-  --color-brand: #E11D48;
-  --color-brand-hover: #BE123C;
-  --color-brand-active: #9F1239;
-  --color-brand-subtle: #FFE4E6;
+  --color-brand: #2563EB;
+  --color-brand-hover: #1D4ED8;
+  --color-brand-active: #1E40AF;
+  --color-brand-subtle: #EFF6FF;
   --color-success: #16A34A;
   --color-success-subtle: #DCFCE7;
   --color-warning: #D97706;
@@ -140,24 +151,24 @@
   --surface-inverse: #FFFFFF;
   --border: #1E293B;
   --border-strong: #334155;
-  --border-brand: #F43F5E;
+  --border-brand: #3B82F6;
   --border-inverse: #CBD5E1;
   --text: #F8FAFC;
   --text-secondary: #94A3B8;
   --text-muted: #94A3B8;
   --text-disabled: #334155;
   --text-inverse: #0F172A;
-  --text-brand: #FB7185;
-  --brand: #E11D48;
-  --brand-hover: #FB7185;
-  --brand-active: #BE123C;
-  --brand-soft: #4C0519;
-  --brand-soft-text: #FDA4AF;
-  --brand-ring: #F43F5E;
+  --text-brand: #60A5FA;
+  --brand: #2563EB;
+  --brand-hover: #3B82F6;
+  --brand-active: #1D4ED8;
+  --brand-soft: #172554;
+  --brand-soft-text: #93C5FD;
+  --brand-ring: #60A5FA;
   --accent: #F8FAFC;
   --accent-hover: #FFFFFF;
   --on-primary: #FFFFFF;
-  --focus: #F43F5E;
+  --focus: #3B82F6;
   --overlay-scrim: rgba(2, 6, 23, 0.66);
   --success: #4ADE80;
   --success-subtle: #14532D;
@@ -194,16 +205,16 @@
   --color-bg-inset: #334155;
   --color-border-base: #1E293B;
   --color-border-strong: #334155;
-  --color-border-brand: #F43F5E;
+  --color-border-brand: #3B82F6;
   --color-text-primary: #F8FAFC;
   --color-text-secondary: #94A3B8;
   --color-text-muted: #94A3B8;
   --color-text-disabled: #334155;
   --color-text-on-brand: #FFFFFF;
-  --color-brand: #E11D48;
-  --color-brand-hover: #FB7185;
-  --color-brand-active: #BE123C;
-  --color-brand-subtle: #4C0519;
+  --color-brand: #2563EB;
+  --color-brand-hover: #3B82F6;
+  --color-brand-active: #1D4ED8;
+  --color-brand-subtle: #172554;
   --color-success: #4ADE80;
   --color-success-subtle: #14532D;
   --color-warning: #FCD34D;

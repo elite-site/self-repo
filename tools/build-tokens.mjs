@@ -15,6 +15,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 import {
   red,
+  blue,
   slate,
   font,
   radius,
@@ -47,7 +48,7 @@ const kebab = (s) => s.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
  * `--slate-*`.
  */
 const ramps = Object.fromEntries(
-  [['red', red], ['slate', slate]].flatMap(([name, ramp]) =>
+  [['red', red], ['blue', blue], ['slate', slate]].flatMap(([name, ramp]) =>
     Object.entries(ramp).map(([step, value]) => [`${name}-${step}`, value]),
   ),
 );
