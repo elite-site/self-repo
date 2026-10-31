@@ -9,7 +9,6 @@ import {
   FolderGit2,
   Star,
   GitFork,
-  Sparkles,
   ChevronRight,
   RefreshCw,
 } from 'lucide-react';
@@ -92,7 +91,6 @@ export const ProjectsTab: React.FC = () => {
 
   const isGithubConnected = Boolean(portfolioData?.connected);
   const showcasedRepos = portfolioData?.showcasedRepos || portfolioData?.showcased || [];
-  const computedSkills = portfolioData?.skills || [];
   const hasShowcasedRepos = isGithubConnected && showcasedRepos.length > 0;
   const isSyncing =
     portfolioData?.githubAccount?.syncStatus === 'QUEUED' ||
@@ -255,43 +253,6 @@ export const ProjectsTab: React.FC = () => {
             })}
           </div>
 
-          {/* 2. COMPUTED SKILLS SECTION (Alongside Projects) */}
-          {computedSkills.length > 0 && (
-            <div className="surface p-5 sm:p-6 rounded-2xl border border-edge shadow-card space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Sparkles size={18} className="text-ink-brand" />
-                  <h3 className="font-heading text-headline-xs text-ink font-bold">
-                    Verified GitHub Skills
-                  </h3>
-                </div>
-                <span className="badge badge-brand text-xs">
-                  {computedSkills.length} Verified
-                </span>
-              </div>
-
-              <div className="flex flex-wrap gap-2 pt-1">
-                {computedSkills.map((skill) => {
-                  const evidence = skill.repoCount ? `${skill.repoCount} repo${skill.repoCount > 1 ? 's' : ''}` : null;
-
-                  return (
-                    <span
-                      key={skill.id || skill.name}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface border border-edge shadow-sm text-ink text-body-sm font-bold"
-                    >
-                      <span>{skill.name}</span>
-                      {evidence && (
-                        <span className="text-label-xs font-mono font-normal text-ink-muted bg-surface-sunken px-1.5 py-0.5 rounded border border-edge">
-                          {evidence}
-                        </span>
-                      )}
-                    </span>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
         </div>
       ) : (
         <div className="space-y-6">
@@ -338,7 +299,7 @@ export const ProjectsTab: React.FC = () => {
             <EmptyState
               icon={FolderGit2}
               title="Showcase your GitHub repositories"
-              description="Connect your GitHub account to showcase your top repositories and automatically compute verified skills."
+              description="Connect your GitHub account to showcase your top repositories on your portfolio."
               action={
                 <Link to="/github" className="btn btn-primary">
                   <Github size={16} />
