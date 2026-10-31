@@ -61,6 +61,23 @@ export async function markNotificationRead(req: Request, res: Response): Promise
   res.json(result);
 }
 
+export async function deleteNotification(req: Request, res: Response): Promise<void> {
+  const studentId = getStudentId(req);
+  const id = validateRequiredId(req.params.id);
+  const result = await notificationsService.deleteNotification(id, studentId);
+  res.json(result);
+}
+
+export async function deleteNotificationsByQuery(req: Request, res: Response): Promise<void> {
+  const studentId = getStudentId(req);
+  const search = typeof req.query.q === 'string' ? req.query.q.trim() : '';
+  if (!search) {
+    throw new AppError('VALIDATION_ERROR', 'Search query parameter "q" is required', 400);
+  }
+  const result = await notificationsService.deleteNotificationsByQuery(studentId, search);
+  res.json(result);
+}
+
 export async function getAnnouncementById(req: Request, res: Response): Promise<void> {
   const studentId = getStudentId(req);
   const id = validateRequiredId(req.params.id, 'Announcement ID');

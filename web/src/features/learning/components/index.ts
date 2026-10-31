@@ -6,3 +6,4 @@ export * from './NotesView';
 export * from './QuizView';
 export * from './LessonSidebar';
 export * from './TranscriptViewer';
+export * from './LessonNavigator';

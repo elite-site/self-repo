@@ -18,6 +18,7 @@ export const NotificationsPage: React.FC = () => {
     loadNotifications,
     handleLoadMore,
     handleMarkAllRead,
+    handleDeleteNotification,
     handleNotificationClick,
   } = useNotifications();
 
@@ -92,7 +93,12 @@ export const NotificationsPage: React.FC = () => {
       ) : (
         <div className="surface divide-y animate-fade-in">
           {filteredNotifs.map((n) => (
-            <NotificationItem key={n.id} notification={n} onClick={handleNotificationClick} />
+            <NotificationItem
+              key={n.id}
+              notification={n}
+              onClick={handleNotificationClick}
+              onDelete={handleDeleteNotification}
+            />
           ))}
         </div>
       )}

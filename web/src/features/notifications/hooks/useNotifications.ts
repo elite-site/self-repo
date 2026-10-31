@@ -81,6 +81,21 @@ export function useNotifications() {
     }
   };
 
+  const handleDeleteNotification = async (id: string) => {
+    const target = notifs.find((n) => n.id === id);
+    setNotifs((prev) => prev.filter((n) => n.id !== id));
+    if (target && !target.isRead && target.status !== 'READ') {
+      setUnreadCount((prev) => Math.max(0, prev - 1));
+    }
+    try {
+      await notificationsApi.deleteNotification(id);
+      showToast('Notification deleted.');
+    } catch {
+      showToast('Failed to delete notification.', 'error');
+      loadNotifications(true);
+    }
+  };
+
   const handleNotificationClick = (n: Notification) => {
     if (!n.isRead && n.status !== 'READ') {
       handleMarkSingleRead(n.id);
@@ -110,6 +125,7 @@ export function useNotifications() {
     loadNotifications,
     handleLoadMore,
     handleMarkAllRead,
+    handleDeleteNotification,
     handleNotificationClick,
   };
 }

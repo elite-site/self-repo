@@ -34,6 +34,16 @@ export const notificationsApi = {
     return res.data;
   },
 
+  async deleteNotification(id: string) {
+    const res = await client.delete(`/student/notifications/${encodeURIComponent(id)}`);
+    return res.data;
+  },
+
+  async deleteNotificationsByQuery(q: string) {
+    const res = await client.delete('/student/notifications/query', { params: { q } });
+    return res.data;
+  },
+
   async getAnnouncement(id: string): Promise<Announcement> {
     const res = await client.get(`/student/announcements/${encodeURIComponent(id)}`);
     return res.data;

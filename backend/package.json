@@ -26,6 +26,7 @@
     "verify:esm-interop": "npm run build && node scripts/verify-esm-interop.js",
     "db:setup": "ts-node scripts/db-setup.ts",
     "cleanup:internal-event": "ts-node scripts/cleanup-internal-event.ts",
+    "cleanup:spring-boot": "ts-node scripts/cleanup-spring-boot-notification.ts",
     "get-token": "ts-node scripts/get-oauth-token.ts"
   },
   "dependencies": {

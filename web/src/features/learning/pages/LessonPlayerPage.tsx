@@ -3,13 +3,8 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   ChevronLeft,
-  ChevronRight,
-  ExternalLink,
   Maximize2,
   Minimize2,
-  CheckCircle2,
-  Clock,
-  BookOpen,
 } from 'lucide-react';
 import {
   useLessonQuery,
@@ -19,6 +14,7 @@ import {
   useQuizQuery,
   useSubmitQuizMutation,
 } from '../hooks';
+import { useLessonShortcuts } from '../hooks/useLessonShortcuts';
 import { learningApi } from '../api';
 import {
   YouTubePlayer,
@@ -27,6 +23,7 @@ import {
   NotesView,
   QuizView,
   LessonSidebar,
+  LessonNavigator,
 } from '../components';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/shared/ui/Tabs';
 import { Button } from '@/shared/ui/Button';
@@ -34,19 +31,7 @@ import { Skeleton } from '@/shared/ui/Skeleton';
 import { ErrorState } from '@/shared/ui/ErrorState';
 import { celebrate } from '@/shared/lib/celebrate';
 import { cn } from '@/shared/lib/cn';
-
-function formatDuration(sec?: number | null): string {
-  if (!sec || sec <= 0) return '';
-  const mins = Math.floor(sec / 60);
-  const remainingSec = sec % 60;
-  if (mins === 0) return `${remainingSec}s`;
-  if (mins >= 60) {
-    const hours = Math.floor(mins / 60);
-    const m = mins % 60;
-    return `${hours}h ${m}m`;
-  }
-  return `${mins}m`;
-}
+// formatDuration lives in lib/timecode — the local duplicate has been removed (DRY-2).
 
 export const LessonPlayerPage: React.FC = () => {
   const params = useParams<{ id?: string; lessonId?: string }>();
@@ -62,12 +47,12 @@ export const LessonPlayerPage: React.FC = () => {
     refetch,
   } = useLessonQuery(lessonId);
   const { data: courseData } = useCourseDetailQuery(
-    lesson?.courseSlug || lesson?.courseId || ''
+    lesson?.courseSlug || lesson?.courseId || '',
   );
   const { data: transcriptData, isLoading: isTranscriptLoading } =
     useLessonTranscriptQuery(lessonId);
   const progressMutation = useLessonProgressMutation(
-    lesson?.courseSlug || lesson?.courseId
+    lesson?.courseSlug || lesson?.courseId,
   );
   const { data: quizData } = useQuizQuery(lesson?.quizId || '');
   const submitQuizMutation = useSubmitQuizMutation(lesson?.quizId || undefined);
@@ -76,6 +61,26 @@ export const LessonPlayerPage: React.FC = () => {
   const [isTheater, setIsTheater] = useState(false);
   const [activeTab, setActiveTab] = useState('transcript');
   const playerRef = useRef<YouTubePlayerHandle | null>(null);
+
+  // ── Navigation callbacks ─────────────────────────────────────────────────
+  const handleGoNext = useCallback(() => {
+    if (lesson?.nextLessonId) {
+      navigate(`/learning/lessons/${lesson.nextLessonId}`);
+    }
+  }, [lesson?.nextLessonId, navigate]);
+
+  const handleGoPrevious = useCallback(() => {
+    if (lesson?.prevLessonId) {
+      navigate(`/learning/lessons/${lesson.prevLessonId}`);
+    }
+  }, [lesson?.prevLessonId, navigate]);
+
+  // Shift+N / Shift+P lesson shortcuts — ignored while typing in inputs.
+  useLessonShortcuts({
+    onNext: handleGoNext,
+    onPrevious: handleGoPrevious,
+    enabled: !!lesson,
+  });
 
   // Sync initial watched time on lesson load
   useEffect(() => {
@@ -139,7 +144,7 @@ export const LessonPlayerPage: React.FC = () => {
         },
       });
     },
-    [lesson, progressMutation]
+    [lesson, progressMutation],
   );
 
   const handleMarkAsComplete = useCallback(() => {
@@ -184,77 +189,13 @@ export const LessonPlayerPage: React.FC = () => {
     );
   }
 
-  const durationStr = formatDuration(lesson.durationSec);
+  const allLessons = courseData?.course?.lessons ?? [];
+  const courseProgressPercent = courseData?.enrollment?.progressPercent ?? 0;
 
-  const renderHeaderAndControls = () => (
-    <div className="space-y-4 rounded-xl border border-edge bg-surface p-4 sm:p-5 shadow-xs">
-      {/* Lesson Title & Metadata */}
-      <div>
-        <h1 className="text-lg font-bold tracking-tight text-ink sm:text-xl">
-          {lesson.title}
-        </h1>
-        <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-ink-muted">
-          <span className="font-semibold text-brand">Lesson {lesson.order}</span>
-          {durationStr && (
-            <span className="inline-flex items-center gap-1">
-              <Clock className="size-3.5" aria-hidden="true" />
-              {durationStr}
-            </span>
-          )}
-          {lesson.progress.completed && (
-            <span className="inline-flex items-center gap-1 font-medium text-success">
-              <CheckCircle2 className="size-3.5" aria-hidden="true" />
-              Completed
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* Navigation & Action Bar */}
-      <div className="flex items-center justify-between gap-3 border-t border-edge pt-4">
-        <Button
-          variant="secondary"
-          size="sm"
-          disabled={!lesson.prevLessonId}
-          onClick={() =>
-            lesson.prevLessonId &&
-            navigate(`/learning/lessons/${lesson.prevLessonId}`)
-          }
-          className="gap-1.5 text-xs"
-        >
-          <ChevronLeft className="size-4" aria-hidden="true" />
-          <span>Previous</span>
-        </Button>
-
-        {/* Manual completion only for non-video lessons (e.g. NOTES, LINK) when not completed.
-            Video lessons auto-complete upon reaching 100% watched. */}
-        {lesson.type !== 'YOUTUBE' && !lesson.progress.completed && (
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={handleMarkAsComplete}
-            className="text-xs"
-          >
-            Mark as Completed
-          </Button>
-        )}
-
-        <Button
-          variant="primary"
-          size="sm"
-          disabled={!lesson.nextLessonId}
-          onClick={() =>
-            lesson.nextLessonId &&
-            navigate(`/learning/lessons/${lesson.nextLessonId}`)
-          }
-          className="gap-1.5 text-xs"
-        >
-          <span>Next Lesson</span>
-          <ChevronRight className="size-4" aria-hidden="true" />
-        </Button>
-      </div>
-    </div>
-  );
+  // Find the next lesson title for the YouTubePlayer end screen.
+  const nextLessonSummary = lesson.nextLessonId
+    ? allLessons.find((l) => l.id === lesson.nextLessonId)
+    : undefined;
 
   const renderTabs = (tabClassName?: string) => (
     <Tabs
@@ -286,7 +227,7 @@ export const LessonPlayerPage: React.FC = () => {
 
       <TabsContent value="syllabus">
         <LessonSidebar
-          lessons={courseData?.course?.lessons || []}
+          lessons={allLessons}
           currentLessonId={lessonId}
           onSelectLesson={(id) => navigate(`/learning/lessons/${id}`)}
           courseTitle={lesson.courseTitle}
@@ -298,13 +239,24 @@ export const LessonPlayerPage: React.FC = () => {
         <div
           className={cn(
             'overflow-y-auto rounded-xl border border-edge bg-surface p-4 shadow-xs',
-            tabClassName
+            tabClassName,
           )}
         >
           <NotesView notes={lesson.notes} className="border-0 p-0 shadow-none" />
         </div>
       </TabsContent>
     </Tabs>
+  );
+
+  const renderNavigator = () => (
+    <LessonNavigator
+      lesson={lesson}
+      lessons={allLessons}
+      courseProgressPercent={courseProgressPercent}
+      onPrevious={handleGoPrevious}
+      onNext={handleGoNext}
+      onMarkAsCompleted={handleMarkAsComplete}
+    />
   );
 
   const renderPlayerOrContent = () => (
@@ -321,6 +273,10 @@ export const LessonPlayerPage: React.FC = () => {
           }}
           isTheater={isTheater}
           onToggleTheater={() => setIsTheater((prev) => !prev)}
+          maxPositionSec={lesson.progress.maxPositionSec}
+          transcriptSegments={transcriptData?.segments}
+          nextLessonTitle={nextLessonSummary?.title}
+          onNextLesson={lesson.nextLessonId ? handleGoNext : undefined}
         />
       )}
       {lesson.type === 'NOTES' && <NotesView notes={lesson.notes} />}
@@ -334,14 +290,12 @@ export const LessonPlayerPage: React.FC = () => {
       )}
       {lesson.type === 'LINK' && lesson.url && (
         <div className="flex flex-col items-center justify-center rounded-xl border border-edge p-12 text-center">
-          <BookOpen className="mb-3 size-10 text-ink-muted" aria-hidden="true" />
-          <p className="mb-4 text-sm text-ink-secondary">
+          <p className="mb-4 text-body-sm text-ink-secondary">
             This lesson references an external resource.
           </p>
           <a href={lesson.url} target="_blank" rel="noopener noreferrer">
             <Button variant="primary" className="gap-2">
               <span>Open External Resource</span>
-              <ExternalLink className="size-4" aria-hidden="true" />
             </Button>
           </a>
         </div>
@@ -351,76 +305,60 @@ export const LessonPlayerPage: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-6 p-4 sm:p-6 lg:p-8">
-      {/* Top Header / Breadcrumb Bar */}
+      {/* ── Top breadcrumb / theater toggle ─────────────────────────────── */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-edge pb-4">
         <Link
           to={`/learning/courses/${lesson.courseSlug || lesson.courseId}`}
-          className="inline-flex items-center gap-1.5 text-xs font-medium text-ink-secondary transition-colors hover:text-ink"
+          className="inline-flex items-center gap-1.5 text-label-sm font-medium text-ink-secondary transition-colors hover:text-ink"
         >
           <ChevronLeft className="size-4" aria-hidden="true" />
           <span>Back to {lesson.courseTitle}</span>
         </Link>
 
-        <div className="flex items-center gap-3">
-          <span className="text-xs font-semibold text-ink-muted">
-            Lesson {lesson.order}
-          </span>
-          {lesson.progress.completed ? (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-success-subtle/30 px-2.5 py-0.5 text-xs font-semibold text-success">
-              <CheckCircle2 className="size-3.5" aria-hidden="true" />
-              Completed
-            </span>
-          ) : (
-            <span className="text-xs text-ink-muted">In Progress</span>
-          )}
-
-          {lesson.type === 'YOUTUBE' && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsTheater((prev) => !prev)}
-              className="h-8 gap-1.5 text-xs text-ink-secondary hover:text-ink"
-              aria-label={isTheater ? 'Exit theater mode' : 'Theater mode'}
-              title={isTheater ? 'Exit theater mode' : 'Theater mode'}
-            >
-              {isTheater ? (
-                <>
-                  <Minimize2 className="size-3.5" aria-hidden="true" />
-                  <span className="hidden sm:inline">Exit Theater</span>
-                </>
-              ) : (
-                <>
-                  <Maximize2 className="size-3.5" aria-hidden="true" />
-                  <span className="hidden sm:inline">Theater Mode</span>
-                </>
-              )}
-            </Button>
-          )}
-        </div>
+        {lesson.type === 'YOUTUBE' && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsTheater((prev) => !prev)}
+            className="h-8 gap-1.5 text-label-sm text-ink-secondary hover:text-ink"
+            aria-label={isTheater ? 'Exit theater mode' : 'Theater mode'}
+            title={isTheater ? 'Exit theater mode' : 'Theater mode'}
+          >
+            {isTheater ? (
+              <>
+                <Minimize2 className="size-3.5" aria-hidden="true" />
+                <span className="hidden sm:inline">Exit Theater</span>
+              </>
+            ) : (
+              <>
+                <Maximize2 className="size-3.5" aria-hidden="true" />
+                <span className="hidden sm:inline">Theater Mode</span>
+              </>
+            )}
+          </Button>
+        )}
       </div>
 
       {isTheater ? (
-        /* Theater Mode: Full-width player, tabs arranged below */
+        /* Theater Mode: full-width player, navigator, then tabs */
         <div className="space-y-6">
           <div className="space-y-4">
             {renderPlayerOrContent()}
-            {renderHeaderAndControls()}
+            {renderNavigator()}
           </div>
           <div className="w-full">{renderTabs('h-[450px]')}</div>
         </div>
       ) : (
         /* Normal Mode: 2-column studio layout */
         <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-12">
-          {/* Main Left Studio Column */}
+          {/* Left: player + navigator */}
           <div className="space-y-4 lg:col-span-8">
             {renderPlayerOrContent()}
-            {renderHeaderAndControls()}
+            {renderNavigator()}
           </div>
 
-          {/* Right Sidebar Column */}
-          <div className="lg:col-span-4">
-            {renderTabs('h-[580px]')}
-          </div>
+          {/* Right: tabs (transcript / syllabus / notes) */}
+          <div className="lg:col-span-4">{renderTabs('h-[580px]')}</div>
         </div>
       )}
     </div>

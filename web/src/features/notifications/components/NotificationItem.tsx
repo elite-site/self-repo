@@ -1,13 +1,14 @@
 import React from 'react';
-import { Calendar, Award, Vote, Video, Info, ChevronRight } from 'lucide-react';
+import { Calendar, Award, Vote, Video, Info, ChevronRight, Trash2 } from 'lucide-react';
 import { Notification } from '../types';
 
 interface NotificationItemProps {
   notification: Notification;
   onClick: (n: Notification) => void;
+  onDelete?: (id: string) => void;
 }
 
-export const NotificationItem: React.FC<NotificationItemProps> = ({ notification: n, onClick }) => {
+export const NotificationItem: React.FC<NotificationItemProps> = ({ notification: n, onClick, onDelete }) => {
   const getTypeIcon = (type: string) => {
     switch (type) {
       case 'EVENT':
@@ -34,7 +35,7 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ notification
       }}
       tabIndex={0}
       role="button"
-      aria-label={!n.isRead ? 'Unread notification' : 'Read notification'}
+      aria-label={!n.isRead ? `Unread notification: ${n.title}` : `Read notification: ${n.title}`}
       className={`p-4 sm:p-5 flex items-start gap-4 cursor-pointer group ${
         !n.isRead ? 'bg-brand-soft/50 hover:bg-brand-soft' : 'hover:bg-surface-sunken'
       }`}
@@ -69,6 +70,20 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ notification
             <span className="w-2.5 h-2.5 rounded-full bg-brand block" aria-hidden="true" />
             <span className="sr-only">Unread</span>
           </>
+        )}
+        {onDelete && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(n.id);
+            }}
+            className="p-1.5 rounded-lg text-ink-muted hover:text-status-rejected hover:bg-surface-sunken transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            aria-label={`Delete notification: ${n.title}`}
+            title="Delete notification"
+          >
+            <Trash2 className="w-4 h-4" aria-hidden="true" />
+          </button>
         )}
         <ChevronRight
           className="w-4 h-4 text-ink-muted group-hover:text-ink group-hover:translate-x-0.5 transition-transform duration-fast"
