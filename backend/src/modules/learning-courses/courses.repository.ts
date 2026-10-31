@@ -114,6 +114,14 @@ export class CoursesRepository {
     return perCourse.filter(Boolean) as any[];
   }
 
+  async findActiveEnrollmentCourseIds(studentId: string): Promise<string[]> {
+    const enrollments = await prisma.enrollment.findMany({
+      where: { studentId, status: EnrollmentStatus.ACTIVE },
+      select: { courseId: true },
+    });
+    return enrollments.map((enrollment) => enrollment.courseId);
+  }
+
   async countCompletedEnrollmentsForCourses(courseIds: string[]) {
     if (courseIds.length === 0) return [];
     try {

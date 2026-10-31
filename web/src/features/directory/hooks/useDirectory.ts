@@ -59,7 +59,10 @@ export function useDirectory(limit = 24) {
       .then((skills) => {
         if (Array.isArray(skills)) setAvailableSkills(skills);
       })
-      .catch(() => {});
+      .catch((err) => {
+        // Non-fatal: the skill filter just stays empty; directory results are unaffected.
+        console.warn('Could not load directory skill filters:', err);
+      });
   }, []);
 
   // Use deferred value for instant responsive keystroke rendering

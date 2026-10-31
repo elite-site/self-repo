@@ -5,10 +5,6 @@ import type { CreateAnnouncementInput } from '../admin.types';
 
 import { clearLimitsCache } from '../../../services/limits.service';
 
-export async function getSettings() {
-  return adminRepo.findAllPortalSettings();
-}
-
 export async function saveSetting(key: string, value: any, group?: string) {
   if (key) {
     await adminRepo.upsertPortalSetting(key, String(value), group || 'general');
@@ -42,18 +38,6 @@ export async function savePortalSettings(body: Record<string, any>, updatedBy: s
     await adminRepo.batchUpsertPortalSettings(validEntries, updatedBy);
     clearLimitsCache();
   }
-}
-
-export async function listSkills() {
-  return adminRepo.findAllSkills();
-}
-
-export async function createSkill(name: string, category?: string) {
-  return adminRepo.createSkill({ name, category, isActive: true });
-}
-
-export async function deleteSkill(id: string) {
-  return adminRepo.deleteSkill(id);
 }
 
 export async function listPortalAnnouncements() {

@@ -78,3 +78,34 @@ export const proofUpload = multer({
   { name: 'file', maxCount: 1 },
   { name: 'proof', maxCount: 1 },
 ]);
+
+/**
+ * Study resources are metadata + one attachment. The declared MIME type is only
+ * a coarse first pass; ValidationService.validateResourceFile checks magic bytes
+ * before anything reaches Drive.
+ */
+const RESOURCE_ALLOWED_MIMES = new Set([
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/zip',
+  'application/x-zip-compressed',
+  'text/plain',
+  'text/markdown',
+  'image/png',
+  'image/jpeg',
+  'image/webp',
+]);
+
+export const resourceUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 50 * 1024 * 1024, files: 1 },
+  fileFilter: (_req, file, cb) => {
+    if (RESOURCE_ALLOWED_MIMES.has(file.mimetype)) cb(null, true);
+    else cb(new UploadValidationError('Unsupported resource file type.'));
+  },
+}).single('file');

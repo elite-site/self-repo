@@ -6,10 +6,12 @@ import { uploadFile, uploadSubmissionFiles, verifyUploadedVideoFile } from './up
 import { createResumableUploadSession, streamUploadToDrive } from './resumable';
 import * as mediaFns from './media';
 import * as cleanupFns from './cleanup';
+import { getStorageQuota, DriveStorageQuota } from './quota';
 import { DriveStreamResult, parseContentRangeHeader } from './stream';
 
 export * from './types';
 export { DriveStreamResult, parseContentRangeHeader };
+export type { DriveStorageQuota };
 
 export class DriveService {
   private ctx: DriveContext;
@@ -29,6 +31,11 @@ export class DriveService {
 
   public async resolveFolderPath(relativePath: string, rootFolderId?: string): Promise<string> {
     return resolveFolderPath(this.ctx, relativePath, rootFolderId, (id) => this.setViewerPermission(id));
+  }
+
+  // Storage quota
+  public async getStorageQuota(): Promise<DriveStorageQuota | null> {
+    return getStorageQuota(this.ctx);
   }
 
   // URLs & Direct Links

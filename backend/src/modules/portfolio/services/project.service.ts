@@ -1,13 +1,17 @@
-import { prisma } from '../../../infrastructure/prisma';
 import { AppError } from '../../../utils/appError';
+import {
+  findProjectsByStudent,
+  countProjectsByStudent,
+  findHighestDisplayOrderProject,
+  createProjectRecord,
+  reorderStudentProjects,
+  updateStudentProject,
+  deleteStudentProject,
+} from '../portfolio.repository';
 
 export async function listProjects(studentId: string) {
   try {
-    const projects = await prisma.project.findMany({
-      where: { studentId },
-      orderBy: { displayOrder: 'asc' },
-      take: 100,
-    });
+    const projects = await findProjectsByStudent(studentId);
     return projects.map((p) => ({
       ...p,
       techStack: p.technologies,
@@ -31,12 +35,8 @@ export async function createProject(
 ) {
   try {
     const [count, maxOrderProj] = await Promise.all([
-      prisma.project.count({ where: { studentId } }),
-      prisma.project.findFirst({
-        where: { studentId },
-        orderBy: { displayOrder: 'desc' },
-        select: { displayOrder: true },
-      }),
+      countProjectsByStudent(studentId),
+      findHighestDisplayOrderProject(studentId),
     ]);
 
     if (count >= 5) {
@@ -45,18 +45,16 @@ export async function createProject(
 
     const displayOrder = maxOrderProj ? maxOrderProj.displayOrder + 1 : 0;
 
-    const project = await prisma.project.create({
-      data: {
-        studentId,
-        title: data.title,
-        description: data.description,
-        technologies: data.technologies,
-        githubUrl: data.githubUrl,
-        driveVideoUrl: data.driveVideoUrl,
-        displayOrder,
-        status: 'PENDING',
-        isPublic: false,
-      },
+    const project = await createProjectRecord({
+      studentId,
+      title: data.title,
+      description: data.description,
+      technologies: data.technologies,
+      githubUrl: data.githubUrl,
+      driveVideoUrl: data.driveVideoUrl,
+      displayOrder,
+      status: 'PENDING',
+      isPublic: false,
     });
 
     return {
@@ -73,14 +71,7 @@ export async function createProject(
 
 export async function reorderProjects(studentId: string, ids: string[]) {
   try {
-    await prisma.$transaction(
-      ids.map((id: string, index: number) =>
-        prisma.project.updateMany({
-          where: { id, studentId },
-          data: { displayOrder: index },
-        })
-      )
-    );
+    await reorderStudentProjects(studentId, ids);
     return { message: 'Reordered successfully' };
   } catch (err: any) {
     console.error(`[project.service:reorderProjects] Failed to reorder projects for studentId=${studentId}:`, err);
@@ -90,10 +81,7 @@ export async function reorderProjects(studentId: string, ids: string[]) {
 
 export async function updateProject(studentId: string, id: string, updateData: any) {
   try {
-    const proj = await prisma.project.updateMany({
-      where: { id, studentId },
-      data: updateData,
-    });
+    const proj = await updateStudentProject(studentId, id, updateData);
     if (proj.count === 0) {
       throw new AppError('NOT_FOUND', 'Project not found', 404, 'project.service:updateProject');
     }
@@ -107,9 +95,7 @@ export async function updateProject(studentId: string, id: string, updateData: a
 
 export async function deleteProject(studentId: string, id: string) {
   try {
-    const proj = await prisma.project.deleteMany({
-      where: { id, studentId },
-    });
+    const proj = await deleteStudentProject(studentId, id);
     if (proj.count === 0) {
       throw new AppError('NOT_FOUND', 'Project not found', 404, 'project.service:deleteProject');
     }

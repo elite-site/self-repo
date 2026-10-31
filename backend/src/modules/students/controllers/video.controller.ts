@@ -1,6 +1,7 @@
-import { Request, Response } from 'express';
+import { NextFunction, Request, Response } from 'express';
 import { env } from '../../../config/env';
 import { logger } from '../../../utils/logger';
+import { AppError } from '../../../utils/appError';
 import { driveService } from '../../media/drive';
 import { resolveContentRange } from '../../../utils/rangeParser';
 import {
@@ -16,11 +17,12 @@ import {
   validateVideoCompletePayload,
 } from '../schemas/video.schema';
 
-export function deprecatedSubmission(_req: Request, res: Response): void {
-  res.status(410).json({
-    error: 'DEPRECATED',
-    message: 'This upload endpoint has been retired. Please use /submission/video-stream.',
-  });
+export function deprecatedSubmission(_req: Request, _res: Response): void {
+  throw new AppError(
+    'DEPRECATED',
+    'This upload endpoint has been retired. Please use /submission/video-stream.',
+    410,
+  );
 }
 
 export async function deleteSubmission(req: Request, res: Response): Promise<void> {
@@ -84,7 +86,11 @@ export async function streamUpload(req: Request, res: Response): Promise<void> {
   });
 }
 
-export async function streamVideo(req: Request, res: Response): Promise<void> {
+export async function streamVideo(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
   const studentId = req.student!.studentId;
   const rollNo = req.student?.rollNo;
 
@@ -103,7 +109,16 @@ export async function streamVideo(req: Request, res: Response): Promise<void> {
     if (directLink) {
       let isPublic = await driveService.isPubliclyReadable(driveFileId);
       if (!isPublic) {
-        await driveService.setViewerPermission(driveFileId).catch(() => {});
+        try {
+          await driveService.setViewerPermission(driveFileId);
+        } catch (permissionErr) {
+          // Non-fatal: sharing is best-effort here. If it fails the proxy
+          // stream below can still serve the video.
+          logger.warn('Failed to grant viewer permission for student video', {
+            studentId,
+            error: permissionErr,
+          });
+        }
         isPublic = await driveService.isPubliclyReadable(driveFileId);
       }
       if (isPublic) {
@@ -114,7 +129,9 @@ export async function streamVideo(req: Request, res: Response): Promise<void> {
           res.redirect(302, directLink);
           return;
         } else {
-          console.warn(`[StudentMedia] Direct link probe failed for ${driveFileId}, falling back to proxy stream`);
+          logger.warn('[StudentMedia] Direct link probe failed, falling back to proxy stream', {
+            studentId,
+          });
         }
       }
     }
@@ -164,10 +181,10 @@ export async function streamVideo(req: Request, res: Response): Promise<void> {
     }
   });
 
-  stream.on('error', (err: any) => {
-    console.error('[video.controller:streamVideo] Stream error:', err);
+  stream.on('error', (streamErr) => {
+    logger.error('[video.controller:streamVideo] Stream failed', { studentId, error: streamErr });
     if (!res.headersSent) {
-      res.status(500).json({ error: 'STREAM_ERROR', message: 'Video stream interrupted' });
+      next(streamErr);
     } else {
       res.end();
     }

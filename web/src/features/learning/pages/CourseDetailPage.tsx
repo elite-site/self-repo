@@ -94,7 +94,7 @@ export const CourseDetailPage: React.FC = () => {
               isOverdue
                 ? 'bg-status-rejected/10 border-status-rejected/30 text-status-rejected'
                 : daysRemaining !== null && daysRemaining <= 3
-                ? 'bg-warning/10 border-warning/30 text-warning-foreground'
+                ? 'bg-warning/10 border-warning/30 text-warning'
                 : 'bg-surface-sunken border-edge text-ink-secondary'
             }`}
           >

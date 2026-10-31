@@ -13,9 +13,3 @@ export interface UpdateVotingCampaignInput {
   title?: string;
   description?: string | null;
 }
-
-export interface CastVoteInput {
-  campaignId: string;
-  candidateId?: string;
-  studentId: string;
-}

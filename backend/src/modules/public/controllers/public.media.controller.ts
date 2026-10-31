@@ -1,18 +1,19 @@
-import { Request, Response } from 'express';
+import { NextFunction, Request, Response } from 'express';
 import * as repo from '../public.repository';
 import * as service from '../public.service';
 import { driveService } from '../../media/drive';
+import { AppError, NotFoundError, ValidationError } from '../../../utils/appError';
+import { logger } from '../../../utils/logger';
 
 const REDIRECTABLE_TYPES = new Set(['video']);
 
 export async function getMediaThumbnail(req: Request, res: Response): Promise<void> {
-  try {
-    const { type, id } = req.params;
-    if (!id || !type) {
-      res.status(400).json({ error: 'MISSING_PARAMS', message: 'Type and ID are required' });
-      return;
-    }
+  const { type, id } = req.params;
+  if (!id || !type) {
+    throw new ValidationError('Type and ID are required.');
+  }
 
+  try {
     let record: any = null;
     let driveFileId: string | null = null;
     let thumbnail: Buffer | null = null;
@@ -91,7 +92,9 @@ export async function getMediaThumbnail(req: Request, res: Response): Promise<vo
           }
         }
       } catch (genErr) {
-        console.warn(`[thumbnail] Lazy generation failed for ${type}/${id}:`, genErr);
+        // Non-fatal: a thumbnail is a convenience, the placeholder below is an
+        // acceptable response and generating it must never fail the request.
+        logger.warn('[thumbnail] Lazy generation failed', { type, id, error: genErr });
       }
     }
 
@@ -108,8 +111,14 @@ export async function getMediaThumbnail(req: Request, res: Response): Promise<vo
       res.setHeader('Expires', '0');
       res.status(200).send(svg);
     }
-  } catch (err: any) {
-    console.warn(`[thumbnail] Error serving thumbnail:`, err?.message || err);
+  } catch (err) {
+    // Non-fatal: browsers render a broken-image icon for a JSON error, so this
+    // endpoint always answers with a placeholder image instead.
+    logger.warn('[thumbnail] Error serving thumbnail', {
+      type: req.params?.type,
+      id: req.params?.id,
+      error: err,
+    });
     if (!res.headersSent) {
       const svg = service.getThumbnailPlaceholderSvg(req.params?.type || 'document');
       res.setHeader('Content-Type', 'image/svg+xml');
@@ -118,12 +127,15 @@ export async function getMediaThumbnail(req: Request, res: Response): Promise<vo
   }
 }
 
-export async function streamPublicMedia(req: Request, res: Response): Promise<void> {
+export async function streamPublicMedia(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
   try {
     const { type, fileId } = req.params;
     if (!fileId) {
-      res.status(400).json({ error: 'MISSING_FILE_ID', message: 'File ID is required' });
-      return;
+      throw new ValidationError('File ID is required.');
     }
 
     const cacheKey = `${type}:${fileId}`;
@@ -158,7 +170,9 @@ export async function streamPublicMedia(req: Request, res: Response): Promise<vo
           }
         }
       } catch (lookupErr) {
-        console.warn(`[public media] DB lookup error for ${type}/${fileId}:`, lookupErr);
+        // Non-fatal: the media path accepts a raw storage id too, so a failed
+        // id lookup falls back to streaming the id as-is below.
+        logger.warn('[public media] DB lookup failed', { type, error: lookupErr });
       }
       if (resolvedDriveId) {
         service.mediaDriveIdCache.set(cacheKey, resolvedDriveId);
@@ -186,7 +200,9 @@ export async function streamPublicMedia(req: Request, res: Response): Promise<vo
           res.redirect(302, directLink);
           return;
         } else {
-          console.warn(`[PublicMedia] Direct link probe failed for ${targetDriveFileId} (${type}), falling back to proxy stream`);
+          logger.warn('[PublicMedia] Direct link probe failed, falling back to proxy stream', {
+            type,
+          });
         }
       }
     }
@@ -213,15 +229,23 @@ export async function streamPublicMedia(req: Request, res: Response): Promise<vo
       res.status(200);
     }
 
-    stream.on('error', () => {
-      if (!res.headersSent) res.status(500);
-      res.end();
+    stream.on('error', (streamErr) => {
+      logger.error('[public media] Stream failed', { type, error: streamErr });
+      if (!res.headersSent) {
+        next(streamErr);
+      } else {
+        res.end();
+      }
     });
     stream.pipe(res);
-  } catch (err: any) {
-    console.error('Error streaming public media:', err);
-    if (!res.headersSent) {
-      res.status(404).json({ error: 'MEDIA_NOT_FOUND', message: 'Requested media could not be found or loaded.' });
+  } catch (err) {
+    if (res.headersSent) {
+      logger.error('[public media] Stream failed after headers were sent', { error: err });
+      res.end();
+      return;
     }
+    // Public media only ever means "here is the file" or "not found".
+    if (err instanceof AppError) throw err;
+    throw new NotFoundError('Requested media could not be found or loaded.', 'MEDIA_NOT_FOUND');
   }
 }

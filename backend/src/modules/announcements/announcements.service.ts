@@ -48,10 +48,6 @@ export function announcementStudentWhere(target: AnnouncementTarget): Prisma.Stu
   return where;
 }
 
-export async function countAnnouncementAudience(target: AnnouncementTarget): Promise<number> {
-  return repo.countStudentsByTarget(announcementStudentWhere(target));
-}
-
 export const ANNOUNCEMENT_FANOUT_BATCH_SIZE = 500;
 
 export async function deliverAnnouncementNotifications(

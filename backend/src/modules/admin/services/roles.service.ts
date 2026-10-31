@@ -1,4 +1,5 @@
 import * as adminRepo from '../admin.repository';
+import { NotFoundError } from '../../../utils/appError';
 
 export async function listRoles() {
   return adminRepo.findAllRoles();
@@ -14,6 +15,20 @@ export async function updateRole(id: string, description?: string) {
 
 export async function deleteRole(id: string) {
   return adminRepo.deleteRole(id);
+}
+
+export async function assignRole(adminId: string, roleId: string) {
+  const [admin, role] = await Promise.all([
+    adminRepo.findAdminUserById(adminId),
+    adminRepo.findRoleById(roleId),
+  ]);
+  if (!admin) {
+    throw new NotFoundError('Admin user not found');
+  }
+  if (!role) {
+    throw new NotFoundError('Role not found');
+  }
+  return adminRepo.createRoleAssignment(adminId, roleId);
 }
 
 export async function listPermissions(roleId?: string) {

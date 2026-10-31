@@ -18,6 +18,26 @@ export async function findRoleById(id: string) {
   });
 }
 
+export async function findAdminUserById(id: string) {
+  return prisma.adminUser.findUnique({
+    where: { id },
+    select: { id: true },
+  });
+}
+
+export async function createRoleAssignment(adminId: string, roleId: string) {
+  return prisma.roleAssignment.create({
+    data: { adminId, roleId },
+    select: {
+      adminId: true,
+      roleId: true,
+      assignedAt: true,
+      admin: { select: { id: true, username: true, email: true } },
+      role: { select: { id: true, name: true } },
+    },
+  });
+}
+
 export async function createRole(name: string, description?: string) {
   return prisma.role.create({
     data: {

@@ -12,7 +12,7 @@ export function gradeQuizSubmission(
     const correctOptions = q.options.filter((o: any) => o.isCorrect);
     const correctIds = correctOptions.map((o: any) => o.id);
 
-    let isCorrect = false;
+    let isCorrect: boolean;
     if (q.type === 'MULTI') {
       isCorrect =
         correctIds.length > 0 &&

@@ -73,9 +73,9 @@ tools/              token build, contrast and utility checks
 docs/               decisions/ (ADRs), architecture/, perf/, runbooks/
 ```
 
-Existing domain modules: `admin, announcements, auth, email, events, github, learning-courses, learning-home, learning-progress, learning-quizzes, learning-reports, media, moderation, portfolio, public, students, voting`.
-Frontend features (web): `auth, dashboard, directory, events, github, learning, notifications, portfolio, profile, public-profile, resume, teams, video, voting`.
-Frontend features (admin-client): `activity-log, analytics, announcements, email-automation, events, github, learning, moderation, registrations, roles, settings, storage, students`.
+Existing domain modules: `admin, announcements, auth, email, events, github, learning-courses, learning-home, learning-progress, learning-quizzes, learning-reports, media, moderation, portfolio, public, resources, students, voting`.
+Frontend features (web): `auth, dashboard, directory, events, github, learning, notifications, portfolio, profile, public-profile, resources, resume, teams, video, voting`.
+Frontend features (admin-client): `activity-log, analytics, announcements, email-automation, events, github, learning, moderation, registrations, resources, roles, settings, storage, students`.
 Path alias in the frontends: `@/*` maps to `src/*`.
 
 If this map and the filesystem disagree, trust the filesystem, then fix this map in the same change.

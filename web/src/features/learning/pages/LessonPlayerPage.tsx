@@ -366,7 +366,7 @@ export const LessonPlayerPage: React.FC = () => {
             Lesson {lesson.order}
           </span>
           {lesson.progress.completed ? (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-success-soft/30 px-2.5 py-0.5 text-xs font-semibold text-success">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-success-subtle/30 px-2.5 py-0.5 text-xs font-semibold text-success">
               <CheckCircle2 className="size-3.5" aria-hidden="true" />
               Completed
             </span>

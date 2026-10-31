@@ -34,13 +34,6 @@ export async function deleteAnnouncementWithNotifications(id: string) {
   ]);
 }
 
-export async function findAudienceStudents(where: Prisma.StudentWhereInput) {
-  return prisma.student.findMany({
-    where,
-    select: { id: true },
-  });
-}
-
 export async function findAudienceStudentsBatch(
   where: Prisma.StudentWhereInput,
   take: number,

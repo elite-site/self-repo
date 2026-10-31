@@ -1,5 +1,5 @@
 import { apiClient } from '@/shared/api';
-import { GithubOverview, GithubLog } from '../types';
+import { GithubOverview, GithubLog, GithubShowcasedProjectsResponse } from '../types';
 
 export const githubApi = {
   async getGithubOverview(params?: { search?: string; page?: number; limit?: number }): Promise<GithubOverview> {
@@ -17,7 +17,7 @@ export const githubApi = {
     return res.data;
   },
 
-  async getGithubShowcasedProjects(params?: { search?: string; page?: number; limit?: number }): Promise<any> {
+  async getGithubShowcasedProjects(params?: { search?: string; page?: number; limit?: number }): Promise<GithubShowcasedProjectsResponse> {
     const res = await apiClient.get('/admin/api/portal/github/projects', { params });
     return res.data;
   },

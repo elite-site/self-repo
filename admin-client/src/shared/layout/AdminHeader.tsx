@@ -45,7 +45,10 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
     analyticsApi
       .getStats()
       .then((data) => setPortalStats(data))
-      .catch(() => {});
+      .catch((err) => {
+        // Non-fatal: the header keeps working without the notification badge count.
+        console.warn('Could not load header stats:', err);
+      });
   }, []);
 
   // Close menus on outside click or Escape

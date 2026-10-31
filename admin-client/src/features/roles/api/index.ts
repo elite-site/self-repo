@@ -1,5 +1,5 @@
 import { apiClient } from '@/shared/api';
-import { RolesResponse, RoleItem } from '../types';
+import { RolesResponse, RoleItem, RoleAssignmentItem } from '../types';
 
 export const rolesApi = {
   async getRoles(): Promise<RolesResponse> {
@@ -17,7 +17,10 @@ export const rolesApi = {
     return res.data;
   },
 
-  async assignRole(adminId: string, roleId: string): Promise<{ success: boolean; assignment: any }> {
+  async assignRole(
+    adminId: string,
+    roleId: string
+  ): Promise<{ success: boolean; assignment: RoleAssignmentItem }> {
     const res = await apiClient.post('/admin/api/roles/assign', { adminId, roleId });
     return res.data;
   },

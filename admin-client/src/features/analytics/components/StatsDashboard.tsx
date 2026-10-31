@@ -350,20 +350,20 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
                         params.set('uploaded', 'yes');
                         handleNavigate(`/admin/students?${params.toString()}`);
                       }}
-                      className="w-full text-left p-2.5 rounded-lg border border-edge/60 bg-surface hover:border-indigo-500/40 hover:bg-surface-sunken transition-all cursor-pointer group/sec flex flex-col gap-1.5"
+                      className="w-full text-left p-2.5 rounded-lg border border-edge/60 bg-surface hover:border-indigo-500/40 hover:bg-surface-sunken transition-all cursor-pointer group flex flex-col gap-1.5"
                     >
                       <div className="flex items-center justify-between gap-2 text-body-sm">
                         <div className="flex items-center gap-1.5 min-w-0">
-                          <span className="truncate text-ink font-medium group-hover/sec:text-indigo-600 dark:group-hover/sec:text-indigo-400 transition-colors">
+                          <span className="truncate text-ink font-medium group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                             Section {sec.label}
                           </span>
-                          <ArrowRight size={12} className="text-ink-muted opacity-0 group-hover/sec:opacity-100 group-hover/sec:translate-x-0.5 transition-all shrink-0" />
+                          <ArrowRight size={12} className="text-ink-muted opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all shrink-0" />
                         </div>
-                        <span className="shrink-0 tabular-nums text-ink-secondary font-semibold group-hover/sec:text-ink">
+                        <span className="shrink-0 tabular-nums text-ink-secondary font-semibold group-hover:text-ink">
                           {sec.submitted}
                         </span>
                       </div>
-                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-sunken group-hover/sec:bg-surface-inset">
+                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-sunken group-hover:bg-surface-inset">
                         <div
                           className="h-full rounded-full bg-indigo-500 dark:bg-indigo-400 transition-all"
                           style={{ width: `${widthPct}%` }}

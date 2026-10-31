@@ -35,8 +35,12 @@ import { studentLearningRouter, adminLearningRouter } from './modules/learning-h
 import { studentResourcesRouter, adminResourcesRouter } from './modules/resources';
 import { mountFrontend } from './config/staticAssets';
 import { requestIdMiddleware } from './middleware/requestId';
+import { installProcessGuards } from './infrastructure/processGuards';
 import { logger } from './utils/logger';
 
+// Installed before the app is composed so a failure anywhere after this line is
+// logged through the structured logger instead of silently killing the process.
+installProcessGuards();
 
 const app = express();
 
@@ -174,7 +178,7 @@ const learningFlagGuard = (_req: express.Request, res: express.Response, next: e
 app.use('/api/student/learning', learningFlagGuard, studentLearningRouter);
 
 // 1c. Student portal API routes
-app.use('/api/student/resources', studentResourcesRouter);      // Study resources (year/semester restricted)
+app.use('/api/student/resources', studentResourcesRouter);      // study materials (library + enrolled courses)
 app.use('/api/student/profile', studentProfileRoutes);          // Phase 1: profile
 app.use('/api/student/portfolio', studentPortfolioRoutes);      // Phase 2: projects/achievements/certs
 app.use('/api/student/github', studentGithubRoutes);            // Phase 2: GitHub portfolio & sync
@@ -188,20 +192,21 @@ app.use('/admin', adminAuthRoutes);
 // 2b. Admin LearningHub routes (gated by FEATURE_LEARNINGHUB - mounted before generic /admin/api)
 app.use('/admin/api/learning', learningFlagGuard, adminLearningRouter);
 
-// 2c. Admin Study Resources routes
+// 2c. Admin Resources routes (shared library, course materials, Drive quota)
 app.use('/admin/api/resources', adminResourcesRouter);
-app.use('/api/admin/resources', adminResourcesRouter);
 
 // 3. Admin API routes — existing (stats, submissions, media proxy, email)
 app.use('/admin/api', adminApiRoutes);
 
 // 4. Admin Portal Management routes — Phase 7 (moderation, events, voting, RBAC, settings …)
+// Both bases are load-bearing: the admin client calls /admin/api/portal/... (events, roles,
+// settings, github) and /admin/api/... (announcements, analytics, moderation). Mounting the
+// same router twice is safe only because each path is defined by exactly one router.
 app.use('/admin/api/portal', adminPortalRoutes);
 app.use('/admin/api', adminPortalRoutes);
 
 // 5. Admin Academic Year Promotion routes
 app.use('/admin/api/academic-year', adminAcademicYearRoutes);
-app.use('/api/admin/academic-year', adminAcademicYearRoutes);
 
 // 4. Admin Frontend Static Serving (Served strictly by backend, never Netlify)
 // Cache policy rationale lives in src/config/staticAssets.ts.

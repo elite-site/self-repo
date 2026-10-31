@@ -1,3 +1,5 @@
+export type ActivityLogStatus = 'SUCCESS' | 'WARNING' | 'ERROR' | 'INFO';
+
 export interface ActivityLogItem {
   id: string;
   eventId?: string;
@@ -6,7 +8,7 @@ export interface ActivityLogItem {
   details: string | null;
   userEmail: string | null;
   applicantName?: string | null;
-  status: 'SUCCESS' | 'WARNING' | 'ERROR' | 'INFO';
+  status: ActivityLogStatus;
   errorMessage?: string | null;
   ipAddress?: string | null;
   userAgent?: string | null;

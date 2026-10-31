@@ -32,52 +32,6 @@ export async function batchUpsertPortalSettings(entries: [string, any][], update
   );
 }
 
-export async function findAllSkills() {
-  return prisma.skill.findMany({ orderBy: { name: 'asc' } });
-}
-
-export async function createSkill(data: { name: string; category?: string; isActive?: boolean }) {
-  return prisma.skill.create({ data: { ...data, category: data.category || 'General', isActive: data.isActive ?? true } });
-}
-
-export async function updateSkill(id: string, data: any) {
-  return prisma.skill.update({ where: { id }, data });
-}
-
-export async function deleteSkill(id: string) {
-  return prisma.skill.delete({ where: { id } });
-}
-
-export async function upsertSkill(name: string, category: string) {
-  return prisma.skill.upsert({
-    where: { name },
-    update: {},
-    create: { name, category, isActive: true },
-  });
-}
-
-export async function findAllChangeRequests() {
-  return prisma.changeRequest.findMany({
-    include: { student: true },
-    orderBy: { createdAt: 'desc' },
-  });
-}
-
-export async function updateChangeRequest(id: string, data: any) {
-  return prisma.changeRequest.update({ where: { id }, data });
-}
-
-export async function findAllSkillRequests() {
-  return prisma.skillRequest.findMany({
-    include: { student: true },
-    orderBy: { createdAt: 'desc' },
-  });
-}
-
-export async function updateSkillRequest(id: string, data: any) {
-  return prisma.skillRequest.update({ where: { id }, data });
-}
-
 export async function findAllAnnouncements() {
   return prisma.announcement.findMany({
     orderBy: { createdAt: 'desc' },

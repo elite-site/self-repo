@@ -9,12 +9,5 @@ export interface StudentProfileUpdateInput {
   preferredRole?: string;
 }
 
-export interface StudentFilter {
-  year?: number;
-  section?: string;
-  branch?: string;
-  search?: string;
-}
-
 export { ChangeRequestInput } from './schemas/profile.schema';
 

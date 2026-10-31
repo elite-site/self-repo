@@ -9,8 +9,3 @@ adminReportsRouter.use(requireAdminAuth);
 adminReportsRouter.get(['/admin/reports/overview', '/reports/overview', '/overview'], asyncHandler(controller.getOverview));
 adminReportsRouter.get(['/admin/reports/courses/:id/export', '/reports/courses/:id/export', '/courses/:id/export', '/:id/export'], asyncHandler(controller.exportCourseReport));
 adminReportsRouter.get(['/admin/reports/courses/:id', '/reports/courses/:id', '/courses/:id', '/:id'], asyncHandler(controller.getCourseReport));
-
-export const reportsRouter = Router();
-reportsRouter.use(adminReportsRouter);
-
-export default reportsRouter;

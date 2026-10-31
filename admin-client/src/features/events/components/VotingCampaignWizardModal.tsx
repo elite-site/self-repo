@@ -32,8 +32,9 @@ export const VotingCampaignWizardModal: React.FC<VotingCampaignWizardModalProps>
       await eventsApi.createVotingCampaign(form);
       onCreated();
       onClose();
-    } catch {
-      // noop
+    } catch (err) {
+      // Non-fatal: the wizard stays open so the operator can correct and retry.
+      console.warn('Could not create voting campaign:', err);
     } finally {
       setSubmitting(false);
     }

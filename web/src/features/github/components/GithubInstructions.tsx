@@ -353,7 +353,7 @@ const CopyButton: React.FC<{ code: string; labelText?: string }> = ({ code, labe
     <button
       type="button"
       onClick={handleCopy}
-      className="btn btn-ghost shrink-0 h-7 sm:h-8 px-2.5 text-label-xs font-semibold inline-flex items-center gap-1.5 rounded-lg border border-edge bg-surface hover:bg-surface-elevated text-ink-secondary hover:text-ink transition-colors cursor-pointer"
+      className="btn btn-ghost shrink-0 h-7 sm:h-8 px-2.5 text-label-xs font-semibold inline-flex items-center gap-1.5 rounded-lg border border-edge bg-surface hover:bg-surface-raised text-ink-secondary hover:text-ink transition-colors cursor-pointer"
       aria-label={`Copy command: ${code.slice(0, 40)}`}
       title="Copy to clipboard"
     >

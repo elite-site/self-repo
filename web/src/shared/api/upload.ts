@@ -15,6 +15,17 @@ export interface DirectUploadParams {
 }
 
 /**
+ * Best-effort cleanup of a Google resumable upload session after a cancel or a
+ * failed chunk. Non-fatal by design: Drive expires abandoned sessions itself,
+ * and a cleanup failure must never mask the original upload result.
+ */
+function discardResumableSession(sessionUrl: string): void {
+  void fetch(sessionUrl, { method: 'DELETE' }).catch((err) => {
+    console.warn('Resumable upload session cleanup failed non-fatally:', err);
+  });
+}
+
+/**
  * Queries Google Drive for the current state of a resumable upload session.
  * Used when a chunk fails, to find the exact byte offset Google has received so far.
  */
@@ -31,7 +42,7 @@ export async function queryResumableSessionStatus(
     if (signal) {
       const onAbort = () => {
         xhr.abort();
-        void fetch(sessionUrl, { method: 'DELETE' }).catch(() => {});
+        discardResumableSession(sessionUrl);
         reject(new Error('Upload was cancelled.'));
       };
       if (signal.aborted) {
@@ -120,7 +131,7 @@ export async function uploadDirectToDrive(
   };
 
   if (signal?.aborted) {
-    void fetch(sessionUrl, { method: 'DELETE' }).catch(() => {});
+    discardResumableSession(sessionUrl);
     throw new Error('Upload was cancelled.');
   }
 
@@ -128,7 +139,7 @@ export async function uploadDirectToDrive(
 
   while (currentByte < total) {
     if (signal?.aborted) {
-      void fetch(sessionUrl, { method: 'DELETE' }).catch(() => {});
+      discardResumableSession(sessionUrl);
       throw new Error('Upload was cancelled.');
     }
 
@@ -139,7 +150,7 @@ export async function uploadDirectToDrive(
 
     for (let attempt = 1; attempt <= 3; attempt++) {
       if (signal?.aborted) {
-        void fetch(sessionUrl, { method: 'DELETE' }).catch(() => {});
+        discardResumableSession(sessionUrl);
         throw new Error('Upload was cancelled.');
       }
 
@@ -157,7 +168,7 @@ export async function uploadDirectToDrive(
           if (signal) {
             const onAbort = () => {
               xhr.abort();
-              void fetch(sessionUrl, { method: 'DELETE' }).catch(() => {});
+              discardResumableSession(sessionUrl);
               reject(new Error('Upload was cancelled.'));
             };
             if (signal.aborted) {
@@ -225,7 +236,7 @@ export async function uploadDirectToDrive(
         }
       } catch (err: any) {
         if (signal?.aborted || err.message?.includes('cancelled')) {
-          void fetch(sessionUrl, { method: 'DELETE' }).catch(() => {});
+          discardResumableSession(sessionUrl);
           throw new Error('Upload was cancelled.', { cause: err });
         }
 

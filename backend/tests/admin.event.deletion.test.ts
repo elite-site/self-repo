@@ -8,6 +8,7 @@ import { env } from '../src/config/env';
 import { INTERNAL_EVENT_ID } from '../src/config/constants';
 import { prisma } from '../src/infrastructure/prisma';
 import { ActivityService } from '../src/modules/admin/services/activity.service';
+import { errorHandler } from '../src/middleware/errorHandler';
 
 /**
  * Deleting an Event has to clear every table that hangs off it, because each of
@@ -101,6 +102,10 @@ const app = express();
 app.use(cookieParser());
 app.use(express.json());
 app.use('/admin/api/portal', adminPortalRouter);
+// Controllers throw typed AppErrors; the central handler is what turns them into
+// the JSON envelope the admin client reads (errorHandler is mounted last in the
+// real app too).
+app.use(errorHandler);
 
 const adminToken = jwt.sign(
   { userId: 'admin-1', email: 'admin@example.com', username: 'admin' },

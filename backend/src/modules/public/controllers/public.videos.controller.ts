@@ -1,7 +1,9 @@
-import { Request, Response } from 'express';
+import { NextFunction, Request, Response } from 'express';
 import * as repo from '../public.repository';
 import * as service from '../public.service';
 import { driveService } from '../../media/drive';
+import { AppError, NotFoundError } from '../../../utils/appError';
+import { logger } from '../../../utils/logger';
 
 const PUBLIC_VIDEO_WHERE = {
   status: 'APPROVED' as const,
@@ -10,51 +12,44 @@ const PUBLIC_VIDEO_WHERE = {
 };
 
 export async function listPublicVideos(req: Request, res: Response): Promise<void> {
-  try {
-    const rawLimit = parseInt(String(req.query.limit), 10);
-    const limit = Number.isNaN(rawLimit) || rawLimit <= 0 ? 24 : Math.min(rawLimit, 60);
+  const rawLimit = parseInt(String(req.query.limit), 10);
+  const limit = Number.isNaN(rawLimit) || rawLimit <= 0 ? 24 : Math.min(rawLimit, 60);
 
-    const payload = await service.videoListCache.wrap(`list:${limit}`, () =>
-      repo.listPublishedVideos(limit, PUBLIC_VIDEO_WHERE).then(({ items, total }) => ({
-        items: items.map(service.serializePublicVideo),
-        total,
-      }))
-    );
+  const payload = await service.videoListCache.wrap(`list:${limit}`, () =>
+    repo.listPublishedVideos(limit, PUBLIC_VIDEO_WHERE).then(({ items, total }) => ({
+      items: items.map(service.serializePublicVideo),
+      total,
+    }))
+  );
 
-    res.setHeader('Cache-Control', 'public, max-age=60');
-    res.json(payload);
-  } catch (err: any) {
-    console.error('Error fetching public videos:', err);
-    res.status(500).json({ error: 'SERVER_ERROR', message: 'An unexpected error occurred. Please try again later.' });
-  }
+  res.setHeader('Cache-Control', 'public, max-age=60');
+  res.json(payload);
 }
 
 export async function getFeaturedPublicVideos(_req: Request, res: Response): Promise<void> {
-  try {
-    const payload = await service.videoListCache.wrap('featured:6', () =>
-      repo.listPublishedVideos(6, PUBLIC_VIDEO_WHERE).then(({ items, total }) => ({
-        items: items.map(service.serializePublicVideo),
-        total,
-      }))
-    );
+  const payload = await service.videoListCache.wrap('featured:6', () =>
+    repo.listPublishedVideos(6, PUBLIC_VIDEO_WHERE).then(({ items, total }) => ({
+      items: items.map(service.serializePublicVideo),
+      total,
+    }))
+  );
 
-    res.setHeader('Cache-Control', 'public, max-age=120');
-    res.json(payload);
-  } catch (err: any) {
-    console.error('Error fetching featured public videos:', err);
-    res.status(500).json({ error: 'SERVER_ERROR', message: 'An unexpected error occurred. Please try again later.' });
-  }
+  res.setHeader('Cache-Control', 'public, max-age=120');
+  res.json(payload);
 }
 
-export async function streamPublicVideo(req: Request, res: Response): Promise<void> {
+export async function streamPublicVideo(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
   try {
     let fileId = service.videoFileIdCache.get(req.params.id);
 
     if (!fileId) {
       const video = await repo.findPublishedVideoById(req.params.id, PUBLIC_VIDEO_WHERE);
       if (!video?.driveFileId) {
-        res.status(404).json({ error: 'NOT_FOUND', message: 'This video is not published.' });
-        return;
+        throw new NotFoundError('This video is not published.');
       }
       fileId = video.driveFileId;
       service.videoFileIdCache.set(req.params.id, fileId);
@@ -77,7 +72,7 @@ export async function streamPublicVideo(req: Request, res: Response): Promise<vo
         res.redirect(302, directLink);
         return;
       } else {
-        console.warn(`[PublicVideos] Direct link probe failed for ${fileId}, falling back to proxy stream`);
+        logger.warn('[PublicVideos] Direct link probe failed, falling back to proxy stream');
       }
     }
 
@@ -103,15 +98,23 @@ export async function streamPublicVideo(req: Request, res: Response): Promise<vo
       res.status(200);
     }
 
-    stream.on('error', () => {
-      if (!res.headersSent) res.status(500);
-      res.end();
+    stream.on('error', (streamErr) => {
+      logger.error('[public video] Stream failed', { error: streamErr });
+      if (!res.headersSent) {
+        next(streamErr);
+      } else {
+        res.end();
+      }
     });
     stream.pipe(res);
-  } catch (err: any) {
-    console.error('Error streaming public video:', err);
-    if (!res.headersSent) {
-      res.status(404).json({ error: 'MEDIA_NOT_FOUND', message: 'Requested media could not be found or loaded.' });
+  } catch (err) {
+    if (res.headersSent) {
+      logger.error('[public video] Stream failed after headers were sent', { error: err });
+      res.end();
+      return;
     }
+    // Public video playback only ever means "stream it" or "not found".
+    if (err instanceof AppError) throw err;
+    throw new NotFoundError('Requested media could not be found or loaded.', 'MEDIA_NOT_FOUND');
   }
 }

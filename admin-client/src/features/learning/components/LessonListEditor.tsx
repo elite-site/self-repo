@@ -46,7 +46,7 @@ export const LessonListEditor: React.FC<LessonListEditorProps> = ({
     setType(lesson?.type ?? 'YOUTUBE');
     setUrl(lesson?.url || lesson?.youtubeVideoId || '');
     setNotes(lesson?.notes || '');
-    setDurationSec(lesson?.durationSec != null ? String(lesson?.durationSec) : '');
+    setDurationSec(String(lesson?.durationSec ?? ''));
     setModalOpen(true);
   };
 

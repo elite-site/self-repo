@@ -1,37 +1,30 @@
-import { prisma } from '../../../infrastructure/prisma';
 import { AppError } from '../../../utils/appError';
 import { PortfolioKind, PORTFOLIO_META } from '../portfolio.schemas';
-
-const repoSelect = {
-  id: true, studentId: true, githubRepoId: true, fullName: true, name: true,
-  description: true, htmlUrl: true, isFork: true, primaryLanguage: true,
-  topics: true, stars: true, githubCreatedAt: true, pushedAt: true,
-  languages: true, commitCount: true, isShowcased: true, showcaseRank: true,
-};
+import {
+  findGithubAccountByStudent,
+  findShowcasedRepos,
+  findGithubStudentSkills,
+  findShowcaseCandidateRepos,
+  promoteReposToShowcase,
+  findProjectsByStudent,
+  findStudentProfileWithSkills,
+  findPortfolioItem,
+  updatePortfolioItemVisibility,
+} from '../portfolio.repository';
 
 export async function getUnifiedPortfolio(studentId: string) {
   try {
     const [githubAccount, initialShowcased, computedSkills] = await Promise.all([
-      prisma.githubAccount.findUnique({ where: { studentId } }),
-      prisma.githubRepo.findMany({
-        where: { studentId, isShowcased: true, removedFromGithub: false },
-        orderBy: { showcaseRank: 'asc' }, select: repoSelect,
-      }),
-      prisma.githubStudentSkill.findMany({
-        where: { studentId }, include: { skill: true },
-        orderBy: [{ repoCount: 'desc' }, { totalBytes: 'desc' }],
-      }),
+      findGithubAccountByStudent(studentId),
+      findShowcasedRepos(studentId),
+      findGithubStudentSkills(studentId),
     ]);
 
     if (githubAccount) {
       let showcasedRepos = initialShowcased;
 
       if (showcasedRepos.length === 0) {
-        const candidateRepos = await prisma.githubRepo.findMany({
-          where: { studentId, removedFromGithub: false },
-          orderBy: [{ stars: 'desc' }, { pushedAt: 'desc' }],
-          take: 30,
-        });
+        const candidateRepos = await findShowcaseCandidateRepos(studentId);
 
         if (candidateRepos.length > 0) {
           const sorted = [...candidateRepos].sort((a, b) => {
@@ -46,15 +39,8 @@ export async function getUnifiedPortfolio(studentId: string) {
 
           const toPick = sorted.slice(0, 30);
           if (toPick.length > 0) {
-            await prisma.$transaction(
-              toPick.map((r, idx) =>
-                prisma.githubRepo.update({ where: { id: r.id }, data: { isShowcased: true, showcaseRank: idx + 1 } })
-              )
-            );
-            showcasedRepos = await prisma.githubRepo.findMany({
-              where: { studentId, isShowcased: true, removedFromGithub: false },
-              orderBy: { showcaseRank: 'asc' }, select: repoSelect,
-            });
+            await promoteReposToShowcase(toPick.map((r) => r.id));
+            showcasedRepos = await findShowcasedRepos(studentId);
           }
         }
       }
@@ -71,11 +57,8 @@ export async function getUnifiedPortfolio(studentId: string) {
     }
 
     const [projects, profile] = await Promise.all([
-      prisma.project.findMany({ where: { studentId }, orderBy: { displayOrder: 'asc' }, take: 100 }),
-      prisma.studentProfile.findUnique({
-        where: { studentId },
-        include: { skills: { include: { skill: true } } },
-      }),
+      findProjectsByStudent(studentId),
+      findStudentProfileWithSkills(studentId),
     ]);
 
     return {
@@ -97,8 +80,7 @@ export async function togglePortfolioItemVisibility(
 ) {
   try {
     const meta = PORTFOLIO_META[kind];
-    const delegate = (prisma as any)[meta.model];
-    const item = await delegate.findFirst({ where: { id, studentId } });
+    const item = await findPortfolioItem(meta.model, id, studentId);
     if (!item) {
       throw new AppError('NOT_FOUND', `${meta.label} not found`, 404, 'portfolio.service:togglePortfolioItemVisibility');
     }
@@ -107,11 +89,7 @@ export async function togglePortfolioItemVisibility(
       throw new AppError('NOT_APPROVED', `Only approved ${meta.label.toLowerCase()}s can be displayed on your public profile.`, 409, 'portfolio.service:togglePortfolioItemVisibility');
     }
 
-    const updated = await delegate.update({
-      where: { id: item.id },
-      data: { isPublic },
-      select: { id: true, isPublic: true, status: true },
-    });
+    const updated = await updatePortfolioItemVisibility(meta.model, item.id, isPublic);
 
     return {
       success: true,

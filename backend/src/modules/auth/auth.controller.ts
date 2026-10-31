@@ -3,7 +3,6 @@ import { env } from '../../config/env';
 import { STUDENT_SESSION_COOKIE_NAME } from '../../middleware/studentAuth';
 import * as authService from './auth.service';
 import { validateCallbackQuery } from './auth.schemas';
-import { AppError } from '../../utils/appError';
 import { logger } from '../../utils/logger';
 
 // --- Student Controllers ---
@@ -46,35 +45,20 @@ export function studentLogout(_req: Request, res: Response): void {
 export async function adminLogin(req: Request, res: Response): Promise<void> {
   const { username, password } = req.body;
 
-  try {
-    const { token, user } = await authService.adminLogin(username, password);
+  const { token, user } = await authService.adminLogin(username, password);
 
-    res.cookie(env.ADMIN_SESSION_COOKIE_NAME, token, {
-      httpOnly: true,
-      secure: env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 12 * 60 * 60 * 1000, // 12 hours
-      path: '/',
-    });
+  res.cookie(env.ADMIN_SESSION_COOKIE_NAME, token, {
+    httpOnly: true,
+    secure: env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    maxAge: 12 * 60 * 60 * 1000, // 12 hours
+    path: '/',
+  });
 
-    res.json({
-      success: true,
-      user,
-    });
-  } catch (err: any) {
-    if (err instanceof AppError) {
-      res.status(err.status).json({
-        error: err.code,
-        message: err.message,
-      });
-      return;
-    }
-    console.error('Error during admin login:', err);
-    res.status(500).json({
-      error: 'LOGIN_FAILED',
-      message: 'An error occurred during login. Please try again.',
-    });
-  }
+  res.json({
+    success: true,
+    user,
+  });
 }
 
 export function adminLogout(_req: Request, res: Response): void {

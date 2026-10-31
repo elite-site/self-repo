@@ -1,4 +1,7 @@
 import * as adminRepo from '../admin.repository';
+import { driveService } from '../../media/drive';
+import { UpstreamError } from '../../../utils/appError';
+import { logger } from '../../../utils/logger';
 
 export async function getStorageInfo() {
   const inventory = await adminRepo.getStorageInventory();
@@ -36,4 +39,16 @@ export async function getStorageInfo() {
 
 export async function clearStorageCache() {
   return adminRepo.clearDriveFolderCache();
+}
+
+/** Re-applies viewer access to every stored Drive file and folder. */
+export async function ensureViewerPermissions(): Promise<{ count: number; failed: number }> {
+  try {
+    return await driveService.ensureAllFilesViewerAccess();
+  } catch (err) {
+    logger.error('Drive viewer permission sweep failed', {
+      error: err instanceof Error ? err.message : String(err),
+    });
+    throw new UpstreamError('Could not update viewer permissions on Google Drive.', 502, 'google-drive');
+  }
 }

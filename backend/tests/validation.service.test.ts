@@ -8,30 +8,35 @@ const MP4_MAGIC = Buffer.from('000000186674797069736f6d000000006d703432', 'hex')
 const PNG_MAGIC = Buffer.from('89504e470d0a1a0a', 'hex');
 const PNG_PADDED = Buffer.concat([PNG_MAGIC, Buffer.alloc(4096)]);
 
+// `validateVideo` sniffs magic bytes through a dynamic `import('file-type')`.
+// That ESM module can take several seconds to resolve on a cold worker, which
+// is longer than the 5s default and made this suite fail intermittently.
+const SNIFF_TIMEOUT_MS = 30_000;
+
 describe('ValidationService.validateVideo', () => {
   it('accepts a small mp4 header named .mp4', async () => {
     const r = await ValidationService.validateVideo(MP4_MAGIC, 'intro.mp4', MP4_MAGIC.length);
     expect(r.valid).toBe(true);
     expect(r.detectedMime).toBe('video/mp4');
-  });
+  }, SNIFF_TIMEOUT_MS);
 
   it('rejects an image renamed to .mp4 via magic-byte sniffing', async () => {
     const r = await ValidationService.validateVideo(PNG_PADDED, 'evil.mp4', PNG_PADDED.length);
     expect(r.valid).toBe(false);
     expect(r.error).toMatch(/Unsupported file format/);
-  });
+  }, SNIFF_TIMEOUT_MS);
 
   it('rejects a disallowed extension even with a plausible signature', async () => {
     const r = await ValidationService.validateVideo(MP4_MAGIC, 'intro.exe', MP4_MAGIC.length);
     expect(r.valid).toBe(false);
-  });
+  }, SNIFF_TIMEOUT_MS);
 
   it('rejects files over the video size cap', async () => {
     const big = Buffer.alloc(0);
     const r = await ValidationService.validateVideo(big, 'intro.mp4', 30 * 1024 * 1024);
     expect(r.valid).toBe(false);
     expect(r.error).toMatch(/too large/i);
-  });
+  }, SNIFF_TIMEOUT_MS);
 });
 
 describe('ValidationService.validateImage', () => {
@@ -39,5 +44,5 @@ describe('ValidationService.validateImage', () => {
     const r = await ValidationService.validateImage(PNG_MAGIC, 'photo.png', PNG_MAGIC.length);
     expect(r.valid).toBe(false);
     expect(r.error).toMatch(/corrupted|not a valid|readable/i);
-  });
+  }, SNIFF_TIMEOUT_MS);
 });

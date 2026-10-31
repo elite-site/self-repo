@@ -65,7 +65,7 @@ export interface ModerationDecisionData {
 export interface ModerationDecisionResult {
   success: boolean;
   message?: string;
-  item?: any;
+  item?: unknown;
 }
 
 export interface ModerationBaseItem {

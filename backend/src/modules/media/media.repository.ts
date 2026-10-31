@@ -14,10 +14,6 @@ export async function upsertFolderCache(pathKey: string, driveFolderId: string) 
   });
 }
 
-export async function findAllFolderCaches() {
-  return prisma.driveFolderCache.findMany();
-}
-
 export async function findAllMediaFileDriveIds(): Promise<{
   cachedFolders: string[];
   resumes: string[];

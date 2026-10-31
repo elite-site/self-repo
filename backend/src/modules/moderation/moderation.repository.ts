@@ -1,4 +1,5 @@
 import { prisma } from '../../infrastructure/prisma';
+import type { ModerationUpdate } from './moderation.types';
 
 const studentSelect = {
   name: true,
@@ -157,7 +158,35 @@ export async function findVideoById(id: string) {
   });
 }
 
-export async function updateVideo(id: string, data: any) {
+export async function findResumeById(id: string) {
+  return prisma.resume.findUnique({
+    where: { id },
+    select: { id: true, status: true, isPublic: true, driveFileId: true },
+  });
+}
+
+export async function findAchievementById(id: string) {
+  return prisma.achievement.findUnique({
+    where: { id },
+    select: { id: true, status: true, isPublic: true, proofDriveId: true },
+  });
+}
+
+export async function findCertificateById(id: string) {
+  return prisma.certificate.findUnique({
+    where: { id },
+    select: { id: true, status: true, isPublic: true, fileDriveId: true },
+  });
+}
+
+export async function findProjectById(id: string) {
+  return prisma.project.findUnique({
+    where: { id },
+    select: { id: true, status: true, isPublic: true },
+  });
+}
+
+export async function updateVideo(id: string, data: ModerationUpdate) {
   return prisma.introVideo.update({
     where: { id },
     data,
@@ -171,60 +200,50 @@ export async function updateSubmissionStatusByRollNo(rollNo: string, status: any
   }).catch(() => {});
 }
 
-export async function updateResume(id: string, data: any) {
+export async function updateResume(id: string, data: ModerationUpdate) {
   return prisma.resume.update({
     where: { id },
     data,
   });
 }
 
-export async function updateAchievement(id: string, data: any) {
+export async function updateAchievement(id: string, data: ModerationUpdate) {
   return prisma.achievement.update({
     where: { id },
     data,
   });
 }
 
-export async function updateCertificate(id: string, data: any) {
+export async function updateCertificate(id: string, data: ModerationUpdate) {
   return prisma.certificate.update({
     where: { id },
     data,
   });
 }
 
-// Portal pending items
-export async function findPortalPendingVideos(take: number = 200) {
-  return prisma.introVideo.findMany({
-    where: { status: { in: ['PENDING', 'UNDER_REVIEW'] } },
-    include: { student: { select: studentSelect } },
-    take,
-    orderBy: { submittedAt: 'desc' },
+export async function updateProject(id: string, data: ModerationUpdate) {
+  return prisma.project.update({
+    where: { id },
+    data,
   });
 }
 
-export async function findPortalPendingResumes(take: number = 200) {
-  return prisma.resume.findMany({
-    where: { status: { in: ['PENDING', 'UNDER_REVIEW'] } },
-    include: { student: { select: studentSelect } },
-    take,
-    orderBy: { submittedAt: 'desc' },
-  });
+export async function deleteVideo(id: string) {
+  return prisma.introVideo.delete({ where: { id }, select: { id: true } });
 }
 
-export async function findPortalPendingAchievements(take: number = 200) {
-  return prisma.achievement.findMany({
-    where: { status: 'PENDING' },
-    include: { student: { select: studentSelect }, category: true },
-    take,
-    orderBy: { createdAt: 'desc' },
-  });
+export async function deleteResume(id: string) {
+  return prisma.resume.delete({ where: { id }, select: { id: true } });
 }
 
-export async function findPortalPendingCertificates(take: number = 200) {
-  return prisma.certificate.findMany({
-    where: { status: 'PENDING' },
-    include: { student: { select: studentSelect } },
-    take,
-    orderBy: { createdAt: 'desc' },
-  });
+export async function deleteAchievement(id: string) {
+  return prisma.achievement.delete({ where: { id }, select: { id: true } });
+}
+
+export async function deleteCertificate(id: string) {
+  return prisma.certificate.delete({ where: { id }, select: { id: true } });
+}
+
+export async function deleteProject(id: string) {
+  return prisma.project.delete({ where: { id }, select: { id: true } });
 }

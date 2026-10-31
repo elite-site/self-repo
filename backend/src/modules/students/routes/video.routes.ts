@@ -14,7 +14,7 @@ import {
 
 const router = Router();
 
-router.post('/submission', requireStudentAuth, deprecatedSubmission);
+router.post('/submission', requireStudentAuth, asyncHandler(deprecatedSubmission));
 router.delete('/submission', requireStudentAuth, asyncHandler(deleteSubmission));
 router.patch('/submission/video-visibility', requireStudentAuth, asyncHandler(updateVisibility));
 router.get('/submission/media/video', requireStudentAuth, asyncHandler(streamVideo));

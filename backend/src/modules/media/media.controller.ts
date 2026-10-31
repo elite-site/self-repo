@@ -1,9 +1,14 @@
-import { Request, Response } from 'express';
+import { NextFunction, Request, Response } from 'express';
 import { resolveContentRange } from '../../utils/rangeParser';
-import { AppError } from '../../utils/appError';
+import { NotFoundError } from '../../utils/appError';
+import { logger } from '../../utils/logger';
 import * as mediaService from './media.service';
 
-export async function streamMedia(req: Request, res: Response): Promise<void> {
+export async function streamMedia(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
   try {
     const { type, fileId } = req.params;
     const rangeHeader = req.headers.range;
@@ -51,47 +56,35 @@ export async function streamMedia(req: Request, res: Response): Promise<void> {
       }
     });
 
-    stream.on('error', (err: any) => {
-      console.error('Media stream error:', err);
+    stream.on('error', (streamErr) => {
+      logger.error('Media stream failed', { type, error: streamErr });
       if (!res.headersSent) {
-        res.status(500).json({ error: 'STREAM_ERROR', message: 'Stream interrupted' });
+        next(streamErr);
       } else {
         res.end();
       }
     });
 
     stream.pipe(res);
-  } catch (err: any) {
-    if (err instanceof AppError) {
-      res.status(err.status).json({ error: err.code, message: err.message });
+  } catch (err) {
+    if (res.headersSent) {
+      logger.error('Media stream failed after headers were sent', { error: err });
+      res.end();
       return;
     }
-    console.error('Error streaming media:', err);
-    if (!res.headersSent) {
-      res.status(500).json({ error: 'STREAM_ERROR', message: err.message || 'Stream error' });
-    }
+    throw err;
   }
 }
 
 export async function getThumbnail(req: Request, res: Response): Promise<void> {
-  try {
-    const { type, id } = req.params;
-    const buffer = await mediaService.getThumbnail(type, id);
+  const { type, id } = req.params;
+  const buffer = await mediaService.getThumbnail(type, id);
 
-    if (!buffer) {
-      res.status(404).json({ error: 'THUMBNAIL_NOT_FOUND', message: 'Thumbnail could not be generated' });
-      return;
-    }
-
-    res.setHeader('Content-Type', 'image/jpeg');
-    res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
-    res.send(buffer);
-  } catch (err: any) {
-    if (err instanceof AppError) {
-      res.status(err.status).json({ error: err.code, message: err.message });
-      return;
-    }
-    console.error('Error fetching thumbnail:', err);
-    res.status(500).json({ error: 'THUMBNAIL_ERROR', message: err.message || 'Server error' });
+  if (!buffer) {
+    throw new NotFoundError('Thumbnail could not be generated', 'THUMBNAIL_NOT_FOUND');
   }
+
+  res.setHeader('Content-Type', 'image/jpeg');
+  res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
+  res.send(buffer);
 }

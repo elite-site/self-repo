@@ -109,9 +109,11 @@ export function validateVisibilityPayload(body: any): boolean {
 
 export type PortfolioKind = 'achievements' | 'projects' | 'certificates';
 
+export type PortfolioModel = 'achievement' | 'project' | 'certificate';
+
 export const PORTFOLIO_META: Record<
   PortfolioKind,
-  { model: 'achievement' | 'project' | 'certificate'; label: string }
+  { model: PortfolioModel; label: string }
 > = {
   achievements: { model: 'achievement', label: 'Achievement' },
   projects: { model: 'project', label: 'Project' },

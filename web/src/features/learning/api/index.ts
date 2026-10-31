@@ -19,7 +19,9 @@ import {
 } from './fixtures';
 
 const isMock = (): boolean => {
-  return import.meta.env.VITE_LEARNING_MOCK === 'true';
+  // Fixtures are development-only. A production build must never render fake
+  // courses even if VITE_LEARNING_MOCK was left set in the environment.
+  return import.meta.env.DEV && import.meta.env.VITE_LEARNING_MOCK === 'true';
 };
 
 export const learningApi = {

@@ -5,6 +5,11 @@ import {
   RegistrationTeam,
 } from '../types';
 
+/** Builds an event-scoped xlsx download URL for one of the admin export routes. */
+function getEventExportUrl(path: string, eventId?: string): string {
+  return `${path}?eventId=${encodeURIComponent(eventId ?? '')}`;
+}
+
 export const registrationsApi = {
   async getRegistrations(params: {
     eventId?: string;
@@ -80,15 +85,11 @@ export const registrationsApi = {
   },
 
   getStudentsExportUrl(eventId?: string): string {
-    return eventId
-      ? `/admin/api/students/export?eventId=${encodeURIComponent(eventId)}`
-      : '/admin/api/students/export';
+    return getEventExportUrl('/admin/api/students/export', eventId);
   },
 
   getSubmissionsExportUrl(eventId?: string): string {
-    return eventId
-      ? `/admin/api/portal/submissions/export?eventId=${encodeURIComponent(eventId)}`
-      : '/admin/api/portal/submissions/export';
+    return getEventExportUrl('/admin/api/submissions/export', eventId);
   },
 
   getActivityLogsExportUrl(): string {

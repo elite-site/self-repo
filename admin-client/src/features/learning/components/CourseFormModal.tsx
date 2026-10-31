@@ -118,7 +118,7 @@ export const CourseFormModal: React.FC<CourseFormModalProps> = ({
       setDescription(course.description || '');
       setCategory(course.category || '');
       setLevel(course.level || 'BEGINNER');
-      setEstimatedHours(course.estimatedHours != null ? String(course.estimatedHours) : '');
+      setEstimatedHours(String(course.estimatedHours ?? ''));
       setThumbnailUrl(course.thumbnailUrl || '');
       setInstructor(course.instructor || '');
       setSkills(Array.isArray(course.skills) ? course.skills.join(', ') : '');

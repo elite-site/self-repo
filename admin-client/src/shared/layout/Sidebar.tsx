@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
 import {
   Home,
-  BookOpen,
   Users,
-  Clock,
   LogOut,
   UserRound,
   ShieldCheck,
@@ -22,6 +20,7 @@ import {
   Layers,
   HardDrive,
   GraduationCap,
+  LibraryBig,
 } from 'lucide-react';
 
 /**
@@ -38,10 +37,8 @@ export type AdminTab =
   | 'submissions'
   | 'students'
   | 'github'
-  | 'activity'
   | 'moderation'
   | 'learning'
-  | 'resources'
   | 'events'
   | 'event-registrations'
   | 'voting'
@@ -52,6 +49,7 @@ export type AdminTab =
   | 'analytics'
   | 'exports'
   | 'storage'
+  | 'resources'
   | 'roles'
   | 'audit-logs'
   | 'settings';
@@ -67,7 +65,7 @@ interface NavGroup {
   items: { id: AdminTab; label: string; icon: React.FC<{ className?: string }> }[];
 }
 
-const navGroups: NavGroup[] = [
+export const ADMIN_NAV_GROUPS: NavGroup[] = [
   {
     label: 'Overview',
     items: [
@@ -75,13 +73,18 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
-    label: 'Core Features',
+    label: 'Students',
     items: [
       { id: 'students', label: 'All students', icon: Users },
+      { id: 'github', label: 'GitHub', icon: HardDrive },
       { id: 'moderation', label: 'Moderation queue', icon: ShieldCheck },
-      { id: 'submissions', label: 'Video submissions', icon: Layers },
+    ],
+  },
+  {
+    label: 'Learning',
+    items: [
       { id: 'learning', label: 'Courses & Quizzes', icon: GraduationCap },
-      { id: 'resources', label: 'Study Resources', icon: BookOpen },
+      { id: 'resources', label: 'Resources', icon: LibraryBig },
     ],
   },
   {
@@ -89,6 +92,11 @@ const navGroups: NavGroup[] = [
     items: [
       { id: 'events', label: 'All events', icon: CalendarDays },
       { id: 'event-registrations', label: 'Registrations', icon: Layers },
+    ],
+  },
+  {
+    label: 'Voting',
+    items: [
       { id: 'voting', label: 'Voting Management', icon: Vote },
       { id: 'voting-results', label: 'Voting Results', icon: BarChart3 },
     ],
@@ -102,14 +110,17 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
-    label: 'System & Data',
+    label: 'Data',
     items: [
       { id: 'analytics', label: 'Analytics', icon: BarChart3 },
       { id: 'exports', label: 'Exports', icon: Download },
-      { id: 'github', label: 'GitHub', icon: HardDrive },
+    ],
+  },
+  {
+    label: 'System',
+    items: [
       { id: 'storage', label: 'Storage', icon: HardDrive },
       { id: 'roles', label: 'Roles & Permissions', icon: Lock },
-      { id: 'activity', label: 'Activity Log', icon: Clock },
       { id: 'audit-logs', label: 'Audit Logs', icon: ScrollText },
       { id: 'settings', label: 'Settings', icon: Settings },
     ],
@@ -126,51 +137,40 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab, onLogo
     <aside className="w-60 bg-surface border-r border-edge flex flex-col shrink-0 h-[100dvh] sticky top-0 text-left z-sticky select-none">
       <div className="flex flex-col h-full overflow-y-auto">
         {/* BRAND */}
-        <div className="h-16 px-4 border-b border-edge flex items-center gap-2.5 shrink-0">
-          <div className="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-500 dark:text-indigo-400 flex items-center justify-center shrink-0 border border-indigo-500/20">
+        <div className="p-4 border-b border-edge flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-brand-soft text-brand-soft-text flex items-center justify-center shrink-0 border border-brand-soft">
             <UserRound strokeWidth={1.75} className="w-4 h-4" />
           </div>
-          <div className="text-left leading-tight">
-            <div className="flex items-center gap-1 font-heading text-xs font-bold tracking-tight text-ink">
+          <div>
+            <div className="flex items-center gap-1 font-heading text-sm font-semibold tracking-tight leading-tight">
               <span className="text-brand">ELITE</span>
-              <span>Portal</span>
+              <span className="text-ink">Portal</span>
             </div>
-            <div className="text-xs text-ink-muted font-medium">Admin Control</div>
+            <div className="text-xs text-ink-muted font-semibold">Admin Control</div>
           </div>
         </div>
 
         {/* NAV GROUPS */}
         <nav className="flex-1 p-2.5 space-y-1 overflow-y-auto" aria-label="Admin navigation">
-          {navGroups.map((group, groupIdx) => {
-            const isFirstGroup = groupIdx === 0;
-            const groupSpacingClass = isFirstGroup ? 'mb-1' : 'mb-1 mt-2';
-
+          {ADMIN_NAV_GROUPS.map((group) => {
             if (group.items.length === 1) {
               const item = group.items[0];
               const Icon = item.icon;
               const isActive = activeTab === item.id;
               return (
-                <div key={group.label} className={groupSpacingClass}>
-                  <div className="px-2.5 pt-1.5 pb-1 text-[10px] uppercase font-bold tracking-wider text-ink-muted select-none">
-                    {group.label}
-                  </div>
+                <div key={group.label} className="mb-2">
                   <button
                     onClick={() => onSelectTab(item.id)}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                       isActive
-                        ? 'bg-indigo-500/10 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 font-semibold shadow-xs'
+                        ? 'bg-brand-soft text-brand-soft-text font-semibold'
                         : 'text-ink-secondary hover:text-ink hover:bg-surface-sunken'
                     }`}
                     aria-current={isActive ? 'page' : undefined}
                     aria-pressed={isActive}
                   >
-                    <div className="flex items-center gap-2.5 truncate">
-                      <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-indigo-600 dark:text-indigo-400' : 'text-ink-muted'}`} aria-hidden="true" />
-                      <span className="truncate">{item.label}</span>
-                    </div>
-                    {isActive && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 dark:bg-indigo-400 shrink-0 ml-1.5" aria-hidden="true" />
-                    )}
+                    <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-brand' : 'text-ink-muted'}`} aria-hidden="true" />
+                    <span className="truncate">{item.label}</span>
                   </button>
                 </div>
               );
@@ -181,14 +181,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab, onLogo
             // they are looking at behind a closed disclosure.
             const isOpen = hasActive || !collapsed[group.label];
             return (
-              <div key={group.label} className={groupSpacingClass}>
+              <div key={group.label} className="mb-2">
                 <button
                   onClick={() => toggle(group.label)}
-                  className="w-full flex items-center justify-between px-2.5 py-1 text-[10px] uppercase font-bold tracking-wider text-ink-muted hover:text-ink-secondary transition-colors cursor-pointer select-none"
+                  className="w-full flex items-center justify-between px-2.5 py-1.5 font-heading text-xs font-semibold text-ink-muted hover:text-ink-secondary transition-colors cursor-pointer"
                   aria-expanded={isOpen}
                   aria-controls={`nav-group-${group.label.replace(/\s+/g, '-').toLowerCase()}`}
                 >
-                  <span id={`nav-group-label-${group.label.replace(/\s+/g, '-').toLowerCase()}`} className={hasActive ? 'text-indigo-600 dark:text-indigo-400 font-bold' : ''}>{group.label}</span>
+                  <span id={`nav-group-label-${group.label.replace(/\s+/g, '-').toLowerCase()}`} className={hasActive ? 'text-brand' : ''}>{group.label}</span>
                   {isOpen ? (
                     <ChevronDown className="w-3 h-3" aria-hidden="true" />
                   ) : (
@@ -196,7 +196,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab, onLogo
                   )}
                 </button>
                 {isOpen && (
-                  <div id={`nav-group-${group.label.replace(/\s+/g, '-').toLowerCase()}`} className="space-y-0.5 mt-1" role="group" aria-labelledby={`nav-group-label-${group.label.replace(/\s+/g, '-').toLowerCase()}`}>
+                  <div id={`nav-group-${group.label.replace(/\s+/g, '-').toLowerCase()}`} className="space-y-0.5 mt-0.5" role="group" aria-labelledby={`nav-group-label-${group.label.replace(/\s+/g, '-').toLowerCase()}`}>
                     {group.items.map((item) => {
                       const Icon = item.icon;
                       const isActive = activeTab === item.id;
@@ -204,21 +204,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab, onLogo
                         <button
                           key={item.id}
                           onClick={() => onSelectTab(item.id)}
-                          className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                             isActive
-                              ? 'bg-indigo-500/10 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 font-semibold shadow-xs'
+                              ? 'bg-brand-soft text-brand-soft-text font-semibold'
                               : 'text-ink-secondary hover:text-ink hover:bg-surface-sunken'
                           }`}
                           aria-current={isActive ? 'page' : undefined}
                           aria-pressed={isActive}
                         >
-                          <div className="flex items-center gap-2.5 truncate">
-                            <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-indigo-600 dark:text-indigo-400' : 'text-ink-muted'}`} aria-hidden="true" />
-                            <span className="truncate">{item.label}</span>
-                          </div>
-                          {isActive && (
-                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 dark:bg-indigo-400 shrink-0 ml-1.5" aria-hidden="true" />
-                          )}
+                          <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-brand' : 'text-ink-muted'}`} aria-hidden="true" />
+                          <span className="truncate">{item.label}</span>
                         </button>
                       );
                     })}

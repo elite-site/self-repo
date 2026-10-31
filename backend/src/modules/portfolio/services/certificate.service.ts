@@ -1,23 +1,20 @@
 import path from 'path';
-import { prisma } from '../../../infrastructure/prisma';
 import { driveService } from '../../media/drive';
 import { env } from '../../../config/env';
 import { AppError } from '../../../utils/appError';
-
-const certificateSelect = {
-  id: true, studentId: true, title: true, issuer: true, issuedAt: true,
-  fileDriveId: true, status: true, reviewNote: true, reviewedBy: true,
-  reviewedAt: true, isPublic: true, createdAt: true, updatedAt: true,
-};
+import {
+  findCertificatesByStudent,
+  findStudentIdentity,
+  createCertificateRecord,
+  findCertificateByStudent,
+  updateCertificateVisibility as updateCertificateVisibilityRecord,
+  findCertificateForDeletion,
+  deleteCertificateRecord,
+} from '../portfolio.repository';
 
 export async function listCertificates(studentId: string) {
   try {
-    const certificates = await prisma.certificate.findMany({
-      where: { studentId },
-      orderBy: { issuedAt: 'desc' },
-      take: 100,
-      select: certificateSelect,
-    });
+    const certificates = await findCertificatesByStudent(studentId);
 
     return certificates.map((c) => {
       const { fileDriveId: _f, ...rest } = c;
@@ -44,10 +41,7 @@ export async function listCertificates(studentId: string) {
 
 export async function createCertificate(studentId: string, data: { title: string; issuer: string; issuedAt: Date }, file?: Express.Multer.File) {
   try {
-    const student = await prisma.student.findUnique({
-      where: { id: studentId },
-      select: { rollNo: true, name: true, year: true, section: true },
-    });
+    const student = await findStudentIdentity(studentId);
 
     let driveFileId: string | null = null;
     if (file) {
@@ -68,11 +62,9 @@ export async function createCertificate(studentId: string, data: { title: string
       }
     }
 
-    const certificate = await prisma.certificate.create({
-      data: {
-        studentId, title: data.title || 'Certificate', issuer: data.issuer || '', issuedAt: data.issuedAt,
-        fileDriveId: driveFileId, thumbnail: null, status: 'PENDING', isPublic: false,
-      },
+    const certificate = await createCertificateRecord({
+      studentId, title: data.title || 'Certificate', issuer: data.issuer || '', issuedAt: data.issuedAt,
+      fileDriveId: driveFileId, thumbnail: null, status: 'PENDING', isPublic: false,
     });
 
     const { fileDriveId: _f, thumbnail: _t, ...rest } = certificate;
@@ -95,7 +87,7 @@ export async function createCertificate(studentId: string, data: { title: string
 
 export async function updateCertificateVisibility(studentId: string, id: string, isPublic: boolean) {
   try {
-    const certificate = await prisma.certificate.findFirst({ where: { id, studentId } });
+    const certificate = await findCertificateByStudent(studentId, id);
     if (!certificate) {
       throw new AppError('NOT_FOUND', 'Certificate not found', 404, 'certificate.service:updateCertificateVisibility');
     }
@@ -103,11 +95,7 @@ export async function updateCertificateVisibility(studentId: string, id: string,
       throw new AppError('NOT_APPROVED', 'Only approved certificates can be displayed on your public profile.', 409, 'certificate.service:updateCertificateVisibility');
     }
 
-    const updated = await prisma.certificate.update({
-      where: { id: certificate.id },
-      data: { isPublic },
-      select: { id: true, isPublic: true, status: true },
-    });
+    const updated = await updateCertificateVisibilityRecord(certificate.id, isPublic);
 
     return {
       success: true,
@@ -123,10 +111,7 @@ export async function updateCertificateVisibility(studentId: string, id: string,
 
 export async function deleteCertificate(studentId: string, id: string) {
   try {
-    const cert = await prisma.certificate.findFirst({
-      where: { id, studentId },
-      include: { student: { select: { rollNo: true } } },
-    });
+    const cert = await findCertificateForDeletion(studentId, id);
     if (!cert) {
       throw new AppError('NOT_FOUND', 'Not found', 404, 'certificate.service:deleteCertificate');
     }
@@ -137,7 +122,7 @@ export async function deleteCertificate(studentId: string, id: string) {
       await driveService.deleteFileById(cert.fileDriveId, relativePath).catch(() => {});
     }
 
-    await prisma.certificate.delete({ where: { id: cert.id } });
+    await deleteCertificateRecord(cert.id);
     return { message: 'Deleted successfully' };
   } catch (err: any) {
     if (err instanceof AppError) throw err;

@@ -9,8 +9,3 @@ studentProgressRouter.use(requireStudentAuth);
 studentProgressRouter.get('/my-learning', asyncHandler(controller.getMyLearning));
 studentProgressRouter.get('/lessons/:id', asyncHandler(controller.getLesson));
 studentProgressRouter.post('/lessons/:id/progress', asyncHandler(controller.updateLessonProgress));
-
-export const progressRouter = Router();
-progressRouter.use(studentProgressRouter);
-
-export default progressRouter;

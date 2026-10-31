@@ -1,25 +1,19 @@
 import path from 'path';
-import { prisma } from '../../../infrastructure/prisma';
 import { driveService } from '../../media/drive';
 import { env } from '../../../config/env';
 import { AppError } from '../../../utils/appError';
-
-const achievementSelect = {
-  id: true, studentId: true, categoryId: true, title: true,
-  description: true, organization: true, achievedAt: true,
-  proofDriveId: true, proofUrl: true, status: true, reviewNote: true,
-  reviewedBy: true, reviewedAt: true, isPublic: true,
-  createdAt: true, updatedAt: true, category: true,
-};
+import {
+  findAchievementsByStudent,
+  findStudentIdentity,
+  createAchievementRecord,
+  updateStudentAchievement,
+  findAchievementForDeletion,
+  deleteAchievementRecord,
+} from '../portfolio.repository';
 
 export async function listAchievements(studentId: string) {
   try {
-    const achievements = await prisma.achievement.findMany({
-      where: { studentId },
-      orderBy: { achievedAt: 'desc' },
-      take: 100,
-      select: achievementSelect,
-    });
+    const achievements = await findAchievementsByStudent(studentId);
 
     return achievements.map((a) => {
       const { proofDriveId: _p, ...rest } = a;
@@ -53,10 +47,7 @@ export async function createAchievement(
   file?: Express.Multer.File
 ) {
   try {
-    const student = await prisma.student.findUnique({
-      where: { id: studentId },
-      select: { rollNo: true, name: true, year: true, section: true },
-    });
+    const student = await findStudentIdentity(studentId);
 
     let proofDriveId: string | null = null;
     if (file) {
@@ -77,13 +68,11 @@ export async function createAchievement(
       }
     }
 
-    const achievement = await prisma.achievement.create({
-      data: {
-        studentId, title: data.title, description: data.description, achievedAt: data.achievedAt,
-        organization: data.organization, categoryId: data.categoryId,
-        proofDriveId: proofDriveId || data.proofDriveId, proofUrl: data.proofUrl,
-        thumbnail: null, status: 'PENDING', isPublic: false,
-      },
+    const achievement = await createAchievementRecord({
+      studentId, title: data.title, description: data.description, achievedAt: data.achievedAt,
+      organization: data.organization, categoryId: data.categoryId,
+      proofDriveId: proofDriveId || data.proofDriveId, proofUrl: data.proofUrl,
+      thumbnail: null, status: 'PENDING', isPublic: false,
     });
 
     const proofUrl = achievement.proofDriveId ? `/api/public/media/achievement/${achievement.id}` : achievement.proofUrl || null;
@@ -106,7 +95,7 @@ export async function createAchievement(
 
 export async function updateAchievement(studentId: string, id: string, updateData: any) {
   try {
-    const updated = await prisma.achievement.updateMany({ where: { id, studentId }, data: updateData });
+    const updated = await updateStudentAchievement(studentId, id, updateData);
     if (updated.count === 0) {
       throw new AppError('NOT_FOUND', 'Not found', 404, 'achievement.service:updateAchievement');
     }
@@ -120,10 +109,7 @@ export async function updateAchievement(studentId: string, id: string, updateDat
 
 export async function deleteAchievement(studentId: string, id: string) {
   try {
-    const item = await prisma.achievement.findFirst({
-      where: { id, studentId },
-      include: { student: { select: { rollNo: true } } },
-    });
+    const item = await findAchievementForDeletion(studentId, id);
     if (!item) {
       throw new AppError('NOT_FOUND', 'Not found', 404, 'achievement.service:deleteAchievement');
     }
@@ -134,7 +120,7 @@ export async function deleteAchievement(studentId: string, id: string) {
       await driveService.deleteFileById(item.proofDriveId, relativePath).catch(() => {});
     }
 
-    await prisma.achievement.delete({ where: { id: item.id } });
+    await deleteAchievementRecord(item.id);
     return { message: 'Deleted successfully' };
   } catch (err: any) {
     if (err instanceof AppError) throw err;

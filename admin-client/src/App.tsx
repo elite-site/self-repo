@@ -7,6 +7,7 @@ import {
   useLocation,
   useNavigate,
 } from 'react-router-dom';
+import type { RouteObject } from 'react-router-dom';
 import { Sidebar, AdminHeader, AdminTab } from '@/shared/layout';
 import { BrandedLoading, ConfirmProvider, LoginPage } from '@/shared/ui';
 import { ErrorBoundary } from '@/shared/ui/ErrorBoundary';
@@ -17,7 +18,6 @@ import { useTheme } from './context/ThemeContext';
 // Lazy Loaded Pages
 const DashboardPage = React.lazy(() => import('@/features/analytics').then((m) => ({ default: m.DashboardPage })));
 const StudentsPage = React.lazy(() => import('@/features/students').then((m) => ({ default: m.StudentsPage })));
-const ActivityLogPage = React.lazy(() => import('@/features/activity-log').then((m) => ({ default: m.ActivityLogPage })));
 const ModerationPage = React.lazy(() => import('@/features/moderation').then((m) => ({ default: m.ModerationPage })));
 const AdminEventsPage = React.lazy(() => import('@/features/events').then((m) => ({ default: m.AdminEventsPage })));
 const EventRegistrationsPage = React.lazy(() => import('@/features/registrations').then((m) => ({ default: m.EventRegistrationsPage })));
@@ -29,6 +29,7 @@ const EmailHistoryPage = React.lazy(() => import('@/features/email-automation').
 const AnalyticsPage = React.lazy(() => import('@/features/analytics').then((m) => ({ default: m.AnalyticsPage })));
 const ExportsPage = React.lazy(() => import('@/features/registrations').then((m) => ({ default: m.ExportsPage })));
 const StoragePage = React.lazy(() => import('@/features/storage').then((m) => ({ default: m.StoragePage })));
+const AdminResourcesPage = React.lazy(() => import('@/features/resources').then((m) => ({ default: m.AdminResourcesPage })));
 const RolesPermissionsPage = React.lazy(() => import('@/features/roles').then((m) => ({ default: m.RolesPermissionsPage })));
 const AuditLogsPage = React.lazy(() => import('@/features/activity-log').then((m) => ({ default: m.AuditLogsPage })));
 const SettingsPage = React.lazy(() => import('@/features/settings').then((m) => ({ default: m.SettingsPage })));
@@ -37,7 +38,6 @@ const AdminCoursesPage = React.lazy(() => import('@/features/learning/pages/Admi
 const AdminCourseEditPage = React.lazy(() => import('@/features/learning/pages/AdminCourseEditPage'));
 const AdminCourseEnrollmentsPage = React.lazy(() => import('@/features/learning/pages/AdminCourseEnrollmentsPage'));
 const AdminCourseReportsPage = React.lazy(() => import('@/features/learning/pages/AdminCourseReportsPage'));
-const AdminResourcesPage = React.lazy(() => import('@/features/resources').then((m) => ({ default: m.AdminResourcesPage })));
 
 const PageLoadingFallback: React.FC = () => (
   <BrandedLoading message="Loading Module" fullScreen={false} />
@@ -168,11 +168,11 @@ export const ProtectedLayout: React.FC = () => {
   }
 
   const pathTabs: AdminTab[] = [
-    'dashboard', 'submissions', 'students', 'github', 'activity', 'moderation',
-    'learning', 'resources',
+    'dashboard', 'submissions', 'students', 'github', 'moderation',
+    'learning',
     'events', 'event-registrations', 'voting', 'voting-results',
     'communications', 'email-automation', 'email-history', 'analytics',
-    'exports', 'storage', 'roles', 'audit-logs', 'settings'
+    'exports', 'storage', 'resources', 'roles', 'audit-logs', 'settings'
   ];
 
   const currentPath = location.pathname.replace('/admin', '') || '/dashboard';
@@ -249,42 +249,51 @@ const RootRouterError: React.FC = () => (
   </div>
 );
 
+/**
+ * Routes rendered inside the admin shell. Exported so the navigation contract
+ * (one audit page, with `/activity` kept as a legacy alias) can be tested
+ * without mounting the whole application.
+ */
+export const adminRoutes: RouteObject[] = [
+  { index: true, element: <Navigate to="/admin/dashboard" replace /> },
+  { path: 'dashboard', element: <DashboardPage /> },
+  { path: 'submissions', element: <Navigate to="/admin/moderation" replace /> },
+  { path: 'students', element: <StudentsPage /> },
+  { path: 'students/:studentId', element: <StudentsPage /> },
+  { path: 'github', element: <AdminGithubPage /> },
+  // Legacy path: existing bookmarks point here, so redirect instead of rendering
+  // a second implementation of the audit trail.
+  { path: 'activity', element: <Navigate to="/admin/audit-logs" replace /> },
+  { path: 'moderation', element: <ModerationPage /> },
+  { path: 'learning', element: <AdminCoursesPage /> },
+  { path: 'learning/courses/:id', element: <AdminCourseEditPage /> },
+  { path: 'learning/courses/:id/edit', element: <AdminCourseEditPage /> },
+  { path: 'learning/courses/:id/enrollments', element: <AdminCourseEnrollmentsPage /> },
+  { path: 'learning/courses/:id/reports', element: <AdminCourseReportsPage /> },
+  { path: 'learning/reports/:id', element: <AdminCourseReportsPage /> },
+  { path: 'events', element: <AdminEventsPage /> },
+  { path: 'event-registrations', element: <EventRegistrationsPage /> },
+  { path: 'voting', element: <VotingManagementPage /> },
+  { path: 'voting-results', element: <VotingResultsPage /> },
+  { path: 'communications', element: <AnnouncementsPage /> },
+  { path: 'email-automation', element: <EmailAutomationPage /> },
+  { path: 'email-history', element: <EmailHistoryPage /> },
+  { path: 'analytics', element: <AnalyticsPage /> },
+  { path: 'exports', element: <ExportsPage /> },
+  { path: 'storage', element: <StoragePage /> },
+  { path: 'resources', element: <AdminResourcesPage /> },
+  { path: 'roles', element: <RolesPermissionsPage /> },
+  { path: 'audit-logs', element: <AuditLogsPage /> },
+  { path: 'settings', element: <SettingsPage /> },
+  { path: '*', element: <Navigate to="/admin/dashboard" replace /> },
+];
+
 const router = createBrowserRouter([
   {
     path: '/admin',
     element: <AuthProvider><ProtectedLayout /></AuthProvider>,
     errorElement: <RootRouterError />,
-    children: [
-      { index: true, element: <Navigate to="/admin/dashboard" replace /> },
-      { path: 'dashboard', element: <DashboardPage /> },
-      { path: 'submissions', element: <Navigate to="/admin/moderation" replace /> },
-      { path: 'students', element: <StudentsPage /> },
-      { path: 'students/:studentId', element: <StudentsPage /> },
-      { path: 'github', element: <AdminGithubPage /> },
-      { path: 'activity', element: <ActivityLogPage /> },
-      { path: 'moderation', element: <ModerationPage /> },
-      { path: 'learning', element: <AdminCoursesPage /> },
-      { path: 'learning/courses/:id', element: <AdminCourseEditPage /> },
-      { path: 'learning/courses/:id/edit', element: <AdminCourseEditPage /> },
-      { path: 'learning/courses/:id/enrollments', element: <AdminCourseEnrollmentsPage /> },
-      { path: 'learning/courses/:id/reports', element: <AdminCourseReportsPage /> },
-      { path: 'learning/reports/:id', element: <AdminCourseReportsPage /> },
-      { path: 'resources', element: <AdminResourcesPage /> },
-      { path: 'events', element: <AdminEventsPage /> },
-      { path: 'event-registrations', element: <EventRegistrationsPage /> },
-      { path: 'voting', element: <VotingManagementPage /> },
-      { path: 'voting-results', element: <VotingResultsPage /> },
-      { path: 'communications', element: <AnnouncementsPage /> },
-      { path: 'email-automation', element: <EmailAutomationPage /> },
-      { path: 'email-history', element: <EmailHistoryPage /> },
-      { path: 'analytics', element: <AnalyticsPage /> },
-      { path: 'exports', element: <ExportsPage /> },
-      { path: 'storage', element: <StoragePage /> },
-      { path: 'roles', element: <RolesPermissionsPage /> },
-      { path: 'audit-logs', element: <AuditLogsPage /> },
-      { path: 'settings', element: <SettingsPage /> },
-      { path: '*', element: <Navigate to="/admin/dashboard" replace /> },
-    ],
+    children: adminRoutes,
   },
   {
     path: '/submissions',

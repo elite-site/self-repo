@@ -39,8 +39,9 @@ export const useVotingManagement = () => {
     try {
       await eventsApi.activateVotingCampaign(id);
       fetchCampaigns();
-    } catch {
-      // noop
+    } catch (err) {
+      // Non-fatal: the list keeps its previous state and can be refreshed.
+      console.warn('Could not activate voting campaign:', err);
     } finally {
       setActivating(null);
     }
@@ -57,8 +58,9 @@ export const useVotingManagement = () => {
     try {
       await eventsApi.closeVotingCampaign(id);
       fetchCampaigns();
-    } catch {
-      // noop
+    } catch (err) {
+      // Non-fatal: the list keeps its previous state and can be refreshed.
+      console.warn('Could not close voting campaign:', err);
     }
   };
 

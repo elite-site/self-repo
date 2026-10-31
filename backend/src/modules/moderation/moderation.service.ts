@@ -1,7 +1,65 @@
 import * as repo from './moderation.repository';
 import { parseModerationStatus } from './moderation.schemas';
-import { AppError } from '../../utils/appError';
+import { ConflictError, NotFoundError, ValidationError } from '../../utils/appError';
 import { notifyStudent, notifyVideoChangeRequested } from '../students';
+import { driveService } from '../media/drive';
+import { logger } from '../../utils/logger';
+import type {
+  ModerationDecision,
+  ModerationDecisionOptions,
+  ModerationDecisionOutcome,
+  ModerationItemType,
+  ModerationRecord,
+  ModerationUpdate,
+} from './moderation.types';
+
+const ITEM_LABELS: Record<ModerationItemType, string> = {
+  videos: 'Video',
+  resumes: 'Resume',
+  certificates: 'Certificate',
+  achievements: 'Achievement',
+  projects: 'Project',
+};
+
+/** Maps a project row onto the shape the moderation queue renders. */
+function mapProjectItem(p: {
+  id: string;
+  studentId: string;
+  title: string;
+  description: string | null;
+  githubUrl: string | null;
+  driveVideoUrl: string | null;
+  status: string;
+  isPublic: boolean;
+  reviewNote: string | null;
+  createdAt: Date;
+  student?: { name: string; rollNo: string; year: number; section: string; branch: string } | null;
+}) {
+  return {
+    id: p.id,
+    type: 'projects' as const,
+    itemType: 'project' as const,
+    studentId: p.studentId,
+    studentName: p.student?.name || 'Unknown',
+    studentRoll: p.student?.rollNo || 'Unknown',
+    studentYear: p.student?.year,
+    studentSection: p.student?.section,
+    studentBranch: p.student?.branch,
+    title: p.title,
+    description: p.description,
+    organization: null,
+    category: 'Project',
+    proofUrl: p.githubUrl,
+    fileUrl: p.driveVideoUrl || p.githubUrl,
+    githubUrl: p.githubUrl,
+    driveVideoUrl: p.driveVideoUrl,
+    status: p.status,
+    submittedAt: p.createdAt?.toISOString() || new Date().toISOString(),
+    isPublic: Boolean(p.isPublic),
+    reviewNote: p.reviewNote,
+  };
+}
+
 
 export async function getUnifiedModerationItems(rawType: string = 'all', rawStatus: string = 'ALL') {
   const normalizedType = rawType.toLowerCase();
@@ -120,29 +178,7 @@ export async function getUnifiedModerationItems(rawType: string = 'all', rawStat
     reviewNote: c.reviewNote,
   }));
 
-  const mappedProjects = projects.map((p) => ({
-    id: p.id,
-    type: 'projects' as const,
-    itemType: 'project' as const,
-    studentId: p.studentId,
-    studentName: p.student?.name || 'Unknown',
-    studentRoll: p.student?.rollNo || 'Unknown',
-    studentYear: p.student?.year,
-    studentSection: p.student?.section,
-    studentBranch: p.student?.branch,
-    title: p.title,
-    description: p.description,
-    organization: null,
-    category: 'Project',
-    proofUrl: p.githubUrl,
-    fileUrl: p.driveVideoUrl || p.githubUrl,
-    githubUrl: p.githubUrl,
-    driveVideoUrl: p.driveVideoUrl,
-    status: p.status,
-    submittedAt: (p as any).createdAt?.toISOString() || new Date().toISOString(),
-    isPublic: Boolean(p.isPublic),
-    reviewNote: p.reviewNote,
-  }));
+  const mappedProjects = projects.map(mapProjectItem);
 
   const allItems = [
     ...mappedVideos,
@@ -217,35 +253,72 @@ export async function getCertificateModerationQueue() {
   }));
 }
 
-export async function moderateVideo(
-  id: string,
-  action: 'approve' | 'reject' | 'changes_requested',
-  reason?: string,
-  publish?: boolean,
-  adminUser?: { username?: string; email?: string }
-) {
+export async function getProjectModerationQueue() {
+  const projects = await repo.findProjects({}, 200);
+  return projects.map(mapProjectItem);
+}
+
+interface ModerationItemAdapter {
+  findById: (id: string) => Promise<ModerationRecord | null>;
+  update: (id: string, data: ModerationUpdate) => Promise<ModerationRecord>;
+  remove: (id: string) => Promise<unknown>;
+}
+
+/** One adapter per queue type so every handler dispatches the same way. */
+const ITEM_ADAPTERS: Record<ModerationItemType, ModerationItemAdapter> = {
+  videos: { findById: repo.findVideoById, update: repo.updateVideo, remove: repo.deleteVideo },
+  resumes: { findById: repo.findResumeById, update: repo.updateResume, remove: repo.deleteResume },
+  certificates: {
+    findById: repo.findCertificateById,
+    update: repo.updateCertificate,
+    remove: repo.deleteCertificate,
+  },
+  achievements: {
+    findById: repo.findAchievementById,
+    update: repo.updateAchievement,
+    remove: repo.deleteAchievement,
+  },
+  projects: { findById: repo.findProjectById, update: repo.updateProject, remove: repo.deleteProject },
+};
+
+/** Keeps the per-type columns each legacy handler wrote. */
+function buildDecisionUpdate(
+  type: ModerationItemType,
+  decision: ModerationDecision,
+  note?: string,
+  reviewer?: string
+): ModerationUpdate {
+  if (type === 'achievements') {
+    return { status: decision, reviewNote: note ?? null, reviewedAt: new Date() };
+  }
+  if (type === 'projects') {
+    return { status: decision, reviewNote: note ?? null, reviewedAt: new Date(), reviewedBy: reviewer ?? null };
+  }
+  return { status: decision, reviewNote: note };
+}
+
+async function decideVideo(id: string, decision: ModerationDecision, options: ModerationDecisionOptions) {
   const video = await repo.findVideoById(id);
   if (!video) {
-    throw new AppError('NOT_FOUND', 'Video not found', 404);
+    throw new NotFoundError('Video not found');
   }
 
-  const status = action === 'approve' ? 'APPROVED' : action === 'reject' ? 'REJECTED' : 'CHANGES_REQUESTED';
-  const note = reason ? String(reason) : null;
-  const publishApproved = action === 'approve' ? publish !== false : false;
+  const note = options.note ?? null;
+  const publishApproved = decision === 'APPROVED' && options.publish !== false;
 
-  const data: Record<string, unknown> = {
-    status,
+  const data: ModerationUpdate = {
+    status: decision,
     reviewNote: note,
     reviewedAt: new Date(),
-    reviewedBy: adminUser?.username || adminUser?.email || null,
+    reviewedBy: options.reviewer ?? null,
   };
 
-  if (action === 'approve') {
+  if (decision === 'APPROVED') {
     data.isPublic = publishApproved;
     data.publishedAt = publishApproved ? (video.publishedAt ?? new Date()) : null;
     data.changeRequestedAt = null;
     data.changeRequestNote = null;
-  } else if (action === 'reject') {
+  } else if (decision === 'REJECTED' || decision === 'HIDDEN') {
     data.isPublic = false;
     data.publishedAt = null;
   } else {
@@ -256,14 +329,23 @@ export async function moderateVideo(
   const updated = await repo.updateVideo(id, data);
 
   if (video.student?.rollNo) {
-    const subStatus = status === 'APPROVED' ? 'REVIEWED' : status === 'REJECTED' ? 'REJECTED' : 'UNDER_REVIEW';
-    await repo.updateSubmissionStatusByRollNo(video.student.rollNo, subStatus);
+    const submissionStatus =
+      decision === 'APPROVED'
+        ? 'REVIEWED'
+        : decision === 'REJECTED'
+        ? 'REJECTED'
+        : decision === 'CHANGES_REQUESTED'
+        ? 'UNDER_REVIEW'
+        : null;
+    if (submissionStatus) {
+      await repo.updateSubmissionStatusByRollNo(video.student.rollNo, submissionStatus);
+    }
   }
 
   if (video.student?.id) {
-    if (status === 'CHANGES_REQUESTED') {
+    if (decision === 'CHANGES_REQUESTED') {
       await notifyVideoChangeRequested(video.student.id, note);
-    } else if (status === 'APPROVED') {
+    } else if (decision === 'APPROVED') {
       await notifyStudent({
         studentId: video.student.id,
         title: publishApproved
@@ -273,7 +355,7 @@ export async function moderateVideo(
           ? 'Your introduction video was approved and is now visible on the public page.'
           : 'Your introduction video was approved. You can publish it to the public page from your Introduction Video page.',
       });
-    } else if (status === 'REJECTED') {
+    } else if (decision === 'REJECTED') {
       await notifyStudent({
         studentId: video.student.id,
         title: 'Introduction video rejected',
@@ -287,18 +369,39 @@ export async function moderateVideo(
   return { video: updated, isPublic: Boolean(updated.isPublic) };
 }
 
+export async function applyModerationDecision(
+  type: ModerationItemType,
+  id: string,
+  decision: ModerationDecision,
+  options: ModerationDecisionOptions = {}
+): Promise<ModerationDecisionOutcome> {
+  if (type === 'videos') {
+    const result = await decideVideo(id, decision, options);
+    return { type, item: result.video, isPublic: result.isPublic };
+  }
+
+  const adapter = ITEM_ADAPTERS[type];
+  const existing = await adapter.findById(id);
+  if (!existing) {
+    throw new NotFoundError(`${ITEM_LABELS[type]} not found`);
+  }
+
+  const item = await adapter.update(id, buildDecisionUpdate(type, decision, options.note, options.reviewer));
+  return { type, item };
+}
+
 export async function updateVideoVisibility(id: string, isPublic: boolean) {
   if (typeof isPublic !== 'boolean') {
-    throw new AppError('VALIDATION_ERROR', 'isPublic must be true or false', 400);
+    throw new ValidationError('isPublic must be true or false');
   }
 
   const video = await repo.findVideoById(id);
   if (!video) {
-    throw new AppError('NOT_FOUND', 'Video not found', 404);
+    throw new NotFoundError('Video not found');
   }
 
   if (isPublic && video.status !== 'APPROVED') {
-    throw new AppError('NOT_APPROVED', 'Only an approved video can be published publicly.', 409);
+    throw new ConflictError('Only an approved video can be published publicly.');
   }
 
   const updated = await repo.updateVideo(id, {
@@ -309,41 +412,60 @@ export async function updateVideoVisibility(id: string, isPublic: boolean) {
   return updated;
 }
 
-export async function moderateResume(id: string, action: string, reason?: string) {
-  const status = action === 'approve' ? 'APPROVED' : action === 'reject' ? 'REJECTED' : 'CHANGES_REQUESTED';
-  return repo.updateResume(id, { status, reviewNote: reason });
+export async function setModerationVisibility(
+  type: ModerationItemType,
+  id: string,
+  isPublic: boolean
+): Promise<ModerationDecisionOutcome> {
+  if (typeof isPublic !== 'boolean') {
+    throw new ValidationError('isPublic must be true or false');
+  }
+
+  if (type === 'videos') {
+    const item = await updateVideoVisibility(id, isPublic);
+    return { type, item, isPublic };
+  }
+
+  const adapter = ITEM_ADAPTERS[type];
+  const existing = await adapter.findById(id);
+  if (!existing) {
+    throw new NotFoundError(`${ITEM_LABELS[type]} not found`);
+  }
+
+  if (isPublic && existing.status !== 'APPROVED') {
+    throw new ConflictError('Only an approved item can be published publicly.');
+  }
+
+  const item = await adapter.update(id, { isPublic });
+  return { type, item, isPublic };
 }
 
-export async function moderateAchievement(id: string, action: string, reason?: string) {
-  const status = action === 'approve' ? 'APPROVED' : action === 'reject' ? 'REJECTED' : action === 'hide' ? 'HIDDEN' : 'CHANGES_REQUESTED';
-  return repo.updateAchievement(id, {
-    status,
-    reviewNote: reason || null,
-    reviewedAt: new Date(),
-  });
+export async function deleteModerationItem(type: ModerationItemType, id: string): Promise<void> {
+  const adapter = ITEM_ADAPTERS[type];
+  const existing = await adapter.findById(id);
+  if (!existing) {
+    throw new NotFoundError(`${ITEM_LABELS[type]} not found`);
+  }
+
+  const driveFileId = existing.driveFileId ?? existing.fileDriveId ?? existing.proofDriveId ?? null;
+  if (driveFileId) {
+    try {
+      await driveService.deleteFileById(driveFileId);
+    } catch (err) {
+      // The record still has to be removed: an orphaned Drive file is
+      // recoverable, a half-deleted portfolio item is not.
+      logger.warn('[moderation] failed to delete the Drive file for a removed item', {
+        error: err,
+        type,
+        id,
+      });
+    }
+  }
+
+  await adapter.remove(id);
 }
 
 // Portal Moderation
-export async function getPortalModerationItems() {
-  const [videos, resumes, achievements, certificates] = await Promise.all([
-    repo.findPortalPendingVideos(),
-    repo.findPortalPendingResumes(),
-    repo.findPortalPendingAchievements(),
-    repo.findPortalPendingCertificates(),
-  ]);
-
-  const mappedVideos = videos.map((v) => {
-    const fileId = (v.driveFileId && v.driveFileId.trim()) ? v.driveFileId.trim() : v.id;
-    return {
-      ...v,
-      fileUrl: fileId ? `/api/public/media/video/${fileId}?stream=true` : null,
-      thumbnailUrl: (v.driveFileId && v.driveFileId.trim()) ? `/api/public/media/thumbnail/video/${v.id}?v=${encodeURIComponent(v.driveFileId.trim())}` : null,
-    };
-  });
-
-  return { videos: mappedVideos, resumes, achievements, certificates };
-}
-
 export async function handlePortalModerationDecision(
   type: string,
   id: string,
@@ -352,7 +474,7 @@ export async function handlePortalModerationDecision(
 ) {
   switch (type) {
     case 'videos': {
-      const data: Record<string, unknown> = {
+      const data: ModerationUpdate = {
         status,
         reviewNote: reason,
         reviewedAt: new Date(),
@@ -404,6 +526,6 @@ export async function handlePortalModerationDecision(
     case 'certificates':
       return repo.updateCertificate(id, { status, reviewNote: reason });
     default:
-      throw new AppError('INVALID_TYPE', `Invalid moderation type: ${type}`, 400);
+      throw new NotFoundError(`Invalid moderation type: ${type}`);
   }
 }

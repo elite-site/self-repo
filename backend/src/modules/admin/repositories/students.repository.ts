@@ -84,25 +84,6 @@ export async function countStudents(whereClause: any) {
   return prisma.student.count({ where: whereClause });
 }
 
-export async function findStudents(whereClause: any, skip: number, take: number, orderBy: any) {
-  return prisma.student.findMany({
-    where: whereClause,
-    skip,
-    take,
-    orderBy,
-  });
-}
-
-export async function findStudentsWithProfile(whereClause: any, skip: number, take: number) {
-  return prisma.student.findMany({
-    where: whereClause,
-    skip,
-    take,
-    orderBy: { rollNo: 'asc' },
-    include: { profile: true },
-  });
-}
-
 export async function findStudentsForRoster(whereClause: any, skip: number, take: number) {
   return prisma.student.findMany({
     where: whereClause,
@@ -261,14 +242,6 @@ export async function updateProject(id: string, data: any) {
 
 export async function deleteProject(id: string) {
   return prisma.project.delete({ where: { id } });
-}
-
-export async function upsertStudentProfileStatus(studentId: string, isPublic: boolean) {
-  return prisma.studentProfile.upsert({
-    where: { studentId },
-    update: { isPublic },
-    create: { studentId, isPublic },
-  });
 }
 
 export async function executeAcademicYearPromotion(params: {

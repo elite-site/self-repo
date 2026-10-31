@@ -1,10 +1,12 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { moderationApi } from '../api';
+import { githubApi } from '@/features/github/api';
+import type { GithubShowcasedProject } from '@/features/github/types';
 import { UnifiedModerationItem, ModerationType, TabType, StatusFilter } from '../types';
 
 export const useModeration = () => {
   const [items, setItems] = useState<UnifiedModerationItem[]>([]);
-  const [githubProjects, setGithubProjects] = useState<any[]>([]);
+  const [githubProjects, setGithubProjects] = useState<GithubShowcasedProject[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,22 +37,33 @@ export const useModeration = () => {
   const fetchItems = useCallback(async () => {
     setLoading(true);
     setError(null);
-    try {
-      const [res, ghRes] = await Promise.all([
-        moderationApi.getModerationItems('all', 'ALL'),
-        moderationApi.getModerationProjects(), // or gh projects
-      ]);
-      setItems(res.items ?? []);
-      // Check if ghRes has items
-      const ghItems = Array.isArray(ghRes) ? ghRes : (ghRes as any)?.items ?? [];
-      setGithubProjects(ghItems);
-    } catch (err: any) {
-      console.error('Failed to load moderation queue:', err);
+
+    // The queue and the showcased GitHub repositories are independent reads.
+    // Settling both means a failing GitHub call degrades to a warning instead
+    // of blanking the moderation page.
+    const [queueResult, projectsResult] = await Promise.allSettled([
+      moderationApi.getModerationItems('all', 'ALL'),
+      githubApi.getGithubShowcasedProjects(),
+    ]);
+
+    const queueLoaded = queueResult.status === 'fulfilled';
+    if (queueLoaded) {
+      setItems(queueResult.value.items ?? []);
+    } else {
       setError("Couldn't load the queue. Try again.");
-    } finally {
-      setLoading(false);
     }
-  }, []);
+
+    if (projectsResult.status === 'fulfilled') {
+      setGithubProjects(projectsResult.value.items ?? []);
+    } else {
+      setGithubProjects([]);
+      if (queueLoaded) {
+        showToast("Couldn't load showcased projects. The moderation queue is still up to date.", 'error');
+      }
+    }
+
+    setLoading(false);
+  }, [showToast]);
 
   useEffect(() => {
     fetchItems();

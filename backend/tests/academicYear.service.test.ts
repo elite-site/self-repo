@@ -7,6 +7,7 @@ import { env } from '../src/config/env';
 import { prisma } from '../src/infrastructure/prisma';
 import { ActivityService } from '../src/modules/admin/services/activity.service';
 import { adminAcademicYearRouter, promoteAcademicYear } from '../src/modules/admin';
+import { errorHandler } from '../src/middleware/errorHandler';
 
 vi.mock('../src/infrastructure/prisma', () => ({
   prisma: {
@@ -55,6 +56,7 @@ const routeApp = express();
 routeApp.use(cookieParser());
 routeApp.use(express.json());
 routeApp.use('/api/admin/academic-year', adminAcademicYearRouter);
+routeApp.use(errorHandler);
 
 const adminToken = jwt.sign(
   { userId: 'admin-1', email: 'admin@example.com', username: 'admin' },
@@ -262,11 +264,12 @@ describe('POST /api/admin/academic-year/promote', () => {
       .send({});
 
     expect(response.status).toBe(409);
-    expect(response.body).toEqual({
+    expect(response.body).toMatchObject({
       error: 'ALREADY_PROMOTED',
       message: `Already promoted for academic year ${currentYear} — run again anyway?`,
       alreadyPromoted: true,
     });
+    expect(response.body.requestId).toBeDefined();
   });
 
   it('maps an empty active roster to the documented 409 response', async () => {
@@ -278,28 +281,34 @@ describe('POST /api/admin/academic-year/promote', () => {
       .send({});
 
     expect(response.status).toBe(409);
-    expect(response.body).toEqual({
+    expect(response.body).toMatchObject({
       error: 'NO_ACTIVE_STUDENTS',
       message: 'No active students to promote.',
     });
+    expect(response.body.requestId).toBeDefined();
   });
 
-  it('logs unexpected failures without leaking their message', async () => {
+  it('returns a generic 500 without leaking an unexpected failure message', async () => {
+    const nodeEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'production';
     const sensitiveError = new Error('database password leaked here');
     studentAggregate.mockRejectedValue(sensitiveError);
-    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
-    const response = await request(routeApp)
-      .post('/api/admin/academic-year/promote')
-      .set('Cookie', `${env.ADMIN_SESSION_COOKIE_NAME}=${adminToken}`)
-      .send({ force: true });
+    try {
+      const response = await request(routeApp)
+        .post('/api/admin/academic-year/promote')
+        .set('Cookie', `${env.ADMIN_SESSION_COOKIE_NAME}=${adminToken}`)
+        .send({ force: true });
 
-    expect(response.status).toBe(500);
-    expect(response.body).toEqual({
-      error: 'SERVER_ERROR',
-      message: 'Internal server error',
-    });
-    expect(consoleError).toHaveBeenCalledWith('Error promoting academic year:', sensitiveError);
-    consoleError.mockRestore();
+      expect(response.status).toBe(500);
+      expect(response.body).toMatchObject({
+        error: 'INTERNAL_SERVER_ERROR',
+        message: 'An unexpected error occurred. Please try again later.',
+      });
+      expect(response.body.requestId).toBeDefined();
+      expect(JSON.stringify(response.body)).not.toContain('database password leaked here');
+    } finally {
+      process.env.NODE_ENV = nodeEnv;
+    }
   });
 });

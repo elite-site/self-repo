@@ -1,51 +1,6 @@
 import { prisma } from '../../../infrastructure/prisma';
 import { EXCLUDE_INTERNAL_EVENT } from '../../../config/constants';
 
-export async function findVotingCampaigns() {
-  return prisma.votingCampaign.findMany({
-    include: {
-      event: true,
-      _count: { select: { candidates: true, votes: true } },
-    },
-    orderBy: { createdAt: 'desc' },
-  });
-}
-
-export async function createVotingCampaign(data: any) {
-  return prisma.votingCampaign.create({ data });
-}
-
-export async function findVotingCampaignById(id: string) {
-  return prisma.votingCampaign.findUnique({
-    where: { id },
-    include: {
-      event: true,
-      candidates: {
-        include: {
-          _count: { select: { votes: true } },
-        },
-      },
-      _count: { select: { votes: true } },
-    },
-  });
-}
-
-export async function updateVotingCampaign(id: string, data: any) {
-  return prisma.votingCampaign.update({ where: { id }, data });
-}
-
-export async function deleteVotingCampaign(id: string) {
-  return prisma.votingCampaign.delete({ where: { id } });
-}
-
-export async function createVotingCandidate(data: any) {
-  return prisma.votingCandidate.create({ data });
-}
-
-export async function deleteVotingCandidate(id: string) {
-  return prisma.votingCandidate.delete({ where: { id } });
-}
-
 export async function getAdminStatsCounts(eventId: string) {
   const [
     totalVideos,

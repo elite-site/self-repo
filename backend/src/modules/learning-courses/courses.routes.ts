@@ -27,9 +27,3 @@ adminCoursesRouter.put(['/admin/courses/:id/lessons/:lessonId', '/courses/:id/le
 adminCoursesRouter.delete(['/admin/courses/:id/lessons/:lessonId', '/courses/:id/lessons/:lessonId', '/:id/lessons/:lessonId'], asyncHandler(controller.deleteLesson));
 adminCoursesRouter.post(['/admin/courses/:id/assign', '/courses/:id/assign', '/:id/assign'], asyncHandler(controller.assignCourse));
 adminCoursesRouter.get(['/admin/courses/:id/enrollments', '/courses/:id/enrollments', '/:id/enrollments'], asyncHandler(controller.getCourseEnrollments));
-
-export const coursesRouter = Router();
-coursesRouter.use(studentCoursesRouter);
-coursesRouter.use(adminCoursesRouter);
-
-export default coursesRouter;

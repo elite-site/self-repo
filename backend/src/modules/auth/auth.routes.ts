@@ -13,14 +13,14 @@ import {
 
 export const adminAuthRouter = Router();
 
-adminAuthRouter.post('/login', adminLoginRateLimiter, adminLogin);
-adminAuthRouter.post('/logout', adminLogout);
-adminAuthRouter.get('/me', requireAdminAuth, adminMe);
+adminAuthRouter.post('/login', adminLoginRateLimiter, asyncHandler(adminLogin));
+adminAuthRouter.post('/logout', asyncHandler(adminLogout));
+adminAuthRouter.get('/me', requireAdminAuth, asyncHandler(adminMe));
 
 export const studentAuthRouter = Router();
 
-studentAuthRouter.get('/google/authorize', studentLoginRateLimiter, authorize);
+studentAuthRouter.get('/google/authorize', studentLoginRateLimiter, asyncHandler(authorize));
 studentAuthRouter.get('/google/callback', studentLoginRateLimiter, asyncHandler(googleCallback));
-studentAuthRouter.post('/logout', studentLogout);
+studentAuthRouter.post('/logout', asyncHandler(studentLogout));
 
 export default adminAuthRouter;

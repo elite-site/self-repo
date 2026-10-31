@@ -3,7 +3,6 @@ import { NavLink } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   Bell,
-  BookOpen,
   Briefcase,
   Calendar,
   ClipboardList,
@@ -12,6 +11,8 @@ import {
   Globe,
   GraduationCap,
   LayoutDashboard,
+  LibraryBig,
+  Settings,
   User,
   Users,
   Video,
@@ -23,9 +24,7 @@ import { useReducedMotion } from '@/shared/hooks/useReducedMotion';
 import { selectVariantsByName, transitionTabSpring } from '@/shared/lib/motion';
 import { prefetchRoute } from '@/shared/utils/prefetch';
 
-const isLearningHubEnabled =
-  (import.meta as any).env?.VITE_FEATURE_LEARNINGHUB !== 'false' &&
-  (import.meta as any).env?.FEATURE_LEARNINGHUB !== 'false';
+const isLearningHubEnabled = import.meta.env.VITE_FEATURE_LEARNINGHUB !== 'false';
 
 // ============================================================================
 // Navigation vocabulary
@@ -64,9 +63,9 @@ export const SIDEBAR_NAV: NavEntry[] = [
   {
     label: 'Resources',
     path: '/resources',
-    icon: BookOpen,
-    keywords: 'study materials notes question papers syllabus lab manuals drive',
-    description: 'Semester study materials, notes, and question papers',
+    icon: LibraryBig,
+    keywords: 'notes materials question bank lab manual syllabus download study',
+    description: 'Download notes, question banks and your course materials',
   },
   { label: 'Profile', path: '/profile', icon: User, keywords: 'roll number bio' },
   {
@@ -131,6 +130,13 @@ export const SIDEBAR_NAV: NavEntry[] = [
     keywords: 'inbox announcements alerts',
     description: 'Announcements, moderation alerts and updates',
   },
+  {
+    label: 'Settings',
+    path: '/settings',
+    icon: Settings,
+    keywords: 'preferences account theme appearance',
+    description: 'Theme, notifications and account preferences',
+  },
 ];
 
 /**
@@ -149,9 +155,8 @@ const TAB_PATHS = new Set(BOTTOM_TAB_NAV.map((entry) => entry.path));
 /**
  * §5.2: everything the bottom bar does not fit, plus the public directory the
  * old mobile sheet carried. Derived from `SIDEBAR_NAV` so the two cannot drift.
- * §5.1 lists a "Settings" row and §5.2 a "Settings" sheet entry, but this repo
- * has no `/settings` route and no settings page, so `/registrations` takes that
- * slot rather than the row linking to nothing.
+ * Settings is a real protected route (`/settings`) and a sidebar row; it is not
+ * a bottom tab, so it appears in the More sheet through this derivation.
  */
 export const MORE_SHEET_NAV: NavEntry[] = [
   ...SIDEBAR_NAV.filter((entry) => !TAB_PATHS.has(entry.path)),

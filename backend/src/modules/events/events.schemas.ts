@@ -1,25 +1,6 @@
 export const EVENT_TYPES = ['HACKATHON', 'WORKSHOP', 'COMPETITION', 'SEMINAR', 'OTHER'] as const;
 export const EVENT_STATUSES = ['DRAFT', 'OPEN', 'CLOSED', 'ARCHIVED'] as const;
 
-export interface EventPayload {
-  name?: string;
-  title?: string;
-  description?: string | null;
-  type?: string;
-  year?: number;
-  status?: string;
-  registrationStart?: string | Date | null;
-  registrationEnd?: string | Date | null;
-  eventDate?: string | Date | null;
-  eligibilityYears?: number[];
-  minCompletion?: number;
-  notifyOnOpen?: boolean;
-  notifyReminder?: boolean;
-  teamEnabled?: boolean;
-  teamMin?: number;
-  teamMax?: number;
-}
-
 export function parseEventPayload(rawBody: any, { partial }: { partial: boolean }) {
   if (rawBody === undefined || rawBody === null || typeof rawBody !== 'object') {
     return { ok: false as const, message: 'A JSON request body is required.' };

@@ -1,5 +1,3 @@
-import * as repo from './students.repository';
-
 export * from './services/profile.service';
 export * from './services/profilePhoto.service';
 export * from './services/profileSkills.service';
@@ -18,11 +16,3 @@ export * from './services/video.service';
 export * from './services/videoRecord.service';
 export * from './services/videoStream.service';
 export * from './services/resume.service';
-
-export async function getStudentById(id: string) {
-  return repo.findStudentById(id, true);
-}
-
-export async function getStudentByRollNo(rollNo: string) {
-  return repo.findStudentByRollNo(rollNo, true);
-}

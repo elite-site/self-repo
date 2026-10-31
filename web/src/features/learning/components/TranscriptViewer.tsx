@@ -51,7 +51,7 @@ const HighlightedText: React.FC<{ text: string; query: string }> = ({ text, quer
         part.toLowerCase() === trimmed.toLowerCase() ? (
           <mark
             key={index}
-            className="rounded bg-brand/20 px-0.5 font-medium text-brand dark:bg-brand/35 dark:text-brand-light"
+            className="rounded bg-brand/20 px-0.5 font-medium text-brand dark:bg-brand/35 dark:text-brand"
           >
             {part}
           </mark>

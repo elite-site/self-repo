@@ -23,14 +23,6 @@ export interface StudentRosterQueryParams {
   search?: string;
 }
 
-export interface PortalStudentsQueryParams {
-  year?: string;
-  section?: string;
-  search?: string;
-  page?: string;
-  limit?: string;
-}
-
 export interface CreateVotingCampaignInput {
   title: string;
   description?: string;

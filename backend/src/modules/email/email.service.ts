@@ -1,41 +1,8 @@
-import { emailEnabled, resendClient, emailFromAddress } from '../../infrastructure/email';
+import { emailEnabled } from '../../infrastructure/email';
 import * as repo from './email.repository';
-import { escapeHtml } from './email.schemas';
-import type {
-  AnnouncementEmailPayload,
-  CreateEmailAutomationInput,
-  SendAnnouncementEmailRecipient,
-} from './email.types';
+import type { CreateEmailAutomationInput } from './email.types';
 
 export { emailEnabled };
-
-export async function sendAnnouncementEmails(
-  to: SendAnnouncementEmailRecipient[],
-  announcement: AnnouncementEmailPayload
-): Promise<void> {
-  if (!emailEnabled || !resendClient || !emailFromAddress) return;
-  const recipients = to
-    .map((recipient) => (recipient.email || '').trim())
-    .filter((email) => email !== '');
-  if (recipients.length === 0) return;
-
-  const subject = `Announcement: ${announcement.title}`;
-  const html = `
-    <h1>${escapeHtml(announcement.title)}</h1>
-    <p>${escapeHtml(announcement.message).replace(/\n/g, '<br/>')}</p>
-  `;
-
-  try {
-    await resendClient.emails.send({
-      from: emailFromAddress,
-      to: recipients,
-      subject,
-      html,
-    });
-  } catch (err) {
-    console.error('Email send failed:', err);
-  }
-}
 
 export async function getEmailAutomations() {
   let automations = await repo.findEmailAutomations();

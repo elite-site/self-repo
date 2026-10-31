@@ -1,10 +1,6 @@
 import { prisma } from '../../infrastructure/prisma';
 import type { Prisma } from '@prisma/client';
 
-export async function findOAuthState(state: string) {
-  return prisma.githubOAuthState.findUnique({ where: { state } });
-}
-
 export async function findGithubAccount(studentId: string) {
   return prisma.githubAccount.findUnique({ where: { studentId } });
 }

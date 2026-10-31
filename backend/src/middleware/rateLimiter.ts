@@ -85,6 +85,22 @@ export const submissionRateLimiter = rateLimit({
   },
 });
 
+/**
+ * Resource downloads/previews: generous enough for normal reading, bounded so a
+ * single client cannot pull the whole library repeatedly.
+ */
+export const resourceDownloadRateLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => getClientIdentity(req),
+  message: {
+    error: 'TOO_MANY_REQUESTS',
+    message: 'Too many file downloads. Please wait a moment before trying again.',
+  },
+});
+
 // Admin login: strict brute-force guard
 export const adminLoginRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,

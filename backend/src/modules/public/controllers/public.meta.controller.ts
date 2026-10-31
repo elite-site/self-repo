@@ -7,6 +7,7 @@ import { driveService } from '../../media/drive';
 import { ActivityService } from '../../admin';
 import { ValidationService } from '../../../services/validation.service';
 import { logger } from '../../../utils/logger';
+import { ConflictError, ValidationError } from '../../../utils/appError';
 
 const EVENT_ID = INTERNAL_EVENT_ID;
 const EVENT_NAME = 'Self Introduction';
@@ -27,75 +28,100 @@ export function getYears(_req: Request, res: Response) {
 }
 
 export async function getPublicEvents(_req: Request, res: Response): Promise<void> {
-  try {
-    const mapped = await service.getPublicEventsList();
-    res.set('Cache-Control', 'public, max-age=60');
-    res.json(mapped);
-  } catch (err: any) {
-    console.error('Internal server error:', err);
-    res.status(500).json({ error: 'SERVER_ERROR', message: 'An unexpected error occurred. Please try again later.' });
-  }
+  const mapped = await service.getPublicEventsList();
+  res.set('Cache-Control', 'public, max-age=60');
+  res.json(mapped);
 }
 
 export async function getPublicEventById(req: Request, res: Response): Promise<void> {
-  try {
-    const result = await service.getPublicEventDetail(req.params.id);
-    res.set('Cache-Control', 'public, max-age=60');
-    res.json(result);
-  } catch (err: any) {
-    if (err.statusCode === 404 || err.code === 'NOT_FOUND') {
-      res.status(404).json({ error: 'NOT_FOUND', message: 'Event not found' });
-      return;
-    }
-    console.error('Internal server error:', err);
-    res.status(500).json({ error: 'SERVER_ERROR', message: 'An unexpected error occurred. Please try again later.' });
-  }
+  const result = await service.getPublicEventDetail(req.params.id);
+  res.set('Cache-Control', 'public, max-age=60');
+  res.json(result);
 }
 
 export async function submitLegacyApplication(req: Request, res: Response): Promise<void> {
-  let currentRollNo = '';
-  let currentStudentName = '';
-  let currentStudentEmail = '';
+  const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
+
+  const rollNo = (req.body.rollNo || '').trim().toUpperCase();
+  const name = (req.body.name || '').trim();
+  const email = (req.body.email || '').trim().toLowerCase();
+  const phoneNo = (req.body.phoneNo || '').trim();
+  const section = String(req.body.section || '').trim().toUpperCase();
+  const year = parseInt(String(req.body.year || ''), 10);
+  const branch = 'IT';
+
+  if (!rollNo) {
+    throw new ValidationError('Roll number is required.', [
+      { field: 'rollNo', message: 'Roll number is required.' },
+    ]);
+  }
+  if (!name || name.length < 2 || name.length > 100) {
+    throw new ValidationError('Please enter your full name.', [
+      { field: 'name', message: 'Please enter your full name.' },
+    ]);
+  }
+  if (!YEARS.includes(year as any)) {
+    throw new ValidationError(`Invalid year. Available options: ${YEARS.join(', ')}.`, [
+      { field: 'year', message: `Invalid year. Available options: ${YEARS.join(', ')}.` },
+    ]);
+  }
+  if (!SECTIONS.includes(section as any)) {
+    throw new ValidationError(`Invalid section. Available options: ${SECTIONS.join(', ')}.`, [
+      { field: 'section', message: `Invalid section. Available options: ${SECTIONS.join(', ')}.` },
+    ]);
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 200) {
+    throw new ValidationError('Please enter a valid email address.', [
+      { field: 'email', message: 'Please enter a valid email address.' },
+    ]);
+  }
+  if (!/^\+?\d{10,15}$/.test(phoneNo)) {
+    throw new ValidationError('Please enter a valid phone number (10–15 digits).', [
+      { field: 'phoneNo', message: 'Please enter a valid phone number (10–15 digits).' },
+    ]);
+  }
+
+  const videoFile = files?.video?.[0];
+  if (!videoFile) {
+    throw new ValidationError('Self introduction video is required.', [
+      { field: 'video', message: 'Self introduction video is required.' },
+    ]);
+  }
+
+  const vVideo = await ValidationService.validateVideo(videoFile.buffer, videoFile.originalname, videoFile.size);
+  if (!vVideo.valid) {
+    ActivityService.logNonBlocking({
+      eventId: EVENT_ID,
+      category: 'FILE_UPLOAD',
+      action: 'File validation failed (Video)',
+      details: vVideo.error,
+      applicantName: name,
+      userEmail: email,
+      status: 'ERROR',
+      errorMessage: vVideo.error,
+    });
+    const message = vVideo.error || 'Video validation failed.';
+    throw new ValidationError(message, [{ field: 'video', message }]);
+  }
+
+  const existing = await repo.findSubmissionByEventAndStudent(EVENT_ID, rollNo, year, branch, section);
+  if (existing && existing.videoDriveId) {
+    ActivityService.logNonBlocking({
+      eventId: EVENT_ID,
+      category: 'APPLICATION',
+      action: 'Submission rejected (Video already uploaded)',
+      details: `Roll Number: ${rollNo}`,
+      applicantName: name,
+      userEmail: email,
+      status: 'WARNING',
+    });
+    throw new ConflictError(
+      `A self introduction video has already been submitted for roll number ${rollNo}. You can upload again only if the admin removes the current video.`,
+      'DUPLICATE_VIDEO',
+    );
+  }
 
   try {
-    const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
-
-    const rollNo = (req.body.rollNo || '').trim().toUpperCase();
-    const name = (req.body.name || '').trim();
-    const email = (req.body.email || '').trim().toLowerCase();
-    const phoneNo = (req.body.phoneNo || '').trim();
-    const section = String(req.body.section || '').trim().toUpperCase();
-    const year = parseInt(String(req.body.year || ''), 10);
-    const branch = 'IT';
-    currentRollNo = rollNo;
-    currentStudentName = name;
-    currentStudentEmail = email;
-
-    if (!rollNo) {
-      res.status(400).json({ error: 'VALIDATION_ERROR', field: 'rollNo', message: 'Roll number is required.' });
-      return;
-    }
-    if (!name || name.length < 2 || name.length > 100) {
-      res.status(400).json({ error: 'VALIDATION_ERROR', field: 'name', message: 'Please enter your full name.' });
-      return;
-    }
-    if (!YEARS.includes(year as any)) {
-      res.status(400).json({ error: 'VALIDATION_ERROR', field: 'year', message: `Invalid year. Available options: ${YEARS.join(', ')}.` });
-      return;
-    }
-    if (!SECTIONS.includes(section as any)) {
-      res.status(400).json({ error: 'VALIDATION_ERROR', field: 'section', message: `Invalid section. Available options: ${SECTIONS.join(', ')}.` });
-      return;
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 200) {
-      res.status(400).json({ error: 'VALIDATION_ERROR', field: 'email', message: 'Please enter a valid email address.' });
-      return;
-    }
-    if (!/^\+?\d{10,15}$/.test(phoneNo)) {
-      res.status(400).json({ error: 'VALIDATION_ERROR', field: 'phoneNo', message: 'Please enter a valid phone number (10–15 digits).' });
-      return;
-    }
-
     const dbEvent = await repo.findEventById(EVENT_ID);
     if (!dbEvent) {
       await repo.createEventRecord({
@@ -105,47 +131,6 @@ export async function submitLegacyApplication(req: Request, res: Response): Prom
         year: env.EVENT_YEAR,
         status: 'OPEN',
       });
-    }
-
-    const videoFile = files?.video?.[0];
-    if (!videoFile) {
-      res.status(400).json({ error: 'VALIDATION_ERROR', field: 'video', message: 'Self introduction video is required.' });
-      return;
-    }
-
-    const vVideo = await ValidationService.validateVideo(videoFile.buffer, videoFile.originalname, videoFile.size);
-    if (!vVideo.valid) {
-      ActivityService.logNonBlocking({
-        eventId: EVENT_ID,
-        category: 'FILE_UPLOAD',
-        action: 'File validation failed (Video)',
-        details: vVideo.error,
-        applicantName: name,
-        userEmail: email,
-        status: 'ERROR',
-        errorMessage: vVideo.error,
-      });
-      res.status(400).json({ error: 'VALIDATION_ERROR', field: 'video', message: vVideo.error });
-      return;
-    }
-
-    const existing = await repo.findSubmissionByEventAndStudent(EVENT_ID, rollNo, year, branch, section);
-    if (existing && existing.videoDriveId) {
-      ActivityService.logNonBlocking({
-        eventId: EVENT_ID,
-        category: 'APPLICATION',
-        action: 'Submission rejected (Video already uploaded)',
-        details: `Roll Number: ${rollNo}`,
-        applicantName: name,
-        userEmail: email,
-        status: 'WARNING',
-      });
-      res.status(409).json({
-        error: 'DUPLICATE_VIDEO',
-        field: 'video',
-        message: `A self introduction video has already been submitted for roll number ${rollNo}. You can upload again only if the admin removes the current video.`,
-      });
-      return;
     }
 
     const uploadResult = await driveService.uploadSubmissionFiles(
@@ -207,7 +192,8 @@ export async function submitLegacyApplication(req: Request, res: Response): Prom
           try {
             thumbnailBuffer = await driveService.generateThumbnail(uploadResult.videoDriveId, 'video');
           } catch (err) {
-            // Non-fatal: video submission succeeds even if thumbnail generation fails
+            // Non-fatal: the submission is already stored and must succeed even
+            // when the optional thumbnail cannot be generated.
             logger.warn('Failed generating video thumbnail for submission', { error: err });
           }
           const ivData = {
@@ -235,7 +221,9 @@ export async function submitLegacyApplication(req: Request, res: Response): Prom
           }
         }
       } catch (syncErr) {
-        console.warn('[public submit] introVideo sync notice:', syncErr);
+        // Non-fatal: mirroring the submission into the intro-video table is a
+        // convenience sync; the submission itself is already committed.
+        logger.warn('[public submit] introVideo sync notice', { error: syncErr });
       }
     }
 
@@ -255,22 +243,23 @@ export async function submitLegacyApplication(req: Request, res: Response): Prom
       message: 'Submission received successfully!',
     });
   } catch (err: any) {
-    console.error('Error handling submission:', err);
+    logger.error('Application submission failed', {
+      error: err instanceof Error ? err.message : 'Unknown error',
+    });
     ActivityService.logNonBlocking({
       eventId: EVENT_ID,
       category: 'APPLICATION',
       action: 'Application submission failed',
       details: err?.message || 'Unexpected server error',
-      applicantName: currentStudentName,
-      userEmail: currentStudentEmail || currentRollNo,
+      applicantName: name,
+      userEmail: email || rollNo,
       status: 'ERROR',
       errorMessage: err?.stack || err?.message,
     });
 
-    if (err.code === 'P2002') {
-      res.status(409).json({ error: 'DUPLICATE_SUBMISSION', message: 'An entry with this roll number already exists.' });
-      return;
+    if (err?.code === 'P2002') {
+      throw new ConflictError('An entry with this roll number already exists.', 'DUPLICATE_SUBMISSION');
     }
-    res.status(500).json({ error: 'SUBMISSION_FAILED', message: 'An error occurred while uploading your submission. Please try again.' });
+    throw err;
   }
 }

@@ -86,10 +86,6 @@ export async function updateEventRecord(id: string, data: any) {
   });
 }
 
-export async function deleteEventRecord(id: string) {
-  return prisma.event.delete({ where: { id } });
-}
-
 // Registrations
 export async function countRegistrations(where: Prisma.EventRegistrationWhereInput) {
   return prisma.eventRegistration.count({ where });

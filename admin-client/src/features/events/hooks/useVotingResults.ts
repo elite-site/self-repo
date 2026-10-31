@@ -15,7 +15,10 @@ export const useVotingResults = () => {
       const list = res?.campaigns ?? [];
       setCampaigns(list);
       if (list.length > 0) setSelectedId(list[0].id);
-    }).catch(() => {});
+    }).catch((err) => {
+      // Non-fatal: the results view simply has no campaigns to select.
+      console.warn('Could not load voting campaigns:', err);
+    });
   }, []);
 
   useEffect(() => {
@@ -37,8 +40,9 @@ export const useVotingResults = () => {
       setLoading(true);
       const res = await eventsApi.getVotingResults(selectedId);
       setResult(res ?? null);
-    } catch {
-      // noop
+    } catch (err) {
+      // Non-fatal: the dialog stays open and the operator can retry finalizing.
+      console.warn('Could not finalize voting results:', err);
     } finally {
       setFinalizing(false);
       setLoading(false);

@@ -1,5 +1,37 @@
-import { describe, expect, it } from 'vitest';
-import { ApiError, normalizeApiError } from './client';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+/**
+ * `authApi.getMe` decides whether an organizer stays signed in. It must let
+ * every failure propagate: a 500 or a dropped connection is not the same as
+ * being signed out, and a resolved `{ authenticated: false }` would bounce the
+ * organizer to the login page and hide the "retry" screen in App.tsx.
+ *
+ * The axios instance is mocked so these cases exercise the real `authApi`
+ * normalisation and do not depend on a running backend.
+ */
+const httpClient = vi.hoisted(() => ({
+  get: vi.fn(),
+  post: vi.fn(),
+}));
+
+vi.mock('axios', () => ({
+  __esModule: true,
+  default: { create: vi.fn(() => httpClient) },
+  AxiosError: class AxiosError extends Error {},
+}));
+
+import { ApiError, authApi, normalizeApiError } from './client';
+
+beforeEach(() => {
+  httpClient.get.mockReset();
+  httpClient.post.mockReset();
+});
+
+function httpError(status: number): Error {
+  const error = new Error(`Request failed with status code ${status}`);
+  (error as Error & { response?: { status: number } }).response = { status };
+  return error;
+}
 
 describe('ApiError and normalizeApiError', () => {
   it('instantiates ApiError with all fields', () => {
@@ -95,5 +127,72 @@ describe('ApiError and normalizeApiError', () => {
     });
 
     expect(normalizeApiError(apiErr)).toBe(apiErr);
+  });
+});
+
+describe('authApi.getMe', () => {
+  it('returns the payload on success', async () => {
+    const user = { id: 'admin_1', username: 'organizer', role: 'ADMIN' };
+    httpClient.get.mockResolvedValue({ data: { authenticated: true, user } });
+
+    await expect(authApi.getMe()).resolves.toEqual({ authenticated: true, user });
+  });
+
+  it('propagates a 500 so the caller can offer a retry', async () => {
+    httpClient.get.mockRejectedValue(httpError(500));
+
+    await expect(authApi.getMe()).rejects.toMatchObject({
+      name: 'ApiError',
+      status: 500,
+      code: 'INTERNAL_SERVER_ERROR',
+    });
+  });
+
+  it('propagates a 401 so the caller can distinguish an auth rejection', async () => {
+    httpClient.get.mockRejectedValue(httpError(401));
+
+    await expect(authApi.getMe()).rejects.toMatchObject({
+      status: 401,
+      response: { status: 401 },
+    });
+  });
+
+  it('propagates a network failure instead of reporting "not authenticated"', async () => {
+    httpClient.get.mockRejectedValue(new Error('Network Error'));
+
+    await expect(authApi.getMe()).rejects.toMatchObject({
+      status: 0,
+      code: 'NETWORK_ERROR',
+      message: 'Network Error',
+    });
+  });
+
+  it('does not invent an authenticated:false result on failure', async () => {
+    httpClient.get.mockRejectedValue(httpError(503));
+
+    const result = await authApi.getMe().catch(() => 'rejected');
+    expect(result).toBe('rejected');
+  });
+});
+
+describe('the session decision built on getMe', () => {
+  /** Mirrors the branch in admin-client/src/App.tsx. */
+  function decide(error: unknown): 'signed-in' | 'signed-out' | 'retry' {
+    const status =
+      (error as { status?: number } | null)?.status ??
+      (error as { response?: { status?: number } } | null)?.response?.status;
+    if (status === 401 || status === 403) return 'signed-out';
+    return 'retry';
+  }
+
+  it('signs out only on an explicit auth rejection', () => {
+    expect(decide(httpError(401))).toBe('signed-out');
+    expect(decide(httpError(403))).toBe('signed-out');
+  });
+
+  it('offers a retry for everything else instead of signing the organizer out', () => {
+    expect(decide(httpError(500))).toBe('retry');
+    expect(decide(httpError(502))).toBe('retry');
+    expect(decide(new Error('Network Error'))).toBe('retry');
   });
 });

@@ -4,7 +4,6 @@ import {
   ModerationCertificateItem,
   ModerationDecisionData,
   ModerationDecisionResult,
-  ModerationProjectItem,
   ModerationResumeItem,
   ModerationType,
   ModerationVideoItem,
@@ -125,11 +124,6 @@ export const moderationApi = {
     return { items: res.data || [] };
   },
 
-  async getModerationProjects(): Promise<{ items: ModerationProjectItem[] }> {
-    const res = await apiClient.get('/admin/api/moderation/projects');
-    return { items: res.data || [] };
-  },
-
   async moderationDecision(
     type: ModerationType | string,
     id: string,
@@ -139,18 +133,17 @@ export const moderationApi = {
     return res.data;
   },
 
-  async setModerationVisibility(type: ModerationType | string, id: string, isPublic: boolean) {
+  async setModerationVisibility(
+    type: ModerationType | string,
+    id: string,
+    isPublic: boolean
+  ): Promise<{ success: boolean }> {
     const res = await apiClient.patch(`/admin/api/moderation/${type}/${id}/visibility`, { isPublic });
     return res.data;
   },
 
-  async deleteModerationItem(type: ModerationType | string, id: string) {
+  async deleteModerationItem(type: ModerationType | string, id: string): Promise<{ success: boolean }> {
     const res = await apiClient.delete(`/admin/api/moderation/${type}/${id}`);
-    return res.data;
-  },
-
-  async requestModerationChanges(type: ModerationType | string, id: string, note?: string) {
-    const res = await apiClient.post(`/admin/api/moderation/${type}/${id}/request-changes`, note ? { note } : {});
     return res.data;
   },
 };

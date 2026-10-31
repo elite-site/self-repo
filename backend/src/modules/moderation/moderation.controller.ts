@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
-import { NotFoundError, ConflictError, ValidationError } from '../../utils/appError';
+import { ValidationError } from '../../utils/appError';
+import { parseModerationDecision, parseModerationType, readModerationNote } from './moderation.schemas';
 import * as service from './moderation.service';
+import type { ModerationDecisionOptions } from './moderation.types';
 
 export async function listModerationItems(req: Request, res: Response): Promise<void> {
   const rawType = String(req.query.type || 'all');
@@ -34,56 +36,69 @@ export async function getCertificateQueue(_req: Request, res: Response): Promise
   res.json(result);
 }
 
-export async function moderateVideo(req: Request, res: Response): Promise<void> {
-  const { action, reason, publish } = req.body;
-  const adminUser = (req as any).adminUser;
-  const result = await service.moderateVideo(req.params.id, action, reason, publish, adminUser);
-  res.json({ message: 'Success', video: result.video, isPublic: result.isPublic });
+export async function getProjectQueue(_req: Request, res: Response): Promise<void> {
+  const items = await service.getProjectModerationQueue();
+  res.setHeader('Cache-Control', 'private, max-age=15, must-revalidate');
+  res.json({ items });
 }
 
-export async function updateVideoVisibility(req: Request, res: Response): Promise<void> {
-  const { isPublic } = req.body || {};
+function decisionOptions(req: Request): ModerationDecisionOptions {
+  const body: Record<string, unknown> = req.body ?? {};
+  return {
+    note: readModerationNote(body),
+    publish: typeof body.publish === 'boolean' ? body.publish : undefined,
+    reviewer: req.adminUser?.username || req.adminUser?.email || undefined,
+  };
+}
+
+export async function moderateItem(req: Request, res: Response): Promise<void> {
+  const type = parseModerationType(req.params.type);
+  const body: Record<string, unknown> = req.body ?? {};
+  const decision = parseModerationDecision(body);
+  const outcome = await service.applyModerationDecision(type, req.params.id, decision, decisionOptions(req));
+
+  const payload: Record<string, unknown> = { success: true, message: 'Success', item: outcome.item };
+  if (outcome.type === 'videos') {
+    payload.video = outcome.item;
+    payload.isPublic = outcome.isPublic;
+  }
+  if (outcome.type === 'achievements') {
+    payload.achievement = outcome.item;
+  }
+  res.json(payload);
+}
+
+export async function updateItemVisibility(req: Request, res: Response): Promise<void> {
+  const type = parseModerationType(req.params.type);
+  const { isPublic } = req.body ?? {};
   if (typeof isPublic !== 'boolean') {
     throw new ValidationError('isPublic must be true or false');
   }
-  try {
-    const updated = await service.updateVideoVisibility(req.params.id, isPublic);
-    res.json({
-      success: true,
-      video: updated,
-      message: isPublic
-        ? 'Video is now visible on the public page.'
-        : 'Video has been removed from the public page.',
-    });
-  } catch (err: any) {
-    if (err.statusCode === 404 || err.code === 'NOT_FOUND') {
-      throw new NotFoundError(err.message || 'Video not found');
-    }
-    if (err.statusCode === 409 || err.code === 'NOT_APPROVED') {
-      throw new ConflictError(err.message || 'Video must be approved before publishing');
-    }
-    throw err;
+
+  const outcome = await service.setModerationVisibility(type, req.params.id, isPublic);
+  const payload: Record<string, unknown> = { success: true, item: outcome.item };
+  if (type === 'videos') {
+    payload.video = outcome.item;
+    payload.message = isPublic
+      ? 'Video is now visible on the public page.'
+      : 'Video has been removed from the public page.';
   }
+  res.json(payload);
 }
 
-export async function moderateResume(req: Request, res: Response): Promise<void> {
-  const { action, reason } = req.body;
-  await service.moderateResume(req.params.id, action, reason);
-  res.json({ message: 'Success' });
+export async function deleteItem(req: Request, res: Response): Promise<void> {
+  const type = parseModerationType(req.params.type);
+  await service.deleteModerationItem(type, req.params.id);
+  res.json({ success: true });
 }
 
-export async function moderateAchievement(req: Request, res: Response): Promise<void> {
-  const { action, reason } = req.body;
-  const updated = await service.moderateAchievement(req.params.id, action, reason);
-  res.json({ message: 'Success', achievement: updated });
+export async function requestItemChanges(req: Request, res: Response): Promise<void> {
+  const type = parseModerationType(req.params.type);
+  await service.applyModerationDecision(type, req.params.id, 'CHANGES_REQUESTED', decisionOptions(req));
+  res.json({ success: true, message: 'Changes requested' });
 }
 
 // Portal controllers
-export async function getPortalModeration(_req: Request, res: Response): Promise<void> {
-  const result = await service.getPortalModerationItems();
-  res.json(result);
-}
-
 export async function portalApprove(req: Request, res: Response): Promise<void> {
   await service.handlePortalModerationDecision(req.params.type, req.params.id, 'APPROVED', req.body.reason);
   res.json({ success: true, message: 'Item approved' });
@@ -92,11 +107,6 @@ export async function portalApprove(req: Request, res: Response): Promise<void> 
 export async function portalReject(req: Request, res: Response): Promise<void> {
   await service.handlePortalModerationDecision(req.params.type, req.params.id, 'REJECTED', req.body.reason);
   res.json({ success: true, message: 'Item rejected' });
-}
-
-export async function portalRequestChanges(req: Request, res: Response): Promise<void> {
-  await service.handlePortalModerationDecision(req.params.type, req.params.id, 'CHANGES_REQUESTED', req.body.reason);
-  res.json({ success: true, message: 'Changes requested' });
 }
 
 export async function portalHide(req: Request, res: Response): Promise<void> {

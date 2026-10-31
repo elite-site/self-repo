@@ -1,45 +1,6 @@
 import { driveService } from '../../media/drive';
 import { AppError } from '../../../utils/appError';
 import * as adminRepo from '../admin.repository';
-import type { PortalStudentsQueryParams } from '../admin.types';
-
-export async function getPortalStudents(query: PortalStudentsQueryParams) {
-  const { year, section, search, page = '1', limit = '25' } = query;
-  const where: any = {};
-  if (year) where.year = parseInt(String(year), 10);
-  if (section) where.section = String(section);
-  if (search) {
-    const term = String(search).trim();
-    if (term.length >= 2) {
-      if (/^\d+$/.test(term)) {
-        where.rollNo = { contains: term, mode: 'insensitive' };
-      } else {
-        where.OR = [
-          { name: { contains: term, mode: 'insensitive' } },
-          { rollNo: { contains: term, mode: 'insensitive' } },
-          { email: { contains: term, mode: 'insensitive' } },
-        ];
-      }
-    }
-  }
-  const p = Math.max(1, parseInt(String(page), 10));
-  const l = Math.max(1, Math.min(100, parseInt(String(limit), 10)));
-
-  const [total, students] = await Promise.all([
-    adminRepo.countStudents(where),
-    adminRepo.findStudentsWithProfile(where, (p - 1) * l, l),
-  ]);
-
-  const rollNos = students.map((s) => s.rollNo);
-  const submissions = await adminRepo.findSubmissionsByRollNos(undefined, rollNos);
-
-  const studentsWithSubs = students.map((s) => ({
-    ...s,
-    submissions: submissions.filter((sub) => sub.rollNo === s.rollNo),
-  }));
-
-  return { students: studentsWithSubs, total, page: p, totalPages: Math.ceil(total / l) || 1 };
-}
 
 export async function getPortalStudentDetail(id: string) {
   const student = await adminRepo.findStudentWithFullProfile(id);

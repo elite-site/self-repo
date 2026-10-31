@@ -3,15 +3,18 @@ import { ShieldAlert, RefreshCw, Download, Search } from 'lucide-react';
 import { useActivityLogs } from '../hooks/useActivityLogs';
 import { AuditLogsStats } from '../components/AuditLogsStats';
 import { AuditLogsTable } from '../components/AuditLogsTable';
+import { ACTIVITY_LOG_CATEGORIES, ACTIVITY_LOG_STATUSES } from '../constants';
 
 export const AuditLogsPage: React.FC = () => {
   const {
     logs,
     stats,
+    error,
     loading,
     refreshing,
     page,
     totalPages,
+    totalCount,
     setPage,
     search,
     setSearch,
@@ -39,7 +42,7 @@ export const AuditLogsPage: React.FC = () => {
         </div>
         <div className="flex items-center gap-3">
           <button
-            onClick={() => fetchLogs(true)}
+            onClick={fetchLogs}
             disabled={refreshing}
             className="inline-flex items-center gap-2 px-3 py-2 text-xs font-semibold text-ink-secondary bg-surface border border-edge-strong rounded-lg hover:bg-surface-sunken transition-colors shadow-sm disabled:opacity-50"
           >
@@ -82,11 +85,11 @@ export const AuditLogsPage: React.FC = () => {
             className="px-3 py-2 text-xs rounded-lg border border-edge-strong bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-brand"
           >
             <option value="ALL">All Categories</option>
-            <option value="ADMIN">ADMIN Operations</option>
-            <option value="COMMUNICATIONS">COMMUNICATIONS</option>
-            <option value="SUBMISSION">SUBMISSIONS</option>
-            <option value="MODERATION">MODERATION</option>
-            <option value="SYSTEM">SYSTEM</option>
+            {ACTIVITY_LOG_CATEGORIES.map((item) => (
+              <option key={item} value={item}>
+                {item}
+              </option>
+            ))}
           </select>
 
           <select
@@ -98,9 +101,11 @@ export const AuditLogsPage: React.FC = () => {
             className="px-3 py-2 text-xs rounded-lg border border-edge-strong bg-surface text-ink focus:outline-none focus:ring-2 focus:ring-brand"
           >
             <option value="ALL">All Statuses</option>
-            <option value="SUCCESS">SUCCESS</option>
-            <option value="WARNING">WARNING</option>
-            <option value="ERROR">ERROR</option>
+            {ACTIVITY_LOG_STATUSES.map((item) => (
+              <option key={item} value={item}>
+                {item}
+              </option>
+            ))}
           </select>
         </div>
       </div>
@@ -109,9 +114,12 @@ export const AuditLogsPage: React.FC = () => {
       <AuditLogsTable
         logs={logs}
         loading={loading}
+        error={error}
         page={page}
         totalPages={totalPages}
+        totalCount={totalCount}
         onPageChange={setPage}
+        onRetry={fetchLogs}
       />
     </div>
   );

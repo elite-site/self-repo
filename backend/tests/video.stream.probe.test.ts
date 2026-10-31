@@ -113,7 +113,10 @@ describe('Video Stream Probe and ?proxy=1 Fallback', () => {
         'Students/23K61A1299',
         undefined,
       );
-      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Direct link probe failed for drive_video_test_file_id'));
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('[StudentMedia] Direct link probe failed'),
+      );
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('"studentId"'));
       warnSpy.mockRestore();
     });
 

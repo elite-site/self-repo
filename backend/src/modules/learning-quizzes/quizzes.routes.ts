@@ -16,9 +16,3 @@ adminQuizzesRouter.use(requireAdminAuth);
 adminQuizzesRouter.post(['/admin/courses/:id/quizzes', '/courses/:id/quizzes', '/:id/quizzes'], asyncHandler(controller.createAdminQuiz));
 adminQuizzesRouter.get(['/admin/courses/:id/quizzes/:quizId', '/courses/:id/quizzes/:quizId', '/:id/quizzes/:quizId'], asyncHandler(controller.getAdminQuiz));
 adminQuizzesRouter.put(['/admin/courses/:id/quizzes/:quizId', '/courses/:id/quizzes/:quizId', '/:id/quizzes/:quizId'], asyncHandler(controller.updateAdminQuiz));
-
-export const quizzesRouter = Router();
-quizzesRouter.use(studentQuizzesRouter);
-quizzesRouter.use(adminQuizzesRouter);
-
-export default quizzesRouter;

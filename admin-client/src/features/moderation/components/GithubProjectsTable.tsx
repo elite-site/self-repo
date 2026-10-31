@@ -1,8 +1,9 @@
 import React from 'react';
 import { ExternalLink } from 'lucide-react';
+import type { GithubShowcasedProject } from '@/features/github/types';
 
 interface GithubProjectsTableProps {
-  githubProjects: any[];
+  githubProjects: GithubShowcasedProject[];
 }
 
 export const GithubProjectsTable: React.FC<GithubProjectsTableProps> = ({ githubProjects }) => {
@@ -34,7 +35,7 @@ export const GithubProjectsTable: React.FC<GithubProjectsTableProps> = ({ github
                 </td>
               </tr>
             ) : (
-              githubProjects.map((gp: any) => (
+              githubProjects.map((gp) => (
                 <tr key={gp.id} className="hover:bg-surface-sunken/40 transition-colors">
                   <td className="py-3 px-4">
                     <div className="font-semibold text-ink">{gp.student?.name}</div>
