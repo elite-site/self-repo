@@ -220,6 +220,25 @@ enum ResourceType {
   OTHER
 }
 
+enum CodeChefStatus {
+  CONNECTED
+  STALE
+  ERROR
+}
+
+enum CodeChefSyncTrigger {
+  SCHEDULED
+  MANUAL
+  CONNECT
+  ADMIN
+}
+
+enum CodeChefSyncLogStatus {
+  SUCCESS
+  PARTIAL
+  FAILED
+}
+
 
 // ============================================================
 // EXISTING MODELS (unchanged, preserved for backward compat)
@@ -366,6 +385,9 @@ model Student {
   githubSkills               GithubStudentSkill[]
   githubSyncLogs             GithubSyncLog[]
   githubOAuthStates          GithubOAuthState[]
+
+  // CodeChef integration
+  codechefAccount            CodeChefAccount?
 
   @@index([name])
   @@index([section, year])
@@ -1341,5 +1363,76 @@ model Resource {
   @@index([createdAt])
   @@map("resources")
 }
+
+// ============================================================
+// CODECHEF INTEGRATION
+// ============================================================
+
+model CodeChefAccount {
+  id                   String              @id @default(cuid())
+  studentId            String              @unique
+  student              Student             @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  handle               String              @unique
+  verified             Boolean             @default(false)
+  verifiedAt           DateTime?
+  verifyCode           String?
+  verifyCodeExpiresAt  DateTime?
+  status               CodeChefStatus      @default(CONNECTED)
+  lastSyncedAt         DateTime?
+  lastError            String?
+  showPublic           Boolean             @default(false)
+  displayName          String?
+  avatarUrl            String?
+  country              String?
+  institution          String?
+  currentRating        Float?
+  maxRating            Float?
+  stars                Int?
+  globalRank           Int?
+  topPercentage        Float?
+  totalSolved          Int?
+  totalContests        Int?
+  totalActiveDays      Int?
+  currentStreak        Int?
+  longestStreak        Int?
+  badgesCount          Int?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+
+  profileData          CodeChefProfileData?
+  syncLogs             CodeChefSyncLog[]
+
+  @@index([currentRating])
+  @@index([verified, currentRating])
+  @@index([status, lastSyncedAt])
+}
+
+model CodeChefProfileData {
+  id         String          @id @default(cuid())
+  accountId  String          @unique
+  account    CodeChefAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  profile    Json            @default("{}")
+  contests   Json            @default("[]")
+  heatmap    Json            @default("{}")
+  topics     Json            @default("[]")
+  difficulty Json            @default("{}")
+  badges     Json            @default("[]")
+  syncedAt   DateTime        @default(now())
+}
+
+model CodeChefSyncLog {
+  id         String                @id @default(cuid())
+  accountId  String
+  account    CodeChefAccount       @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  trigger    CodeChefSyncTrigger
+  status     CodeChefSyncLogStatus
+  durationMs Int
+  apiCalls   Int
+  error      String?
+  startedAt  DateTime              @default(now())
+
+  @@index([accountId, startedAt])
+}
+
 
 

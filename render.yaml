@@ -33,6 +33,10 @@ services:
         sync: false
       - key: FEATURE_GITHUB_PORTFOLIO
         value: "true"
+      - key: FEATURE_CODECHEF
+        value: "false"
+      - key: CODECHEF_STATS_BASE_URL
+        value: "https://codechef-stats.tashif.codes"
       - key: GITHUB_OAUTH_CLIENT_ID
         sync: false
       - key: GITHUB_OAUTH_CLIENT_SECRET
