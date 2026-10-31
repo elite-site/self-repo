@@ -2,4 +2,5 @@ export { default as studentRouter, studentRouter as default, studentProfileRoute
 export * from './students.service';
 export * from './students.types';
 export * from './students.schemas';
+export { deleteNotification, deleteNotificationsByQuery } from './students.service';
 export * from './students.repository';

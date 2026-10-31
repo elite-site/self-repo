@@ -293,6 +293,16 @@ export async function countEventDependents(id: string) {
 
 export async function deleteEventWithCascade(id: string, deps: { registrations: number; formFields: number; teams: number; votes: number; submissions: number; emailLogs: number }) {
   return prisma.$transaction(async (tx) => {
+    if ((tx as any).notification?.deleteMany) {
+      await (tx as any).notification.deleteMany({
+        where: {
+          OR: [
+            { id: { startsWith: `notif_event_${id}_` } },
+            { actionUrl: { contains: `/events/${id}` } },
+          ],
+        },
+      });
+    }
     if (deps.registrations > 0 || deps.formFields > 0) {
       await tx.registrationAnswer.deleteMany({
         where: { OR: [{ registration: { eventId: id } }, { field: { eventId: id } }] },

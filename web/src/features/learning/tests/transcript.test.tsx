@@ -291,6 +291,7 @@ describe('TranscriptViewer Component', () => {
       const user = userEvent.setup();
       const createObjectURLMock = vi.fn().mockReturnValue('blob:http://localhost/fake-url');
       const revokeObjectURLMock = vi.fn();
+      const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
       globalThis.URL.createObjectURL = createObjectURLMock;
       globalThis.URL.revokeObjectURL = revokeObjectURLMock;
 
@@ -307,6 +308,7 @@ describe('TranscriptViewer Component', () => {
 
       expect(createObjectURLMock).toHaveBeenCalledTimes(1);
       expect(revokeObjectURLMock).toHaveBeenCalledWith('blob:http://localhost/fake-url');
+      clickSpy.mockRestore();
     });
   });
 });

@@ -16,6 +16,8 @@ router.get('/notifications', asyncHandler(controller.getNotifications));
 router.post('/notifications/read-all', asyncHandler(controller.markAllNotificationsRead));
 router.patch('/notifications/read-all', asyncHandler(controller.markAllNotificationsRead));
 router.patch('/notifications/:id/read', asyncHandler(controller.markNotificationRead));
+router.delete('/notifications/query', asyncHandler(controller.deleteNotificationsByQuery));
+router.delete('/notifications/:id', asyncHandler(controller.deleteNotification));
 
 // Announcements
 router.get('/announcements/:id', asyncHandler(controller.getAnnouncementById));

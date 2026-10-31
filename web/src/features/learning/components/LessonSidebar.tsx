@@ -1,8 +1,16 @@
-import React from 'react';
-import { Play, FileText, HelpCircle, ExternalLink, CheckCircle2, ChevronRight } from 'lucide-react';
+import React, { useEffect, useRef } from 'react';
+import {
+  Play,
+  FileText,
+  HelpCircle,
+  ExternalLink,
+  CheckCircle2,
+} from 'lucide-react';
 import { LessonSummary, LessonType } from '../types';
-import { Button } from '@/shared/ui/Button';
+import { ProgressBar } from '@/shared/ui/ProgressBar';
 import { cn } from '@/shared/lib/cn';
+import { formatDuration } from '../lib/timecode';
+import { scrollWithin } from '../lib/scrollWithin';
 
 export interface LessonSidebarProps {
   lessons: LessonSummary[];
@@ -19,19 +27,6 @@ const TYPE_ICONS: Record<LessonType, React.ComponentType<{ className?: string }>
   LINK: ExternalLink,
 };
 
-function formatDuration(sec?: number | null): string {
-  if (!sec || sec <= 0) return '';
-  const mins = Math.floor(sec / 60);
-  const remainingSec = sec % 60;
-  if (mins === 0) return `${remainingSec}s`;
-  if (mins >= 60) {
-    const hours = Math.floor(mins / 60);
-    const m = mins % 60;
-    return `${hours}h ${m}m`;
-  }
-  return `${mins}m`;
-}
-
 export const LessonSidebar: React.FC<LessonSidebarProps> = ({
   lessons,
   currentLessonId,
@@ -39,8 +34,20 @@ export const LessonSidebar: React.FC<LessonSidebarProps> = ({
   courseTitle,
   className,
 }) => {
-  const currentIndex = lessons.findIndex((l) => l.id === currentLessonId);
-  const nextLesson = currentIndex >= 0 && currentIndex < lessons.length - 1 ? lessons[currentIndex + 1] : null;
+  const navRef = useRef<HTMLElement>(null);
+  const activeItemRef = useRef<HTMLButtonElement | null>(null);
+
+  const completedCount = lessons.filter((l) => l.completed).length;
+  const totalLessons = lessons.length;
+  const progressPercent =
+    totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0;
+
+  // Scroll the current lesson into view within the nav list on mount and
+  // whenever the current lesson changes. Uses scrollWithin so only the
+  // sidebar panel scrolls, never the whole page (AGENTS task requirement).
+  useEffect(() => {
+    scrollWithin(navRef.current, activeItemRef.current, 'smooth');
+  }, [currentLessonId]);
 
   return (
     <aside
@@ -50,69 +57,119 @@ export const LessonSidebar: React.FC<LessonSidebarProps> = ({
       )}
       aria-label="Course lessons"
     >
+      {/* ── Header: title + progress ─────────────────────────────────── */}
       <div className="border-b border-edge p-4">
         {courseTitle && (
-          <h2 className="line-clamp-1 text-sm font-bold text-ink mb-1">
+          <h2 className="mb-2 line-clamp-1 text-label-md font-bold text-ink">
             {courseTitle}
           </h2>
         )}
-        <div className="flex items-center justify-between text-xs text-ink-muted">
-          <span>{lessons.length} {lessons.length === 1 ? 'lesson' : 'lessons'}</span>
-          <span>{lessons.filter((l) => l.completed).length} completed</span>
-        </div>
 
-        {nextLesson && (
-          <div className="mt-3">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => onSelectLesson(nextLesson.id)}
-              className="w-full justify-between text-xs"
-            >
-              <span>Next lesson</span>
-              <ChevronRight className="size-3.5" aria-hidden="true" />
-            </Button>
-          </div>
-        )}
+        <p className="mb-2 text-label-sm text-ink-muted">
+          {completedCount} of {totalLessons}{' '}
+          {totalLessons === 1 ? 'lesson' : 'lessons'} completed
+        </p>
+
+        <ProgressBar
+          label="Lessons completed"
+          value={progressPercent}
+        />
       </div>
 
-      <nav className="flex-1 overflow-y-auto p-2 space-y-1">
-        {lessons.map((lesson) => {
-          const isActive = lesson.id === currentLessonId;
-          const Icon = TYPE_ICONS[lesson.type] || FileText;
-          const durationStr = formatDuration(lesson.durationSec);
+      {/* ── Lesson list ──────────────────────────────────────────────── */}
+      <nav
+        ref={navRef}
+        className="flex-1 overflow-y-auto p-2"
+        aria-label="Lesson list"
+      >
+        <ul className="space-y-1" role="list">
+          {lessons.map((lesson) => {
+            const isActive = lesson.id === currentLessonId;
+            const Icon = TYPE_ICONS[lesson.type] ?? FileText;
+            const durationStr = formatDuration(lesson.durationSec ?? undefined);
+            const isInProgress =
+              !lesson.completed && (lesson.secondsWatched ?? 0) > 0;
+            const watchedPercent =
+              isInProgress && lesson.durationSec && lesson.durationSec > 0
+                ? Math.min(
+                    100,
+                    Math.round(((lesson.secondsWatched ?? 0) / lesson.durationSec) * 100),
+                  )
+                : 0;
 
-          return (
-            <button
-              key={lesson.id}
-              type="button"
-              onClick={() => onSelectLesson(lesson.id)}
-              className={cn(
-                'group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors',
-                isActive
-                  ? 'border border-brand/40 bg-brand-soft/20 text-ink font-semibold'
-                  : 'text-ink-secondary hover:bg-surface-sunken hover:text-ink',
-              )}
-            >
-              <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-surface-sunken text-xs font-semibold text-ink-muted group-hover:text-ink">
-                {lesson.order}
-              </span>
+            return (
+              <li key={lesson.id} role="listitem">
+                <button
+                  ref={isActive ? (el) => { activeItemRef.current = el; } : undefined}
+                  type="button"
+                  onClick={() => onSelectLesson(lesson.id)}
+                  aria-current={isActive ? 'page' : undefined}
+                  className={cn(
+                    'group flex w-full flex-col rounded-lg px-3 py-2.5 text-left transition-colors',
+                    isActive
+                      ? 'border border-brand/40 bg-brand-soft/20 text-ink font-semibold'
+                      : 'text-ink-secondary hover:bg-surface-sunken hover:text-ink',
+                  )}
+                >
+                  <div className="flex w-full items-center gap-3">
+                    {/* Order badge */}
+                    <span
+                      className={cn(
+                        'flex size-6 shrink-0 items-center justify-center rounded-full text-label-sm font-semibold',
+                        isActive
+                          ? 'bg-brand text-on-brand'
+                          : 'bg-surface-sunken text-ink-muted group-hover:text-ink',
+                      )}
+                      aria-hidden="true"
+                    >
+                      {lesson.order}
+                    </span>
 
-              <div className="flex flex-1 items-center gap-2 overflow-hidden">
-                <Icon className={cn('size-4 shrink-0', isActive ? 'text-brand' : 'text-ink-muted')} aria-hidden="true" />
-                <span className="truncate text-xs">{lesson.title}</span>
-              </div>
+                    {/* Icon + title */}
+                    <div className="flex flex-1 items-center gap-2 overflow-hidden">
+                      <Icon
+                        className={cn(
+                          'size-4 shrink-0',
+                          isActive ? 'text-brand' : 'text-ink-muted',
+                        )}
+                        aria-hidden="true"
+                      />
+                      <span className="truncate text-label-sm">{lesson.title}</span>
+                    </div>
 
-              {durationStr && (
-                <span className="shrink-0 text-[11px] text-ink-muted">{durationStr}</span>
-              )}
+                    {/* Duration */}
+                    {durationStr && (
+                      <span className="shrink-0 text-label-xs text-ink-muted">
+                        {durationStr}
+                      </span>
+                    )}
 
-              {lesson.completed && (
-                <CheckCircle2 className="size-4 shrink-0 text-success" aria-label="Completed" />
-              )}
-            </button>
-          );
-        })}
+                    {/* Completed checkmark */}
+                    {lesson.completed && (
+                      <CheckCircle2
+                        className="size-4 shrink-0 text-success"
+                        aria-label="Completed"
+                      />
+                    )}
+                  </div>
+
+                  {/* In-progress thin bar */}
+                  {isInProgress && watchedPercent > 0 && (
+                    <div
+                      className="mt-2 h-0.5 w-full overflow-hidden rounded-full bg-surface-inset"
+                      aria-hidden="true"
+                    >
+                      <div
+                        className="h-full rounded-full bg-brand"
+                        style={{ width: `${watchedPercent}%` }}
+                      />
+                    </div>
+                  )}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
       </nav>
     </aside>
   );

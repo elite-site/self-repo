@@ -50,6 +50,31 @@ export async function markNotificationRead(id: string, studentId: string) {
   }
 }
 
+export async function deleteNotification(id: string, studentId: string) {
+  try {
+    const deleted = await repo.deleteNotification(id, studentId);
+    if (deleted.count === 0) {
+      throw new AppError('NOT_FOUND', 'Notification not found', 404);
+    }
+    return { success: true, message: 'Notification deleted' };
+  } catch (err: any) {
+    if (err instanceof AppError) throw err;
+    logger.error(`[notifications.service:deleteNotification] id=${id} studentId=${studentId}:`, { error: err });
+    throw new AppError('SERVER_ERROR', 'An unexpected error occurred. Please try again later.', 500);
+  }
+}
+
+export async function deleteNotificationsByQuery(studentId: string, search: string) {
+  try {
+    const deleted = await repo.deleteNotificationsByQuery(studentId, search);
+    return { success: true, count: deleted.count, message: `Deleted ${deleted.count} notification(s)` };
+  } catch (err: any) {
+    if (err instanceof AppError) throw err;
+    logger.error(`[notifications.service:deleteNotificationsByQuery] studentId=${studentId} search=${search}:`, { error: err });
+    throw new AppError('SERVER_ERROR', 'An unexpected error occurred. Please try again later.', 500);
+  }
+}
+
 export async function getAnnouncementById(id: string, studentId: string) {
   try {
     const announcement = await repo.findPublishedAnnouncement(id);

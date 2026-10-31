@@ -20,7 +20,14 @@ export async function upsertStudentProfile(studentId: string, data: Prisma.Stude
 // Notifications
 export async function countUnreadNotifications(studentId: string) {
   return prisma.notification.count({
-    where: { studentId, status: 'UNREAD' },
+    where: {
+      studentId,
+      status: 'UNREAD',
+      NOT: [
+        { title: { contains: 'Spring Boot', mode: 'insensitive' } },
+        { message: { contains: 'Spring Boot', mode: 'insensitive' } },
+      ],
+    },
   });
 }
 
@@ -35,6 +42,24 @@ export async function markNotificationAsRead(id: string, studentId: string) {
   return prisma.notification.updateMany({
     where: { id, studentId },
     data: { status: 'READ', readAt: new Date() },
+  });
+}
+
+export async function deleteNotification(id: string, studentId: string) {
+  return prisma.notification.deleteMany({
+    where: { id, studentId },
+  });
+}
+
+export async function deleteNotificationsByQuery(studentId: string, search: string) {
+  return prisma.notification.deleteMany({
+    where: {
+      studentId,
+      OR: [
+        { title: { contains: search, mode: 'insensitive' } },
+        { message: { contains: search, mode: 'insensitive' } },
+      ],
+    },
   });
 }
 
@@ -461,7 +486,14 @@ export async function findActiveVotingCampaigns() {
 
 export async function findDashboardNotifications(studentId: string) {
   return prisma.notification.findMany({
-    where: { studentId, status: 'UNREAD' },
+    where: {
+      studentId,
+      status: 'UNREAD',
+      NOT: [
+        { title: { contains: 'Spring Boot', mode: 'insensitive' } },
+        { message: { contains: 'Spring Boot', mode: 'insensitive' } },
+      ],
+    },
     orderBy: { createdAt: 'desc' },
     take: 8,
     select: {
@@ -518,15 +550,33 @@ export async function findIntroVideoForMe(studentId: string) {
 
 // --- Notifications ---
 export async function findNotificationsPaginated(studentId: string, limit: number, offset: number) {
+  const notCriteria = [
+    { title: { contains: 'Spring Boot', mode: 'insensitive' as const } },
+    { message: { contains: 'Spring Boot', mode: 'insensitive' as const } },
+  ];
   const [items, total, unreadCount] = await Promise.all([
     prisma.notification.findMany({
-      where: { studentId },
+      where: {
+        studentId,
+        NOT: notCriteria,
+      },
       orderBy: { createdAt: 'desc' },
       take: limit,
       skip: offset,
     }),
-    prisma.notification.count({ where: { studentId } }),
-    prisma.notification.count({ where: { studentId, status: 'UNREAD' } }),
+    prisma.notification.count({
+      where: {
+        studentId,
+        NOT: notCriteria,
+      },
+    }),
+    prisma.notification.count({
+      where: {
+        studentId,
+        status: 'UNREAD',
+        NOT: notCriteria,
+      },
+    }),
   ]);
   return { items, total, unreadCount };
 }
