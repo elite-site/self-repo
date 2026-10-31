@@ -25,7 +25,8 @@ export function useNotifications() {
     try {
       const data: any = await notificationsApi.getNotifications({ limit: 20 });
       if (data && Array.isArray(data.items)) {
-        setNotifs(data.items);
+        const activeItems = data.items.filter((item: any) => item.type !== 'EVENT');
+        setNotifs(activeItems);
         setUnreadCount(typeof data.unreadCount === 'number' ? data.unreadCount : 0);
         setHasMore(Boolean(data.hasMore));
       } else {
@@ -47,7 +48,8 @@ export function useNotifications() {
     try {
       const data: any = await notificationsApi.getNotifications({ limit: 20, offset: notifs.length });
       if (data && Array.isArray(data.items)) {
-        setNotifs((prev) => [...prev, ...data.items]);
+        const activeItems = data.items.filter((item: any) => item.type !== 'EVENT');
+        setNotifs((prev) => [...prev, ...activeItems]);
         setUnreadCount(typeof data.unreadCount === 'number' ? data.unreadCount : unreadCount);
         setHasMore(Boolean(data.hasMore));
       }
@@ -105,6 +107,7 @@ export function useNotifications() {
   };
 
   const filteredNotifs = notifs.filter((n) => {
+    if (n.type === 'EVENT') return false;
     if (activeFilter === 'UNREAD') return !n.isRead;
     if (activeFilter === 'VIDEO') return n.type === 'MODERATION';
     if (activeFilter !== 'ALL') return n.type === activeFilter;

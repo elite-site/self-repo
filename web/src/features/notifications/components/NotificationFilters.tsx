@@ -7,7 +7,7 @@ interface NotificationFiltersProps {
   onFilterChange: (filter: NotificationFilterType) => void;
 }
 
-const FILTERS: NotificationFilterType[] = ['ALL', 'UNREAD', 'EVENT', 'ACADEMIC', 'VOTING', 'VIDEO'];
+const FILTERS: NotificationFilterType[] = ['ALL', 'UNREAD', 'ACADEMIC', 'VOTING', 'VIDEO'];
 
 export const NotificationFilters: React.FC<NotificationFiltersProps> = ({
   activeFilter,

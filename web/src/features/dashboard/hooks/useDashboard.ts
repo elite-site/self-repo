@@ -141,7 +141,7 @@ export function useDashboard() {
   const events = dashboardData?.events ?? [];
   const registrations = dashboardData?.registrations ?? [];
   const votingCampaigns = dashboardData?.votingCampaigns ?? [];
-  const notifications: Notification[] = (dashboardData?.notifications as any) ?? [];
+  const notifications: Notification[] = ((dashboardData?.notifications as any) ?? []).filter((n: any) => n.type !== 'EVENT');
   const github = dashboardData?.github ?? null;
   const learning = dashboardData?.learning ?? { activeCount: 0, completedCount: 0, totalCount: 0 };
 

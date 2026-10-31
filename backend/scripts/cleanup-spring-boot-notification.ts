@@ -10,10 +10,13 @@ const APPLY = process.argv.includes('--apply');
 async function main() {
   console.log('[cleanup-spring-boot] Starting search for Spring Boot notifications/events...');
   try {
-    // 1. Find notifications matching Spring Boot
+    // 1. Find notifications matching Spring Boot or any EVENT notification
     const notifications = await prisma.notification.findMany({
       where: {
         OR: [
+          { type: 'EVENT' },
+          { id: { startsWith: 'notif_event_' } },
+          { actionUrl: { contains: '/events/' } },
           { title: { contains: 'Spring Boot', mode: 'insensitive' } },
           { message: { contains: 'Spring Boot', mode: 'insensitive' } },
         ],

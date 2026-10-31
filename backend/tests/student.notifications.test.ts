@@ -84,6 +84,7 @@ describe('Student Notifications API & Event Cascade', () => {
           where: expect.objectContaining({
             studentId: 'stud_notif_1',
             NOT: expect.arrayContaining([
+              { type: 'EVENT' },
               { title: { contains: 'Spring Boot', mode: 'insensitive' } },
               { message: { contains: 'Spring Boot', mode: 'insensitive' } },
             ]),

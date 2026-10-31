@@ -24,6 +24,7 @@ export async function countUnreadNotifications(studentId: string) {
       studentId,
       status: 'UNREAD',
       NOT: [
+        { type: 'EVENT' },
         { title: { contains: 'Spring Boot', mode: 'insensitive' } },
         { message: { contains: 'Spring Boot', mode: 'insensitive' } },
       ],
@@ -490,6 +491,7 @@ export async function findDashboardNotifications(studentId: string) {
       studentId,
       status: 'UNREAD',
       NOT: [
+        { type: 'EVENT' },
         { title: { contains: 'Spring Boot', mode: 'insensitive' } },
         { message: { contains: 'Spring Boot', mode: 'insensitive' } },
       ],
@@ -550,7 +552,8 @@ export async function findIntroVideoForMe(studentId: string) {
 
 // --- Notifications ---
 export async function findNotificationsPaginated(studentId: string, limit: number, offset: number) {
-  const notCriteria = [
+  const notCriteria: any[] = [
+    { type: 'EVENT' },
     { title: { contains: 'Spring Boot', mode: 'insensitive' as const } },
     { message: { contains: 'Spring Boot', mode: 'insensitive' as const } },
   ];
