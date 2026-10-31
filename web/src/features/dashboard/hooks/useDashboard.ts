@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { dashboardApi } from '../api';
+import { useSession } from '@/context/SessionContext';
 import { StudentDashboardResponse, DashboardTask, DashboardTone } from '../types';
 import { Notification } from '@/shared/types';
 import { getNotificationDestination, navigateToNotification } from '@/shared/utils/notificationRouting';
@@ -83,9 +84,45 @@ const shortDate = (value: string | undefined) => {
   return date.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 };
 
+export const toTitleCase = (str: string): string =>
+  str
+    .toLowerCase()
+    .split(/\s+/)
+    .map((word) => (word ? word[0].toUpperCase() + word.slice(1) : ''))
+    .join(' ');
+
+/**
+ * Extracts a student's first name (given name) from their full name.
+ * In college rosters and official records, names are stored as "[Surname] [GivenName]"
+ * (e.g. "ADABALA BHAVITHA" or "K. BHAVITHA"). The first token is the surname / last name,
+ * and the given name(s) follow.
+ */
+export function extractFirstName(rawName?: string | null): string {
+  if (!rawName) return 'there';
+  const trimmed = rawName.trim();
+  if (!trimmed || trimmed.toLowerCase() === 'there') return 'there';
+
+  const parts = trimmed.split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return 'there';
+  if (parts.length === 1) return toTitleCase(parts[0]);
+
+  // If the last token is an initial (e.g. "Bhavitha A." or "Bhavitha K"),
+  // the given name is at the start.
+  const lastPart = parts[parts.length - 1];
+  if (/^[A-Za-z]\.?$/.test(lastPart)) {
+    return toTitleCase(parts.slice(0, -1).join(' '));
+  }
+
+  // Otherwise, the surname is the first token (e.g. "Adabala Bhavitha" or "A. Bhavitha"),
+  // and the given name is the remainder.
+  const givenName = parts.slice(1).join(' ') || parts[0];
+  return toTitleCase(givenName);
+}
+
 export function useDashboard() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { session } = useSession();
 
   const {
     data: dashboardData,
@@ -286,7 +323,8 @@ export function useDashboard() {
       .slice(0, 3);
   }, [events]);
 
-  const firstName = (profile?.name || 'there').split(' ').filter(Boolean)[0];
+  const studentName = profile?.name || session?.student?.name;
+  const firstName = extractFirstName(studentName);
   const credentialsCount = (counts?.achievements ?? 0) + (counts?.certificates ?? 0);
 
   const todayLine = new Date().toLocaleDateString(undefined, {
@@ -347,6 +385,7 @@ export function useDashboard() {
   return {
     dashboardData,
     profile,
+    session,
     resume,
     counts,
     events,

@@ -22,6 +22,7 @@ export const DashboardPage: React.FC = () => {
   const {
     dashboardData,
     profile,
+    session,
     upcomingEvents,
     registrations,
     votingCampaigns,
@@ -71,8 +72,8 @@ export const DashboardPage: React.FC = () => {
           <h1 className="font-heading text-headline-xl-mobile text-ink sm:text-headline-xl">
             <TypewriterText
               text={`${greeting}, ${firstName}`}
-              ready={Boolean(profile) || Boolean(profileError)}
-              animate={Boolean(profile?.name)}
+              ready={Boolean(profile) || Boolean(session?.student) || Boolean(profileError)}
+              animate={Boolean(profile?.name || session?.student?.name)}
               storageKey="elite:greeting-typed"
             />{' '}
             <span aria-hidden="true">👋</span>
