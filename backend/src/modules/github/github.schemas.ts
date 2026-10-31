@@ -53,3 +53,47 @@ export function validateShowcaseRepoIds(repoIds: unknown): string[] {
 
   return uniqueIds;
 }
+
+export function validateShowcaseSkillIds(skillIds: unknown): string[] {
+  if (!Array.isArray(skillIds)) {
+    throw new AppError(
+      'VALIDATION_ERROR',
+      'Field "skillIds" must be an array of skill IDs.',
+      400,
+      'github.schema:validateShowcaseSkillIds'
+    );
+  }
+
+  if (skillIds.length > 50) {
+    throw new AppError(
+      'INVALID_SKILL_COUNT',
+      'You cannot showcase more than 50 skills.',
+      400,
+      'github.schema:validateShowcaseSkillIds'
+    );
+  }
+
+  const stringIds = skillIds.map((id) => {
+    if (typeof id !== 'string' || !id.trim()) {
+      throw new AppError(
+        'VALIDATION_ERROR',
+        'Each skill ID must be a non-empty string.',
+        400,
+        'github.schema:validateShowcaseSkillIds'
+      );
+    }
+    return id.trim();
+  });
+
+  const uniqueIds = Array.from(new Set(stringIds));
+  if (uniqueIds.length !== stringIds.length) {
+    throw new AppError(
+      'DUPLICATE_SKILLS',
+      'Showcased skills must be unique.',
+      400,
+      'github.schema:validateShowcaseSkillIds'
+    );
+  }
+
+  return uniqueIds;
+}

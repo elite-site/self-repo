@@ -1,3 +1,4 @@
+import { clearPublicStudentCaches } from '../../public';
 import { prisma } from '../../../infrastructure/prisma';
 import { githubAccountService } from './github.account.service';
 import { githubSyncService } from './github.sync.service';
@@ -159,6 +160,61 @@ export async function snoozeGithubReminder(studentId: string) {
     return await githubAccountService.snoozeReminder(studentId);
   } catch (err: any) {
     console.error(`[github.service:snoozeGithubReminder] Failed to snooze reminder for studentId=${studentId}:`, err?.message || err);
+    throw err;
+  }
+}
+
+export async function updateShowcasedSkills(studentId: string, skillIds: string[]) {
+  try {
+    const profile = await prisma.studentProfile.upsert({
+      where: { studentId },
+      update: {},
+      create: { studentId },
+    });
+
+    if (skillIds.length > 0) {
+      const existingSkills = await prisma.skill.findMany({
+        where: { id: { in: skillIds } },
+        select: { id: true },
+      });
+      const existingSkillIdSet = new Set(existingSkills.map((s) => s.id));
+      const invalid = skillIds.filter((id) => !existingSkillIdSet.has(id));
+      if (invalid.length > 0) {
+        throw new AppError(
+          'INVALID_SKILLS',
+          'One or more selected skills do not exist.',
+          400,
+          'github.service:updateShowcasedSkills'
+        );
+      }
+    }
+
+    await prisma.$transaction([
+      prisma.studentSkill.deleteMany({
+        where: { profileId: profile.id },
+      }),
+      ...(skillIds.length > 0
+        ? [
+            prisma.studentSkill.createMany({
+              data: skillIds.map((skillId) => ({
+                profileId: profile.id,
+                skillId,
+              })),
+              skipDuplicates: true,
+            }),
+          ]
+        : []),
+    ]);
+
+    clearPublicStudentCaches();
+
+    return {
+      success: true,
+      showcasedSkillIds: skillIds,
+    };
+  } catch (err: any) {
+    if (err instanceof AppError) throw err;
+    console.error(`[github.service:updateShowcasedSkills] Failed to update skills showcase for studentId=${studentId}:`, err?.message || err);
     throw err;
   }
 }

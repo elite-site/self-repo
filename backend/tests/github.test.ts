@@ -433,3 +433,54 @@ describe('Student Portfolio — GET /api/student/portfolio', () => {
   });
 });
 
+describe('PUT /api/student/github/skills/showcase — skill showcase customization', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('rejects non-array skillIds with 400', async () => {
+    const res = await request(app)
+      .put('/api/student/github/skills/showcase')
+      .set('Cookie', `pc_student_session=${tokenA}`)
+      .send({ skillIds: 'not-an-array' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe('VALIDATION_ERROR');
+  });
+
+  it('rejects more than 50 skills with 400', async () => {
+    const tooMany = Array.from({ length: 51 }, (_, i) => `skill_${i}`);
+    const res = await request(app)
+      .put('/api/student/github/skills/showcase')
+      .set('Cookie', `pc_student_session=${tokenA}`)
+      .send({ skillIds: tooMany });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe('INVALID_SKILL_COUNT');
+  });
+
+  it('rejects duplicate skill ids with 400', async () => {
+    const res = await request(app)
+      .put('/api/student/github/skills/showcase')
+      .set('Cookie', `pc_student_session=${tokenA}`)
+      .send({ skillIds: ['skill_java', 'skill_java'] });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe('DUPLICATE_SKILLS');
+  });
+
+  it('successfully updates showcased skills in profile', async () => {
+    mock(prisma.studentProfile.upsert).mockResolvedValue({ id: 'prof_1', studentId: studentA.studentId });
+    mock(prisma.skill.findMany).mockResolvedValue([{ id: 'skill_java' }, { id: 'skill_react' }]);
+    mock(prisma.$transaction).mockResolvedValue([{}, {}]);
+
+    const res = await request(app)
+      .put('/api/student/github/skills/showcase')
+      .set('Cookie', `pc_student_session=${tokenA}`)
+      .send({ skillIds: ['skill_java', 'skill_react'] });
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.showcasedSkillIds).toEqual(['skill_java', 'skill_react']);
+  });
+});

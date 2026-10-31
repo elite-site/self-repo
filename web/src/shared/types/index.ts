@@ -302,6 +302,7 @@ export interface GithubSkillItem {
   repoCount: number;
   totalBytes?: number | string;
   lastEvidenceAt?: string | null;
+  isShowcased?: boolean;
 }
 
 export interface GithubStatusResponse {
@@ -310,6 +311,7 @@ export interface GithubStatusResponse {
   repos?: GithubRepoItem[];
   showcase?: GithubRepoItem[];
   skills?: GithubSkillItem[];
+  showcasedSkillIds?: string[];
   reminderSnoozed?: boolean;
   reminderSnoozedUntil?: string | null;
   nextSyncAllowedAt?: string | null;

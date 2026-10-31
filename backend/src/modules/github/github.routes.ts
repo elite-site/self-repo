@@ -19,6 +19,8 @@ studentGithubRouter.get('/repos/:id/readme', asyncHandler(controller.getReadme))
 studentGithubRouter.post('/connect', asyncHandler(controller.connect));
 studentGithubRouter.post('/sync', asyncHandler(controller.sync));
 studentGithubRouter.put('/showcase', asyncHandler(controller.updateShowcase));
+studentGithubRouter.put('/skills/showcase', asyncHandler(controller.updateSkillShowcase));
+studentGithubRouter.put('/skills', asyncHandler(controller.updateSkillShowcase));
 studentGithubRouter.delete('/', asyncHandler(controller.disconnect));
 studentGithubRouter.post('/reminder/snooze', asyncHandler(controller.snoozeReminder));
 

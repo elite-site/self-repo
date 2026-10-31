@@ -5,6 +5,7 @@ import {
   parseCallbackQuery,
   validateRepoId,
   validateShowcaseRepoIds,
+  validateShowcaseSkillIds,
   validateStudentId,
 } from './github.schemas';
 import * as service from './github.service';
@@ -100,6 +101,14 @@ export async function updateShowcase(req: Request, res: Response): Promise<void>
     showcased,
   });
 }
+
+export async function updateSkillShowcase(req: Request, res: Response): Promise<void> {
+  const studentId = validateStudentId(req);
+  const skillIds = validateShowcaseSkillIds(req.body?.skillIds);
+  const result = await service.updateShowcasedSkills(studentId, skillIds);
+  res.json(result);
+}
+
 
 export async function disconnect(req: Request, res: Response): Promise<void> {
   const studentId = validateStudentId(req);

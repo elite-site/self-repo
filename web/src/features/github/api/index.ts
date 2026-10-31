@@ -30,6 +30,10 @@ export const githubApi = {
     const res = await client.put('/student/github/showcase', { repoIds });
     return res.data;
   },
+  async updateSkillShowcase(skillIds: string[]): Promise<{ success: boolean; showcasedSkillIds: string[] }> {
+    const res = await client.put('/student/github/skills/showcase', { skillIds });
+    return res.data;
+  },
   async disconnectGithub(): Promise<{ success: boolean }> {
     const res = await client.delete('/student/github');
     return res.data;

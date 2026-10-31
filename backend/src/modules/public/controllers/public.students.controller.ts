@@ -290,13 +290,20 @@ export async function getPublicStudentByRollNo(req: Request, res: Response): Pro
       showcaseRank: r.showcaseRank,
       source: 'GITHUB',
     })),
-    githubSkills: (student.githubSkills || []).map((s: any) => ({
-      id: s.id,
-      skillId: s.skillId,
-      name: s.skill?.name || '',
-      category: s.skill?.category || null,
-      repoCount: s.repoCount,
-    })),
+    githubSkills: (() => {
+      const profileSkillIds = new Set((student.profile?.skills || []).map((sk: any) => sk.skillId));
+      const hasCustomShowcase = profileSkillIds.size > 0;
+      return (student.githubSkills || [])
+        .filter((s: any) => !hasCustomShowcase || profileSkillIds.has(s.skillId))
+        .map((s: any) => ({
+          id: s.id,
+          skillId: s.skillId,
+          name: s.skill?.name || '',
+          category: s.skill?.category || null,
+          repoCount: s.repoCount,
+          isShowcased: true,
+        }));
+    })(),
     certificates: student.certificates.map((c: any) => {
       const { fileDriveId: _f, thumbnail: _thumb, ...rest } = c;
       const viewUrl = c.fileDriveId ? `/api/public/media/certificate/${c.id}` : null;

@@ -19,6 +19,11 @@ export function useGithub() {
   const [disconnecting, setDisconnecting] = useState(false);
   const [savingShowcase, setSavingShowcase] = useState(false);
 
+  const [editingSkills, setEditingSkills] = useState(false);
+  const [savingSkills, setSavingSkills] = useState(false);
+  const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]);
+  const [initialSelectedSkillIds, setInitialSelectedSkillIds] = useState<string[]>([]);
+
   const [showcaseIds, setShowcaseIds] = useState<string[]>([]);
   const [initialShowcaseIds, setInitialShowcaseIds] = useState<string[]>([]);
 
@@ -49,6 +54,17 @@ export function useGithub() {
         if (!isPolling) {
           setShowcaseIds(serverShowcased);
           setInitialShowcaseIds(serverShowcased);
+        }
+      }
+
+      if (data.connected && data.skills) {
+        const serverShowcasedSkills = data.showcasedSkillIds && data.showcasedSkillIds.length > 0
+          ? data.showcasedSkillIds
+          : data.skills.filter((s) => s.isShowcased !== false).map((s) => s.skillId || s.id);
+
+        if (!isPolling) {
+          setSelectedSkillIds(serverShowcasedSkills);
+          setInitialSelectedSkillIds(serverShowcasedSkills);
         }
       }
       return data;
@@ -246,6 +262,49 @@ export function useGithub() {
     return list;
   }, [repos, searchQuery, includeForks, sortBy]);
 
+
+  const toggleSkillShowcase = (skillId: string) => {
+    setSelectedSkillIds((prev) =>
+      prev.includes(skillId) ? prev.filter((id) => id !== skillId) : [...prev, skillId]
+    );
+  };
+
+  const selectAllSkills = () => {
+    const allIds = (statusData?.skills || []).map((s) => s.skillId || s.id);
+    setSelectedSkillIds(allIds);
+  };
+
+  const clearAllSkills = () => {
+    setSelectedSkillIds([]);
+  };
+
+  const isSkillsDirty = useMemo(() => {
+    if (selectedSkillIds.length !== initialSelectedSkillIds.length) return true;
+    const initialSet = new Set(initialSelectedSkillIds);
+    return selectedSkillIds.some((id) => !initialSet.has(id));
+  }, [selectedSkillIds, initialSelectedSkillIds]);
+
+  const handleSaveSkills = async () => {
+    setSavingSkills(true);
+    try {
+      await githubApi.updateSkillShowcase(selectedSkillIds);
+      setInitialSelectedSkillIds([...selectedSkillIds]);
+      setEditingSkills(false);
+      showToast('Skill showcase updated successfully!', 'success');
+      await fetchStatus(true);
+    } catch (err: any) {
+      const msg = err.response?.data?.message || 'Failed to update showcased skills.';
+      showToast(msg, 'error');
+    } finally {
+      setSavingSkills(false);
+    }
+  };
+
+  const handleCancelEditSkills = () => {
+    setSelectedSkillIds([...initialSelectedSkillIds]);
+    setEditingSkills(false);
+  };
+
   return {
     loading,
     error,
@@ -273,5 +332,15 @@ export function useGithub() {
     toggleShowcase,
     moveShowcase,
     handleSaveShowcase,
+    editingSkills,
+    setEditingSkills,
+    savingSkills,
+    selectedSkillIds,
+    toggleSkillShowcase,
+    selectAllSkills,
+    clearAllSkills,
+    isSkillsDirty,
+    handleSaveSkills,
+    handleCancelEditSkills,
   };
 }

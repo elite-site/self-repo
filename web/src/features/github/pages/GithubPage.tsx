@@ -3,7 +3,7 @@ import { Search, Save, Loader2, Code2 } from 'lucide-react';
 import { SkeletonPage } from '@/shared/ui/Skeleton';
 import { ErrorState } from '@/shared/ui/ErrorState';
 import { useGithub } from '../hooks/useGithub';
-import { GithubNotConnected, GithubAccountCard, GithubRepoRow } from '../components';
+import { GithubNotConnected, GithubAccountCard, GithubRepoRow, GithubSkillsSection } from '../components';
 
 export const GithubPage: React.FC = () => {
   const {
@@ -33,6 +33,16 @@ export const GithubPage: React.FC = () => {
     toggleShowcase,
     moveShowcase,
     handleSaveShowcase,
+    editingSkills,
+    setEditingSkills,
+    savingSkills,
+    selectedSkillIds,
+    toggleSkillShowcase,
+    selectAllSkills,
+    clearAllSkills,
+    isSkillsDirty,
+    handleSaveSkills,
+    handleCancelEditSkills,
   } = useGithub();
 
   if (loading) {
@@ -69,6 +79,20 @@ export const GithubPage: React.FC = () => {
         disconnecting={disconnecting}
         onSync={handleSync}
         onDisconnect={handleDisconnect}
+      />
+
+      <GithubSkillsSection
+        skills={statusData?.skills || []}
+        selectedSkillIds={selectedSkillIds}
+        editingSkills={editingSkills}
+        savingSkills={savingSkills}
+        isSkillsDirty={isSkillsDirty}
+        onStartEdit={() => setEditingSkills(true)}
+        onCancelEdit={handleCancelEditSkills}
+        onSaveSkills={handleSaveSkills}
+        onToggleSkill={toggleSkillShowcase}
+        onSelectAll={selectAllSkills}
+        onClearAll={clearAllSkills}
       />
 
       <div className="space-y-4">

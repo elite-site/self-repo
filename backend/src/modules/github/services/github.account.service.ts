@@ -305,7 +305,7 @@ export class GithubAccountService {
     }
     const dailySyncsRemaining = Math.max(0, env.GITHUB_SYNC_DAILY_CAP - dailyCount);
 
-    const [repos, skills] = await Promise.all([
+    const [repos, skills, profile] = await Promise.all([
       prisma.githubRepo.findMany({
         where: { studentId, removedFromGithub: false },
         orderBy: [{ isShowcased: 'desc' }, { showcaseRank: 'asc' }, { stars: 'desc' }, { pushedAt: 'desc' }],
@@ -337,7 +337,25 @@ export class GithubAccountService {
         include: { skill: true },
         orderBy: [{ repoCount: 'desc' }, { totalBytes: 'desc' }],
       }),
+      prisma.studentProfile.findUnique({
+        where: { studentId },
+        include: { skills: true },
+      }),
     ]);
+
+    let currentSkills = skills;
+    if (repos.length > 0 && currentSkills.length === 0) {
+      try {
+        await githubSyncService.recomputeStudentSkills(studentId);
+        currentSkills = await prisma.githubStudentSkill.findMany({
+          where: { studentId },
+          include: { skill: true },
+          orderBy: [{ repoCount: 'desc' }, { totalBytes: 'desc' }],
+        });
+      } catch {
+        // Continue with currentSkills
+      }
+    }
 
     const serializedAccount = {
       id: account.id,
@@ -362,11 +380,16 @@ export class GithubAccountService {
       .filter((r) => r.isShowcased)
       .sort((a, b) => (a.showcaseRank || 999) - (b.showcaseRank || 999));
 
-    const serializedSkills = skills.map((s) => ({
+    const showcasedSkillIds = (profile?.skills || []).map((s) => s.skillId);
+    const hasCustomizedShowcase = showcasedSkillIds.length > 0;
+    const showcasedSet = new Set(showcasedSkillIds);
+
+    const serializedSkills = currentSkills.map((s) => ({
       ...s,
-      name: s.skill.name,
-      category: s.skill.category,
+      name: s.skill?.name || '',
+      category: s.skill?.category || null,
       totalBytes: String(s.totalBytes),
+      isShowcased: hasCustomizedShowcase ? showcasedSet.has(s.skillId) : true,
     }));
 
     return {
@@ -377,6 +400,9 @@ export class GithubAccountService {
       repos: serializedRepos,
       showcasedRepos,
       skills: serializedSkills,
+      showcasedSkillIds: hasCustomizedShowcase
+        ? showcasedSkillIds
+        : serializedSkills.map((s) => s.skillId),
       reminderSnoozedUntil: student.githubReminderSnoozedUntil,
     };
   }

@@ -379,13 +379,18 @@ export class GithubSyncService {
    * Recompute skills for a student from their active non-fork GitHub repositories
    */
   async recomputeStudentSkills(studentId: string): Promise<void> {
-    const repos = await prisma.githubRepo.findMany({
+    let repos = await prisma.githubRepo.findMany({
       where: { studentId, removedFromGithub: false, isFork: false },
     });
+    if (repos.length === 0) {
+      repos = await prisma.githubRepo.findMany({
+        where: { studentId, removedFromGithub: false },
+      });
+    }
 
-    const langMap = new Map<string, { bytes: number; repoIds: Set<string>; lastDate: Date | null }>();
+    const langMap = new Map<string, { displayName: string; bytes: number; repoIds: Set<string>; lastDate: Date | null }>();
     const depMap = new Map<string, { repoIds: Set<string>; lastDate: Date | null }>();
-    const topicMap = new Map<string, { repoIds: Set<string>; lastDate: Date | null }>();
+    const topicMap = new Map<string, { displayName: string; repoIds: Set<string>; lastDate: Date | null }>();
 
     for (const repo of repos) {
       const pDate = repo.pushedAt || repo.githubCreatedAt || null;
@@ -393,9 +398,10 @@ export class GithubSyncService {
       // Languages
       const langs = (repo.languages as Record<string, number>) || {};
       for (const [langName, bytes] of Object.entries(langs)) {
-        const key = langName.trim().toLowerCase();
+        const trimmed = langName.trim();
+        const key = trimmed.toLowerCase();
         if (!key) continue;
-        const current = langMap.get(key) || { bytes: 0, repoIds: new Set<string>(), lastDate: null };
+        const current = langMap.get(key) || { displayName: trimmed, bytes: 0, repoIds: new Set<string>(), lastDate: null };
         current.bytes += typeof bytes === 'number' ? bytes : 0;
         current.repoIds.add(repo.id);
         if (pDate && (!current.lastDate || pDate > current.lastDate)) {
@@ -406,9 +412,10 @@ export class GithubSyncService {
 
       // Primary language fallback if not in languages map
       if (repo.primaryLanguage) {
-        const primKey = repo.primaryLanguage.trim().toLowerCase();
-        if (!langMap.has(primKey)) {
-          langMap.set(primKey, { bytes: 1000, repoIds: new Set([repo.id]), lastDate: pDate });
+        const primName = repo.primaryLanguage.trim();
+        const primKey = primName.toLowerCase();
+        if (primKey && !langMap.has(primKey)) {
+          langMap.set(primKey, { displayName: primName, bytes: 1000, repoIds: new Set([repo.id]), lastDate: pDate });
         }
       }
 
@@ -434,9 +441,11 @@ export class GithubSyncService {
       // Topics
       if (Array.isArray(repo.topics)) {
         for (const topic of repo.topics) {
-          const tKey = topic.trim().toLowerCase();
+          if (!topic || typeof topic !== 'string') continue;
+          const tName = topic.trim();
+          const tKey = tName.toLowerCase();
           if (!tKey) continue;
-          const current = topicMap.get(tKey) || { repoIds: new Set<string>(), lastDate: null };
+          const current = topicMap.get(tKey) || { displayName: tName, repoIds: new Set<string>(), lastDate: null };
           current.repoIds.add(repo.id);
           if (pDate && (!current.lastDate || pDate > current.lastDate)) {
             current.lastDate = pDate;
@@ -451,7 +460,12 @@ export class GithubSyncService {
     const allDepKeys = Array.from(depMap.keys());
     const allTopicKeys = Array.from(topicMap.keys());
 
-    const matchedMaps = await prisma.skillSourceMap.findMany({
+    const matchedMaps: Array<{
+      skillId: string;
+      sourceType: 'LANGUAGE' | 'DEPENDENCY' | 'TOPIC';
+      ecosystem: string | null;
+      sourceKey: string;
+    }> = await prisma.skillSourceMap.findMany({
       where: {
         OR: [
           { sourceType: 'LANGUAGE', sourceKey: { in: allLangKeys } },
@@ -466,6 +480,120 @@ export class GithubSyncService {
         sourceKey: true,
       },
     });
+
+    // Check for unmapped languages and link or auto-create Skill and SkillSourceMap
+    const mappedLangKeys = new Set(
+      matchedMaps.filter((m) => m.sourceType === 'LANGUAGE').map((m) => m.sourceKey.toLowerCase())
+    );
+    const unmappedLangKeys = allLangKeys.filter((k) => !mappedLangKeys.has(k));
+
+    if (unmappedLangKeys.length > 0) {
+      try {
+        const allSkills = await prisma.skill.findMany({
+          select: { id: true, name: true },
+        });
+        const skillByNameLower = new Map<string, { id: string; name: string }>();
+        for (const sk of allSkills) {
+          skillByNameLower.set(sk.name.trim().toLowerCase(), sk);
+        }
+
+        for (const langKey of unmappedLangKeys) {
+          const langInfo = langMap.get(langKey);
+          if (!langInfo) continue;
+          let skill = skillByNameLower.get(langKey);
+
+          if (!skill) {
+            try {
+              const created = await prisma.skill.create({
+                data: {
+                  name: langInfo.displayName,
+                  category: 'Languages',
+                  isActive: true,
+                },
+                select: { id: true, name: true },
+              });
+              skill = created;
+              skillByNameLower.set(langKey, created);
+            } catch {
+              const found = await prisma.skill.findFirst({
+                where: { name: { equals: langInfo.displayName, mode: 'insensitive' } },
+                select: { id: true, name: true },
+              });
+              if (found) {
+                skill = found;
+                skillByNameLower.set(langKey, found);
+              }
+            }
+          }
+
+          if (skill) {
+            try {
+              await prisma.skillSourceMap.create({
+                data: {
+                  skillId: skill.id,
+                  sourceType: 'LANGUAGE',
+                  sourceKey: langKey,
+                },
+              });
+            } catch {
+              // Ignore if mapping already exists
+            }
+            matchedMaps.push({
+              skillId: skill.id,
+              sourceType: 'LANGUAGE',
+              ecosystem: null,
+              sourceKey: langKey,
+            });
+          }
+        }
+      } catch {
+        // Fallback gracefully
+      }
+    }
+
+    // Check for unmapped topics that match existing skills
+    const mappedTopicKeys = new Set(
+      matchedMaps.filter((m) => m.sourceType === 'TOPIC').map((m) => m.sourceKey.toLowerCase())
+    );
+    const unmappedTopicKeys = allTopicKeys.filter((k) => !mappedTopicKeys.has(k));
+
+    if (unmappedTopicKeys.length > 0) {
+      try {
+        const allSkills = await prisma.skill.findMany({
+          where: { isActive: true },
+          select: { id: true, name: true },
+        });
+        const skillByNameLower = new Map<string, { id: string; name: string }>();
+        for (const sk of allSkills) {
+          skillByNameLower.set(sk.name.trim().toLowerCase(), sk);
+        }
+
+        for (const tKey of unmappedTopicKeys) {
+          const skill = skillByNameLower.get(tKey);
+          if (skill) {
+            try {
+              await prisma.skillSourceMap.create({
+                data: {
+                  skillId: skill.id,
+                  sourceType: 'TOPIC',
+                  sourceKey: tKey,
+                },
+              });
+            } catch {
+              // Ignore if duplicate
+            }
+            matchedMaps.push({
+              skillId: skill.id,
+              sourceType: 'TOPIC',
+              ecosystem: null,
+              sourceKey: tKey,
+            });
+          }
+        }
+      } catch {
+        // Fallback gracefully
+      }
+    }
 
     interface SkillAggregate {
       repoIds: Set<string>;
@@ -548,6 +676,32 @@ export class GithubSyncService {
         skillId: { notIn: activeSkillIds },
       },
     });
+
+    // Initialize profile skills if empty so showcased skills are visible by default
+    try {
+      const profile = await prisma.studentProfile.upsert({
+        where: { studentId },
+        update: {},
+        create: { studentId },
+        include: { skills: true },
+      });
+
+      if (profile && profile.skills.length === 0 && activeSkillIds.length > 0) {
+        const topSkillIds = Array.from(skillAggregates.entries())
+          .sort((a, b) => b[1].repoIds.size - a[1].repoIds.size || Number(b[1].totalBytes - a[1].totalBytes))
+          .slice(0, 10)
+          .map(([skillId]) => skillId);
+
+        if (topSkillIds.length > 0) {
+          await prisma.studentSkill.createMany({
+            data: topSkillIds.map((skillId) => ({ profileId: profile.id, skillId })),
+            skipDuplicates: true,
+          });
+        }
+      }
+    } catch {
+      // Non-fatal
+    }
   }
 }
 
