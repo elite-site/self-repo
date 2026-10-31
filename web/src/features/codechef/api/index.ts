@@ -14,6 +14,8 @@ const mockStatus: CodeChefStatus = {
   handle: 'chef_candidate',
   displayName: 'Candidate Chef',
   avatarUrl: 'https://cdn.codechef.com/sites/all/themes/abessive/images/user_default_thumb.jpg',
+  country: 'India',
+  institution: 'ELITE Institute of Technology',
   verified: true,
   verifiedAt: new Date().toISOString(),
   verifyCode: null,
