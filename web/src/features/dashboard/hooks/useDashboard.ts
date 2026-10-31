@@ -143,6 +143,7 @@ export function useDashboard() {
   const votingCampaigns = dashboardData?.votingCampaigns ?? [];
   const notifications: Notification[] = (dashboardData?.notifications as any) ?? [];
   const github = dashboardData?.github ?? null;
+  const learning = dashboardData?.learning ?? { activeCount: 0, completedCount: 0, totalCount: 0 };
 
   const profileError = isError && !profile ? 'We could not load your profile right now.' : null;
   const eventsError = isError && events.length === 0 ? 'We could not load department events right now.' : null;
@@ -298,6 +299,64 @@ export function useDashboard() {
   const isComplete = remainingItems.length === 0;
   const completionPercentage = isComplete ? 100 : Math.round((completedCount / tasks.length) * 100);
   const nextMissing = remainingItems.slice(0, 3);
+  const nextActionUrl = remainingItems[0]?.to || '/profile/edit';
+
+  const readinessSubLabel = useMemo(() => {
+    if (completionPercentage === 100) {
+      return 'Resume & Portfolio verified';
+    }
+    if (checkResume && checkProjects) {
+      return 'Resume & Projects verified';
+    }
+    if (checkResume && !checkProjects) {
+      return 'Resume verified · Add projects';
+    }
+    if (!checkResume && checkProjects) {
+      return 'Projects added · Upload resume';
+    }
+    return `${completedCount} of ${tasks.length} requirements met`;
+  }, [completionPercentage, checkResume, checkProjects, completedCount, tasks.length]);
+
+  const courseProgress = useMemo(() => {
+    const active = learning.activeCount ?? 0;
+    const completed = learning.completedCount ?? 0;
+    const total = learning.totalCount ?? (active + completed);
+
+    if (total === 0) {
+      return {
+        value: 0,
+        suffix: ' Enrolled',
+        subLabel: 'Explore courses in LearningHub',
+      };
+    }
+
+    return {
+      value: active,
+      suffix: active === 1 ? ' Module Active' : ' Modules Active',
+      subLabel: `${active} in progress, ${completed} completed`,
+    };
+  }, [learning]);
+
+  const codingStreak = useMemo(() => {
+    if (!github?.connected) {
+      return {
+        value: 0,
+        suffix: ' Days',
+        subLabel: 'Connect GitHub to track streak',
+      };
+    }
+
+    const streak = github.streakDays ?? 0;
+    const commits = github.totalCommits ?? 0;
+
+    return {
+      value: streak,
+      suffix: ' Days',
+      subLabel: streak > 0
+        ? `Active streak · ${commits} commit${commits === 1 ? '' : 's'}`
+        : (commits > 0 ? `${commits} commit${commits === 1 ? '' : 's'} recorded` : 'Push a commit to start streak'),
+    };
+  }, [github]);
 
   useEffect(() => {
     if (!profile || !dashboardData) return;
@@ -407,6 +466,10 @@ export function useDashboard() {
     nextMissing,
     isComplete,
     completionPercentage,
+    readinessSubLabel,
+    nextActionUrl,
+    courseProgress,
+    codingStreak,
     firstName,
     contextLine,
     greeting,

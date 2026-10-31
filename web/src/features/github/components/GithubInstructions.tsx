@@ -619,7 +619,7 @@ export const GithubInstructionsModal: React.FC<GithubInstructionsModalProps> = (
         {/* Mobile Top Tabs (Sticky) */}
         <div
           ref={mobileTabsRef}
-          className="md:hidden sticky -top-5 -mt-5 -mx-5 px-4 py-2 bg-surface/95 backdrop-blur border-b border-edge z-10 overflow-x-auto flex gap-1.5 shrink-0 scrollbar-none"
+          className="md:hidden sticky -top-5 -mt-5 -mx-4 px-4 py-2 bg-surface/95 backdrop-blur border-b border-edge z-10 overflow-x-auto flex gap-1.5 shrink-0 scrollbar-none max-w-full"
         >
           {INSTRUCTION_STEPS.map((step) => {
             const isActive = activeId === step.id;

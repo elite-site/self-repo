@@ -365,9 +365,17 @@ export interface StudentDashboardResponse {
   }>;
   notifications: Array<Notification & { isRead?: boolean }>;
   unreadNotificationsCount: number;
+  learning?: {
+    activeCount: number;
+    completedCount: number;
+    totalCount: number;
+  };
   github: {
     connected: boolean;
     reminderSnoozedUntil: string | null;
+    streakDays?: number;
+    totalCommits?: number;
+    lastCommitAt?: string | null;
   };
 }
 

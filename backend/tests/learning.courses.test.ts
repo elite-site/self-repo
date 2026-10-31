@@ -383,7 +383,7 @@ describe('LearningHub - Courses Module', () => {
       expect(res.body.videoId).toBe('dQw4w9WgXcQ');
       expect(res.body.embeddable).toBe(true);
       expect(res.body.thumbnailUrl).toContain('dQw4w9WgXcQ');
-    });
+    }, 15000);
 
     it('GET /admin/youtube/preview - rejects invalid non-YouTube URLs', async () => {
       const res = await request(app)

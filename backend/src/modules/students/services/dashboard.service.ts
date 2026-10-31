@@ -13,6 +13,8 @@ export async function getStudentDashboardData(studentId: string, rollNo?: string
       votingCampaigns,
       notifications,
       unreadNotificationsCount,
+      learningStats,
+      githubStats,
     ] = await Promise.all([
       repo.findStudentDashboardDetails(studentId),
       rollNo
@@ -23,6 +25,8 @@ export async function getStudentDashboardData(studentId: string, rollNo?: string
       repo.findActiveVotingCampaigns(),
       repo.findDashboardNotifications(studentId),
       repo.countUnreadNotifications(studentId),
+      repo.findStudentLearningStats(studentId),
+      repo.findStudentGithubStats(studentId),
     ]);
 
     if (!student) {
@@ -90,9 +94,17 @@ export async function getStudentDashboardData(studentId: string, rollNo?: string
         isRead: n.status === 'READ',
       })),
       unreadNotificationsCount,
+      learning: {
+        activeCount: learningStats.activeCount,
+        completedCount: learningStats.completedCount,
+        totalCount: learningStats.totalCount,
+      },
       github: {
         connected: Boolean(student.githubAccount),
         reminderSnoozedUntil: student.githubReminderSnoozedUntil,
+        streakDays: student.githubAccount ? githubStats.streakDays : 0,
+        totalCommits: student.githubAccount ? githubStats.totalCommits : 0,
+        lastCommitAt: student.githubAccount ? githubStats.lastCommitAt : null,
       },
     };
   } catch (err: any) {

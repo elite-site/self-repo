@@ -299,6 +299,53 @@ export async function findStudentAcademicAndSkillChangeRequests(studentId: strin
 }
 
 // --- Dashboard & Me Operations ---
+export async function findStudentLearningStats(studentId: string) {
+  const [activeCount, completedCount] = await Promise.all([
+    prisma.enrollment.count({
+      where: { studentId, status: 'ACTIVE' },
+    }),
+    prisma.enrollment.count({
+      where: { studentId, status: 'COMPLETED' },
+    }),
+  ]);
+  return {
+    activeCount,
+    completedCount,
+    totalCount: activeCount + completedCount,
+  };
+}
+
+export async function findStudentGithubStats(studentId: string) {
+  const repos = await prisma.githubRepo.findMany({
+    where: { studentId, removedFromGithub: false },
+    select: {
+      lastCommitAt: true,
+      pushedAt: true,
+      commitCount: true,
+    },
+    orderBy: { pushedAt: 'desc' },
+    take: 10,
+  });
+
+  const totalCommits = repos.reduce((sum, r) => sum + (r.commitCount || 0), 0);
+  const latestActivity = repos[0]?.lastCommitAt || repos[0]?.pushedAt || null;
+
+  let streakDays = 0;
+  if (latestActivity) {
+    const diffMs = Date.now() - new Date(latestActivity).getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    if (diffDays <= 2) {
+      streakDays = Math.min(Math.max(1, Math.ceil(totalCommits / 2)), 30);
+    }
+  }
+
+  return {
+    totalCommits,
+    streakDays,
+    lastCommitAt: latestActivity ? latestActivity.toISOString() : null,
+  };
+}
+
 export async function findStudentDashboardDetails(studentId: string) {
   return prisma.student.findUnique({
     where: { id: studentId },

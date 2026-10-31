@@ -103,7 +103,7 @@ export const DashboardQuickActions: React.FC<DashboardQuickActionsProps> = ({ ac
               <action.icon className="w-4 h-4 sm:w-5 sm:h-5" strokeWidth={2} aria-hidden="true" />
             </span>
             <span className="min-w-0 w-full px-0.5">
-              <span className="block font-heading text-label-xs sm:text-label-md font-bold leading-tight text-ink truncate">
+              <span className="block font-heading text-xs sm:text-sm font-bold leading-tight text-ink truncate">
                 {action.label}
               </span>
             </span>

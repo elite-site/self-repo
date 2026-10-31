@@ -14,6 +14,7 @@
  */
 
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Card } from './Card';
 import { useCountUp } from '@/shared/hooks/useCountUp';
 import { cn } from '@/shared/lib/cn';
@@ -29,6 +30,10 @@ export interface MetricTileProps {
   suffix?: string;
   /** Optional sub-text below the value. */
   subLabel?: string;
+  /** Optional router destination URL */
+  to?: string;
+  /** Optional click handler */
+  onClick?: () => void;
   /** Extra class names on the outer card. */
   className?: string;
 }
@@ -43,28 +48,49 @@ export const MetricTile: React.FC<MetricTileProps> = ({
   value,
   suffix = '',
   subLabel,
+  to,
+  onClick,
   className,
 }) => {
   const animatedValue = useCountUp(value);
 
-  return (
-    <Card
-      className={cn(
-        'rounded-xl p-4 flex flex-col gap-3 transition-all duration-quick hover:-translate-y-0.5 hover:shadow-md',
-        className,
-      )}
-    >
+  const content = (
+    <>
       <div className="flex items-center gap-2">
-        <span className="text-brand">{icon}</span>
-        <span className="text-label-sm text-ink-muted">{label}</span>
+        <span className="text-brand shrink-0">{icon}</span>
+        <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted truncate">
+          {label}
+        </span>
       </div>
-      <p className="font-heading text-headline-md text-ink tabular-nums leading-none">
+      <p className="font-heading text-headline-lg sm:text-headline-xl font-bold text-ink tabular-nums leading-none tracking-tight">
         {animatedValue}
         {suffix}
       </p>
       {subLabel && (
-        <p className="text-label-xs text-ink-muted">{subLabel}</p>
+        <p className="text-xs font-medium text-ink-secondary truncate" title={subLabel}>
+          {subLabel}
+        </p>
       )}
+    </>
+  );
+
+  const cardClasses = cn(
+    'rounded-xl p-4 sm:p-5 flex flex-col gap-2.5 sm:gap-3 transition-all duration-quick border border-edge bg-surface shadow-xs',
+    (to || onClick) && 'hover:-translate-y-0.5 hover:shadow-md hover:border-brand/40 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2',
+    className,
+  );
+
+  if (to) {
+    return (
+      <Link to={to} className="block no-underline group focus-visible:outline-none">
+        <Card className={cardClasses}>{content}</Card>
+      </Link>
+    );
+  }
+
+  return (
+    <Card className={cardClasses} onClick={onClick} role={onClick ? 'button' : undefined} tabIndex={onClick ? 0 : undefined}>
+      {content}
     </Card>
   );
 };

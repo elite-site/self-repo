@@ -36,6 +36,10 @@ export const DashboardPage: React.FC = () => {
     showGithubBanner,
     tasks,
     completionPercentage,
+    readinessSubLabel,
+    nextActionUrl,
+    courseProgress,
+    codingStreak,
     firstName,
     contextLine,
     quickActions,
@@ -52,8 +56,6 @@ export const DashboardPage: React.FC = () => {
     return <DashboardSkeleton />;
   }
 
-  const effectivePercentage = completionPercentage > 0 ? completionPercentage : 68;
-
   return (
     <motion.div
       className="space-y-6"
@@ -67,14 +69,14 @@ export const DashboardPage: React.FC = () => {
           <div className="flex flex-col sm:flex-row sm:items-center gap-6 sm:gap-8">
             <div className="shrink-0 flex items-center justify-center sm:justify-start">
               <RadialRing
-                value={effectivePercentage}
+                value={completionPercentage}
                 size={110}
                 strokeWidth={9}
                 className="text-brand"
               >
                 <div className="flex flex-col items-center">
                   <span className="font-heading text-headline-md sm:text-headline-lg font-bold text-ink tabular-nums leading-none">
-                    {effectivePercentage}%
+                    {completionPercentage}%
                   </span>
                 </div>
               </RadialRing>
@@ -93,7 +95,7 @@ export const DashboardPage: React.FC = () => {
                   to="/learning"
                   className="btn btn-primary rounded-full px-5 py-2.5 text-xs sm:text-sm font-semibold shadow-sm inline-flex items-center gap-2"
                 >
-                  <span>Continue Full-Stack Course</span>
+                  <span>{courseProgress.value > 0 ? 'Continue Learning' : 'Explore Courses'}</span>
                   <ArrowRight size={15} aria-hidden="true" />
                 </Link>
 
@@ -134,23 +136,26 @@ export const DashboardPage: React.FC = () => {
         <MetricTile
           icon={<Clock size={18} aria-hidden="true" />}
           label="Course Progress:"
-          value={8}
-          suffix=" Modules Active"
-          subLabel="2 in progress, 6 completed"
+          value={courseProgress.value}
+          suffix={courseProgress.suffix}
+          subLabel={courseProgress.subLabel}
+          to="/learning"
         />
         <MetricTile
           icon={<Calendar size={18} aria-hidden="true" />}
           label="Coding Streak:"
-          value={14}
-          suffix=" Days"
-          subLabel="Personal record: 21 days"
+          value={codingStreak.value}
+          suffix={codingStreak.suffix}
+          subLabel={codingStreak.subLabel}
+          to="/github"
         />
         <MetricTile
           icon={<CheckCircle2 size={18} aria-hidden="true" />}
           label="Placement Readiness:"
-          value={effectivePercentage > 88 ? effectivePercentage : 88}
+          value={completionPercentage}
           suffix="/100"
-          subLabel="Resume & Portfolio verified"
+          subLabel={readinessSubLabel}
+          to={nextActionUrl}
         />
       </motion.div>
 
