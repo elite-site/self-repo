@@ -24,16 +24,16 @@ export const ModerationQueueTable: React.FC<ModerationQueueTableProps> = ({
 }) => {
   return (
     <div className="surface border border-edge rounded-xl overflow-hidden shadow-xs">
-      <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse text-body-sm">
+      <div className="table-responsive">
+        <table className="w-full text-left border-collapse text-sm">
           <thead>
-            <tr className="border-b border-edge bg-surface-sunken text-label-sm font-semibold text-ink-secondary">
-              <th className="py-3 px-4">Student</th>
-              <th className="py-3 px-4">Artifact type</th>
-              <th className="py-3 px-4">Title / summary</th>
-              <th className="py-3 px-4">Submitted</th>
-              <th className="py-3 px-4">Status</th>
-              <th className="py-3 px-4 text-right">Action</th>
+            <tr className="border-b border-edge bg-surface-sunken text-xs font-semibold text-ink-secondary">
+              <th className="py-3.5 px-4">Student</th>
+              <th className="py-3.5 px-4">Artifact type</th>
+              <th className="py-3.5 px-4">Title / summary</th>
+              <th className="py-3.5 px-4">Submitted</th>
+              <th className="py-3.5 px-4">Status</th>
+              <th className="py-3.5 px-4 text-right">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-edge">
@@ -55,57 +55,47 @@ export const ModerationQueueTable: React.FC<ModerationQueueTableProps> = ({
                   {/* Student Info */}
                   <td className="py-3.5 px-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-brand-soft text-brand flex items-center justify-center font-bold text-body-sm shrink-0 border border-brand/20">
+                      <div className="w-9 h-9 rounded-full bg-brand-soft text-brand-soft-text flex items-center justify-center font-bold text-sm shrink-0 border border-brand/20">
                         {item.studentName?.charAt(0) || '?'}
                       </div>
                       <div className="min-w-0">
-                        <div className="font-bold text-ink truncate group-hover:text-brand transition-colors">
-                          {item.studentName}
+                        <div className="font-semibold text-ink truncate group-hover:text-brand transition-colors">
+                          {item.studentName || 'Unknown Student'}
                         </div>
-                        <div className="text-xs font-mono text-ink-muted">
-                          {item.studentRoll} {academicInfo && `• ${academicInfo}`}
+                        <div className="text-xs text-ink-muted flex items-center gap-1.5 font-mono">
+                          <span>{item.studentRoll || '—'}</span>
+                          {academicInfo && <span>· {academicInfo}</span>}
                         </div>
                       </div>
                     </div>
                   </td>
 
-                  {/* Artifact Type Badge */}
-                  <td className="py-3.5 px-4 whitespace-nowrap">
-                    <ItemTypeBadge itemType={item.itemType} />
-                  </td>
-
-                  {/* Title & Description */}
+                  {/* Artifact Type */}
                   <td className="py-3.5 px-4">
-                    <div className="font-semibold text-ink truncate max-w-xs sm:max-w-md">
-                      {item.title || 'Untitled Submission'}
+                    <ItemTypeBadge type={item.type} />
+                  </td>
+
+                  {/* Title / Summary */}
+                  <td className="py-3.5 px-4 max-w-xs sm:max-w-md">
+                    <div className="font-medium text-ink truncate">
+                      {item.title || 'Untitled submission'}
                     </div>
-                    {item.description && (
-                      <div className="text-xs text-ink-muted truncate max-w-xs sm:max-w-md">
-                        {item.description}
-                      </div>
-                    )}
-                    {item.technologies && item.technologies.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {item.technologies.slice(0, 3).map((tech, idx) => (
-                          <span
-                            key={idx}
-                            className="text-xs px-1.5 py-0.5 rounded bg-surface-sunken text-ink-muted border border-edge"
-                          >
-                            {tech}
-                          </span>
-                        ))}
-                        {item.technologies.length > 3 && (
-                          <span className="text-xs text-ink-muted">
-                            +{item.technologies.length - 3}
-                          </span>
-                        )}
+                    {item.summary && (
+                      <div className="text-xs text-ink-muted truncate mt-0.5">
+                        {item.summary}
                       </div>
                     )}
                   </td>
 
                   {/* Submitted Date */}
-                  <td className="py-3.5 px-4 whitespace-nowrap text-ink-muted text-label-sm">
-                    {item.submittedAt ? new Date(item.submittedAt).toLocaleDateString() : 'N/A'}
+                  <td className="py-3.5 px-4 text-xs text-ink-muted whitespace-nowrap">
+                    {item.submittedAt
+                      ? new Date(item.submittedAt).toLocaleDateString(undefined, {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                        })
+                      : '—'}
                   </td>
 
                   {/* Status */}
@@ -113,7 +103,7 @@ export const ModerationQueueTable: React.FC<ModerationQueueTableProps> = ({
                     <StatusBadge status={item.status} />
                   </td>
 
-                  {/* Review Button */}
+                  {/* Action */}
                   <td className="py-3.5 px-4 text-right whitespace-nowrap">
                     <button
                       type="button"
@@ -121,10 +111,10 @@ export const ModerationQueueTable: React.FC<ModerationQueueTableProps> = ({
                         e.stopPropagation();
                         onSelect(item.id);
                       }}
-                      className="btn btn-secondary text-body-sm py-1.5 px-3 inline-flex items-center gap-1 group-hover:btn-primary transition-all"
+                      className="btn btn-secondary text-xs py-1.5 px-3 min-h-[36px] inline-flex items-center gap-1 cursor-pointer group-hover:border-brand/40 shadow-2xs"
                     >
                       <span>Review</span>
-                      <ChevronRight className="w-3.5 h-3.5" />
+                      <ChevronRight className="w-3.5 h-3.5 text-ink-muted group-hover:translate-x-0.5 transition-transform" />
                     </button>
                   </td>
                 </tr>
@@ -135,36 +125,32 @@ export const ModerationQueueTable: React.FC<ModerationQueueTableProps> = ({
       </div>
 
       {/* Pagination Bar */}
-      {filteredCount > 0 && (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-edge bg-surface-sunken">
-          <div className="text-body-sm text-ink-muted">
-            Showing <span className="font-semibold text-ink">{(currentPage - 1) * pageSize + 1}</span> to{' '}
-            <span className="font-semibold text-ink">{Math.min(currentPage * pageSize, filteredCount)}</span> of{' '}
-            <span className="font-semibold text-ink">{filteredCount}</span> submissions
+      {totalPages > 1 && (
+        <div className="p-4 border-t border-edge bg-surface-sunken flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-ink-secondary">
+          <div>
+            Showing <strong className="text-ink">{(currentPage - 1) * pageSize + 1}</strong> to{' '}
+            <strong className="text-ink">{Math.min(currentPage * pageSize, filteredCount)}</strong> of{' '}
+            <strong className="text-ink">{filteredCount}</strong> entries
           </div>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-2">
             <button
-              type="button"
               onClick={() => onPageChange(Math.max(1, currentPage - 1))}
               disabled={currentPage <= 1}
-              className="btn btn-ghost text-body-sm p-1.5 sm:px-3 sm:py-1.5 inline-flex items-center gap-1"
-              aria-label="Previous page"
+              className="btn btn-secondary px-2.5 py-1 text-xs min-h-[36px] inline-flex items-center gap-1 disabled:opacity-40 cursor-pointer"
             >
-              <ChevronLeft className="w-4 h-4" />
-              <span className="hidden sm:inline">Previous</span>
+              <ChevronLeft className="w-3.5 h-3.5" />
+              <span>Prev</span>
             </button>
-            <span className="text-label-sm font-semibold text-ink px-2">
-              Page {currentPage} of {totalPages}
+            <span className="font-mono px-2 font-semibold">
+              {currentPage} / {totalPages}
             </span>
             <button
-              type="button"
               onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
               disabled={currentPage >= totalPages}
-              className="btn btn-ghost text-body-sm p-1.5 sm:px-3 sm:py-1.5 inline-flex items-center gap-1"
-              aria-label="Next page"
+              className="btn btn-secondary px-2.5 py-1 text-xs min-h-[36px] inline-flex items-center gap-1 disabled:opacity-40 cursor-pointer"
             >
-              <span className="hidden sm:inline">Next</span>
-              <ChevronRight className="w-4 h-4" />
+              <span>Next</span>
+              <ChevronRight className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
@@ -172,3 +158,5 @@ export const ModerationQueueTable: React.FC<ModerationQueueTableProps> = ({
     </div>
   );
 };
+
+export default ModerationQueueTable;

@@ -24,7 +24,7 @@ export const ModerationFilterTabs: React.FC<ModerationFilterTabsProps> = ({
   onTabChange,
 }) => {
   return (
-    <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none border-b border-edge" role="tablist">
+    <div className="flex items-center gap-2 overflow-x-auto pb-2 pt-1 scrollbar-none border-b border-edge" role="tablist" aria-label="Moderation filters">
       {TAB_CONFIG.map((tab) => {
         const Icon = tab.icon;
         const count = counts[tab.id];
@@ -35,16 +35,16 @@ export const ModerationFilterTabs: React.FC<ModerationFilterTabsProps> = ({
             onClick={() => onTabChange(tab.id)}
             role="tab"
             aria-selected={isActive}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-body-sm font-bold whitespace-nowrap transition-colors cursor-pointer ${
+            className={`flex items-center gap-2 px-3.5 py-2 min-h-[40px] rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition-all duration-quick cursor-pointer card-hover ${
               isActive
-                ? 'bg-brand text-ink-inverse shadow-xs'
-                : 'text-ink-secondary hover:text-ink hover:bg-surface-sunken'
+                ? 'bg-brand text-on-primary shadow-sm'
+                : 'bg-surface border border-edge text-ink-secondary hover:text-ink hover:bg-surface-sunken'
             }`}
           >
-            <Icon className="w-4 h-4" />
+            <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-on-primary' : 'text-ink-muted'}`} />
             <span>{tab.label}</span>
             <span
-              className={`ml-1 text-xs px-1.5 py-0.2 rounded-full font-mono ${
+              className={`ml-1 text-[11px] px-2 py-0.5 rounded-full font-mono font-bold ${
                 isActive ? 'bg-white/20 text-white' : 'bg-surface-sunken text-ink-muted border border-edge'
               }`}
             >

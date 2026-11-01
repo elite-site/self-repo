@@ -24,17 +24,21 @@ export const ModerationHeader: React.FC<ModerationHeaderProps> = ({
   onStatusFilterChange,
 }) => {
   return (
-    <>
+    <div className="space-y-4">
       {toast && (
         <div
-          className={`fixed bottom-5 right-5 z-overlay text-xs font-semibold px-4 py-3 rounded-lg shadow-modal animate-fade-in flex items-center gap-2 ${
+          className={`fixed bottom-5 right-5 z-overlay text-xs font-semibold px-4 py-3 rounded-xl shadow-modal animate-fade-in flex items-center gap-2 ${
             toast.type === 'error'
-              ? 'bg-status-bg-rejected text-status-rejected border border-status-rejected/30'
+              ? 'bg-status-rejected/10 text-status-rejected border border-status-rejected/30'
               : 'bg-surface-inverse text-ink-inverse'
           }`}
           role={toast.type === 'error' ? 'alert' : 'status'}
         >
-          {toast.type === 'error' ? <AlertCircle className="w-4 h-4 shrink-0" /> : <CheckCircle className="w-4 h-4 shrink-0 text-success" />}
+          {toast.type === 'error' ? (
+            <AlertCircle className="w-4 h-4 shrink-0" />
+          ) : (
+            <CheckCircle className="w-4 h-4 shrink-0 text-success" />
+          )}
           <span>{toast.message}</span>
           <button
             type="button"
@@ -48,12 +52,12 @@ export const ModerationHeader: React.FC<ModerationHeaderProps> = ({
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-edge">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-brand-soft text-brand flex items-center justify-center shadow-xs">
+          <div className="w-10 h-10 rounded-xl bg-brand-soft text-brand-soft-text flex items-center justify-center shadow-xs border border-brand/20">
             <Sparkles className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-headline-sm font-semibold text-ink">Moderation queue</h1>
-            <p className="text-body-sm text-ink-muted">
+            <h1 className="text-xl sm:text-2xl font-bold text-ink tracking-tight font-sans">Moderation queue</h1>
+            <p className="text-xs sm:text-sm text-ink-muted mt-0.5">
               Unified review for Intro Videos, Resumes, Certificates, Projects, and Achievements
             </p>
           </div>
@@ -62,9 +66,9 @@ export const ModerationHeader: React.FC<ModerationHeaderProps> = ({
           <button
             onClick={onRefresh}
             disabled={loading}
-            className="btn btn-secondary inline-flex items-center gap-2 cursor-pointer"
+            className="btn btn-secondary min-h-[44px] sm:min-h-0 inline-flex items-center gap-2 cursor-pointer shadow-xs hover:shadow-sm"
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-brand' : ''}`} />
             <span>Refresh</span>
           </button>
         </div>
@@ -78,12 +82,13 @@ export const ModerationHeader: React.FC<ModerationHeaderProps> = ({
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Search by student name, roll number, or title..."
-            className="input pl-9 pr-8 text-body-sm w-full"
+            className="input pl-9 pr-8 text-sm w-full min-h-[44px]"
           />
           {searchQuery && (
             <button
               onClick={() => onSearchChange('')}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-ink-muted hover:text-ink cursor-pointer"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-ink-muted hover:text-ink cursor-pointer"
+              aria-label="Clear search"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -95,16 +100,16 @@ export const ModerationHeader: React.FC<ModerationHeaderProps> = ({
           <select
             value={statusFilter}
             onChange={(e) => onStatusFilterChange(e.target.value as StatusFilter)}
-            className="select text-body-sm min-w-[170px] cursor-pointer"
+            className="select text-sm min-w-[170px] min-h-[44px] cursor-pointer"
           >
             <option value="ALL">All Statuses</option>
-            <option value="PENDING_REVIEW">Pending & In Review</option>
+            <option value="PENDING">Pending Review</option>
             <option value="APPROVED">Approved</option>
             <option value="CHANGES_REQUESTED">Changes Requested</option>
             <option value="REJECTED">Rejected</option>
           </select>
         </div>
       </div>
-    </>
+    </div>
   );
 };

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, Star } from 'lucide-react';
 import type { GithubShowcasedProject } from '@/features/github/types';
 
 interface GithubProjectsTableProps {
@@ -11,15 +11,17 @@ export const GithubProjectsTable: React.FC<GithubProjectsTableProps> = ({ github
     <div className="surface border border-edge rounded-xl overflow-hidden shadow-xs">
       <div className="p-4 border-b border-edge bg-surface-sunken flex items-center justify-between">
         <div>
-          <h3 className="text-body-sm font-bold text-ink">Showcased GitHub Projects (Read-only)</h3>
+          <h3 className="text-sm font-bold text-ink">Showcased GitHub Projects (Read-only)</h3>
           <p className="text-xs text-ink-muted">Showcased repositories selected by students (no faculty approval required)</p>
         </div>
-        <span className="text-xs font-mono text-ink-muted">{githubProjects.length} projects</span>
+        <span className="text-xs font-mono text-ink-muted font-semibold px-2 py-0.5 rounded-full bg-surface border border-edge">
+          {githubProjects.length} projects
+        </span>
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse text-body-sm">
+      <div className="table-responsive">
+        <table className="w-full text-left border-collapse text-sm">
           <thead>
-            <tr className="border-b border-edge bg-surface-sunken text-label-sm font-semibold text-ink-secondary">
+            <tr className="border-b border-edge bg-surface-sunken text-xs font-semibold text-ink-secondary">
               <th className="py-3 px-4">Student</th>
               <th className="py-3 px-4">Repository</th>
               <th className="py-3 px-4">Language / Stars</th>
@@ -37,46 +39,49 @@ export const GithubProjectsTable: React.FC<GithubProjectsTableProps> = ({ github
             ) : (
               githubProjects.map((gp) => (
                 <tr key={gp.id} className="hover:bg-surface-sunken/40 transition-colors">
-                  <td className="py-3 px-4">
+                  <td className="py-3.5 px-4">
                     <div className="font-semibold text-ink">{gp.student?.name}</div>
-                    <div className="text-[11px] text-ink-muted font-mono">{gp.student?.rollNo}</div>
+                    <div className="text-xs text-ink-muted font-mono">{gp.student?.rollNo}</div>
                   </td>
-                  <td className="py-3 px-4 font-mono font-medium text-ink">
+                  <td className="py-3.5 px-4 font-mono font-medium text-ink">
                     {gp.name}
                   </td>
-                  <td className="py-3 px-4">
+                  <td className="py-3.5 px-4">
                     <div className="flex items-center gap-2 text-xs">
                       {gp.primaryLanguage && (
-                        <span className="px-1.5 py-0.5 rounded bg-surface-inset text-[11px] font-semibold text-ink-secondary">
+                        <span className="px-2 py-0.5 rounded-md bg-surface-inset text-[11px] font-semibold text-ink-secondary">
                           {gp.primaryLanguage}
                         </span>
                       )}
-                      <span className="text-ink-muted font-mono">★ {gp.stars ?? 0}</span>
+                      <span className="text-ink-muted font-mono inline-flex items-center gap-0.5">
+                        <Star className="w-3 h-3 text-status-pending fill-status-pending" />
+                        {gp.stars ?? 0}
+                      </span>
                     </div>
                   </td>
-                  <td className="py-3 px-4 max-w-md">
+                  <td className="py-3.5 px-4 max-w-md">
                     {gp.readmeExcerpt ? (
                       <p className="text-xs text-ink-muted line-clamp-2 font-mono">
                         {gp.readmeExcerpt}
                       </p>
-                    ) : (
-                      <p className="text-xs text-ink-secondary line-clamp-2">
-                        {gp.description || 'No description provided.'}
+                    ) : gp.description ? (
+                      <p className="text-xs text-ink-muted line-clamp-2">
+                        {gp.description}
                       </p>
+                    ) : (
+                      <span className="text-xs text-ink-muted italic">No description provided</span>
                     )}
                   </td>
-                  <td className="py-3 px-4 text-right">
-                    {gp.htmlUrl && (
-                      <a
-                        href={gp.htmlUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="btn btn-ghost text-xs px-2 py-1 inline-flex items-center gap-1"
-                      >
-                        <span>View</span>
-                        <ExternalLink className="w-3 h-3" />
-                      </a>
-                    )}
+                  <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                    <a
+                      href={gp.htmlUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn btn-secondary text-xs py-1.5 px-3 min-h-[36px] inline-flex items-center gap-1.5 hover:text-brand"
+                    >
+                      <span>View</span>
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
                   </td>
                 </tr>
               ))
@@ -87,3 +92,5 @@ export const GithubProjectsTable: React.FC<GithubProjectsTableProps> = ({ github
     </div>
   );
 };
+
+export default GithubProjectsTable;
