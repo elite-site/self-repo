@@ -7,10 +7,10 @@ interface CacheDirectoryTableProps {
 
 export const CacheDirectoryTable: React.FC<CacheDirectoryTableProps> = ({ recentCache }) => {
   return (
-    <div className="bg-surface border border-edge rounded-xl shadow-sm overflow-hidden">
+    <div className="surface border border-edge rounded-xl shadow-xs overflow-hidden">
       <div className="p-5 border-b border-edge flex items-center justify-between">
         <div>
-          <h3 className="text-sm font-bold text-ink">
+          <h3 className="text-sm font-bold text-ink font-sans">
             Recent Cache Directory Map
           </h3>
           <p className="text-xs text-ink-muted mt-0.5">
@@ -27,8 +27,8 @@ export const CacheDirectoryTable: React.FC<CacheDirectoryTableProps> = ({ recent
           No folder cache entries found. Cache will populate upon next student upload or video stream.
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+        <div className="table-responsive">
+          <table className="w-full text-left text-xs border-collapse">
             <thead className="bg-surface-sunken text-ink-secondary font-semibold border-b border-edge">
               <tr>
                 <th className="px-5 py-3">Folder Path Key</th>
@@ -38,14 +38,14 @@ export const CacheDirectoryTable: React.FC<CacheDirectoryTableProps> = ({ recent
             </thead>
             <tbody className="divide-y divide-edge text-ink-secondary">
               {recentCache.map((entry) => (
-                <tr key={entry.id} className="hover:bg-surface-sunken/50 transition-colors">
+                <tr key={entry.id} className="hover:bg-brand-soft/40 transition-colors">
                   <td className="px-5 py-3 font-mono font-medium text-ink">
                     {entry.folderKey}
                   </td>
                   <td className="px-5 py-3 font-mono text-ink-muted">
                     {entry.folderId}
                   </td>
-                  <td className="px-5 py-3 text-ink-muted">
+                  <td className="px-5 py-3 text-ink-muted font-mono">
                     {new Date(entry.updatedAt).toLocaleString()}
                   </td>
                 </tr>
