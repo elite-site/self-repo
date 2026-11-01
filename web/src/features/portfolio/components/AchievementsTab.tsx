@@ -7,6 +7,7 @@ import { useConfirm } from '@/shared/ui/ConfirmDialog';
 import { Modal } from '@/shared/ui/Modal';
 import { EmptyState } from '@/shared/ui/EmptyState';
 import { ErrorState } from '@/shared/ui/ErrorState';
+import { MasonryGrid, MasonryItem } from '@/shared/layout/MasonryLayout';
 import { FileField } from '@/shared/ui/FileField';
 
 const statusBadge = (status: string) => {
@@ -209,9 +210,10 @@ export const AchievementsTab: React.FC = () => {
           }
         />
       ) : achievements.length > 0 ? (
-        <ul className="surface divide-y divide-edge">
+        <MasonryGrid cols={2}>
           {achievements.map((a) => (
-            <li key={a.id} className="flex flex-col gap-4 p-4 sm:flex-row sm:items-start sm:gap-5">
+            <MasonryItem key={a.id}>
+              <div className="surface card-lift rounded-2xl p-5 border border-edge shadow-xs transition-all duration-quick hover:-translate-y-0.5 hover:shadow-md flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-5">
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <h3 className="font-heading text-label-lg font-semibold text-ink">{a.title}</h3>
@@ -270,9 +272,10 @@ export const AchievementsTab: React.FC = () => {
                   <Trash2 size={16} strokeWidth={1.75} aria-hidden="true" />
                 </button>
               </div>
-            </li>
+            </div>
+            </MasonryItem>
           ))}
-        </ul>
+        </MasonryGrid>
       ) : null}
 
       <Modal

@@ -16,6 +16,7 @@ import { EmptyState } from '@/shared/ui/EmptyState';
 import { ErrorState } from '@/shared/ui/ErrorState';
 import { Card } from '@/shared/ui/Card';
 import { ReadmeExcerptView } from '@/shared/ui/ReadmeExcerptView';
+import { MasonryGrid, MasonryItem } from '@/shared/layout/MasonryLayout';
 
 const LANG_COLORS: Record<string, string> = {
   TypeScript: 'bg-blue-500',
@@ -129,7 +130,7 @@ export const ProjectsTab: React.FC = () => {
           </div>
 
           {/* Showcased Project Cards Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <MasonryGrid cols={2}>
             {showcasedRepos.map((repo, idx) => {
               const languages = repo.languages || {};
               const totalBytes = Object.values(languages).reduce((sum, b) => sum + (Number(b) || 0), 0);
@@ -144,6 +145,7 @@ export const ProjectsTab: React.FC = () => {
               const rank = repo.showcaseRank ?? idx + 1;
 
               return (
+                <MasonryItem key={repo.id}>
                 <Card
                   key={repo.id}
                   className={`p-5 sm:p-6 border flex flex-col justify-between gap-4 transition-all ${
@@ -249,9 +251,10 @@ export const ProjectsTab: React.FC = () => {
                     <span>Pushed {formatRelativeTime(repo.pushedAt)}</span>
                   </div>
                 </Card>
+                </MasonryItem>
               );
             })}
-          </div>
+          </MasonryGrid>
 
         </div>
       ) : (

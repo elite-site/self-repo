@@ -8,6 +8,7 @@ import { useConfirm } from '@/shared/ui/ConfirmDialog';
 import { Modal } from '@/shared/ui/Modal';
 import { EmptyState } from '@/shared/ui/EmptyState';
 import { ErrorState } from '@/shared/ui/ErrorState';
+import { MasonryGrid, MasonryItem } from '@/shared/layout/MasonryLayout';
 import { FileField } from '@/shared/ui/FileField';
 import { celebrate } from '@/shared/lib/celebrate';
 
@@ -204,9 +205,10 @@ export const CertificatesTab: React.FC = () => {
           }
         />
       ) : certificates.length > 0 ? (
-        <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <MasonryGrid cols={3}>
           {certificates.map((c) => (
-            <li key={c.id} className="surface flex flex-col p-4">
+            <MasonryItem key={c.id}>
+              <div className="surface card-lift rounded-2xl p-5 border border-edge shadow-xs transition-all duration-quick hover:-translate-y-0.5 hover:shadow-md flex flex-col h-full">
               <div className="flex items-start justify-between gap-2">
                 {statusBadge(c.status || 'PENDING')}
                 <div className="flex items-center gap-0.5">
@@ -301,9 +303,10 @@ export const CertificatesTab: React.FC = () => {
                   </a>
                 ) : null}
               </div>
-            </li>
+            </div>
+            </MasonryItem>
           ))}
-        </ul>
+        </MasonryGrid>
       ) : null}
 
       <Modal

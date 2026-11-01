@@ -178,7 +178,7 @@ export const EditProfilePage: React.FC = () => {
         isOpen={isCropModalOpen}
         imageSrc={cropImageSrc}
         onClose={() => setIsCropModalOpen(false)}
-        onCropComplete={handleCropComplete}
+        onCropSave={handleCropComplete}
       />
     </div>
   );

@@ -1,5 +1,5 @@
 import React from 'react';
-import { AlertCircle, ShieldCheck, Edit3, ExternalLink } from 'lucide-react';
+import { AlertCircle, ShieldCheck, Edit3 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { SkeletonPage } from '@/shared/ui/Skeleton';
 import { AsymGrid, AsymFeatured, AsymSide, AsymAccent } from '@/shared/layout/AsymLayout';
