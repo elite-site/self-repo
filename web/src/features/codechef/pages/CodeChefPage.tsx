@@ -1,5 +1,5 @@
 import React from 'react';
-import { Star, Award, ShieldCheck, RefreshCw } from 'lucide-react';
+import { Star, RefreshCw } from 'lucide-react';
 import { SkeletonPage } from '@/shared/ui/Skeleton';
 import { ErrorState } from '@/shared/ui/ErrorState';
 import { AsymGrid, AsymFeatured, AsymSide, AsymAccent } from '@/shared/layout/AsymLayout';
@@ -96,10 +96,10 @@ export const CodeChefPage: React.FC = () => {
               </p>
               <div className="space-y-1 pt-1 text-label-xs font-mono text-ink-secondary">
                 <div>Handle: <span className="font-bold text-ink">{status.handle}</span></div>
-                {status.rating !== undefined && (
-                  <div>Rating: <span className="font-bold text-ink">{status.rating} ({status.stars || 1}★)</span></div>
+                {status.currentRating !== null && status.currentRating !== undefined && (
+                  <div>Rating: <span className="font-bold text-ink">{status.currentRating} ({status.stars || 1}★)</span></div>
                 )}
-                <div>Visibility: <span className="text-ink">{status.isPublic ? 'Public' : 'Private'}</span></div>
+                <div>Visibility: <span className="text-ink">{status.showPublic ? 'Public' : 'Private'}</span></div>
               </div>
             </div>
 
@@ -176,3 +176,4 @@ export const CodeChefPage: React.FC = () => {
 };
 
 export default CodeChefPage;
+

@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Search, ChevronLeft, ChevronRight, BookOpen, AlertCircle } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, BookOpen, AlertCircle, Sparkles } from 'lucide-react';
 import { useCoursesQuery } from '../hooks';
 import { CourseCard } from '../components';
 import { Button } from '@/shared/ui/Button';
 import { Skeleton } from '@/shared/ui/Skeleton';
 import { EmptyState } from '@/shared/ui/EmptyState';
+import { AsymGrid, AsymFeatured, AsymSide, AsymAccent } from '@/shared/layout/AsymLayout';
+import { MasonryGrid, MasonryItem } from '@/shared/layout/MasonryLayout';
 import { cn } from '@/shared/lib/cn';
 
 const CATEGORIES = ['All', 'Web Development', 'Mobile', 'Data Science', 'AI & ML', 'DevOps'];
@@ -35,49 +37,106 @@ export const CoursesGridPage: React.FC = () => {
   });
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-8">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-ink sm:text-3xl">Course Catalog</h1>
-        <p className="text-sm text-ink-muted">Explore courses across technology domains.</p>
-      </div>
+    <div className="space-y-8 p-4 sm:p-6 lg:p-8 page-enter max-w-7xl mx-auto text-left">
+      {/* 1. ASYMMETRICAL CATALOG HERO BANNER */}
+      <AsymGrid>
+        <AsymFeatured cols="8">
+          <div>
+            <span className="badge badge-brand text-xs font-semibold">Course Catalog</span>
+            <h1 className="mt-2 text-2xl font-bold tracking-tight text-ink sm:text-3xl font-heading">
+              Explore Engineering Courses
+            </h1>
+            <p className="mt-1 text-sm text-ink-muted max-w-xl">
+              Curated masterclasses, hands-on tutorials, and project-based assignments across technology domains.
+            </p>
+          </div>
 
-      <div className="space-y-3">
-        <form onSubmit={(e) => { e.preventDefault(); updateParam('search', searchInput); }} className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-muted" aria-hidden="true" />
-          <input
-            type="search"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            placeholder="Search courses..."
-            className="w-full rounded-lg border border-edge bg-surface py-2 pl-9 pr-4 text-sm text-ink placeholder:text-ink-muted focus:border-brand focus:outline-none focus:ring-1 focus:ring-focus"
-          />
-        </form>
+          <div className="space-y-3 pt-2">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                updateParam('search', searchInput);
+              }}
+              className="relative max-w-lg"
+            >
+              <Search className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-ink-muted" aria-hidden="true" />
+              <input
+                type="search"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder="Search courses by topic, skill, or keyword..."
+                className="input pl-10 min-h-[44px]"
+              />
+            </form>
 
-        <div className="flex flex-wrap items-center gap-2">
-          {CATEGORIES.map((cat) => (
-            <button key={cat} type="button" onClick={() => updateParam('category', cat)} className={cn('rounded-full px-3 py-1 text-xs font-semibold transition-colors', category === cat ? 'bg-brand text-on-brand' : 'border border-edge bg-surface text-ink-secondary hover:bg-surface-sunken')}>
-              {cat}
-            </button>
-          ))}
-          <div className="h-4 w-px bg-edge mx-1 hidden sm:block" />
-          {LEVELS.map((lvl) => (
-            <button key={lvl} type="button" onClick={() => updateParam('level', lvl)} className={cn('rounded-full px-3 py-1 text-xs font-semibold transition-colors', level === lvl ? 'bg-ink text-surface' : 'border border-edge bg-surface text-ink-secondary hover:bg-surface-sunken')}>
-              {lvl.charAt(0) + lvl.slice(1).toLowerCase()}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {isLoading ? (
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="rounded-xl border border-edge bg-surface p-3 space-y-3">
-              <Skeleton className="aspect-video w-full rounded-lg" />
-              <Skeleton className="h-4 w-3/4" />
-              <Skeleton className="h-3 w-1/2" />
+            <div className="flex flex-wrap items-center gap-2">
+              {CATEGORIES.map((cat) => (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => updateParam('category', cat)}
+                  className={cn(
+                    'rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors min-h-[36px]',
+                    category === cat
+                      ? 'bg-brand text-on-brand shadow-sm'
+                      : 'border border-edge bg-surface text-ink-secondary hover:bg-surface-sunken hover:border-brand-ring'
+                  )}
+                >
+                  {cat}
+                </button>
+              ))}
+              <div className="h-4 w-px bg-edge mx-1 hidden sm:block" />
+              {LEVELS.map((lvl) => (
+                <button
+                  key={lvl}
+                  type="button"
+                  onClick={() => updateParam('level', lvl)}
+                  className={cn(
+                    'rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors min-h-[36px]',
+                    level === lvl
+                      ? 'bg-ink text-surface'
+                      : 'border border-edge bg-surface text-ink-secondary hover:bg-surface-sunken'
+                  )}
+                >
+                  {lvl.charAt(0) + lvl.slice(1).toLowerCase()}
+                </button>
+              ))}
             </div>
+          </div>
+        </AsymFeatured>
+
+        <AsymSide cols="4">
+          <AsymAccent className="flex flex-col justify-between h-full">
+            <div className="space-y-2">
+              <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-brand">
+                <Sparkles size={14} aria-hidden="true" />
+                Continuous Learning
+              </span>
+              <p className="text-body-xs text-ink-secondary leading-relaxed">
+                Filter courses by difficulty level to match your current academic year and career trajectory.
+              </p>
+            </div>
+            <div className="mt-4 pt-3 border-t border-brand/20 flex items-center justify-between text-label-xs text-ink-muted">
+              <span>{data?.pagination?.total ? `${data.pagination.total} total courses` : 'Curated catalog'}</span>
+              <span className="font-semibold text-brand">Page {page} / {data?.pagination?.totalPages || 1}</span>
+            </div>
+          </AsymAccent>
+        </AsymSide>
+      </AsymGrid>
+
+      {/* 2. MASONRY COURSE CARDS */}
+      {isLoading ? (
+        <MasonryGrid cols={3}>
+          {Array.from({ length: 6 }).map((_, i) => (
+            <MasonryItem key={i}>
+              <div className="rounded-2xl border border-edge bg-surface p-4 space-y-3">
+                <Skeleton className="aspect-video w-full rounded-xl" />
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-3 w-1/2" />
+              </div>
+            </MasonryItem>
           ))}
-        </div>
+        </MasonryGrid>
       ) : error ? (
         <div className="surface border border-edge rounded-2xl p-8 text-center space-y-3 max-w-md mx-auto" role="alert">
           <AlertCircle className="size-8 text-status-rejected mx-auto" />
@@ -90,11 +149,13 @@ export const CoursesGridPage: React.FC = () => {
           </Button>
         </div>
       ) : data?.courses?.length ? (
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+        <MasonryGrid cols={3}>
           {data.courses.map((course) => (
-            <CourseCard key={course.id} course={course} />
+            <MasonryItem key={course.id}>
+              <CourseCard course={course} className="card-lift" />
+            </MasonryItem>
           ))}
-        </div>
+        </MasonryGrid>
       ) : (
         <EmptyState
           icon={BookOpen}
