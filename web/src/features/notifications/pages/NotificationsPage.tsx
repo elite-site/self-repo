@@ -1,6 +1,8 @@
 import React from 'react';
-import { Bell, Loader2, CheckCheck, AlertCircle, RefreshCw, ChevronRight } from 'lucide-react';
+import { Bell, Loader2, CheckCheck, AlertCircle, RefreshCw, ChevronRight, Inbox } from 'lucide-react';
 import { SkeletonListPage } from '@/shared/ui/Skeleton';
+import { AsymGrid, AsymFeatured, AsymSide, AsymAccent } from '@/shared/layout/AsymLayout';
+import { MasonryGrid, MasonryItem } from '@/shared/layout/MasonryLayout';
 import { useNotifications } from '../hooks/useNotifications';
 import { NotificationItem, NotificationFilters } from '../components';
 
@@ -27,43 +29,79 @@ export const NotificationsPage: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6 text-left page-enter" role="main">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-xl sm:text-2xl font-black text-ink font-heading">Notification Inbox</h1>
-            {unreadCount > 0 && <span className="badge badge-brand">{unreadCount} Unread</span>}
+    <div className="space-y-8 text-left page-enter max-w-6xl mx-auto pb-12" role="main">
+      {/* 1. ASYMMETRICAL FILTER & SUMMARY HEADER */}
+      <AsymGrid>
+        <AsymFeatured cols="8">
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <span className="badge badge-brand text-xs font-semibold">Activity Hub</span>
+                <div className="mt-1 flex items-center gap-2.5">
+                  <h1 className="text-xl sm:text-2xl font-black text-ink font-heading">Notification Inbox</h1>
+                  {unreadCount > 0 && <span className="badge badge-brand">{unreadCount} Unread</span>}
+                </div>
+                <p className="mt-1 text-body-sm text-ink-secondary">
+                  Announcements, event confirmations, change request decisions, and system alerts.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 self-start sm:self-center">
+                {unreadCount > 0 && (
+                  <button
+                    onClick={handleMarkAllRead}
+                    disabled={markingAll}
+                    className="btn btn-secondary min-h-[44px]"
+                    aria-label={markingAll ? 'Marking all as read' : `Mark all ${unreadCount} notifications as read`}
+                  >
+                    <CheckCheck className="w-3.5 h-3.5" aria-hidden="true" />
+                    <span>Mark All Read</span>
+                  </button>
+                )}
+
+                <button
+                  onClick={() => loadNotifications()}
+                  className="btn btn-ghost p-2.5 min-h-[44px] min-w-[44px] rounded-xl"
+                  aria-label="Refresh notifications"
+                >
+                  <RefreshCw className="w-4 h-4" aria-hidden="true" />
+                </button>
+              </div>
+            </div>
+
+            <NotificationFilters
+              activeFilter={activeFilter}
+              unreadCount={unreadCount}
+              onFilterChange={setActiveFilter}
+            />
           </div>
-          <p className="text-body-sm text-ink-secondary">
-            Announcements, event confirmations, change request decisions, and system alerts
-          </p>
-        </div>
+        </AsymFeatured>
 
-        <div className="flex items-center gap-3">
-          {unreadCount > 0 && (
-            <button
-              onClick={handleMarkAllRead}
-              disabled={markingAll}
-              className="btn btn-secondary"
-              aria-label={markingAll ? 'Marking all as read' : `Mark all ${unreadCount} notifications as read`}
-            >
-              <CheckCheck className="w-3.5 h-3.5" aria-hidden="true" />
-              <span>Mark All as Read</span>
-            </button>
-          )}
-
-          <button
-            onClick={() => loadNotifications()}
-            className="btn btn-ghost p-2"
-            aria-label="Refresh notifications"
-          >
-            <RefreshCw className="w-4 h-4" aria-hidden="true" />
-          </button>
-        </div>
-      </div>
+        <AsymSide cols="4">
+          <AsymAccent className="flex flex-col justify-between h-full">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-brand">
+                  <Inbox size={16} aria-hidden="true" />
+                  Inbox Summary
+                </span>
+                <span className="badge badge-brand text-[11px]">
+                  {unreadCount} New
+                </span>
+              </div>
+              <p className="text-body-xs text-ink-secondary leading-relaxed">
+                Clicking any item routes directly to the relevant event, submission feedback, or election ballot.
+              </p>
+            </div>
+            <div className="mt-4 pt-3 border-t border-brand/20 text-label-xs text-ink-muted">
+              <span>Showing {filteredNotifs.length} notifications</span>
+            </div>
+          </AsymAccent>
+        </AsymSide>
+      </AsymGrid>
 
       {error && (
-        <div className="surface-sunken border border-status-rejected bg-status-bg-rejected text-status-rejected text-body-sm flex items-center justify-between animate-fade-in" role="alert">
+        <div className="surface-sunken border border-status-rejected bg-status-bg-rejected text-status-rejected text-body-sm flex items-center justify-between p-4 rounded-2xl" role="alert">
           <div className="flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0" aria-hidden="true" />
             <span>{error}</span>
@@ -74,14 +112,9 @@ export const NotificationsPage: React.FC = () => {
         </div>
       )}
 
-      <NotificationFilters
-        activeFilter={activeFilter}
-        unreadCount={unreadCount}
-        onFilterChange={setActiveFilter}
-      />
-
+      {/* 2. MASONRY GROUPED NOTIFICATION CARDS */}
       {filteredNotifs.length === 0 ? (
-        <div className="surface text-center py-16 px-4 animate-fade-in">
+        <div className="surface text-center py-16 px-4 rounded-2xl border border-edge">
           <div className="w-12 h-12 rounded-full bg-brand-soft flex items-center justify-center mx-auto mb-4">
             <Bell className="w-6 h-6 text-brand" aria-hidden="true" />
           </div>
@@ -91,24 +124,27 @@ export const NotificationsPage: React.FC = () => {
           </p>
         </div>
       ) : (
-        <div className="surface divide-y animate-fade-in">
+        <MasonryGrid cols={2}>
           {filteredNotifs.map((n) => (
-            <NotificationItem
-              key={n.id}
-              notification={n}
-              onClick={handleNotificationClick}
-              onDelete={handleDeleteNotification}
-            />
+            <MasonryItem key={n.id}>
+              <div className="surface rounded-2xl border border-edge overflow-hidden card-lift">
+                <NotificationItem
+                  notification={n}
+                  onClick={handleNotificationClick}
+                  onDelete={handleDeleteNotification}
+                />
+              </div>
+            </MasonryItem>
           ))}
-        </div>
+        </MasonryGrid>
       )}
 
       {hasMore && (
-        <div className="text-center pt-1 animate-fade-in">
+        <div className="text-center pt-2">
           <button
             onClick={handleLoadMore}
             disabled={loadingMore}
-            className="btn btn-secondary"
+            className="btn btn-secondary min-h-[44px] px-6"
             aria-busy={loadingMore}
           >
             {loadingMore ? (
