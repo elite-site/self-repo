@@ -10,10 +10,15 @@ import {
   Clapperboard,
   Clock,
   FileSpreadsheet,
+  Users,
+  Video,
+  CheckCircle,
+  X,
 } from 'lucide-react';
 import { StudentsResponse, Student } from '@/types';
 import { studentsApi } from '../api';
 import { formatDateTime } from '@/shared/utils/formatDate';
+import { AsymGrid, AsymFeatured, AsymSide, AsymAccent } from '@/shared/layout/AsymGrid';
 
 interface StudentsTableProps {
   activeEventId: string;
@@ -95,49 +100,127 @@ export const StudentsTable: React.FC<StudentsTableProps> = ({
   };
 
   const uploadedCount = data?.data.filter((s) => s.hasUploaded).length ?? 0;
+  const totalCount = data?.pagination?.total ?? 0;
+  const currentTotal = data?.data.length ?? 0;
+  const uploadPercentage = totalCount > 0 ? Math.round((uploadedCount / Math.max(1, currentTotal)) * 100) : 0;
 
   return (
-    <div className="space-y-6 text-left page-enter">
-      {/* 1. HEADER & REFRESH */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-edge pb-5">
-        <div>
-          <h1 className="font-heading text-headline-lg text-ink">All students</h1>
-          <p className="mt-1 text-body-md text-ink-secondary">
-            Roster imported from the department sheet, with introduction-video status and moderation response.
-          </p>
-        </div>
+    <div className="space-y-8 text-left animate-fade-in-up">
+      {/* 1. TOP ASYMMETRICAL ROSTER HERO */}
+      <AsymGrid>
+        <AsymFeatured cols={8}>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-edge">
+            <div>
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-brand-soft text-brand-soft-text text-xs font-semibold mb-2">
+                <Users size={13} className="shrink-0" />
+                <span>Department Student Directory</span>
+              </div>
+              <h1 className="font-heading text-2xl sm:text-3xl font-bold text-ink tracking-tight">
+                All students
+              </h1>
+              <p className="mt-1 text-xs sm:text-sm text-ink-secondary">
+                Roster imported from the department sheet, with introduction-video status and moderation response.
+              </p>
+            </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={loadStudents}
-            className="btn btn-secondary self-start sm:self-auto"
-          >
-            <RefreshCw size={15} strokeWidth={1.75} className={loading ? 'animate-spin' : ''} aria-hidden="true" />
-            <span>Refresh</span>
-          </button>
+            <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+              <button
+                onClick={loadStudents}
+                className="btn btn-secondary min-h-[40px] inline-flex items-center gap-2 cursor-pointer shadow-xs"
+              >
+                <RefreshCw size={15} strokeWidth={1.75} className={loading ? 'animate-spin text-brand' : ''} aria-hidden="true" />
+                <span>Refresh</span>
+              </button>
 
-          <button
-            onClick={() => window.open(studentsApi.getStudentsExportUrl(activeEventId), '_blank')}
-            className="btn bg-status-solid-approved text-on-primary self-start sm:self-auto"
-            title="Download the full student roster as an Excel (.xlsx) file"
-          >
-            <FileSpreadsheet size={15} strokeWidth={1.75} aria-hidden="true" />
-            <span>Export roster</span>
-          </button>
-        </div>
-      </div>
+              <button
+                onClick={() => window.open(studentsApi.getStudentsExportUrl(activeEventId), '_blank')}
+                className="btn btn-primary min-h-[40px] inline-flex items-center gap-2 cursor-pointer shadow-xs"
+                title="Download the full student roster as an Excel (.xlsx) file"
+              >
+                <FileSpreadsheet size={15} strokeWidth={1.75} aria-hidden="true" />
+                <span>Export roster</span>
+              </button>
+            </div>
+          </div>
 
-      {/* 2. SEARCH & FILTERS BAR */}
-      <div className="surface p-4 flex flex-wrap items-center gap-3">
-        <form onSubmit={handleSearchSubmit} className="relative flex-1 min-w-[220px]">
+          {/* Quick Metrics Strip */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-1">
+            <div className="p-3 rounded-xl bg-surface border border-edge shadow-xs card-hover">
+              <span className="text-xs text-ink-muted block font-medium">Total In Directory</span>
+              <span className="text-2xl font-bold text-ink tabular-nums">{totalCount}</span>
+            </div>
+            <div className="p-3 rounded-xl bg-surface border border-edge shadow-xs card-hover">
+              <span className="text-xs text-ink-muted block font-medium">Videos Uploaded</span>
+              <span className="text-2xl font-bold text-status-approved tabular-nums">{uploadedCount}</span>
+            </div>
+            <div className="p-3 rounded-xl bg-surface border border-edge shadow-xs card-hover col-span-2 sm:col-span-1">
+              <span className="text-xs text-ink-muted block font-medium">Current Page</span>
+              <span className="text-2xl font-bold text-ink tabular-nums">{page} of {data?.pagination.totalPages || 1}</span>
+            </div>
+          </div>
+        </AsymFeatured>
+
+        <AsymSide cols={4}>
+          <AsymAccent className="flex flex-col justify-between h-full">
+            <div>
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-brand text-on-primary shadow-xs">
+                  <Video size={13} />
+                  Submission Turnout
+                </span>
+                <span className="text-xs font-bold text-brand-soft-text">
+                  {uploadedCount} on page
+                </span>
+              </div>
+              <h2 className="text-base font-bold text-ink">Introduction Video Tracking</h2>
+              <p className="text-xs text-ink-secondary mt-1 leading-relaxed">
+                Track compliance across academic sections. Students with missing videos can be nudged via batch announcement.
+              </p>
+              <div className="mt-4 pt-3 border-t border-brand/20">
+                <div className="flex items-center justify-between text-xs font-medium mb-1.5">
+                  <span className="text-ink-secondary">Page Yield Ratio</span>
+                  <span className="font-bold text-ink">{uploadPercentage}%</span>
+                </div>
+                <div className="w-full h-2 rounded-full bg-surface/60 overflow-hidden">
+                  <div
+                    className="h-full bg-brand rounded-full transition-all duration-slower"
+                    style={{ width: `${uploadPercentage}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="mt-4 flex items-center gap-2 text-xs text-ink-muted">
+              <CheckCircle size={14} className="text-brand shrink-0" />
+              <span>Real-time academic sheet sync</span>
+            </div>
+          </AsymAccent>
+        </AsymSide>
+      </AsymGrid>
+
+      {/* 2. UNIFIED MODERN SEARCH & FILTER BAR */}
+      <div className="surface p-4 rounded-xl border border-edge shadow-xs flex flex-wrap items-center gap-3">
+        <form onSubmit={handleSearchSubmit} className="relative flex-1 min-w-[240px]">
           <Search className="w-4 h-4 text-ink-muted absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             placeholder="Search by name or roll number..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="input pl-9"
+            className="input pl-9 pr-8 text-sm min-h-[44px] w-full"
           />
+          {search && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearch('');
+                setPage(1);
+              }}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-ink-muted hover:text-ink cursor-pointer"
+              aria-label="Clear search"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
         </form>
 
         <div className="flex items-center gap-2 flex-wrap">
@@ -149,7 +232,7 @@ export const StudentsTable: React.FC<StudentsTableProps> = ({
           <select
             value={sectionFilter}
             onChange={(e) => { setSectionFilter(e.target.value); setPage(1); }}
-            className="select"
+            className="select text-sm min-h-[44px] cursor-pointer"
           >
             <option value="">All Sections</option>
             <option value="A">Section A</option>
@@ -159,7 +242,7 @@ export const StudentsTable: React.FC<StudentsTableProps> = ({
           <select
             value={yearFilter}
             onChange={(e) => { setYearFilter(e.target.value); setPage(1); }}
-            className="select"
+            className="select text-sm min-h-[44px] cursor-pointer"
           >
             <option value="">All Years</option>
             <option value="2">2nd Year</option>
@@ -170,7 +253,7 @@ export const StudentsTable: React.FC<StudentsTableProps> = ({
           <select
             value={uploadedFilter}
             onChange={(e) => { setUploadedFilter(e.target.value); setPage(1); }}
-            className="select"
+            className="select text-sm min-h-[44px] cursor-pointer"
           >
             <option value="">All Uploads</option>
             <option value="yes">Has Video</option>
@@ -179,14 +262,14 @@ export const StudentsTable: React.FC<StudentsTableProps> = ({
         </div>
       </div>
 
-      {/* 3. ROSTER TABLE */}
-      <div className="surface overflow-hidden">
+      {/* 3. ROSTER TABLE (CRITICAL RULE: TABLE-RESPONSIVE CONTAINER-LEVEL SCROLLING) */}
+      <div className="surface rounded-xl border border-edge shadow-xs overflow-hidden">
         {loading ? (
           <>
             <span className="sr-only" role="status">
               Loading the student roster
             </span>
-            <div className="space-y-3 p-4" aria-busy="true">
+            <div className="space-y-3 p-5" aria-busy="true">
               {[0, 1, 2, 3, 4, 5].map((i) => (
                 <div key={i} className="flex items-center gap-4">
                   <div className="skeleton h-4 w-40" />
@@ -198,19 +281,17 @@ export const StudentsTable: React.FC<StudentsTableProps> = ({
             </div>
           </>
         ) : !data || data.data.length === 0 ? (
-          <div className="space-y-1 p-16 text-center">
-            <p className="font-heading text-headline-sm text-ink">No students match these filters</p>
-            <p className="text-body-sm text-ink-secondary">
+          <div className="space-y-2 p-16 text-center">
+            <p className="font-heading text-lg font-bold text-ink">No students match these filters</p>
+            <p className="text-xs sm:text-sm text-ink-secondary">
               Try a different name, section, year or upload status.
             </p>
           </div>
         ) : (
-          <div className="max-h-[70vh] overflow-auto">
-            {/* A plain table, not `role="grid"`: a grid is a promise of
-                arrow-key cell navigation, which this does not implement. */}
-            <table className="w-full border-collapse text-left text-body-sm" aria-label="Students">
+          <div className="table-responsive max-h-[70vh] overflow-x-auto">
+            <table className="w-full border-collapse text-left text-sm" aria-label="Students">
               <thead>
-                <tr className="sticky top-0 z-raised border-b border-edge bg-surface-inset text-label-sm font-semibold text-ink-secondary">
+                <tr className="sticky top-0 z-raised border-b border-edge bg-surface-sunken text-xs font-semibold text-ink-secondary">
                   <th className="py-3.5 px-5" scope="col">Student</th>
                   <th className="py-3.5 px-4" scope="col">Roll Number</th>
                   <th className="py-3.5 px-4" scope="col">Year & Section</th>
@@ -222,94 +303,96 @@ export const StudentsTable: React.FC<StudentsTableProps> = ({
               </thead>
               <tbody className="divide-y divide-edge">
                 {data.data.map((student) => {
-                  const reviewed = student.submission?.reviewedAt !== null && student.submission?.reviewedAt !== undefined && (
-                    Boolean(student.submission.reviewText) ||
-                    (student.submission.reviewPros?.length ?? 0) > 0 ||
-                    (student.submission.reviewCons?.length ?? 0) > 0
-                  );
-                  const videoStatus = student.video?.status;
-                  const renderVideoBadge = () => {
-                    switch (videoStatus?.toUpperCase()) {
-                      case 'APPROVED':
-                        return <span className="badge badge-approved">Approved</span>;
-                      case 'PENDING':
-                      case 'UNDER_REVIEW':
-                        return <span className="badge badge-pending">Under review</span>;
-                      case 'CHANGES_REQUESTED':
-                        return <span className="badge badge-changes">Changes requested</span>;
-                      case 'REJECTED':
-                        return <span className="badge badge-rejected">Rejected</span>;
-                      case 'HIDDEN':
-                        return <span className="badge badge-draft">Hidden</span>;
-                      default:
-                        return <span className="badge badge-draft">Not submitted</span>;
-                    }
-                  };
+                  const hasVideo = student.hasUploaded;
+                  const isReviewed = Boolean(student.rating || student.review);
+
                   return (
                     <tr
-                      key={student.id}
+                      key={student.id || student.rollNo}
                       onClick={() => handleView(student)}
-                      className="cursor-pointer transition-colors duration-fast hover:bg-surface-sunken"
+                      className="hover:bg-brand-soft/40 cursor-pointer transition-colors group"
                     >
-                      {/* The name is a real button so the row is reachable by
-                          keyboard; the row click stays as a pointer shortcut. */}
-                      <th scope="row" className="px-5 py-3.5 text-left font-normal">
+                      {/* Name */}
+                      <td className="py-3.5 px-5">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-brand-soft text-brand-soft-text flex items-center justify-center font-bold text-xs shrink-0 border border-brand/20">
+                            {student.name?.charAt(0) || '?'}
+                          </div>
+                          <span className="font-semibold text-ink group-hover:text-brand transition-colors">
+                            {student.name}
+                          </span>
+                        </div>
+                      </td>
+
+                      {/* Roll Number */}
+                      <td className="py-3.5 px-4 font-mono text-xs text-ink-secondary">
+                        {student.rollNo}
+                      </td>
+
+                      {/* Year & Section */}
+                      <td className="py-3.5 px-4 text-xs text-ink-secondary whitespace-nowrap">
+                        {studentYearLabel(student.year)} Year · Sec {student.section}
+                      </td>
+
+                      {/* Upload Time */}
+                      <td className="py-3.5 px-4 text-xs text-ink-muted whitespace-nowrap">
+                        {student.uploadedAt ? (
+                          <span className="inline-flex items-center gap-1">
+                            <Clock size={12} className="shrink-0" />
+                            {formatTime(student.uploadedAt)}
+                          </span>
+                        ) : (
+                          <span className="text-ink-disabled">—</span>
+                        )}
+                      </td>
+
+                      {/* Video Status */}
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        {hasVideo ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-status-approved/10 text-status-approved border border-status-approved/20">
+                            <Clapperboard size={12} />
+                            Uploaded
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-surface-sunken text-ink-muted border border-edge">
+                            Pending
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Rating / Feedback */}
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        {student.rating ? (
+                          <span
+                            className={`badge ${
+                              student.rating === 'GOOD'
+                                ? 'badge-approved'
+                                : student.rating === 'AVERAGE'
+                                ? 'badge-pending'
+                                : 'badge-rejected'
+                            }`}
+                          >
+                            {student.rating}
+                          </span>
+                        ) : isReviewed ? (
+                          <span className="badge badge-review">Reviewed</span>
+                        ) : (
+                          <span className="text-xs text-ink-muted">—</span>
+                        )}
+                      </td>
+
+                      {/* Action */}
+                      <td className="py-3.5 px-5 text-right whitespace-nowrap">
                         <button
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleView(student);
                           }}
-                          className="cursor-pointer text-left font-sans text-sm font-semibold text-ink hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                          className="btn btn-secondary text-xs py-1.5 px-3 min-h-[36px] inline-flex items-center gap-1.5 cursor-pointer group-hover:border-brand/40 shadow-2xs"
                         >
-                          {student.name}
-                        </button>
-                        <span className="mt-0.5 block text-xs font-medium text-slate-700 dark:text-slate-200">
-                          {studentYearLabel(student.year)} year · Section {student.section} · {student.branch}
-                        </span>
-                      </th>
-
-                      <td className="py-3.5 px-4 font-mono text-xs font-semibold text-slate-700 dark:text-slate-200">
-                        {student.rollNo}
-                      </td>
-
-                      <td className="py-3.5 px-4 text-xs font-medium text-slate-700 dark:text-slate-200">
-                        <span className="font-semibold text-ink">{studentYearLabel(student.year)}</span>
-                        <span className="text-ink-muted mx-1.5">•</span>
-                        <span>Sec {student.section}</span>
-                      </td>
-
-                      <td className="py-3.5 px-4">
-                        {student.submission?.submittedAt ? (
-                          <span className="inline-flex items-center gap-1.5 text-status-approved text-xs font-semibold">
-                            <Clock className="w-3 h-3" />
-                            {formatTime(student.submission.submittedAt)}
-                          </span>
-                        ) : (
-                          <span className="text-slate-600 dark:text-slate-300 text-xs font-medium">Not submitted</span>
-                        )}
-                      </td>
-
-                      <td className="py-3.5 px-4">
-                        {renderVideoBadge()}
-                      </td>
-
-                      <td className="py-3.5 px-4">
-                        {reviewed ? (
-                          <span className="badge badge-approved">Sent</span>
-                        ) : (
-                          <span className="text-ink-muted text-xs font-semibold">—</span>
-                        )}
-                      </td>
-
-                      <td className="py-3.5 px-5 text-right">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleView(student); }}
-                          className="btn btn-secondary px-2.5"
-                          aria-label={`View ${student.name}`}
-                        >
-                          <Eye size={15} strokeWidth={1.75} aria-hidden="true" />
-                          <span>View</span>
+                          <Eye size={13} className="text-ink-muted group-hover:text-brand" />
+                          <span>View Profile</span>
                         </button>
                       </td>
                     </tr>
@@ -320,34 +403,33 @@ export const StudentsTable: React.FC<StudentsTableProps> = ({
           </div>
         )}
 
-        {/* 4. PAGINATION CONTROLS */}
+        {/* 4. CLEAN PAGINATION CONTROLS */}
         {data && data.pagination.totalPages > 1 && (
-          <div className="p-4 bg-surface-inset border-t border-edge flex items-center justify-between text-xs text-ink-secondary">
-            <div className="flex items-center gap-3">
-              <span>
-                Showing page <span className="font-bold text-ink">{data.pagination.page}</span> of{' '}
-                <span className="font-bold text-ink">{data.pagination.totalPages}</span>
-              </span>
-              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full badge badge-approved">
-                <Clapperboard className="w-3 h-3" />
-                {uploadedCount} with video
-              </span>
+          <div className="p-4 border-t border-edge bg-surface-sunken flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-ink-secondary">
+            <div>
+              Showing <strong className="text-ink">{(page - 1) * 25 + 1}</strong> to{' '}
+              <strong className="text-ink">{Math.min(page * 25, data.pagination.total)}</strong> of{' '}
+              <strong className="text-ink">{data.pagination.total}</strong> students
             </div>
-
             <div className="flex items-center gap-2">
               <button
-                disabled={page <= 1}
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
-                className="btn btn-secondary p-1.5"
+                disabled={page <= 1}
+                className="btn btn-secondary px-3 py-1.5 text-xs min-h-[36px] inline-flex items-center gap-1 disabled:opacity-40 cursor-pointer"
               >
-                <ChevronLeft className="w-4 h-4" />
+                <ChevronLeft className="w-3.5 h-3.5" />
+                <span>Prev</span>
               </button>
+              <span className="font-mono px-2 font-semibold">
+                Page {page} of {data.pagination.totalPages}
+              </span>
               <button
-                disabled={page >= data.pagination.totalPages}
                 onClick={() => setPage((p) => Math.min(data.pagination.totalPages, p + 1))}
-                className="btn btn-secondary p-1.5"
+                disabled={page >= data.pagination.totalPages}
+                className="btn btn-secondary px-3 py-1.5 text-xs min-h-[36px] inline-flex items-center gap-1 disabled:opacity-40 cursor-pointer"
               >
-                <ChevronRight className="w-4 h-4" />
+                <span>Next</span>
+                <ChevronRight className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
@@ -356,3 +438,5 @@ export const StudentsTable: React.FC<StudentsTableProps> = ({
     </div>
   );
 };
+
+export default StudentsTable;
