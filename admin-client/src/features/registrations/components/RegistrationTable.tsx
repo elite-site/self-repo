@@ -35,10 +35,10 @@ export const RegistrationTable: React.FC<RegistrationTableProps> = ({
   onUpdateStatus,
 }) => {
   return (
-    <div className="bg-surface rounded-lg border border-edge overflow-hidden shadow-xs">
+    <div className="surface rounded-xl border border-edge overflow-hidden shadow-xs">
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20 gap-3">
-          <Loader2 className="w-8 h-8 animate-spin text-status-rejected" />
+          <Loader2 className="w-8 h-8 animate-spin text-brand" />
           <span className="text-xs text-ink-muted font-medium">Loading registrations…</span>
         </div>
       ) : error ? (
@@ -48,7 +48,7 @@ export const RegistrationTable: React.FC<RegistrationTableProps> = ({
           <p className="text-xs text-ink-muted max-w-sm">{error}</p>
           <button
             onClick={onRetry}
-            className="px-4 py-2 bg-status-solid-rejected text-on-primary text-xs font-bold rounded-xl hover:bg-brand cursor-pointer"
+            className="btn btn-secondary text-xs font-bold rounded-lg cursor-pointer shadow-xs"
           >
             Try Again
           </button>
@@ -60,22 +60,22 @@ export const RegistrationTable: React.FC<RegistrationTableProps> = ({
           <p className="text-xs text-ink-muted max-w-sm">
             {hasActiveFilters
               ? 'No registrations match the selected filters. Try broadening your criteria.'
-              : 'No students have registered for this event yet.'}
+              : 'There are no student registrations for this event yet.'}
           </p>
           {hasActiveFilters && (
             <button
               onClick={onResetFilters}
-              className="px-3.5 py-1.5 text-xs font-bold text-status-rejected border border-edge rounded-lg hover:bg-status-bg-rejected cursor-pointer"
+              className="btn btn-secondary text-xs mt-2 cursor-pointer shadow-xs"
             >
               Clear Filters
             </button>
           )}
         </div>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="table-responsive max-h-[70vh] overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="bg-surface-sunken border-b border-edge text-ink-muted font-bold">
+              <tr className="bg-surface-sunken border-b border-edge text-ink-muted font-semibold">
                 <th className="py-3.5 px-4">Student</th>
                 <th className="py-3.5 px-4">Academic</th>
                 <th className="py-3.5 px-4">Event</th>
@@ -99,18 +99,18 @@ export const RegistrationTable: React.FC<RegistrationTableProps> = ({
                   : 'ST';
 
                 return (
-                  <tr key={reg.id} className="hover:bg-surface-sunken/80 transition-colors">
+                  <tr key={reg.id} className="hover:bg-brand-soft/40 transition-colors">
                     {/* Student Info */}
                     <td className="py-3.5 px-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-status-bg-rejected text-status-rejected font-semibold flex items-center justify-center text-xs shrink-0 border border-edge">
+                        <div className="w-8 h-8 rounded-full bg-brand-soft text-brand-soft-text font-bold flex items-center justify-center text-xs shrink-0 border border-brand/20">
                           {initials}
                         </div>
                         <div className="min-w-0">
-                          <div className="font-bold text-ink truncate max-w-[180px]">
+                          <div className="font-semibold text-ink truncate max-w-[180px]">
                             {reg.student.name}
                           </div>
-                          <div className="text-xs font-mono font-semibold text-ink-muted">
+                          <div className="text-xs font-mono font-medium text-ink-muted">
                             {reg.student.rollNo}
                           </div>
                         </div>
@@ -118,8 +118,8 @@ export const RegistrationTable: React.FC<RegistrationTableProps> = ({
                     </td>
 
                     {/* Year & Section */}
-                    <td className="py-3.5 px-4">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-md font-semibold text-xs bg-surface-sunken text-ink-secondary">
+                    <td className="py-3.5 px-4 whitespace-nowrap">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-md font-semibold text-xs bg-surface-sunken text-ink-secondary border border-edge">
                         Y{reg.student.year} · Sec {reg.student.section}
                       </span>
                     </td>
@@ -129,91 +129,85 @@ export const RegistrationTable: React.FC<RegistrationTableProps> = ({
                       <div className="font-semibold text-ink truncate max-w-[150px]">
                         {reg.event.name}
                       </div>
-                      <div className="text-xs text-ink-muted">{reg.event.year}</div>
+                      <div className="text-[10px] text-ink-muted uppercase tracking-wider font-semibold">
+                        {reg.event.type}
+                      </div>
                     </td>
 
-                    {/* Participation (Team or Solo) */}
-                    <td className="py-3.5 px-4">
+                    {/* Participation Type */}
+                    <td className="py-3.5 px-4 whitespace-nowrap">
                       {reg.team ? (
-                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-status-bg-review text-status-review border border-edge">
-                          <Users className="w-3.5 h-3.5 text-status-review" />
-                          <span className="truncate max-w-[120px]">{reg.team.name}</span>
+                        <div className="flex flex-col gap-0.5">
+                          <span className="inline-flex items-center gap-1 text-xs font-semibold text-ink">
+                            <Users className="w-3.5 h-3.5 text-brand" />
+                            {reg.team.name}
+                          </span>
+                          <span className="text-[10px] text-ink-muted">
+                            {reg.team.members.length} {reg.team.members.length === 1 ? 'member' : 'members'}
+                          </span>
                         </div>
                       ) : (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-surface-sunken text-ink-muted">
-                          Solo
-                        </span>
+                        <span className="text-xs text-ink-secondary font-medium">Individual</span>
                       )}
                     </td>
 
-                    {/* Form Answers */}
+                    {/* Questionnaire Responses */}
                     <td className="py-3.5 px-4">
                       {reg.answers && reg.answers.length > 0 ? (
-                        <button
-                          onClick={() => onSelectRegistration(reg)}
-                          className="inline-flex items-center gap-1 text-xs font-semibold text-status-approved hover:underline cursor-pointer"
-                        >
-                          <HelpCircle className="w-3 h-3" />
-                          <span>{reg.answers.length} answers</span>
-                        </button>
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-surface-sunken text-ink border border-edge">
+                          {reg.answers.length} {reg.answers.length === 1 ? 'answer' : 'answers'}
+                        </span>
                       ) : (
-                        <span className="text-xs text-ink-muted">None</span>
+                        <span className="text-ink-disabled text-xs">—</span>
                       )}
                     </td>
 
-                    {/* Status Badge */}
-                    <td className="py-3.5 px-4">
+                    {/* Status */}
+                    <td className="py-3.5 px-4 whitespace-nowrap">
                       <RegistrationStatusBadge status={reg.status} />
                     </td>
 
-                    {/* Registered Date */}
-                    <td className="py-3.5 px-4 text-ink-muted whitespace-nowrap">
-                      {new Date(reg.registeredAt).toLocaleDateString(undefined, {
+                    {/* Date */}
+                    <td className="py-3.5 px-4 text-xs text-ink-muted font-mono whitespace-nowrap">
+                      {new Date(reg.createdAt).toLocaleDateString(undefined, {
                         month: 'short',
                         day: 'numeric',
                         year: 'numeric',
                       })}
                     </td>
 
-                    {/* Row Actions */}
-                    <td className="py-3.5 px-4 text-right">
-                      <div className="inline-flex items-center gap-1">
+                    {/* Actions */}
+                    <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                      <div className="flex items-center justify-end gap-1.5">
                         <button
+                          type="button"
                           onClick={() => onSelectRegistration(reg)}
-                          title="View Registration Details"
-                          className="p-1.5 hover:bg-surface-sunken text-ink-secondary rounded-lg cursor-pointer transition-colors"
+                          className="btn btn-secondary text-xs px-2.5 py-1 min-h-[34px] inline-flex items-center gap-1 cursor-pointer shadow-2xs hover:border-brand/40"
+                          title="View Details"
                         >
-                          <Eye className="w-4 h-4" />
+                          <Eye className="w-3.5 h-3.5 text-ink-muted" />
+                          <span>View</span>
                         </button>
 
-                        {reg.status !== 'CONFIRMED' && (
-                          <button
-                            onClick={() => onUpdateStatus(reg.id, 'CONFIRMED')}
-                            title="Approve / Confirm"
-                            className="p-1.5 hover:bg-status-bg-approved text-status-approved rounded-lg cursor-pointer transition-colors"
-                          >
-                            <Check className="w-4 h-4" />
-                          </button>
-                        )}
-
-                        {reg.status !== 'WAITLISTED' && (
-                          <button
-                            onClick={() => onUpdateStatus(reg.id, 'WAITLISTED')}
-                            title="Move to Waitlist"
-                            className="p-1.5 hover:bg-status-bg-approved text-status-approved rounded-lg cursor-pointer transition-colors"
-                          >
-                            <UserCheck className="w-4 h-4" />
-                          </button>
-                        )}
-
-                        {reg.status !== 'CANCELLED' && (
-                          <button
-                            onClick={() => onUpdateStatus(reg.id, 'CANCELLED')}
-                            title="Cancel Registration"
-                            className="p-1.5 hover:bg-status-bg-rejected text-status-rejected rounded-lg cursor-pointer transition-colors"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
+                        {reg.status === 'PENDING' && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => onUpdateStatus(reg.id, 'CONFIRMED')}
+                              className="p-1.5 rounded-lg text-status-approved hover:bg-status-approved/10 border border-status-approved/20 cursor-pointer min-h-[34px] min-w-[34px] inline-flex items-center justify-center"
+                              title="Approve registration"
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => onUpdateStatus(reg.id, 'REJECTED')}
+                              className="p-1.5 rounded-lg text-status-rejected hover:bg-status-rejected/10 border border-status-rejected/20 cursor-pointer min-h-[34px] min-w-[34px] inline-flex items-center justify-center"
+                              title="Reject registration"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </>
                         )}
                       </div>
                     </td>
@@ -225,30 +219,29 @@ export const RegistrationTable: React.FC<RegistrationTableProps> = ({
         </div>
       )}
 
-      {/* Pagination bar */}
-      {!loading && registrations.length > 0 && (
-        <div className="p-4 border-t border-edge flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-ink-muted">
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="p-4 border-t border-edge bg-surface-sunken flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-ink-secondary">
           <div>
-            Showing <span className="font-bold text-ink">{(page - 1) * limit + 1}</span> to{' '}
-            <span className="font-bold text-ink">{Math.min(page * limit, totalRegistrations)}</span> of{' '}
-            <span className="font-bold text-ink">{totalRegistrations}</span> registrations
+            Showing <strong className="text-ink">{(page - 1) * limit + 1}</strong> to{' '}
+            <strong className="text-ink">{Math.min(page * limit, totalRegistrations)}</strong> of{' '}
+            <strong className="text-ink">{totalRegistrations}</strong> registrations
           </div>
-
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-2">
             <button
               onClick={() => onPageChange(Math.max(1, page - 1))}
               disabled={page <= 1}
-              className="px-3 py-1.5 border border-edge rounded-lg disabled:opacity-40 hover:bg-surface-sunken font-semibold cursor-pointer disabled:cursor-not-allowed"
+              className="btn btn-secondary px-3 py-1.5 text-xs min-h-[34px] inline-flex items-center gap-1 disabled:opacity-40 cursor-pointer"
             >
-              Previous
+              Prev
             </button>
-            <span className="px-2 font-semibold">
-              Page {page} of {totalPages}
+            <span className="font-mono px-2 font-semibold">
+              {page} / {totalPages}
             </span>
             <button
               onClick={() => onPageChange(Math.min(totalPages, page + 1))}
               disabled={page >= totalPages}
-              className="px-3 py-1.5 border border-edge rounded-lg disabled:opacity-40 hover:bg-surface-sunken font-semibold cursor-pointer disabled:cursor-not-allowed"
+              className="btn btn-secondary px-3 py-1.5 text-xs min-h-[34px] inline-flex items-center gap-1 disabled:opacity-40 cursor-pointer"
             >
               Next
             </button>
@@ -258,3 +251,5 @@ export const RegistrationTable: React.FC<RegistrationTableProps> = ({
     </div>
   );
 };
+
+export default RegistrationTable;

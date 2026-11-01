@@ -1,7 +1,8 @@
 import React from 'react';
-import { BarChart3, Loader2, AlertTriangle } from 'lucide-react';
+import { BarChart3, Loader2, AlertTriangle, Vote, ShieldCheck } from 'lucide-react';
 import { useVotingResults } from '../hooks/useVotingResults';
 import { VotingResultsView } from '../components/VotingResultsView';
+import { AsymGrid, AsymFeatured, AsymSide, AsymAccent } from '@/shared/layout/AsymGrid';
 
 export const VotingResultsPage: React.FC = () => {
   const {
@@ -19,13 +20,13 @@ export const VotingResultsPage: React.FC = () => {
   const isCampaignDataEmpty = !campaigns || campaigns.length === 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 animate-fade-in-up">
       {/* Finalize Confirm Dialog */}
       {showFinalizeConfirm && (
-        <div className="fixed inset-0 z-50 bg-scrim flex items-center justify-center p-4">
-          <div className="bg-surface text-ink border border-edge rounded-lg shadow-2xl p-6 max-w-md w-full space-y-4">
+        <div className="fixed inset-0 z-modal bg-scrim flex items-center justify-center p-4">
+          <div className="surface text-ink border border-edge rounded-xl shadow-modal p-6 max-w-md w-full space-y-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-status-bg-rejected flex items-center justify-center">
+              <div className="w-10 h-10 rounded-full bg-status-rejected/10 flex items-center justify-center border border-status-rejected/20">
                 <AlertTriangle className="w-5 h-5 text-status-rejected" />
               </div>
               <div>
@@ -33,20 +34,22 @@ export const VotingResultsPage: React.FC = () => {
                 <p className="text-xs text-ink-muted mt-0.5">This action is irreversible.</p>
               </div>
             </div>
-            <div className="bg-status-bg-rejected border border-edge rounded-xl p-4 text-xs text-status-rejected">
+            <div className="bg-status-rejected/10 border border-status-rejected/30 rounded-xl p-4 text-xs text-status-rejected leading-relaxed">
               <strong>Warning:</strong> Finalizing will lock the results permanently. Vote tallies will be published and cannot be changed. This action cannot be undone.
             </div>
             <div className="flex gap-3">
               <button
+                type="button"
                 onClick={() => setShowFinalizeConfirm(false)}
-                className="flex-1 py-2.5 border border-edge rounded-lg text-xs font-bold text-ink-secondary hover:bg-surface-sunken cursor-pointer"
+                className="btn btn-secondary flex-1 py-2 text-xs font-bold cursor-pointer"
               >
                 Cancel
               </button>
               <button
+                type="button"
                 onClick={handleFinalize}
                 disabled={finalizing}
-                className="flex-1 py-2.5 bg-status-rejected text-on-primary rounded-lg text-xs font-bold disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+                className="btn btn-primary flex-1 py-2 text-xs font-bold disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer bg-status-rejected text-on-primary hover:bg-status-rejected/90"
               >
                 {finalizing && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                 Yes, Finalize
@@ -56,23 +59,26 @@ export const VotingResultsPage: React.FC = () => {
         </div>
       )}
 
-      <div className="flex items-center justify-between pb-2 border-b border-edge">
+      {/* Top Header & Selector */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-edge">
         <div className="flex items-center gap-3">
-          <BarChart3 className="w-6 h-6 text-status-rejected" />
+          <div className="w-10 h-10 rounded-xl bg-brand-soft text-brand-soft-text flex items-center justify-center border border-brand/20">
+            <BarChart3 className="w-5 h-5" />
+          </div>
           <div>
-            <h1 className="text-xl font-semibold text-ink">Voting Results</h1>
-            <p className="text-xs text-ink-muted">Live and final vote tallies</p>
+            <h1 className="text-2xl font-bold tracking-tight text-ink font-sans">Voting Results</h1>
+            <p className="text-xs sm:text-sm text-ink-muted mt-0.5">Live turnout analytics and finalized electoral tallies</p>
           </div>
         </div>
         {isLoading ? (
-          <div className="skeleton h-9 w-48 rounded-lg" aria-hidden="true" />
+          <div className="skeleton h-10 w-48 rounded-lg" aria-hidden="true" />
         ) : campaigns.length > 0 ? (
           <select
             value={selectedId}
-            onChange={e => setSelectedId(e.target.value)}
-            className="text-sm border border-edge rounded-lg px-3 py-2 focus:outline-none focus:border-status-rejected text-ink bg-surface font-semibold cursor-pointer"
+            onChange={(e) => setSelectedId(e.target.value)}
+            className="select text-sm font-semibold min-h-[40px] cursor-pointer"
           >
-            {campaigns.map(c => (
+            {campaigns.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.title}
               </option>
@@ -88,7 +94,7 @@ export const VotingResultsPage: React.FC = () => {
             {[0, 1, 2].map((i) => (
               <div
                 key={i}
-                className="bg-surface rounded-lg border border-edge p-4 flex items-center gap-4 shadow-sm"
+                className="bg-surface rounded-xl border border-edge p-5 flex items-center gap-4 shadow-xs"
               >
                 <div className="w-10 h-10 rounded-xl skeleton shrink-0" />
                 <div className="space-y-2 flex-1">
@@ -100,7 +106,7 @@ export const VotingResultsPage: React.FC = () => {
           </div>
 
           {/* Skeleton Candidate Results Card matching VotingResultsView card */}
-          <div className="bg-surface rounded-lg border border-edge p-6 space-y-5 shadow-sm">
+          <div className="bg-surface rounded-xl border border-edge p-6 space-y-5 shadow-xs">
             <div className="flex items-center justify-between mb-2">
               <div className="skeleton h-5 w-32 rounded" />
               <div className="skeleton h-5 w-20 rounded-full" />
@@ -126,29 +132,31 @@ export const VotingResultsPage: React.FC = () => {
           </div>
         </div>
       ) : isCampaignDataEmpty ? (
-        <div className="flex flex-col items-center justify-center p-12 bg-surface rounded-xl border border-edge gap-3 text-center">
-          <div className="w-12 h-12 rounded-full bg-surface-sunken flex items-center justify-center text-ink-muted">
+        <div className="flex flex-col items-center justify-center p-16 surface rounded-xl border border-edge gap-3 text-center">
+          <div className="w-12 h-12 rounded-full bg-surface-sunken flex items-center justify-center text-ink-muted border border-edge">
             <BarChart3 className="w-6 h-6" />
           </div>
           <div>
-            <h3 className="text-base font-semibold text-ink">No Election Results Available</h3>
+            <h3 className="text-base font-bold text-ink">No Election Results Available</h3>
             <p className="text-xs text-ink-muted mt-1 max-w-sm">
               There are no voting campaigns currently open or finalized with tallied ballots.
             </p>
           </div>
         </div>
       ) : result ? (
-        <VotingResultsView
-          result={result}
-          onShowFinalizeConfirm={() => setShowFinalizeConfirm(true)}
-        />
+        <div className="space-y-6">
+          <VotingResultsView
+            result={result}
+            onShowFinalizeConfirm={() => setShowFinalizeConfirm(true)}
+          />
+        </div>
       ) : (
-        <div className="flex flex-col items-center justify-center p-12 bg-surface rounded-xl border border-edge gap-3 text-center">
-          <div className="w-12 h-12 rounded-full bg-surface-sunken flex items-center justify-center text-ink-muted">
+        <div className="flex flex-col items-center justify-center p-16 surface rounded-xl border border-edge gap-3 text-center">
+          <div className="w-12 h-12 rounded-full bg-surface-sunken flex items-center justify-center text-ink-muted border border-edge">
             <BarChart3 className="w-6 h-6" />
           </div>
           <div>
-            <h3 className="text-base font-semibold text-ink">Election Results Unavailable</h3>
+            <h3 className="text-base font-bold text-ink">Election Results Unavailable</h3>
             <p className="text-xs text-ink-muted mt-1 max-w-sm">
               Could not load the election results for the selected campaign. Please try selecting a different campaign.
             </p>
