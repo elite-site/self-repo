@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trophy, ExternalLink } from 'lucide-react';
+import { Trophy, ExternalLink, Star } from 'lucide-react';
 import type { CodeChefLeaderboardItem } from '../types';
 
 interface CodeChefLeaderboardCardProps {
@@ -18,23 +18,28 @@ export const CodeChefLeaderboardCard: React.FC<CodeChefLeaderboardCardProps> = (
   onSelectStudent,
 }) => {
   return (
-    <div className="p-5 bg-surface rounded-xl border border-border">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-        <div className="flex items-center gap-2">
-          <Trophy className="w-5 h-5 text-amber-500" />
-          <h3 className="font-bold text-base text-ink">CodeChef Rating Leaderboard</h3>
+    <div className="surface rounded-xl border border-edge overflow-hidden shadow-xs">
+      <div className="p-5 border-b border-edge bg-surface-sunken flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-status-pending/10 text-status-pending flex items-center justify-center border border-status-pending/20">
+            <Trophy className="w-4 h-4" />
+          </div>
+          <div>
+            <h3 className="font-bold text-base text-ink">CodeChef Rating Leaderboard</h3>
+            <p className="text-xs text-ink-muted">Highest competitive programming ratings in department</p>
+          </div>
         </div>
 
-        <div className="flex items-center gap-1 text-xs">
+        <div className="flex items-center gap-1.5 text-xs flex-wrap">
           {[undefined, 1, 2, 3, 4].map((y) => (
             <button
               key={y ?? 'all'}
               type="button"
               onClick={() => onSelectYear(y)}
-              className={`px-2.5 py-1 rounded-lg transition-colors font-medium ${
+              className={`px-3 py-1.5 min-h-[34px] rounded-lg transition-all duration-quick font-semibold cursor-pointer ${
                 selectedYear === y
-                  ? 'bg-primary text-white'
-                  : 'bg-surface-muted text-ink-muted hover:text-ink'
+                  ? 'bg-brand text-on-primary shadow-xs'
+                  : 'bg-surface border border-edge text-ink-secondary hover:text-ink hover:bg-surface-sunken'
               }`}
             >
               {y ? `Year ${y}` : 'All Years'}
@@ -44,46 +49,67 @@ export const CodeChefLeaderboardCard: React.FC<CodeChefLeaderboardCardProps> = (
       </div>
 
       {loading ? (
-        <div className="py-8 text-center text-sm text-ink-muted animate-pulse">Loading leaderboard...</div>
+        <div className="py-12 text-center text-sm text-ink-muted">
+          <div className="w-6 h-6 border-2 border-brand border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+          Loading leaderboard...
+        </div>
       ) : leaderboard.length === 0 ? (
-        <div className="py-8 text-center text-sm text-ink-muted">No verified CodeChef ratings found.</div>
+        <div className="py-12 text-center text-sm text-ink-muted">No verified CodeChef ratings found.</div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+        <div className="table-responsive">
+          <table className="w-full text-left text-sm border-collapse">
             <thead>
-              <tr className="border-b border-border text-xs text-ink-muted uppercase">
-                <th className="py-2 px-3 w-12 text-center">Rank</th>
-                <th className="py-2 px-3">Student</th>
-                <th className="py-2 px-3">Handle</th>
-                <th className="py-2 px-3 text-right">Rating</th>
-                <th className="py-2 px-3 text-right">Solved</th>
+              <tr className="border-b border-edge bg-surface-sunken text-xs font-semibold text-ink-secondary">
+                <th className="py-3 px-4 w-16 text-center">Rank</th>
+                <th className="py-3 px-4">Student</th>
+                <th className="py-3 px-4">Handle</th>
+                <th className="py-3 px-4 text-right">Rating</th>
+                <th className="py-3 px-4 text-right">Solved</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border">
-              {leaderboard.map((item) => (
+            <tbody className="divide-y divide-edge">
+              {leaderboard.map((item, idx) => (
                 <tr
-                  key={item.studentId}
+                  key={item.id}
                   onClick={() => onSelectStudent(item.studentId)}
-                  className="hover:bg-surface-muted/50 cursor-pointer transition-colors"
+                  className="hover:bg-brand-soft/40 cursor-pointer transition-colors group"
                 >
-                  <td className="py-2.5 px-3 text-center font-bold text-ink">
-                    {item.rank === 1 ? '🥇' : item.rank === 2 ? '🥈' : item.rank === 3 ? '🥉' : `#${item.rank}`}
+                  <td className="py-3.5 px-4 text-center font-mono font-bold text-xs">
+                    {idx === 0 ? (
+                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-status-pending text-on-primary shadow-xs">
+                        1
+                      </span>
+                    ) : idx === 1 ? (
+                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-400 text-on-primary shadow-xs">
+                        2
+                      </span>
+                    ) : idx === 2 ? (
+                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-700 text-on-primary shadow-xs">
+                        3
+                      </span>
+                    ) : (
+                      <span className="text-ink-muted">{idx + 1}</span>
+                    )}
                   </td>
-                  <td className="py-2.5 px-3">
-                    <div className="font-semibold text-ink hover:text-primary transition-colors">{item.name}</div>
-                    <div className="text-xs text-ink-muted">{item.rollNo} • Year {item.year}</div>
+                  <td className="py-3.5 px-4">
+                    <div className="font-semibold text-ink group-hover:text-brand transition-colors">
+                      {item.student?.name}
+                    </div>
+                    <div className="text-xs text-ink-muted font-mono">{item.student?.rollNo}</div>
                   </td>
-                  <td className="py-2.5 px-3 font-mono text-xs text-ink-muted">
-                    <span className="flex items-center gap-1">
-                      @{item.handle} <ExternalLink className="w-3 h-3 opacity-60" />
-                    </span>
+                  <td className="py-3.5 px-4 font-mono text-xs">
+                    <span className="text-brand font-semibold">@{item.handle}</span>
+                    {item.stars && (
+                      <span className="ml-1.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-status-pending/10 text-status-pending border border-status-pending/20">
+                        {item.stars}★
+                      </span>
+                    )}
                   </td>
-                  <td className="py-2.5 px-3 text-right">
-                    <div className="font-bold text-primary">{item.currentRating}</div>
-                    <div className="text-[11px] text-amber-500 font-semibold">{item.stars}★</div>
+                  <td className="py-3.5 px-4 text-right font-mono font-bold text-ink tabular-nums">
+                    {item.currentRating ?? '—'}
                   </td>
-                  <td className="py-2.5 px-3 text-right font-medium text-ink-muted">
-                    {item.totalSolved.toLocaleString()}
+                  <td className="py-3.5 px-4 text-right font-mono text-ink-secondary tabular-nums">
+                    {item.problemsSolved ?? 0}
                   </td>
                 </tr>
               ))}
@@ -94,3 +120,5 @@ export const CodeChefLeaderboardCard: React.FC<CodeChefLeaderboardCardProps> = (
     </div>
   );
 };
+
+export default CodeChefLeaderboardCard;

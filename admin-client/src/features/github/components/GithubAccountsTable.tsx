@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, RefreshCw, ExternalLink } from 'lucide-react';
+import { Search, RefreshCw, ExternalLink, GitFork } from 'lucide-react';
 import { GithubAccount } from '../types';
 
 interface GithubAccountsTableProps {
@@ -22,8 +22,8 @@ export const GithubAccountsTable: React.FC<GithubAccountsTableProps> = ({
   onResync,
 }) => {
   return (
-    <div className="surface rounded-2xl border border-edge overflow-hidden">
-      <div className="p-5 border-b border-edge flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="surface rounded-xl border border-edge overflow-hidden shadow-xs">
+      <div className="p-5 border-b border-edge flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-surface-sunken">
         <div>
           <h2 className="text-base font-bold text-ink">Connected Student Accounts</h2>
           <p className="text-xs text-ink-muted">List of students with verified GitHub SSO connections</p>
@@ -36,24 +36,24 @@ export const GithubAccountsTable: React.FC<GithubAccountsTableProps> = ({
               placeholder="Search name or roll no..."
               value={search}
               onChange={(e) => onSearchChange(e.target.value)}
-              className="input pl-9 text-xs py-1.5 w-60"
+              className="input pl-9 text-xs py-1.5 w-60 min-h-[38px]"
             />
           </div>
           <button
             onClick={onRefresh}
             disabled={loading}
-            className="btn btn-secondary text-xs flex items-center gap-1.5"
+            className="btn btn-secondary text-xs min-h-[38px] flex items-center gap-1.5 cursor-pointer shadow-xs"
             title="Refresh"
           >
-            <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
+            <RefreshCw size={13} className={loading ? 'animate-spin text-brand' : ''} />
             <span>Refresh</span>
           </button>
         </div>
       </div>
 
-      <div className="overflow-x-auto">
+      <div className="table-responsive">
         <table className="w-full text-left text-xs">
-          <thead className="bg-surface-canvas/50 text-ink-muted border-b border-edge">
+          <thead className="bg-surface-sunken text-ink-muted border-b border-edge font-semibold">
             <tr>
               <th className="p-3.5 pl-5">Student</th>
               <th className="p-3.5">GitHub Login</th>
@@ -73,54 +73,54 @@ export const GithubAccountsTable: React.FC<GithubAccountsTableProps> = ({
               </tr>
             ) : (
               accounts.map((acc) => (
-                <tr key={acc.id} className="hover:bg-surface-canvas/30 transition-colors">
+                <tr key={acc.id} className="hover:bg-brand-soft/40 transition-colors">
                   <td className="p-3.5 pl-5">
                     <div className="font-semibold text-sm text-ink">{acc.student?.name}</div>
-                    <div className="text-xs text-slate-700 dark:text-slate-200 font-mono font-medium mt-0.5">{acc.student?.rollNo}</div>
+                    <div className="text-xs text-ink-muted font-mono font-medium mt-0.5">{acc.student?.rollNo}</div>
                   </td>
                   <td className="p-3.5">
                     <a
                       href={`https://github.com/${acc.login}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex items-center gap-1 text-indigo-600 dark:text-indigo-400 hover:underline font-mono text-xs font-medium"
+                      className="inline-flex items-center gap-1 text-brand hover:underline font-mono text-xs font-semibold"
                     >
                       @{acc.login}
                       <ExternalLink size={11} />
                     </a>
                   </td>
-                  <td className="p-3.5 font-medium text-xs text-slate-700 dark:text-slate-200">{acc.reposCount}</td>
-                  <td className="p-3.5 font-medium text-xs text-slate-700 dark:text-slate-200">{acc.showcasedCount}</td>
+                  <td className="p-3.5 font-medium text-xs text-ink tabular-nums">{acc.reposCount}</td>
+                  <td className="p-3.5 font-medium text-xs text-ink tabular-nums">{acc.showcasedCount}</td>
                   <td className="p-3.5">
                     <span
                       className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
                         acc.syncStatus === 'COMPLETED'
-                          ? 'bg-success/10 text-success'
+                          ? 'bg-status-approved/10 text-status-approved border border-status-approved/20'
                           : acc.syncStatus === 'FAILED'
-                          ? 'bg-danger/10 text-danger'
+                          ? 'bg-status-rejected/10 text-status-rejected border border-status-rejected/20'
                           : acc.syncStatus === 'SYNCING'
-                          ? 'bg-warning/10 text-warning'
-                          : 'bg-surface-sunken text-ink-muted'
+                          ? 'bg-status-pending/10 text-status-pending border border-status-pending/20'
+                          : 'bg-surface-sunken text-ink-muted border border-edge'
                       }`}
                     >
                       {acc.syncStatus}
                     </span>
                     {acc.syncError && (
-                      <div className="text-xs text-danger truncate max-w-xs mt-0.5" title={acc.syncError}>
+                      <div className="text-xs text-status-rejected truncate max-w-xs mt-0.5" title={acc.syncError}>
                         {acc.syncError}
                       </div>
                     )}
                   </td>
-                  <td className="p-3.5 text-xs text-slate-600 dark:text-slate-300 font-mono">
+                  <td className="p-3.5 text-xs text-ink-muted font-mono whitespace-nowrap">
                     {acc.lastSyncedAt ? new Date(acc.lastSyncedAt).toLocaleString() : 'Never'}
                   </td>
-                  <td className="p-3.5 pr-5 text-right">
+                  <td className="p-3.5 pr-5 text-right whitespace-nowrap">
                     <button
                       onClick={() => onResync(acc.studentId, acc.student?.name || 'student')}
                       disabled={resyncingId === acc.studentId}
-                      className="btn btn-secondary text-xs px-2.5 py-1 inline-flex items-center gap-1"
+                      className="btn btn-secondary text-xs px-2.5 py-1.5 min-h-[34px] inline-flex items-center gap-1.5 cursor-pointer shadow-2xs hover:border-brand/40"
                     >
-                      <RefreshCw size={11} className={resyncingId === acc.studentId ? 'animate-spin' : ''} />
+                      <RefreshCw size={12} className={resyncingId === acc.studentId ? 'animate-spin text-brand' : ''} />
                       <span>Re-sync</span>
                     </button>
                   </td>
@@ -133,3 +133,5 @@ export const GithubAccountsTable: React.FC<GithubAccountsTableProps> = ({
     </div>
   );
 };
+
+export default GithubAccountsTable;
