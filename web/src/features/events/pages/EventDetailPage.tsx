@@ -14,7 +14,6 @@ import {
 } from 'lucide-react';
 import { SkeletonPage } from '@/shared/ui/Skeleton';
 import { AsymGrid, AsymFeatured, AsymSide, AsymAccent } from '@/shared/layout/AsymLayout';
-import { MasonryGrid, MasonryItem } from '@/shared/layout/MasonryLayout';
 import { useEventDetail } from '../hooks/useEventDetail';
 import { RegistrationModal, EventTeamModal } from '../components';
 
@@ -155,8 +154,8 @@ export const EventDetailPage: React.FC = () => {
                   : 'Registrations are currently open. Reserve your spot before the deadline.'}
               </p>
               <div className="space-y-1.5 pt-1 text-label-xs font-mono text-ink-secondary">
-                <div>Venue: <span className="text-ink">{event.location || 'Department Auditorium / Virtual'}</span></div>
-                <div>Status: <span className="text-ink">{event.status}</span></div>
+                <div>Type: <span className="text-ink">{event.type || 'Event'}</span></div>
+                <div>Status: <span className="text-ink">{event.status || 'Active'}</span></div>
               </div>
             </div>
 
@@ -181,7 +180,7 @@ export const EventDetailPage: React.FC = () => {
         event={event}
         answers={answers}
         submitting={submitting}
-        error={regError}
+        regError={regError}
         onAnswerChange={(qId, val) => setAnswers((prev) => ({ ...prev, [qId]: val }))}
         onClose={() => setModalOpen(false)}
         onSubmit={handleRegister}
@@ -189,10 +188,11 @@ export const EventDetailPage: React.FC = () => {
 
       <EventTeamModal
         isOpen={teamModalOpen}
+        eventTitle={event.title}
         teamName={teamName}
         creatingTeam={creatingTeam}
-        error={teamError}
-        success={teamSuccess}
+        teamError={teamError}
+        teamSuccess={teamSuccess}
         onTeamNameChange={setTeamName}
         onClose={() => setTeamModalOpen(false)}
         onSubmit={handleCreateTeam}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookOpen, FolderOpen, Sparkles, FileText } from 'lucide-react';
+import { BookOpen, FolderOpen, Sparkles } from 'lucide-react';
 import { SkeletonPage } from '@/shared/ui/Skeleton';
 import { ErrorState } from '@/shared/ui/ErrorState';
 import { EmptyState } from '@/shared/ui/EmptyState';

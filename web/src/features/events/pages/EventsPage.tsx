@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Search, CalendarX2, Sparkles, Calendar, ArrowRight } from 'lucide-react';
+import { Search, CalendarX2, Sparkles, ArrowRight } from 'lucide-react';
 import { EmptyState } from '@/shared/ui/EmptyState';
 import { ErrorState } from '@/shared/ui/ErrorState';
 import { SkeletonPage } from '@/shared/ui/Skeleton';
@@ -149,8 +149,8 @@ export const EventsPage: React.FC = () => {
       ) : (
         <MasonryGrid cols={3}>
           {filteredEvents.map((e) => (
-            <MasonryItem key={e.id}>
-              <EventCard event={e} isRegistered={registeredEventIds.has(e.id)} className="card-lift" />
+            <MasonryItem key={e.id} className="card-lift">
+              <EventCard event={e} isRegistered={registeredEventIds.has(e.id)} />
             </MasonryItem>
           ))}
         </MasonryGrid>
