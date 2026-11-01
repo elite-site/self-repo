@@ -1,7 +1,9 @@
 import React from 'react';
 import { useParams } from 'react-router-dom';
-import { Vote, AlertCircle } from 'lucide-react';
+import { Vote, AlertCircle, ShieldCheck } from 'lucide-react';
 import { SkeletonPage } from '@/shared/ui/Skeleton';
+import { AsymGrid, AsymFeatured, AsymSide, AsymAccent } from '@/shared/layout/AsymLayout';
+import { MasonryGrid, MasonryItem } from '@/shared/layout/MasonryLayout';
 import { useVoting } from '../hooks/useVoting';
 import { VotingCard, VoteModal } from '../components';
 
@@ -28,18 +30,46 @@ export const VotingPage: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6 text-left page-enter" role="main">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-headline-md font-black text-ink font-heading">Student Democracy & Voting</h1>
-          <p className="text-body-sm text-ink-muted">
-            Elections for department class representatives, association executive boards, and student committees
-          </p>
-        </div>
-      </div>
+    <div className="space-y-8 text-left page-enter max-w-6xl mx-auto pb-12" role="main">
+      {/* 1. ASYMMETRICAL CAMPAIGN BANNER */}
+      <AsymGrid>
+        <AsymFeatured cols="8">
+          <header className="space-y-2">
+            <span className="badge badge-brand text-xs font-semibold">Student Democracy</span>
+            <h1 className="text-headline-md font-black text-ink font-heading sm:text-headline-lg">
+              Department Elections & Voting
+            </h1>
+            <p className="text-body-md text-ink-secondary max-w-xl">
+              Cast your vote for department class representatives, association executive boards, and student committee leaders.
+            </p>
+          </header>
+        </AsymFeatured>
+
+        <AsymSide cols="4">
+          <AsymAccent className="flex flex-col justify-between h-full">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-brand">
+                  <ShieldCheck size={16} aria-hidden="true" />
+                  Voting Spotlight
+                </span>
+                <span className="badge badge-brand text-[11px]">
+                  {campaigns.length} Active
+                </span>
+              </div>
+              <p className="text-body-xs text-ink-secondary leading-relaxed">
+                Voting is verified and confidential. Each student is eligible for one vote per active election ballot.
+              </p>
+            </div>
+            <div className="mt-4 pt-3 border-t border-brand/20 text-label-xs text-ink-muted">
+              <span>Secure Session Verification</span>
+            </div>
+          </AsymAccent>
+        </AsymSide>
+      </AsymGrid>
 
       {error && (
-        <div className="p-4 bg-status-bg-rejected border border-edge-strong rounded-lg text-status-rejected text-body-sm flex items-center justify-between" role="alert">
+        <div className="p-4 bg-status-bg-rejected border border-edge-strong rounded-2xl text-status-rejected text-body-sm flex items-center justify-between" role="alert">
           <div className="flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0" aria-hidden="true" />
             <span>{error}</span>
@@ -50,8 +80,9 @@ export const VotingPage: React.FC = () => {
         </div>
       )}
 
+      {/* 2. MASONRY VOTING CAMPAIGNS GRID */}
       {campaigns.length === 0 ? (
-        <div className="surface text-center py-16 px-4" role="status">
+        <div className="surface text-center py-16 px-4 rounded-2xl border border-edge" role="status">
           <Vote className="w-12 h-12 text-ink-muted mx-auto mb-3" aria-hidden="true" />
           <h3 className="text-body-md font-bold text-ink font-heading">No active voting campaigns</h3>
           <p className="text-body-sm text-ink-muted mt-1 max-w-sm mx-auto">
@@ -59,11 +90,15 @@ export const VotingPage: React.FC = () => {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6" role="list" aria-label="Voting campaigns">
+        <MasonryGrid cols={2}>
           {campaigns.map((c) => (
-            <VotingCard key={c.id} campaign={c} onOpenVote={handleOpenVote} />
+            <MasonryItem key={c.id}>
+              <div className="card-lift">
+                <VotingCard campaign={c} onOpenVote={handleOpenVote} />
+              </div>
+            </MasonryItem>
           ))}
-        </div>
+        </MasonryGrid>
       )}
 
       <VoteModal
