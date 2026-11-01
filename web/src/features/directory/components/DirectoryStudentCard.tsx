@@ -22,7 +22,7 @@ export const DirectoryStudentCard: React.FC<DirectoryStudentCardProps> = ({ stud
     <li className="list-none">
       <Link
         to={`/students/${st.rollNo}`}
-        className="card card-interactive group flex h-full flex-col p-5"
+        className="card card-interactive card-lift group flex h-full flex-col p-5 rounded-xl border border-edge bg-surface shadow-xs transition-all duration-quick hover:-translate-y-0.5 hover:shadow-md"
       >
         <div className="flex items-start gap-4">
           <DirectoryPhoto name={name} src={resolvedPhoto} profile={st.profile} />
