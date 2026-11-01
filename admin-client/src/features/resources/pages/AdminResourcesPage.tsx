@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import {
   BookOpen,
   Plus,
@@ -71,6 +71,7 @@ export const AdminResourcesPage: React.FC = () => {
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['admin-resources', queryParams],
     queryFn: () => adminResourcesApi.getResources(queryParams),
+    placeholderData: keepPreviousData,
   });
 
   const resources = data?.resources || [];

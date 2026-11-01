@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { useSession } from '@/context/SessionContext';
 import { resourcesApi } from '../api';
 import { getAllowedSemesters, getCurrentSemester } from '../utils/resourceAccess';
@@ -47,6 +47,7 @@ export function useResources() {
   } = useQuery({
     queryKey: ['student-resources', queryParams],
     queryFn: () => resourcesApi.getResources(queryParams),
+    placeholderData: keepPreviousData,
     staleTime: 60_000,
   });
 

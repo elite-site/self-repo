@@ -53,7 +53,7 @@ export const CodeChefHeatmap: React.FC<CodeChefHeatmapProps> = ({ heatmap }) => 
         <div>
           <h3 className="font-bold text-base text-foreground">Submission Heatmap</h3>
           <p className="text-xs text-foreground-muted">
-            {heatmap.totalSubmissions.toLocaleString()} submissions in the last 12 months • Current streak: {heatmap.currentStreak} days
+            {(heatmap.totalSubmissions ?? 0).toLocaleString()} submissions in the last 12 months • Current streak: {heatmap.currentStreak ?? 0} days
           </p>
         </div>
         <div className="flex items-center gap-1.5 text-xs text-foreground-muted">

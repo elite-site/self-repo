@@ -7,13 +7,13 @@ interface CodeChefTopicsDifficultyProps {
   topics: CodeChefDetails['topics'];
 }
 
-export const CodeChefTopicsDifficulty: React.FC<CodeChefTopicsDifficultyProps> = ({ difficulty, topics }) => {
-  const easy = difficulty.Easy || difficulty.easy || 0;
-  const medium = difficulty.Medium || difficulty.medium || 0;
-  const hard = difficulty.Hard || difficulty.hard || 0;
+export const CodeChefTopicsDifficulty: React.FC<CodeChefTopicsDifficultyProps> = ({ difficulty = {}, topics = [] }) => {
+  const easy = difficulty?.Easy || difficulty?.easy || 0;
+  const medium = difficulty?.Medium || difficulty?.medium || 0;
+  const hard = difficulty?.Hard || difficulty?.hard || 0;
   const total = easy + medium + hard || 1;
 
-  const topTopics = topics.slice(0, 6);
+  const topTopics = (topics || []).slice(0, 6);
   const maxTopicCount = topTopics.length > 0 ? Math.max(...topTopics.map((t) => t.count), 1) : 1;
 
   return (

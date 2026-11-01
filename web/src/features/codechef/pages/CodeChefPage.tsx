@@ -136,29 +136,41 @@ export const CodeChefPage: React.FC = () => {
       {/* 2. MASONRY SUMMARY, CONTESTS & PERFORMANCE BOARDS */}
       {details && (
         <MasonryGrid cols={2}>
-          <MasonryItem>
-            <CodeChefSummaryGrid summary={details.summary} />
-          </MasonryItem>
+          {details.summary && (
+            <MasonryItem>
+              <CodeChefSummaryGrid summary={details.summary} />
+            </MasonryItem>
+          )}
 
-          <MasonryItem>
-            <CodeChefRatingChart contests={details.contests} />
-          </MasonryItem>
+          {details.contests && details.contests.length > 0 && (
+            <>
+              <MasonryItem>
+                <CodeChefRatingChart contests={details.contests} />
+              </MasonryItem>
 
-          <MasonryItem>
-            <CodeChefContestTable contests={details.contests} />
-          </MasonryItem>
+              <MasonryItem>
+                <CodeChefContestTable contests={details.contests} />
+              </MasonryItem>
+            </>
+          )}
 
-          <MasonryItem>
-            <CodeChefTopicsDifficulty difficulty={details.difficulty} topics={details.topics} />
-          </MasonryItem>
+          {details.difficulty && (
+            <MasonryItem>
+              <CodeChefTopicsDifficulty difficulty={details.difficulty} topics={details.topics || []} />
+            </MasonryItem>
+          )}
 
-          <MasonryItem>
-            <CodeChefHeatmap heatmap={details.heatmap} />
-          </MasonryItem>
+          {details.heatmap && (
+            <MasonryItem>
+              <CodeChefHeatmap heatmap={details.heatmap} />
+            </MasonryItem>
+          )}
 
-          <MasonryItem>
-            <CodeChefBadges badges={details.badges} />
-          </MasonryItem>
+          {details.badges && details.badges.length > 0 && (
+            <MasonryItem>
+              <CodeChefBadges badges={details.badges} />
+            </MasonryItem>
+          )}
         </MasonryGrid>
       )}
 

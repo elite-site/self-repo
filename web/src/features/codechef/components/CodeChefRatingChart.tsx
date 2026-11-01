@@ -6,10 +6,10 @@ interface CodeChefRatingChartProps {
   contests: CodeChefContestEntry[];
 }
 
-export const CodeChefRatingChart: React.FC<CodeChefRatingChartProps> = ({ contests }) => {
+export const CodeChefRatingChart: React.FC<CodeChefRatingChartProps> = ({ contests = [] }) => {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
-  const ratedContests = contests.filter((c) => c.rating !== null && c.rating > 0);
+  const ratedContests = (contests || []).filter((c) => c.rating !== null && c.rating > 0);
   if (ratedContests.length < 2) {
     return (
       <Card className="p-6 border border-border bg-surface text-center text-sm text-foreground-muted">

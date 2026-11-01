@@ -8,13 +8,13 @@ interface CodeChefContestTableProps {
   contests: CodeChefContestEntry[];
 }
 
-export const CodeChefContestTable: React.FC<CodeChefContestTableProps> = ({ contests }) => {
+export const CodeChefContestTable: React.FC<CodeChefContestTableProps> = ({ contests = [] }) => {
   const [page, setPage] = useState(1);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const pageSize = 10;
 
   const sorted = useMemo(() => {
-    return [...contests].sort((a, b) => {
+    return [...(contests || [])].sort((a, b) => {
       const timeA = a.timestamp || 0;
       const timeB = b.timestamp || 0;
       return sortOrder === 'desc' ? timeB - timeA : timeA - timeB;
@@ -24,7 +24,7 @@ export const CodeChefContestTable: React.FC<CodeChefContestTableProps> = ({ cont
   const totalPages = Math.ceil(sorted.length / pageSize) || 1;
   const pageItems = sorted.slice((page - 1) * pageSize, page * pageSize);
 
-  if (contests.length === 0) {
+  if (!contests || contests.length === 0) {
     return null;
   }
 

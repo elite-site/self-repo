@@ -21,12 +21,13 @@ export const ResourcesPage: React.FC = () => {
     setSearchQuery,
     groupedBySubject,
     isLoading,
+    isFetching,
     isError,
     error,
     refetch,
   } = useResources();
 
-  if (isLoading) {
+  if (isLoading && !groupedBySubject.length) {
     return <SkeletonPage label="Loading study resources" cards={3} rows={3} />;
   }
 
@@ -108,7 +109,8 @@ export const ResourcesPage: React.FC = () => {
       )}
 
       {/* 2. MASONRY RESOURCE CARDS */}
-      {groupedBySubject.length > 0 ? (
+      <div className={`transition-opacity duration-200 ${isFetching ? 'opacity-60' : 'opacity-100'}`}>
+        {groupedBySubject.length > 0 ? (
         <MasonryGrid cols={2}>
           {groupedBySubject.map((group) => (
             <MasonryItem key={group.subject}>
@@ -146,8 +148,10 @@ export const ResourcesPage: React.FC = () => {
           }
         />
       )}
+      </div>
     </div>
   );
 };
 
 export default ResourcesPage;
+
