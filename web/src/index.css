@@ -331,3 +331,131 @@ textarea,
 [role='button'] {
   touch-action: manipulation;
 }
+
+
+/* ── Asymmetrical & Masonry Layout Architecture ─────────────── */
+@layer components {
+  .asym-grid {
+    display: grid;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+    gap: 1.5rem;
+    align-items: start;
+  }
+  @media (min-width: 768px) {
+    .asym-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  @media (min-width: 1024px) {
+    .asym-grid {
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+    }
+  }
+
+  .asym-featured {
+    grid-column: span 1 / span 1;
+  }
+  @media (min-width: 768px) {
+    .asym-featured {
+      grid-column: span 2 / span 2;
+    }
+  }
+  @media (min-width: 1024px) {
+    .asym-featured {
+      grid-column: span 7 / span 7;
+    }
+  }
+  @media (min-width: 1280px) {
+    .asym-featured {
+      grid-column: span 8 / span 8;
+    }
+  }
+
+  .asym-side {
+    grid-column: span 1 / span 1;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+  @media (min-width: 768px) {
+    .asym-side {
+      grid-column: span 2 / span 2;
+    }
+  }
+  @media (min-width: 1024px) {
+    .asym-side {
+      grid-column: span 5 / span 5;
+    }
+  }
+  @media (min-width: 1280px) {
+    .asym-side {
+      grid-column: span 4 / span 4;
+    }
+  }
+
+  .asym-accent {
+    background-color: var(--brand-soft);
+    border: 1px solid var(--border-brand);
+    border-radius: var(--xl);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .masonry-grid {
+    column-count: 1;
+    column-gap: 1.5rem;
+    column-fill: balance;
+    width: 100%;
+  }
+  @media (min-width: 768px) {
+    .masonry-grid {
+      column-count: 2;
+    }
+  }
+  @media (min-width: 1024px) {
+    .masonry-grid {
+      column-count: 3;
+    }
+  }
+
+  .masonry-item {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    margin-bottom: 1.5rem;
+    display: block;
+    width: 100%;
+  }
+
+  /* Standard subtle hover lift for modern cards */
+  .card-lift {
+    transition: transform var(--dur-quick) var(--ease-standard),
+                box-shadow var(--dur-quick) var(--ease-standard);
+  }
+  .card-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+  }
+
+  /* Scroll reveal support */
+  [data-reveal] {
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity var(--dur-moderate) var(--ease-out),
+                transform var(--dur-moderate) var(--ease-out);
+  }
+  [data-reveal].revealed,
+  [data-reveal].is-revealed {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card-lift:hover {
+    transform: none;
+  }
+  [data-reveal] {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+}

@@ -29,3 +29,5 @@ export * from './PublicVideoShowcase';
 export * from './TypewriterText';
 export * from './RadialRing';
 export * from './MetricTile';
+export * from '../layout/AsymLayout';
+export * from '../layout/MasonryLayout';
