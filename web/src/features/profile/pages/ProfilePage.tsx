@@ -1,6 +1,9 @@
 import React from 'react';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, ShieldCheck, Edit3, ExternalLink } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { SkeletonPage } from '@/shared/ui/Skeleton';
+import { AsymGrid, AsymFeatured, AsymSide, AsymAccent } from '@/shared/layout/AsymLayout';
+import { MasonryGrid, MasonryItem } from '@/shared/layout/MasonryLayout';
 import { useProfile } from '../hooks/useProfile';
 import {
   ProfileHeader,
@@ -52,21 +55,72 @@ export const ProfilePage: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6 text-left page-enter max-w-5xl mx-auto" role="main">
-      <ProfileHeader
-        profile={profile}
-        onRequestCorrection={() => setModalOpen(true)}
-      />
+    <div className="space-y-8 text-left page-enter max-w-6xl mx-auto pb-10" role="main">
+      {/* 1. ASYMMETRIC PROFILE HERO */}
+      <AsymGrid>
+        <AsymFeatured cols="8">
+          <ProfileHeader
+            profile={profile}
+            onRequestCorrection={() => setModalOpen(true)}
+          />
+        </AsymFeatured>
 
-      <ProfileBioSection profile={profile} />
+        <AsymSide cols="4">
+          <AsymAccent className="flex flex-col justify-between h-full">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-brand">
+                  <ShieldCheck size={16} aria-hidden="true" />
+                  Academic Profile
+                </span>
+                <span className="badge badge-brand text-[11px]">Verified</span>
+              </div>
+              <p className="text-body-xs text-ink-secondary leading-relaxed">
+                Official academic records are synchronized with the Department of Information Technology. If any information needs updating, submit a change request.
+              </p>
+              <div className="space-y-1.5 pt-2 text-label-xs font-mono text-ink-secondary">
+                <div>Roll No: <span className="font-bold text-ink">{profile.rollNo}</span></div>
+                <div>Batch: <span className="text-ink">Year {profile.year} - Sec {profile.section}</span></div>
+                <div>Department: <span className="text-ink">{profile.branch || 'IT'}</span></div>
+              </div>
+            </div>
 
-      <ProfilePortfolioSection
-        projects={projects}
-        certificates={certificates}
-        achievements={achievements}
-        video={video}
-        resume={resume}
-      />
+            <div className="mt-4 pt-3 border-t border-brand/20 flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setModalOpen(true)}
+                className="btn btn-secondary text-xs px-3 py-1.5 rounded-full"
+              >
+                Request Correction
+              </button>
+              <Link
+                to="/profile/edit"
+                className="btn btn-primary text-xs px-3 py-1.5 rounded-full inline-flex items-center gap-1"
+              >
+                <Edit3 size={12} aria-hidden="true" />
+                Edit Profile
+              </Link>
+            </div>
+          </AsymAccent>
+        </AsymSide>
+      </AsymGrid>
+
+      {/* 2. MASONRY PROFILE TABS & SECTIONS */}
+      <MasonryGrid cols={2}>
+        <MasonryItem>
+          <ProfileBioSection profile={profile} />
+        </MasonryItem>
+
+        <MasonryItem>
+          <ProfilePortfolioSection
+            projects={projects}
+            certificates={certificates}
+            achievements={achievements}
+            video={video}
+            resume={resume}
+          />
+        </MasonryItem>
+      </MasonryGrid>
 
       <AcademicChangeRequestModal
         isOpen={modalOpen}
