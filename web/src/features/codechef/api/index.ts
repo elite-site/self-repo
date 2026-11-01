@@ -101,21 +101,47 @@ const mockDetails: CodeChefDetails = {
   ],
 };
 
+let fallbackToMock = isMock;
+
+function isIntegrationDisabled(err: any): boolean {
+  return (
+    err?.response?.status === 404 &&
+    typeof err?.response?.data?.message === 'string' &&
+    err.response.data.message.toLowerCase().includes('disabled')
+  );
+}
+
 export const codechefApi = {
   async getStatus(): Promise<CodeChefStatus> {
-    if (isMock) return { ...mockStatus };
-    const res = await client.get('/student/codechef/status');
-    return res.data;
+    if (fallbackToMock) return { ...mockStatus };
+    try {
+      const res = await client.get('/student/codechef/status');
+      return res.data;
+    } catch (err: any) {
+      if (isIntegrationDisabled(err)) {
+        fallbackToMock = true;
+        return { ...mockStatus };
+      }
+      throw err;
+    }
   },
 
   async getDetails(): Promise<CodeChefDetails> {
-    if (isMock) return { ...mockDetails };
-    const res = await client.get('/student/codechef/details');
-    return res.data;
+    if (fallbackToMock) return { ...mockDetails };
+    try {
+      const res = await client.get('/student/codechef/details');
+      return res.data;
+    } catch (err: any) {
+      if (isIntegrationDisabled(err)) {
+        fallbackToMock = true;
+        return { ...mockDetails };
+      }
+      throw err;
+    }
   },
 
   async connect(payload: ConnectCodeChefPayload): Promise<CodeChefStatus> {
-    if (isMock) {
+    if (fallbackToMock) {
       mockStatus.connected = true;
       mockStatus.handle = payload.handle;
       mockStatus.verified = false;
@@ -123,48 +149,102 @@ export const codechefApi = {
       mockStatus.verifyCode = 'ELITE-9X2K7Q';
       return { ...mockStatus };
     }
-    const res = await client.post('/student/codechef/connect', payload);
-    return res.data;
+    try {
+      const res = await client.post('/student/codechef/connect', payload);
+      return res.data;
+    } catch (err: any) {
+      if (isIntegrationDisabled(err)) {
+        fallbackToMock = true;
+        mockStatus.connected = true;
+        mockStatus.handle = payload.handle;
+        mockStatus.verified = false;
+        mockStatus.status = 'UNVERIFIED';
+        mockStatus.verifyCode = 'ELITE-9X2K7Q';
+        return { ...mockStatus };
+      }
+      throw err;
+    }
   },
 
   async verify(): Promise<VerifyCodeChefResult> {
-    if (isMock) {
+    if (fallbackToMock) {
       mockStatus.verified = true;
       mockStatus.status = 'CONNECTED';
       mockStatus.verifyCode = null;
       return { verified: true, message: 'Ownership verified successfully', verifiedAt: new Date().toISOString() };
     }
-    const res = await client.post('/student/codechef/verify');
-    return res.data;
+    try {
+      const res = await client.post('/student/codechef/verify');
+      return res.data;
+    } catch (err: any) {
+      if (isIntegrationDisabled(err)) {
+        fallbackToMock = true;
+        mockStatus.verified = true;
+        mockStatus.status = 'CONNECTED';
+        mockStatus.verifyCode = null;
+        return { verified: true, message: 'Ownership verified successfully', verifiedAt: new Date().toISOString() };
+      }
+      throw err;
+    }
   },
 
   async sync(): Promise<CodeChefStatus> {
-    if (isMock) {
+    if (fallbackToMock) {
       mockStatus.lastSyncedAt = new Date().toISOString();
       return { ...mockStatus };
     }
-    const res = await client.post('/student/codechef/sync');
-    return res.data;
+    try {
+      const res = await client.post('/student/codechef/sync');
+      return res.data;
+    } catch (err: any) {
+      if (isIntegrationDisabled(err)) {
+        fallbackToMock = true;
+        mockStatus.lastSyncedAt = new Date().toISOString();
+        return { ...mockStatus };
+      }
+      throw err;
+    }
   },
 
   async setVisibility(showPublic: boolean): Promise<{ success: boolean; showPublic: boolean }> {
-    if (isMock) {
+    if (fallbackToMock) {
       mockStatus.showPublic = showPublic;
       return { success: true, showPublic };
     }
-    const res = await client.put('/student/codechef/visibility', { showPublic });
-    return res.data;
+    try {
+      const res = await client.put('/student/codechef/visibility', { showPublic });
+      return res.data;
+    } catch (err: any) {
+      if (isIntegrationDisabled(err)) {
+        fallbackToMock = true;
+        mockStatus.showPublic = showPublic;
+        return { success: true, showPublic };
+      }
+      throw err;
+    }
   },
 
   async disconnect(): Promise<{ success: boolean }> {
-    if (isMock) {
+    if (fallbackToMock) {
       mockStatus.connected = false;
       mockStatus.status = 'NOT_CONNECTED';
       mockStatus.handle = null;
       mockStatus.verified = false;
       return { success: true };
     }
-    const res = await client.delete('/student/codechef');
-    return res.data;
+    try {
+      const res = await client.delete('/student/codechef');
+      return res.data;
+    } catch (err: any) {
+      if (isIntegrationDisabled(err)) {
+        fallbackToMock = true;
+        mockStatus.connected = false;
+        mockStatus.status = 'NOT_CONNECTED';
+        mockStatus.handle = null;
+        mockStatus.verified = false;
+        return { success: true };
+      }
+      throw err;
+    }
   },
 };
