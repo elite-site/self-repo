@@ -1,377 +1,423 @@
-# ELITE Student Portal — Design System & UI Standards
+---
+name: ELITE Student Portal
+description: Placement readiness and engineering excellence dashboard for SASI Institute of Technology and Engineering — IT Department.
+colors:
+  # ── Primary interactive ─────────────────────────────────────────────────
+  brand: "#2563EB"
+  brand-hover: "#1D4ED8"
+  brand-active: "#1E40AF"
+  brand-soft: "#EFF6FF"
+  brand-soft-text: "#1D4ED8"
+  brand-ring: "#3B82F6"
+  # ── Brand anchor (destructive / alerts only) ────────────────────────────
+  elite-red: "#E11D48"
+  elite-red-soft: "#FFF1F2"
+  # ── Surfaces (light) ────────────────────────────────────────────────────
+  canvas: "#F8FAFC"
+  surface: "#FFFFFF"
+  surface-raised: "#FFFFFF"
+  surface-sunken: "#F1F5F9"
+  surface-inset: "#E2E8F0"
+  # ── Surfaces (dark) ─────────────────────────────────────────────────────
+  canvas-dark: "#020617"
+  surface-dark: "#0F172A"
+  surface-raised-dark: "#1E293B"
+  surface-sunken-dark: "#020617"
+  # ── Borders ─────────────────────────────────────────────────────────────
+  border: "#E2E8F0"
+  border-strong: "#CBD5E1"
+  border-brand: "#2563EB"
+  # ── Text ────────────────────────────────────────────────────────────────
+  ink: "#0F172A"
+  ink-secondary: "#475569"
+  ink-muted: "#64748B"
+  ink-disabled: "#CBD5E1"
+  ink-inverse: "#FFFFFF"
+  ink-brand: "#2563EB"
+  # ── Status ──────────────────────────────────────────────────────────────
+  success: "#16A34A"
+  success-subtle: "#DCFCE7"
+  warning: "#D97706"
+  warning-subtle: "#FEF3C7"
+  danger: "#DC2626"
+  danger-subtle: "#FEE2E2"
+  info: "#2563EB"
+  info-subtle: "#DBEAFE"
+  status-draft: "#64748B"
+  status-pending: "#D97706"
+  status-review: "#2563EB"
+  status-approved: "#16A34A"
+  status-rejected: "#DC2626"
+  status-changes: "#C2410C"
+typography:
+  display:
+    fontFamily: "'Playfair Display', Georgia, 'Times New Roman', serif"
+    fontSize: "36px"
+    fontWeight: 700
+    lineHeight: "45px"
+    letterSpacing: "-0.03em"
+  headline:
+    fontFamily: "'DM Sans', system-ui, -apple-system, 'Segoe UI', sans-serif"
+    fontSize: "28px"
+    fontWeight: 600
+    lineHeight: "36px"
+    letterSpacing: "-0.025em"
+  title:
+    fontFamily: "'DM Sans', system-ui, -apple-system, 'Segoe UI', sans-serif"
+    fontSize: "20px"
+    fontWeight: 600
+    lineHeight: "28px"
+    letterSpacing: "-0.015em"
+  body:
+    fontFamily: "'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif"
+    fontSize: "14px"
+    fontWeight: 400
+    lineHeight: "21px"
+    letterSpacing: "0.01em"
+  label:
+    fontFamily: "'DM Sans', system-ui, -apple-system, 'Segoe UI', sans-serif"
+    fontSize: "12px"
+    fontWeight: 500
+    lineHeight: "18px"
+    letterSpacing: "0.025em"
+rounded:
+  none: "0"
+  sm: "4px"
+  default: "6px"
+  md: "8px"
+  lg: "12px"
+  xl: "16px"
+  2xl: "20px"
+  3xl: "24px"
+  full: "9999px"
+spacing:
+  xs: "4px"
+  sm: "8px"
+  md: "16px"
+  lg: "24px"
+  xl: "32px"
+  2xl: "48px"
+  3xl: "64px"
+components:
+  button-primary:
+    backgroundColor: "{colors.brand}"
+    textColor: "{colors.ink-inverse}"
+    rounded: "{rounded.full}"
+    padding: "8px 16px"
+  button-primary-hover:
+    backgroundColor: "{colors.brand-hover}"
+  button-secondary:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.full}"
+    padding: "8px 16px"
+  button-ghost:
+    backgroundColor: "transparent"
+    textColor: "{colors.ink-secondary}"
+    rounded: "{rounded.full}"
+    padding: "8px 16px"
+  button-danger:
+    backgroundColor: "{colors.danger}"
+    textColor: "{colors.ink-inverse}"
+    rounded: "{rounded.full}"
+    padding: "8px 16px"
+  card-default:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.xl}"
+    padding: "24px"
+  card-brand:
+    backgroundColor: "{colors.brand-soft}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.2xl}"
+    padding: "32px"
+  badge:
+    rounded: "{rounded.full}"
+    padding: "2px 8px"
+---
 
-> **Reference Mockup:** `docs/design/elite-portal-reference-mockup.jpg`
-> This file is the single source of truth for visual identity, layout rules, animation standards, and per-page consistency requirements across all student-facing pages.
+# Design System: ELITE Student Portal
+
+## Overview
+
+**Creative North Star: "The Scholar's Dashboard"**
+
+The ELITE Student Portal is an **Operate-mode** product: every student's job is to check in, track progress, submit work, and stay placement-ready. The design earns trust the same way a well-made engineering notebook does — through precision, clear hierarchy, and zero visual noise. Notion's content composure, Linear's task density, and the tactile honesty of academic record-keeping are its nearest cultural relatives.
+
+The portal separates itself from the category default — a grid of identical widgets on a neutral dashboard — through deliberate hierarchy. One large featured block dominates the top of each page; smaller, varied-height blocks orbit it; a single accent-coloured block draws the eye to the most time-sensitive action. Below that, masonry columns hold repeating cards of staggered heights so a student reads a page the way they read a well-laid out magazine spread: different entry points, natural visual weight, clear path to the next action.
+
+Density is medium. Students use this on a laptop during campus hours and on mobile between classes. The design must read in both contexts with no horizontal scroll and no content hidden behind a gesture. Light mode is the primary scene (daylit labs and classrooms); dark mode is a toggle, not an afterthought.
+
+**Key Characteristics:**
+- Asymmetrical hero zone: one large featured block (7–8 of 12 columns) beside smaller supporting blocks, one of which is always accent-tinted.
+- Masonry content zone: 3-column desktop, 2-column tablet, 1-column mobile, staggered card heights.
+- Royal blue (`#2563EB`) is the sole interactive accent — reserved, not scattered.
+- ELITE red (`#E11D48`) is for destructive actions and critical alerts only.
+- Every screen declares four states explicitly: loading (skeleton), empty (honest copy + illustration stub), error (message + retry), and populated.
+- Motion is one authored entrance per section — stagger fade-up — plus a hover lift on interactive cards. No looping animations.
 
 ---
 
-## 1. Visual Identity & Brand
+## Colors
 
-The ELITE portal presents as a **clean, professional engineering edtech product** — confident but never loud. Think Notion × Linear × Techsnap: maximum clarity, minimum noise, trustworthy depth.
+The palette is a cool, blue-anchored professional system. Neutral slate grounds every surface; royal blue is the one interactive signal. ELITE red survives only as a destructive-action and critical-alert colour.
 
-### 1.1 Color Palette
+### Primary
 
-#### Light Mode (`:root` / `[data-theme="light"]`)
-| Token | Value | Usage |
+- **Royal Blue** (`#2563EB`): The portal's single interactive accent. Every clickable element — primary buttons, active nav states, focus rings, links, badge fills — is this colour or a tonal step of it. Its rarity earns its authority; avoid scattering it as decoration.
+- **Royal Blue Hover** (`#1D4ED8`): Deeper step for hover and pressed states on brand-coloured surfaces.
+- **Royal Blue Active** (`#1E40AF`): Pressed state on brand buttons.
+- **Brand Soft** (`#EFF6FF`): Blue-tinted background for hero banners, accent blocks, and notification chips. Pairs with Brand Soft Text (`#1D4ED8`) for legible contrast (5.5:1).
+
+### Secondary
+
+- **ELITE Red** (`#E11D48`): The college's brand anchor. Used exclusively for destructive buttons, critical error states, and the delete badge — never as a decorative accent on new screens.
+- **ELITE Red Soft** (`#FFF1F2`): Background for danger badges and alert panels. Text is always the danger semantic token, not the raw red ramp.
+
+### Neutral
+
+- **Midnight Slate** (`#0F172A`): Primary text and dark surface backgrounds. The darkest readable ink.
+- **Slate Secondary** (`#475569`): Body text, descriptions, card content. The workhorse reading colour.
+- **Slate Muted** (`#64748B`): Labels, timestamps, helper text, placeholders. Cleared at 4.5:1 against white in light mode.
+- **Slate Disabled** (`#CBD5E1`): Disabled text only; never use for any active content.
+- **Canvas** (`#F8FAFC`): Page background — the lightest surface, slightly cooler than white.
+- **Surface** (`#FFFFFF`): Card and component backgrounds in light mode.
+- **Surface Sunken** (`#F1F5F9`): Inset panels, code blocks, skeleton bones.
+- **Border** (`#E2E8F0`): Default card and input borders. Subtle enough not to compete with content.
+- **Border Strong** (`#CBD5E1`): Dividers and emphasized separators inside cards.
+
+### Status
+
+- **Success Green** (`#16A34A` light / `#4ADE80` dark): Approved status, passed checks, complete states.
+- **Warning Amber** (`#D97706` light / `#FCD34D` dark): Pending review, upcoming deadline, in-progress.
+- **Danger Red** (`#DC2626` light / `#F87171` dark): Rejected, overdue, error, destructive. Distinct from ELITE red; the semantic token, not the brand ramp.
+- **Info Blue** (`#2563EB` light / `#60A5FA` dark): Informational chips, review-state badges.
+
+**The One Accent Rule.** The royal blue `#2563EB` appears on ≤10% of any given screen's surface area. Its scarcity is the point: when it appears, a student knows something is interactive or time-sensitive.
+
+**The Red Reservation Rule.** `#E11D48` (ELITE red, the college brand colour) does not appear on interactive brand elements in the student portal. The interactive accent is royal blue. ELITE red is reserved for destructive actions (delete, revoke) and critical alerts only. Violation is not an aesthetic choice — it breaks the distinction between brand identity and danger signal.
+
+---
+
+## Typography
+
+**Display Font:** Playfair Display (with Georgia, Times New Roman, serif fallbacks) — hero headings and page titles at `text-4xl` (36px) and above only.
+
+**Body Font:** Inter (with system-ui, -apple-system, Segoe UI, sans-serif) — running text, descriptions, table content.
+
+**UI / Label Font:** DM Sans (with system-ui, -apple-system, Segoe UI, sans-serif) — buttons, navigation labels, section headers below 3xl, badge text, form labels.
+
+**Mono Font:** JetBrains Mono (with ui-monospace, SFMono-Regular, Menlo fallbacks) — roll numbers, code snippets, data identifiers, timestamps in tabular contexts.
+
+**Character:** Playfair Display's editorial authority grounds the hero zone; DM Sans's geometric clarity handles all operational chrome. The contrast between their personalities (serif display vs. clean UI sans) is the one designed moment of visual surprise; everywhere else the system defers to reading.
+
+### Hierarchy
+
+- **Display** (Playfair Display, 700, 36px / 45px lh, −0.03em): Page titles inside hero banners only. Student name on profile hero, "Dashboard", "Learning Hub". Never below `text-4xl`.
+- **Headline-LG** (DM Sans, 600, 28px / 36px lh, −0.025em): Section header for the top-level zone on each page. Used once per screen.
+- **Title** (DM Sans, 600, 20px / 28px lh, −0.015em): Card headings, widget titles, metric values. The most frequent heading weight.
+- **Headline-SM** (DM Sans, 600, 16px / 25.6px lh, 0): Sub-headings inside cards, table column headers, panel labels.
+- **Body-LG** (Inter, 400, 16px / 25.6px lh, 0): Long-form descriptions and guidance copy. Minimum body size for any paragraph.
+- **Body-MD** (Inter, 400, 14px / 21px lh, +0.01em): Default card body text, table rows, form field values. 65–75ch max line length.
+- **Body-SM** (Inter, 400, 13px / 20px lh, 0): Secondary content inside dense cards; never below 13px for body.
+- **Label-LG** (DM Sans, 500, 14px / 21px lh, +0.01em): Button labels (medium and large), nav items.
+- **Label-MD** (DM Sans, 500, 12px / 18px lh, +0.025em): Badge text, chip labels, form helper text.
+- **Label-SM** (DM Sans, 600, 11px / 14px lh, +0.04em): Caption text, timestamps, metric tile labels.
+
+**The Display Ceiling Rule.** Playfair Display is used only at `text-3xl` (30px) and above — this is the plan's hard line. A heading below 30px in Playfair looks decorative, not authoritative. `headline-xl` (36px) is the designed entry point for display type in the student portal.
+
+---
+
+## Layout
+
+The portal uses a **fixed sidebar + scrolling content column** shell. The sidebar rail collapses between 64px (icon-only) and 240px (labelled) without reflowing the content column.
+
+```
+[ Sidebar 64px–240px, fixed ]  [ Content column, flex-1, scrolls ]
+                                 [ TopBar 56px, sticky ]
+                                 [ <main> padded 24px–32px ]
+                                   [ Hero Zone ]
+                                   [ Masonry Content Zone ]
+```
+
+### Hero Zone (asymmetrical grid)
+
+Every page opens with an asymmetrical hero zone using a 12-column grid:
+
+| Slot | Columns | Contents |
 |---|---|---|
-| `--canvas` | `#F8FAFC` (slate-50) | Page background |
-| `--surface` | `#FFFFFF` | Card backgrounds |
-| `--surface-raised` | `#FFFFFF` | Elevated cards, dropdowns |
-| `--surface-sunken` | `#F1F5F9` | Inset panels, code blocks |
-| `--border` | `#E2E8F0` | Default card/input borders |
-| `--border-strong` | `#CBD5E1` | Emphasized dividers |
-| `--ink` | `#0F172A` | Primary text (headings) |
-| `--ink-secondary` | `#475569` | Body, descriptions |
-| `--ink-muted` | `#94A3B8` | Labels, placeholders, hints |
-| `--brand` | `#2563EB` | Primary interactive accent (buttons, active states, links) |
-| `--brand-hover` | `#1D4ED8` | Hover state for brand elements |
-| `--brand-soft` | `#EFF6FF` | Subtle brand-tinted backgrounds |
-| `--brand-soft-text` | `#1D4ED8` | Text inside brand-soft surfaces |
+| Featured block | 7–8 cols | Welcome + key action, page title, primary CTA |
+| Accent block | 2–3 cols | Time-sensitive metric or status — always brand-soft tinted |
+| Supporting block(s) | 2–3 cols each | Secondary metrics, quick stats |
 
-#### Dark Mode (`[data-theme="dark"]`)
-| Token | Value | Usage |
+The featured block is always the left anchor. Accent block is always brand-soft (`#EFF6FF`) background. On tablet (≤1024px), the grid collapses to 2 columns: featured full-width on top, smaller blocks below in a 2-up row. On mobile (≤640px), all blocks stack full-width, featured first.
+
+### Masonry Content Zone
+
+Below the hero zone, repeating content (course cards, submission cards, student directory cards, activity items, info panels) uses a masonry column layout:
+
+| Breakpoint | Columns | Gap |
 |---|---|---|
-| `--canvas` | `#0F172A` (slate-900) | Page background |
-| `--surface` | `#1E293B` (slate-800) | Card backgrounds |
-| `--surface-raised` | `#293548` | Elevated cards, dropdowns |
-| `--surface-sunken` | `#0B1222` | Inset panels |
-| `--border` | `#334155` | Default borders |
-| `--border-strong` | `#475569` | Emphasized dividers |
-| `--ink` | `#F8FAFC` | Primary text |
-| `--ink-secondary` | `#CBD5E1` | Body text |
-| `--ink-muted` | `#64748B` | Muted labels |
-| `--brand` | `#3B82F6` | Primary interactive accent |
-| `--brand-hover` | `#60A5FA` | Hover state |
-| `--brand-soft` | `#172554` | Brand-tinted backgrounds |
-| `--brand-soft-text` | `#93C5FD` | Text on brand-soft surfaces |
+| Desktop (>1024px) | 3 columns | 0 (masonry, no gap — cards butt to each other) |
+| Tablet (641–1024px) | 2 columns | 0 |
+| Mobile (≤640px) | 1 column | 0 |
 
-#### Status Colors (both modes)
-| Purpose | Light | Dark |
+Cards have varied heights by design. Never force equal heights in the masonry zone. Equal-height card grids are explicitly rejected as the category default.
+
+### Spacing Rhythm
+
+- **8px base grid.** All spacing values are multiples of 8px.
+- **Between page-level sections:** `space-y-6` (24px).
+- **Card internal padding:** `p-6` (24px) for large feature cards; `p-4` (16px) for compact metric tiles; `p-5` (20px) for standard content cards.
+- **Sidebar rail:** 64px collapsed, 240px expanded.
+- **TopBar height:** 56px.
+- **Breakpoints:** mobile `≤640px`, tablet `641–1024px`, desktop `>1024px`.
+
+### The No-Horizontal-Scroll Rule.
+
+No page or component causes horizontal overflow at any of the three breakpoints. Tables and wide content scroll inside their own container (`overflow-x: auto` on a wrapper), never the page.
+
+---
+
+## Elevation & Depth
+
+The portal uses **ambient, structural shadows** — not colored halos or neobrutalist offsets. Every shadow is a grey-black with soft blur and meaningful offset, conveying real physical elevation rather than decorative glow.
+
+Surfaces use tonal layering in dark mode (the canvas is darkest, cards one step lighter, raised cards one step lighter still) because dark-mode shadows disappear on near-black backgrounds. Shadow opacity is higher in dark mode to compensate.
+
+**The Flat-By-Default Rule.** Surfaces are flat at rest. Shadows appear only in response to state: hover, elevation change, and fixed-position chrome. A card at rest reads as a sheet on a slightly darker canvas; it lifts on hover.
+
+### Shadow Vocabulary
+
+- **`shadow-xs`** (`0 1px 2px 0 rgba(0,0,0,0.05)`): Subtle separation for inline chips, badges, small helper elements.
+- **`shadow-sm` / `shadow-card`** (`0 1px 3px 0 rgba(0,0,0,0.1), 0 1px 2px -1px rgba(0,0,0,0.1)`): Default card rest state. The base layer of every content card.
+- **`shadow-md` / `shadow-card-hover`** (`0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1)`): Card hover state. Applied with a Framer Motion `whileHover` so it animates in at 150ms ease-out.
+- **`shadow-lg` / `shadow-raised`** (`0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1)`): Sticky elements, filter bars, the sidebar when overlaying content on mobile.
+- **`shadow-xl` / `shadow-drawer`** (`0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1)`): Drawers, side panels.
+- **`shadow-2xl` / `shadow-modal`** (`0 25px 50px -12px rgba(0,0,0,0.25)`): Modals, dialogs, full-screen overlays.
+- **`shadow-focus`** (`0 0 0 3px rgba(225,29,72,0.35)`): Focus ring for brand-coloured interactive elements. Uses the focus semantic token (`#2563EB` in light, `#3B82F6` in dark) via `:focus-visible`.
+
+---
+
+## Shapes
+
+The portal uses **smooth, rounded, organic forms**. No sharp 90° corners on any visible surface. The radius scale communicates hierarchy: larger radius = larger or more prominent element.
+
+| Element | Radius Token | Exact Value |
 |---|---|---|
-| Success / Active | `#10B981` | `#34D399` |
-| Warning / Deadline | `#F59E0B` | `#FBBF24` |
-| Danger / Overdue | `#EF4444` | `#F87171` |
-| Info / Neutral | `#6366F1` | `#818CF8` |
+| Page-level feature cards, hero banner | `--2xl` | 20px |
+| Content cards, metric tiles, stat blocks | `--xl` | 16px |
+| Compact cards, dropdowns, tooltips | `--lg` | 12px |
+| Inputs, selects, textareas | `--md` | 8px |
+| Buttons (all variants) | `--full` | 9999px — pill shape |
+| Badges, chips, tags, search bar | `--full` | 9999px |
+| Avatars, icon buttons | `--full` | 9999px |
+| Progress bar tracks | `--full` | 9999px |
+| Modal dialogs | `--2xl` | 20px |
+| Bottom sheets (mobile) | `--3xl` top-only | 24px top corners only |
+| Active sidebar nav items | `--xl` | 16px |
 
-> [!IMPORTANT]
-> Never use the ELITE red `#E11D48` (brand) on new pages. The **primary interactive accent is `#2563EB` (royal blue)** to align with the approved reference mockup. The red is reserved for destructive actions and critical alerts only.
+**The Pill Button Rule.** All interactive buttons use `rounded-full` (9999px), giving them pill silhouettes. This single decision distinguishes the portal's interactive affordances from its purely informational containers (which use `xl` / `2xl`). The contrast is intentional and must not be eroded by mixing in `rounded-lg` buttons.
 
 ---
 
-## 2. Geometry & Shape Language
+## Components
 
-The portal uses **smooth, rounded, organic shapes**. No sharp 90-degree corners on visible surfaces.
+### Buttons
 
-| Element | Border Radius Token | Tailwind Class |
+Clean, pill-shaped, one font family (DM Sans semibold). The press animation is instant (`transition-duration: 0ms` on `:active`) so it feels tactile; the entry hover transition is 100ms ease-standard.
+
+- **Shape:** Pill (9999px radius), minimum 44px height for all interactive sizes.
+- **Primary** (`btn-primary`): Royal blue fill (`#2563EB`), white label, `shadow-card` at rest. Hover: `#1D4ED8`. Active: `#1E40AF`. Loading: spinner replaces icon, `aria-busy="true"`, pointer-events disabled.
+- **Secondary** (`btn-secondary`): White / surface background, `ink` text, 1px `border` border. Hover: `surface-sunken` background, `border-strong` border.
+- **Ghost** (`btn-ghost`): Transparent background, `ink-secondary` text. Hover: `surface-sunken` background, `ink` text. Used for low-emphasis actions adjacent to a primary button.
+- **Danger** (`btn-danger`): `status-rejected` fill, white label. Used only for delete, revoke, and irreversible actions.
+- **Icon-only:** Square pill, same heights as labelled buttons. Requires `aria-label`; Lucide icon at 16px (sm) or 20px (md/lg), `aria-hidden="true"`.
+- **Sizes:** sm (32px h, 12px pad), md (40px h, 16px pad), lg (48px h, 20px pad).
+- **Disabled:** `opacity-50`, `cursor-not-allowed`, `pointer-events-none`. Never change colour to communicate disabled; use opacity only.
+
+### Cards / Containers
+
+The portal's primary content unit. Motion is handled by Framer Motion with `useReducedMotion()` gate.
+
+- **Default** (`card-default`): White surface, `border-edge` 1px border, `shadow-sm`, `rounded-xl` (16px), `p-6`.
+- **Elevated** (`card-elevated`): White surface, transparent border (prevents reflow on variant swap), `shadow-md`, `rounded-xl`.
+- **Ghost** (`card-ghost`): Transparent background, `border-edge` border. For low-contrast grouping.
+- **Brand** (`card-brand`): `brand-soft` (`#EFF6FF`) background, `border-brand` border, `rounded-2xl` (20px), `p-8`. Used for hero banners and accent blocks.
+- **Interactive** (`card-interactive`): Same as default at rest; lifts to `shadow-md` and `translateY(-2px)` on hover (150ms ease-out). Keyboard accessible via `role="button"`, `tabIndex=0`, Enter/Space handling.
+
+### MetricTile
+
+The portal's compact stat surface. Used in the hero zone's supporting blocks and in dedicated metric rows.
+
+- **Structure:** `rounded-xl` card, `p-4`, flex-column. Icon (Lucide, 16px, `ink-brand` colour, `aria-hidden`) + label (`label-sm`, `ink-muted`) + animated numeric value (`title`, `ink`, `tabular-nums`, count-up animation on mount) + optional sub-label.
+- **Hover (when linked):** `card-interactive` lift behaviour.
+- **Skeleton state:** Full card replaced by `skeleton` class (pulse animation, `surface-sunken` background).
+
+### Badge / Status Chip
+
+Pill (9999px), 12px font, DM Sans semibold. Uses semantic `status-*` background and text tokens; never the raw ramp.
+
+| State | Background | Text |
 |---|---|---|
-| Page cards, feature panels | `--2xl` → 20px | `rounded-2xl` |
-| Metric tiles, compact cards | `--xl` → 16px | `rounded-xl` |
-| Inputs, selects, text areas | `--lg` → 12px | `rounded-lg` |
-| Buttons (default) | `--lg` → 12px | `rounded-lg` |
-| Pill buttons, badges, tags, search bar | `--full` → 9999px | `rounded-full` |
-| Avatars, icon buttons | `--full` → 9999px | `rounded-full` |
-| Progress bars (track) | `--full` | `rounded-full` |
-| Modal dialogs | `--2xl` → 20px | `rounded-2xl` |
-| Sidebar nav items (active) | `--xl` → 16px | `rounded-xl` |
-| Bottom sheets (mobile) | `--3xl` top only → 24px | `rounded-t-3xl` |
+| Draft | `status-draft-bg` | `status-draft` |
+| Pending | `status-pending-bg` | `status-pending` |
+| Review | `status-review-bg` | `status-review` |
+| Approved | `status-approved-bg` | `status-approved` |
+| Rejected | `status-rejected-bg` | `status-rejected` |
+| Changes | `status-changes-bg` | `status-changes` |
+| Brand | `brand-soft` | `brand-soft-text` |
+
+### Inputs / Fields
+
+- **Style:** Full-width, `surface` background, 1px `border` border, `rounded-md` (8px), `p-2 px-3`, 14px Inter, `ink` text.
+- **Placeholder:** `ink-muted` colour.
+- **Focus:** `border-brand` border, `shadow-focus` ring (`0 0 0 3px rgba(225,29,72,0.35)` — semantic `focus` token). No outline override needed; `:focus-visible` is handled globally.
+- **Error:** `status-rejected` border, matching red glow ring. Error copy below the field in `error-text` class (12px, `status-rejected`).
+- **Disabled:** `surface-sunken` background, `ink-muted` text, `cursor-not-allowed`.
+
+### Skeleton / Loading State
+
+Static pulse (no shimmer shimmy — loading states in this portal last 150–400ms; a shimmer reads as jank). `surface-sunken` background, `rounded-md`, `animation: skeleton-pulse 1.6s ease-in-out infinite`. Replace the exact shape of the content it stands in for, not a generic rectangle.
+
+### Navigation (Sidebar)
+
+- **Collapsed (64px):** Icon-only, tooltip on hover showing the label.
+- **Expanded (240px):** Icon + label, `font-ui font-semibold`, 14px.
+- **Active item:** `brand-soft` background, `ink-brand` text and icon, `rounded-xl` (16px).
+- **Hover (inactive):** `surface-sunken` background, `ink` text.
+- **Mobile:** Sidebar becomes a bottom-sheet drawer (`rounded-t-3xl`, `shadow-modal`). Overlay scrim uses `overlay-scrim` token.
+
+### RadialRing (Progress Indicator)
+
+SVG-based circular progress used in hero banners (profile completion %, readiness score). Fills from 0 to value on mount over 600ms ease-out. Background track is `surface-sunken`; progress arc is `brand`. Value label is `title` weight centred inside.
 
 ---
 
-## 3. Layout System
+## Do's and Don'ts
 
-### 3.1 Page Structure
+### Do:
 
-```
-[ Fixed Sidebar Rail 64px/240px ]  [ Content Column (flex-1) ]
-                                    [ TopBar (sticky) ]
-                                    [ <main> — page content ]
-```
+- **Do** use `text-brand` (`#2563EB`) for all interactive accents — links, focus rings, active nav, primary buttons. One colour owns interaction.
+- **Do** place the most time-sensitive information in the accent block (brand-soft tint) in the hero zone's supporting column.
+- **Do** use `rounded-full` on every button. A `rounded-lg` button is a regression to the category default.
+- **Do** give every data view all four states: loading skeleton, error state with retry, empty state with honest copy, and populated content.
+- **Do** gate all Framer Motion animations behind `useReducedMotion()`. The `shouldReduce` flag disables transitions; the content still renders.
+- **Do** use `tabular-nums` on numeric values in metric tiles, tables, and stat blocks so digits don't shift as they count up.
+- **Do** use the `status-*` semantic tokens for badge colours. Never reach for the raw ramp (`red-500`, `slate-400`) inside a status context.
+- **Do** set `aria-hidden="true"` on every Lucide icon. Labels come from adjacent text or the button's `aria-label`.
+- **Do** size touch targets to a minimum of 44px in both dimensions on mobile breakpoints.
+- **Do** scroll wide tables inside their own wrapper (`overflow-x: auto`, never `overflow-x: scroll` on `<body>`).
 
-### 3.2 Content Grid
+### Don't:
 
-Pages use a **12-column grid at large screens**, collapsing to a single column on mobile.
-
-| Breakpoint | Layout |
-|---|---|
-| `< md` (mobile) | Single column, full width |
-| `md` | 2 columns, 50/50 |
-| `lg` | 3-column: main 2fr + sidebar 1fr |
-| `xl` | 4-column: main 3fr + sidebar 1fr |
-
-### 3.3 Spacing Scale
-
-Use `space-y-6` (24px) between page-level sections. Within cards, use `p-5 sm:p-6` (20–24px padding).
-
-**Never use px values directly in components.** Always use Tailwind spacing tokens (multiples of 4).
-
-### 3.4 Hero Banner (Top of Every Page)
-
-Every main page has a **Hero Card** as its first element:
-- Large `rounded-2xl` card with a subtle brand-tinted gradient background.
-- Greeting / page title as `text-headline-xl` heading.
-- Context subtitle as `text-body-md text-ink-secondary`.
-- One or two primary actions: a solid brand blue pill button + optional secondary link.
-- Optional: a circular radial progress meter (completion %, streak, readiness score).
-
-### 3.5 Metric Tiles Row
-
-Below the hero, a **3-column or 4-column grid** of compact metric tiles:
-- `rounded-xl bg-surface border border-border p-4` for each tile.
-- Lucide icon in `text-brand` (top-left).
-- `text-label-sm text-ink-muted` label.
-- `text-headline-md font-bold text-ink` value.
-
-### 3.6 Main Content + Sidebar
-
-Below metric tiles:
-- **Main column** (2fr–3fr): Feature cards for primary page content.
-- **Sidebar column** (1fr): Supplementary quick-info widgets, upcoming events, announcements.
-
----
-
-## 4. Typography Rules
-
-| Scale | Element | Class |
-|---|---|---|
-| `text-headline-xl` | Page title (hero) | `font-heading` |
-| `text-headline-lg` | Section headers | `font-heading` |
-| `text-headline-md` | Card titles, metric values | `font-heading` |
-| `text-headline-sm` | Widget headers | `font-heading` |
-| `text-body-lg` | Long-form body copy | — |
-| `text-body-md` | Default body, descriptions | — |
-| `text-body-sm` | Secondary text, table rows | — |
-| `text-label-lg` | Buttons, nav labels | `font-ui font-semibold` |
-| `text-label-sm` | Badges, tags, tab labels | `font-ui font-semibold` |
-| `text-label-xs` | Caption, timestamps | `font-ui` |
-
-**Line clamping:** Descriptions inside cards are `line-clamp-2`. Headings never wrap more than 2 lines.
-
----
-
-## 5. Animation Standards
-
-Animations in this portal are **purposeful, lightweight, and professional**. Never decorative.
-
-### 5.1 Framer Motion (React Components)
-
-Use named variants from `@/shared/lib/motion.ts`. Always pair with `useReducedMotion()`.
-
-```tsx
-const stagger = selectVariantsByName(shouldReduce, 'staggerFastContainer');
-const item    = selectVariantsByName(shouldReduce, 'staggerFastItem');
-
-<motion.div variants={stagger} initial="hidden" animate="show">
-  <motion.div variants={item}> ... </motion.div>
-</motion.div>
-```
-
-### 5.2 Approved Animation Patterns
-
-| Pattern | Duration | Where |
-|---|---|---|
-| Page entry stagger | 200ms/item | All page sections fade+slide up on mount |
-| Card hover lift | 150ms ease-out | All `Card` components: `hover:-translate-y-0.5 hover:shadow-md` |
-| Button press feedback | 100ms | Scale `0.97` on `:active` |
-| Metric counter count-up | 800ms | Numeric values in hero meter and metric tiles |
-| Progress bar fill | 600ms ease-out | All `ProgressBar` and radial rings on mount |
-| Skeleton to content | 300ms fade | All loading skeletons |
-| Sidebar collapse/expand | 300ms ease-gentle | Width transition only |
-
-### 5.3 Lightweight Vanilla JS Animations
-
-For non-React contexts (CSS classes, utility hooks) use these micro-animation utilities:
-
-**Intersection Observer fade-in (scroll reveal):**
-```ts
-// web/src/shared/lib/scrollReveal.ts
-export function scrollReveal(selector: string = '[data-reveal]') {
-  const io = new IntersectionObserver(
-    (entries) => entries.forEach(e => e.target.classList.toggle('revealed', e.isIntersecting)),
-    { threshold: 0.1, rootMargin: '0px 0px -40px 0px' }
-  );
-  document.querySelectorAll(selector).forEach(el => io.observe(el));
-  return () => io.disconnect();
-}
-```
-
-Apply to elements: `data-reveal` attr + CSS:
-```css
-[data-reveal] { opacity: 0; transform: translateY(12px); transition: opacity 400ms ease, transform 400ms ease; }
-[data-reveal].revealed { opacity: 1; transform: translateY(0); }
-```
-
-**Circular progress ring (SVG, no library):**
-```ts
-export function animateRing(el: SVGCircleElement, targetPct: number) {
-  const r = parseFloat(el.getAttribute('r') ?? '40');
-  const circ = 2 * Math.PI * r;
-  el.style.strokeDasharray = `${circ}`;
-  el.style.strokeDashoffset = `${circ}`;
-  requestAnimationFrame(() => {
-    el.style.transition = 'stroke-dashoffset 0.8s cubic-bezier(0.4, 0, 0.2, 1)';
-    el.style.strokeDashoffset = `${circ * (1 - targetPct / 100)}`;
-  });
-}
-```
-
-**Counter count-up:**
-```ts
-export function countUp(el: HTMLElement, target: number, durationMs = 800) {
-  const start = performance.now();
-  const raf = (now: number) => {
-    const p = Math.min((now - start) / durationMs, 1);
-    el.textContent = String(Math.round(p * target));
-    if (p < 1) requestAnimationFrame(raf);
-  };
-  requestAnimationFrame(raf);
-}
-```
-
-### 5.4 Hard Limits
-
-- **No looping ambient animations** (spinning rings, pulsing blobs, floating particles).
-- **No parallax or scroll-driven transforms**.
-- **All animations must collapse to instant under `prefers-reduced-motion: reduce`** (handled by the token layer and `useReducedMotion` hook).
-- **No third-party animation libraries** beyond Framer Motion (already in the bundle).
-
----
-
-## 6. Per-Page Consistency Checklist
-
-Every student portal page **must** satisfy all of the following:
-
-### 6.1 Structure
-- [ ] Starts with a `<motion.div className="space-y-6">` stagger container.
-- [ ] First section is the Hero Card (`rounded-2xl`, brand gradient, page title).
-- [ ] Metric tiles row (if applicable, 3–4 compact tiles).
-- [ ] Main content + optional sidebar grid (`lg:grid-cols-3 xl:grid-cols-4`).
-- [ ] Loading: `Skeleton` with matching layout (not blank).
-- [ ] Error: `ErrorState` with retry action.
-- [ ] Empty: `EmptyState` with action (not a blank div).
-
-### 6.2 Visual Style
-- [ ] Cards use `rounded-2xl` (feature) or `rounded-xl` (compact).
-- [ ] No hardcoded hex colors or pixel values in JSX.
-- [ ] No `bg-slate-*`, `text-rose-*` or raw palette classes — use semantic tokens only.
-- [ ] Buttons: `btn btn-primary` (brand blue pill) or `btn btn-secondary` (ghost).
-- [ ] Icons: Lucide only, size 16 or 20, `aria-hidden="true"`.
-- [ ] Typography: uses heading/body/label scale — never `text-xl font-bold` raw.
-
-### 6.3 Animation
-- [ ] Page entry uses `staggerFastContainer` / `staggerFastItem` variants.
-- [ ] Cards have `hover:-translate-y-0.5 hover:shadow-md transition-all duration-quick` class.
-- [ ] Numeric displays use `useCountUp` hook.
-- [ ] Progress bars and rings animate in on mount.
-- [ ] All motion is gated on `useReducedMotion()`.
-
-### 6.4 Theme & Accessibility
-- [ ] Component is tested in both light and dark mode.
-- [ ] All interactive elements have accessible names.
-- [ ] Focus ring uses `focus-visible:ring-2 focus-visible:ring-brand`.
-- [ ] Touch targets ≥ 44px on mobile.
-- [ ] Color is never the only indicator of state.
-
----
-
-## 7. Page-by-Page Specifications
-
-### Dashboard (`/`)
-- Hero: Welcome greeting, profile completion radial ring, "Continue Learning" CTA.
-- Metrics: Active courses, coding streak, placement readiness, upcoming events count.
-- Main: Learning card, task board, activity feed.
-- Sidebar: Events, voting campaigns.
-
-### Learning Hub (`/learning`)
-- Hero: "Learning Hub" title, total modules completed, enrolled courses count.
-- Metrics: In-progress, completed, hours logged, certificates earned.
-- Main: Course grid cards (video thumbnail + progress bar + "Resume" CTA).
-- Sidebar: Recommended next course, upcoming lesson schedule.
-
-### Portfolio (`/portfolio`)
-- Hero: "Your Portfolio" title, public showcase readiness %, profile views count.
-- Main: Project bento grid with GitHub stats, live preview links, tech stack chips.
-- Sidebar: Profile completion checklist, public profile link.
-
-### Events (`/events`)
-- Hero: "Events & Hackathons" with upcoming count badge.
-- Main: Event cards with date badge, registration status pill, countdown.
-- Sidebar: My registrations list.
-
-### Voting (`/voting`)
-- Hero: "Campus Voting" with active campaigns count.
-- Main: Campaign cards with candidates, progress bar per candidate, vote action.
-- Sidebar: Past results, voting history.
-
-### Directory (`/directory`)
-- Hero: Search interface (large, prominent search bar with `rounded-full`).
-- Main: Student card grid (avatar + name + skills chips + public profile link).
-- Filters: Pill-shaped filter buttons for branch, year, skills.
-
-### Profile (`/profile`)
-- Hero: Profile photo, name, roll number, bio — card with brand gradient top strip.
-- Main: Tabbed sections (Personal Info, Skills, Social Links, Resume).
-- Sidebar: Completeness checklist.
-
-### Resume (`/resume`)
-- Hero: ATS score circular ring, "Download Resume" CTA.
-- Main: Resume preview + section-by-section editor.
-
-### GitHub (`/github`)
-- Hero: Connected GitHub account + last synced timestamp.
-- Main: Contribution heatmap, top repositories bento grid.
-- Sidebar: Stats summary (stars, forks, streak).
-
-### Notifications (`/notifications`)
-- Hero: "Notifications" with unread count badge.
-- Main: Grouped notification feed (Today, This Week, Earlier).
-
----
-
-## 8. Component Patterns
-
-### Metric Tile
-```tsx
-<Card className="rounded-xl p-4 flex flex-col gap-2">
-  <div className="flex items-center gap-2 text-brand">
-    <Icon size={16} aria-hidden="true" />
-    <span className="text-label-sm text-ink-muted">{label}</span>
-  </div>
-  <p className="text-headline-md font-bold text-ink tabular-nums">{value}</p>
-</Card>
-```
-
-### Hero Card
-```tsx
-<Card variant="brand" className="rounded-2xl p-6 sm:p-8">
-  <div className="flex items-center justify-between gap-4">
-    <div>
-      <h1 className="font-heading text-headline-xl text-ink">{title}</h1>
-      <p className="mt-1 text-body-md text-ink-secondary">{subtitle}</p>
-      <Link className="btn btn-primary rounded-full mt-4 inline-flex">{ctaLabel}</Link>
-    </div>
-    <RadialProgressRing value={pct} size={96} />
-  </div>
-</Card>
-```
-
-### Hoverable Feature Card
-```tsx
-<Card className="rounded-2xl p-5 transition-all duration-quick hover:-translate-y-0.5 hover:shadow-md cursor-pointer">
-  ...
-</Card>
-```
-
----
-
-## 9. What NOT To Do
-
-| ❌ Bad | ✅ Good |
-|---|---|
-| `className="bg-blue-600 text-white rounded"` | `className="btn btn-primary"` |
-| `className="bg-slate-900 text-gray-200"` | `className="bg-surface-inverse text-ink"` |
-| `className="rounded"` or `className="rounded-sm"` on a card | `className="rounded-xl"` or `className="rounded-2xl"` |
-| Raw hardcoded glow: `boxShadow: "0 0 20px #6366f1"` | `className="shadow-md"` using elevation tokens |
-| `animate={{ x: [0, 10, 0] }}` looping | One-shot entry animation only |
-| Empty `<div />` for loading/error state | `<Skeleton />` / `<ErrorState />` / `<EmptyState />` |
-| Page with no stagger entry animation | `motion.div` with `staggerFastContainer` |
-| Neon glows, gradient text, rainbow colors | Flat brand blue, clean white, semantic tokens |
+- **Don't** use `#E11D48` (ELITE red) as the interactive brand accent on student-facing screens. It is reserved for destructive actions and critical alerts.
+- **Don't** build equal-height card grids in the masonry zone. Staggered heights are the design.
+- **Don't** scatter the brand blue as decoration (borders, underlines, icon fills on static elements). Its rarity is its authority.
+- **Don't** use raw Tailwind palette classes (`bg-blue-600`, `text-slate-400`, `border-gray-200`) in components. Every colour reference goes through a semantic token (`bg-brand`, `text-ink-muted`, `border-edge`).
+- **Don't** write `dark:` variant classes on component elements. The token system handles theme switching on `:root` / `[data-theme="dark"]`; a component that reads semantic tokens re-themes automatically.
+- **Don't** use Playfair Display below `text-3xl` (30px). Below that size it reads decorative rather than authoritative.
+- **Don't** use `alert()`, `confirm()`, or `console.error()` as user feedback. Toasts and inline error states are the only permitted channels.
+- **Don't** use emoji or Unicode glyphs in place of icons. Icons are Lucide SVGs at 16px or 20px, one consistent stroke weight.
+- **Don't** create a second button component, a second Card component, or a second colour ramp. `QUAL-1` applies: one implementation of each thing, fixed in place and migrated, never shadowed.
+- **Don't** animate on loop. One entrance animation per section on mount. Hover states transition in/out; they don't play after the cursor leaves.

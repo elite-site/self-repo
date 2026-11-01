@@ -1,0 +1,207 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-01T10:19:00+05:30",
+  "title": "Design System: ELITE Student Portal",
+  "extensions": {
+    "colorMeta": {
+      "brand": {
+        "role": "primary",
+        "displayName": "Royal Blue",
+        "canonical": "#2563EB",
+        "tonalRamp": ["#1E3A8A","#1E40AF","#1D4ED8","#2563EB","#3B82F6","#60A5FA","#93C5FD","#BFDBFE"]
+      },
+      "elite-red": {
+        "role": "secondary",
+        "displayName": "ELITE Red",
+        "canonical": "#E11D48",
+        "tonalRamp": ["#4C0519","#881337","#9F1239","#BE123C","#E11D48","#F43F5E","#FB7185","#FECDD3"]
+      },
+      "canvas": {
+        "role": "neutral",
+        "displayName": "Cool Canvas",
+        "canonical": "#F8FAFC",
+        "tonalRamp": ["#020617","#0F172A","#1E293B","#334155","#64748B","#CBD5E1","#E2E8F0","#F8FAFC"]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Midnight Slate",
+        "canonical": "#0F172A",
+        "tonalRamp": ["#020617","#0F172A","#1E293B","#334155","#475569","#64748B","#94A3B8","#CBD5E1"]
+      },
+      "success": {
+        "role": "semantic",
+        "displayName": "Placement Green",
+        "canonical": "#16A34A",
+        "tonalRamp": ["#14532D","#15803D","#16A34A","#22C55E","#4ADE80","#86EFAC","#BBF7D0","#DCFCE7"]
+      },
+      "warning": {
+        "role": "semantic",
+        "displayName": "Deadline Amber",
+        "canonical": "#D97706",
+        "tonalRamp": ["#451A03","#78350F","#92400E","#B45309","#D97706","#F59E0B","#FCD34D","#FEF3C7"]
+      },
+      "danger": {
+        "role": "semantic",
+        "displayName": "Rejection Red",
+        "canonical": "#DC2626",
+        "tonalRamp": ["#450A0A","#7F1D1D","#991B1B","#B91C1C","#DC2626","#EF4444","#FCA5A5","#FEE2E2"]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Hero Display",
+        "purpose": "Page titles inside hero banners only. Student name on profile hero, Dashboard heading. Never below 36px / text-4xl."
+      },
+      "headline": {
+        "displayName": "Section Header",
+        "purpose": "Top-level section headers. Used once per screen at the zone level."
+      },
+      "title": {
+        "displayName": "Card Title",
+        "purpose": "Card headings, widget titles, metric values. Most frequent heading weight in the system."
+      },
+      "body": {
+        "displayName": "Body Copy",
+        "purpose": "Table rows, card descriptions, form values. 14px minimum; 65–75ch max line length."
+      },
+      "label": {
+        "displayName": "UI Label",
+        "purpose": "Badge text, chip labels, form helper text, timestamps. DM Sans for machine-readability over warmth."
+      }
+    },
+    "shadows": [
+      { "name": "shadow-xs",        "value": "0 1px 2px 0 rgba(0,0,0,0.05)",                                             "purpose": "Chips, badges, inline helper elements." },
+      { "name": "shadow-card",      "value": "0 1px 3px 0 rgba(0,0,0,0.1), 0 1px 2px -1px rgba(0,0,0,0.1)",            "purpose": "Card rest state. The base layer." },
+      { "name": "shadow-card-hover","value": "0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1)",         "purpose": "Card hover. Applied via Framer Motion whileHover at 150ms ease-out." },
+      { "name": "shadow-raised",    "value": "0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1)",       "purpose": "Sticky elements, sidebar when overlaying on mobile." },
+      { "name": "shadow-drawer",    "value": "0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1)",      "purpose": "Drawers, side panels." },
+      { "name": "shadow-modal",     "value": "0 25px 50px -12px rgba(0,0,0,0.25)",                                      "purpose": "Modal dialogs, full-screen overlays." },
+      { "name": "shadow-focus",     "value": "0 0 0 3px rgba(37,99,235,0.35)",                                          "purpose": "Focus ring for interactive elements. Uses semantic focus token." }
+    ],
+    "motion": [
+      { "name": "ease-standard",  "value": "cubic-bezier(0.4, 0, 0.2, 1)",       "purpose": "Default easing for state transitions (colour, border, opacity)." },
+      { "name": "ease-entrance",  "value": "cubic-bezier(0, 0, 0.2, 1)",         "purpose": "Page-entry stagger fade-up. Elements enter already moving fast and decelerate to rest." },
+      { "name": "ease-exit",      "value": "cubic-bezier(0.4, 0, 1, 1)",         "purpose": "Elements leaving the screen accelerate out." },
+      { "name": "ease-gentle",    "value": "cubic-bezier(0.25, 0.46, 0.45, 0.94)", "purpose": "Sidebar expand/collapse, accordion, gentle expansions." },
+      { "name": "ease-press",     "value": "cubic-bezier(0.25, 0.46, 0.45, 0.94)", "purpose": "Button press scale (0.98). Applied at 0ms so the press is instant." },
+      { "name": "dur-fast",       "value": "100ms",  "purpose": "Button state transitions." },
+      { "name": "dur-quick",      "value": "150ms",  "purpose": "Card hover lift." },
+      { "name": "dur-normal",     "value": "200ms",  "purpose": "Default UI micro-transitions." },
+      { "name": "dur-moderate",   "value": "300ms",  "purpose": "Sidebar collapse/expand, skeleton fade-out." },
+      { "name": "dur-slow",       "value": "400ms",  "purpose": "Page entry stagger, scroll-reveal." },
+      { "name": "dur-deliberate", "value": "500ms",  "purpose": "Progress bar fill, radial ring." },
+      { "name": "dur-lazy",       "value": "700ms",  "purpose": "Count-up animations on metric tiles." }
+    ],
+    "breakpoints": [
+      { "name": "mobile",  "value": "640px",  "description": "Max-width for the single-column layout. Sidebar becomes a bottom sheet." },
+      { "name": "tablet",  "value": "1024px", "description": "2-column layout. Masonry drops from 3 to 2 columns." },
+      { "name": "desktop", "value": "1280px", "description": "Full 12-column hero grid with 3-column masonry." }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The portal's single CTA. Pill shape, royal blue fill. Never more than one per visual section.",
+      "html": "<button class=\"ds-btn-primary\">Continue Learning</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 20px; background-color: var(--brand); color: var(--text-inverse); border: none; border-radius: 9999px; font-family: var(--font-ui); font-size: 14px; font-weight: 600; line-height: 20px; white-space: nowrap; cursor: pointer; transition: background-color 100ms cubic-bezier(0.4,0,0.2,1), transform 100ms cubic-bezier(0.25,0.46,0.45,0.94); } .ds-btn-primary:hover { background-color: var(--brand-hover); } .ds-btn-primary:active { background-color: var(--brand-active); transform: scale(0.98); transition-duration: 0ms; } .ds-btn-primary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Low-emphasis action adjacent to a primary button. Never the lead CTA.",
+      "html": "<button class=\"ds-btn-ghost\">View All</button>",
+      "css": ".ds-btn-ghost { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 20px; background-color: transparent; color: var(--text-secondary); border: none; border-radius: 9999px; font-family: var(--font-ui); font-size: 14px; font-weight: 600; cursor: pointer; transition: background-color 100ms cubic-bezier(0.4,0,0.2,1), color 100ms cubic-bezier(0.4,0,0.2,1); } .ds-btn-ghost:hover { background-color: var(--surface-sunken); color: var(--text); } .ds-btn-ghost:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }"
+    },
+    {
+      "name": "Content Card",
+      "kind": "card",
+      "refersTo": "card-default",
+      "description": "The portal's primary content unit. Lifts on hover when interactive.",
+      "html": "<div class=\"ds-card\"><p class=\"ds-card-title\">GitHub Repository</p><p class=\"ds-card-body\">elite-portal · Updated 2 hours ago</p></div>",
+      "css": ".ds-card { background-color: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 24px; transition: box-shadow 150ms cubic-bezier(0,0,0.2,1), transform 150ms cubic-bezier(0,0,0.2,1); } .ds-card:hover { box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1); transform: translateY(-2px); } .ds-card-title { font-family: var(--font-ui); font-size: 20px; font-weight: 600; color: var(--text); margin: 0 0 8px; } .ds-card-body { font-family: var(--font-sans); font-size: 14px; color: var(--text-secondary); margin: 0; }"
+    },
+    {
+      "name": "Hero Banner Card",
+      "kind": "card",
+      "refersTo": "card-brand",
+      "description": "The featured block in the hero zone. Brand-soft tinted, display type, one primary CTA.",
+      "html": "<div class=\"ds-hero\"><div class=\"ds-hero-text\"><h1 class=\"ds-hero-title\">Welcome back, Riya</h1><p class=\"ds-hero-sub\">Your placement readiness is at 72% — keep going.</p><button class=\"ds-btn-primary\" style=\"margin-top:16px\">Continue Learning</button></div></div>",
+      "css": ".ds-hero { background-color: var(--brand-soft); border: 1px solid var(--border-brand); border-radius: 20px; padding: 32px; } .ds-hero-title { font-family: 'Playfair Display', Georgia, serif; font-size: 36px; font-weight: 700; color: var(--text); line-height: 45px; letter-spacing: -0.03em; margin: 0 0 8px; } .ds-hero-sub { font-family: var(--font-sans); font-size: 14px; color: var(--text-secondary); margin: 0; }"
+    },
+    {
+      "name": "Metric Tile",
+      "kind": "card",
+      "description": "Compact stat surface for the hero zone's supporting blocks and metric rows.",
+      "html": "<div class=\"ds-metric\"><span class=\"ds-metric-label\">Active Courses</span><p class=\"ds-metric-value\">8</p><span class=\"ds-metric-sub\">3 in progress</span></div>",
+      "css": ".ds-metric { background-color: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 4px; } .ds-metric-label { font-family: var(--font-ui); font-size: 11px; font-weight: 600; color: var(--text-muted); letter-spacing: 0.04em; text-transform: uppercase; } .ds-metric-value { font-family: var(--font-ui); font-size: 28px; font-weight: 600; color: var(--text); line-height: 1; margin: 4px 0 0; font-variant-numeric: tabular-nums; } .ds-metric-sub { font-family: var(--font-sans); font-size: 12px; color: var(--text-secondary); }"
+    },
+    {
+      "name": "Status Badge",
+      "kind": "chip",
+      "description": "Pill-shaped submission state indicator. Uses semantic status tokens, never the raw ramp.",
+      "html": "<span class=\"ds-badge ds-badge-approved\">Approved</span><span class=\"ds-badge ds-badge-pending\">Pending</span><span class=\"ds-badge ds-badge-rejected\">Rejected</span>",
+      "css": ".ds-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 9999px; font-family: var(--font-ui); font-size: 12px; font-weight: 600; line-height: 16px; white-space: nowrap; } .ds-badge-approved { background: var(--status-approved-bg); color: var(--status-approved); } .ds-badge-pending { background: var(--status-pending-bg); color: var(--status-pending); } .ds-badge-rejected { background: var(--status-rejected-bg); color: var(--status-rejected); } .ds-badge-review { background: var(--status-review-bg); color: var(--status-review); } .ds-badge-draft { background: var(--status-draft-bg); color: var(--status-draft); } .ds-badge-brand { background: var(--brand-soft); color: var(--brand-soft-text); }"
+    },
+    {
+      "name": "Input Field",
+      "kind": "input",
+      "description": "Full-width text input. Focus ring uses semantic focus token.",
+      "html": "<div class=\"ds-field\"><label class=\"ds-label\" for=\"roll\">Roll Number</label><input class=\"ds-input\" id=\"roll\" type=\"text\" placeholder=\"21IT001\"></div>",
+      "css": ".ds-field { display: flex; flex-direction: column; gap: 6px; } .ds-label { font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: var(--text-secondary); } .ds-input { width: 100%; background-color: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-family: var(--font-sans); font-size: 14px; color: var(--text); transition: border-color 100ms cubic-bezier(0.4,0,0.2,1), box-shadow 100ms cubic-bezier(0.4,0,0.2,1); box-sizing: border-box; } .ds-input::placeholder { color: var(--text-muted); } .ds-input:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px rgba(37,99,235,0.25); }"
+    },
+    {
+      "name": "Skeleton Loader",
+      "kind": "custom",
+      "description": "Static pulse placeholder. Matches exact shape of the content it replaces.",
+      "html": "<div class=\"ds-skeleton\" style=\"height:20px;width:60%;\"></div><div class=\"ds-skeleton\" style=\"height:20px;width:40%;margin-top:8px;\"></div>",
+      "css": "@keyframes ds-skeleton-pulse { 0%,100%{opacity:1} 50%{opacity:0.5} } .ds-skeleton { background-color: var(--surface-sunken); border-radius: 8px; animation: ds-skeleton-pulse 1.6s cubic-bezier(0.4,0,0.2,1) infinite; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Scholar's Dashboard",
+    "overview": "The ELITE Student Portal is an Operate-mode product: every student's job is to check in, track progress, submit work, and stay placement-ready. The design earns trust the same way a well-made engineering notebook does — through precision, clear hierarchy, and zero visual noise.\n\nThe portal separates itself from the category default — a grid of identical widgets on a neutral dashboard — through deliberate hierarchy. One large featured block dominates the top of each page; smaller, varied-height blocks orbit it; a single accent-coloured block draws the eye to the most time-sensitive action. Below that, masonry columns hold repeating cards of staggered heights so a student reads a page the way they read a well-laid out magazine spread.\n\nDensity is medium. Light mode is the primary scene (daylit labs and classrooms); dark mode is a toggle, not an afterthought.",
+    "keyCharacteristics": [
+      "Asymmetrical hero zone: one large featured block (7–8 of 12 columns) beside smaller supporting blocks, one always accent-tinted.",
+      "Masonry content zone: 3-column desktop, 2-column tablet, 1-column mobile, staggered card heights.",
+      "Royal blue (#2563EB) is the sole interactive accent — reserved, not scattered.",
+      "ELITE red (#E11D48) is for destructive actions and critical alerts only.",
+      "Every screen declares four states explicitly: loading skeleton, empty, error, and populated.",
+      "Motion is one authored entrance per section — stagger fade-up — plus a hover lift on interactive cards. No looping animations."
+    ],
+    "rules": [
+      { "name": "The One Accent Rule", "body": "Royal blue #2563EB appears on ≤10% of any given screen's surface area. Its scarcity earns its authority.", "section": "colors" },
+      { "name": "The Red Reservation Rule", "body": "#E11D48 (ELITE red) does not appear on interactive brand elements. It is reserved for destructive actions and critical alerts only.", "section": "colors" },
+      { "name": "The Display Ceiling Rule", "body": "Playfair Display is used only at text-3xl (30px) and above. A heading below 30px in Playfair reads decorative, not authoritative.", "section": "typography" },
+      { "name": "The Pill Button Rule", "body": "All interactive buttons use rounded-full (9999px). This single decision distinguishes interactive affordances from informational containers.", "section": "shapes" },
+      { "name": "The Flat-By-Default Rule", "body": "Surfaces are flat at rest. Shadows appear only in response to state: hover, elevation change, and fixed-position chrome.", "section": "elevation" },
+      { "name": "The No-Horizontal-Scroll Rule", "body": "No page or component causes horizontal overflow at any of the three breakpoints. Tables scroll inside their own container, never the page.", "section": "layout" }
+    ],
+    "dos": [
+      "Do use text-brand (#2563EB) for all interactive accents — links, focus rings, active nav, primary buttons.",
+      "Do place the most time-sensitive information in the accent block (brand-soft tint) in the hero zone.",
+      "Do use rounded-full on every button.",
+      "Do give every data view all four states: loading skeleton, error state, empty state, populated content.",
+      "Do gate all Framer Motion animations behind useReducedMotion().",
+      "Do use tabular-nums on numeric values in metric tiles, tables, and stat blocks.",
+      "Do use the status-* semantic tokens for badge colours.",
+      "Do set aria-hidden=true on every Lucide icon.",
+      "Do size touch targets to a minimum of 44px on mobile.",
+      "Do scroll wide tables inside their own overflow-x: auto wrapper."
+    ],
+    "donts": [
+      "Don't use #E11D48 (ELITE red) as the interactive brand accent on student-facing screens.",
+      "Don't build equal-height card grids in the masonry zone — staggered heights are the design.",
+      "Don't scatter brand blue as decoration on static elements.",
+      "Don't use raw Tailwind palette classes (bg-blue-600, text-slate-400) in components — use semantic tokens.",
+      "Don't write dark: variant classes on component elements — the token system handles theme switching.",
+      "Don't use Playfair Display below text-3xl (30px).",
+      "Don't use alert(), confirm(), or console.error() as user feedback.",
+      "Don't use emoji or Unicode glyphs in place of icons.",
+      "Don't create a second button, card, or colour ramp — fix the existing one in place.",
+      "Don't animate on loop — one entrance per section on mount."
+    ]
+  }
+}
