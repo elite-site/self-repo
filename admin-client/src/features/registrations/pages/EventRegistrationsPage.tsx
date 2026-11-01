@@ -9,7 +9,7 @@ import { TeamsView } from '../components/TeamsView';
 import { RegistrationDetailModal } from '../components/RegistrationDetailModal';
 import { RemoveTeamMemberModal } from '../components/RemoveTeamMemberModal';
 import { AsymGrid, AsymFeatured, AsymSide, AsymAccent } from '@/shared/layout/AsymGrid';
-import { Layers, Users, ShieldCheck, CheckCircle } from 'lucide-react';
+import { Users, ShieldCheck } from 'lucide-react';
 
 export const EventRegistrationsPage: React.FC = () => {
   const reg = useRegistrations();
@@ -23,7 +23,7 @@ export const EventRegistrationsPage: React.FC = () => {
 
   const totalPages = Math.ceil(reg.totalRegistrations / reg.limit) || 1;
   const approvedPct = reg.stats?.total && reg.stats.total > 0
-    ? Math.round((reg.stats.approved / reg.stats.total) * 100)
+    ? Math.round((reg.stats.confirmed / reg.stats.total) * 100)
     : 0;
 
   return (
@@ -122,22 +122,21 @@ export const EventRegistrationsPage: React.FC = () => {
       ) : (
         <TeamsView
           teams={teamsHook.teams}
-          loading={teamsHook.teamsLoading}
-          error={teamsHook.teamsError}
-          events={reg.events}
-          selectedEventId={reg.selectedEventId}
-          onRetry={teamsHook.fetchTeams}
-          onOpenRemoveMemberModal={teamsHook.openRemoveMemberModal}
-          onApproveTeam={teamsHook.handleApproveTeam}
-          onRejectTeam={teamsHook.handleRejectTeam}
+          teamsLoading={teamsHook.teamsLoading}
+          onUpdateTeamStatus={teamsHook.handleUpdateTeamStatus}
+          onSetMemberToRemove={teamsHook.setMemberToRemove}
         />
       )}
 
       {reg.selectedRegistration && (
         <RegistrationDetailModal
           registration={reg.selectedRegistration}
+          statusNote={reg.statusNote}
+          statusUpdateLoading={reg.statusUpdateLoading}
           onClose={() => reg.setSelectedRegistration(null)}
+          onStatusNoteChange={reg.setStatusNote}
           onUpdateStatus={reg.handleUpdateStatus}
+          onDeleteRegistration={reg.handleDeleteRegistration}
         />
       )}
 
@@ -145,10 +144,10 @@ export const EventRegistrationsPage: React.FC = () => {
         <RemoveTeamMemberModal
           memberToRemove={teamsHook.memberToRemove}
           removeReason={teamsHook.removeReason}
-          removeLoading={teamsHook.removeLoading}
-          onClose={teamsHook.closeRemoveMemberModal}
-          onReasonChange={teamsHook.setRemoveReason}
-          onConfirm={teamsHook.handleConfirmRemoveMember}
+          removingMember={teamsHook.removingMember}
+          onClose={() => teamsHook.setMemberToRemove(null)}
+          onRemoveReasonChange={teamsHook.setRemoveReason}
+          onConfirmRemove={teamsHook.handleConfirmRemoveMember}
         />
       )}
     </div>

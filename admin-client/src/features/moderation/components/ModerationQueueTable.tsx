@@ -72,7 +72,7 @@ export const ModerationQueueTable: React.FC<ModerationQueueTableProps> = ({
 
                   {/* Artifact Type */}
                   <td className="py-3.5 px-4">
-                    <ItemTypeBadge type={item.type} />
+                    <ItemTypeBadge itemType={item.type} />
                   </td>
 
                   {/* Title / Summary */}

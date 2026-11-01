@@ -1,8 +1,7 @@
 import React from 'react';
-import { BarChart3, Loader2, AlertTriangle, Vote, ShieldCheck } from 'lucide-react';
+import { BarChart3, Loader2, AlertTriangle } from 'lucide-react';
 import { useVotingResults } from '../hooks/useVotingResults';
 import { VotingResultsView } from '../components/VotingResultsView';
-import { AsymGrid, AsymFeatured, AsymSide, AsymAccent } from '@/shared/layout/AsymGrid';
 
 export const VotingResultsPage: React.FC = () => {
   const {

@@ -304,7 +304,8 @@ export const StudentsTable: React.FC<StudentsTableProps> = ({
               <tbody className="divide-y divide-edge">
                 {data.data.map((student) => {
                   const hasVideo = student.hasUploaded;
-                  const isReviewed = Boolean(student.rating || student.review);
+                  const submittedAt = student.submission?.submittedAt;
+                  const submissionStatus = student.submission?.status;
 
                   return (
                     <tr
@@ -336,10 +337,10 @@ export const StudentsTable: React.FC<StudentsTableProps> = ({
 
                       {/* Upload Time */}
                       <td className="py-3.5 px-4 text-xs text-ink-muted whitespace-nowrap">
-                        {student.uploadedAt ? (
+                        {submittedAt ? (
                           <span className="inline-flex items-center gap-1">
                             <Clock size={12} className="shrink-0" />
-                            {formatTime(student.uploadedAt)}
+                            {formatTime(submittedAt)}
                           </span>
                         ) : (
                           <span className="text-ink-disabled">—</span>
@@ -360,22 +361,22 @@ export const StudentsTable: React.FC<StudentsTableProps> = ({
                         )}
                       </td>
 
-                      {/* Rating / Feedback */}
+                      {/* Status / Feedback */}
                       <td className="py-3.5 px-4 whitespace-nowrap">
-                        {student.rating ? (
+                        {submissionStatus ? (
                           <span
                             className={`badge ${
-                              student.rating === 'GOOD'
+                              submissionStatus === 'APPROVED'
                                 ? 'badge-approved'
-                                : student.rating === 'AVERAGE'
+                                : submissionStatus === 'CHANGES_REQUESTED'
                                 ? 'badge-pending'
-                                : 'badge-rejected'
+                                : submissionStatus === 'REJECTED'
+                                ? 'badge-rejected'
+                                : 'badge-review'
                             }`}
                           >
-                            {student.rating}
+                            {submissionStatus}
                           </span>
-                        ) : isReviewed ? (
-                          <span className="badge badge-review">Reviewed</span>
                         ) : (
                           <span className="text-xs text-ink-muted">—</span>
                         )}

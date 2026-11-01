@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, GraduationCap, BookOpen, CheckCircle, Sparkles } from 'lucide-react';
+import { Plus, GraduationCap, BookOpen, CheckCircle } from 'lucide-react';
 import { CourseTable } from '../components/CourseTable';
 import { CourseFormModal } from '../components/CourseFormModal';
 import { useAdminCoursesQuery, useCreateCourseMutation, useDeleteCourseMutation } from '../hooks/useAdminCourses';

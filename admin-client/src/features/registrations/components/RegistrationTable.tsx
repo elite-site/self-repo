@@ -1,5 +1,5 @@
 import React from 'react';
-import { Layers, AlertCircle, Loader2, Users, HelpCircle, Eye, Check, UserCheck, X } from 'lucide-react';
+import { Layers, AlertCircle, Loader2, Users, Eye, Check, X } from 'lucide-react';
 import { RegistrationItem, RegistrationStatus } from '../types';
 import { RegistrationStatusBadge } from './RegistrationStatusBadge';
 
@@ -130,7 +130,7 @@ export const RegistrationTable: React.FC<RegistrationTableProps> = ({
                         {reg.event.name}
                       </div>
                       <div className="text-[10px] text-ink-muted uppercase tracking-wider font-semibold">
-                        {reg.event.type}
+                        Year {reg.event.year}
                       </div>
                     </td>
 
@@ -169,7 +169,7 @@ export const RegistrationTable: React.FC<RegistrationTableProps> = ({
 
                     {/* Date */}
                     <td className="py-3.5 px-4 text-xs text-ink-muted font-mono whitespace-nowrap">
-                      {new Date(reg.createdAt).toLocaleDateString(undefined, {
+                      {new Date(reg.registeredAt).toLocaleDateString(undefined, {
                         month: 'short',
                         day: 'numeric',
                         year: 'numeric',

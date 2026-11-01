@@ -4,6 +4,8 @@ import { useEmailAutomation } from '../hooks/useEmailAutomation';
 import { AutomationCard } from '../components/AutomationCard';
 import { AutomationKpiCards } from '../components/AutomationKpiCards';
 import { CreateAutomationModal } from '../components/CreateAutomationModal';
+import { AsymGrid, AsymFeatured, AsymSide, AsymAccent } from '@/shared/layout/AsymGrid';
+import { MasonryGrid, MasonryItem } from '@/shared/layout/MasonryGrid';
 
 export const EmailAutomationPage: React.FC = () => {
   const {
@@ -50,41 +52,89 @@ export const EmailAutomationPage: React.FC = () => {
   const activeCount = automations.filter((a) => a.status === 'ACTIVE').length;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-edge">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-ink flex items-center gap-2.5">
-            <Zap className="w-7 h-7 text-ink-brand" />
-            Email Automations & Trigger Workflows
-          </h1>
-          <p className="text-sm text-ink-muted mt-1">
-            Event-driven communication pipelines dispatched on student onboarding, event registration, and portfolio milestones.
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => loadData(true)}
-            disabled={refreshing}
-            className="inline-flex items-center gap-2 px-3 py-2 text-xs font-semibold text-ink-secondary bg-surface border border-edge-strong rounded-lg hover:bg-surface-sunken transition-colors shadow-sm disabled:opacity-50 cursor-pointer"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-ink-brand' : ''}`} />
-            Refresh
-          </button>
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-brand text-on-primary text-xs font-bold rounded-lg hover:bg-brand-hover transition-colors shadow-sm cursor-pointer"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            New Workflow
-          </button>
-        </div>
-      </div>
+    <div className="space-y-8 animate-fade-in-up">
+      {/* 1. ASYMMETRICAL TOP SECTION */}
+      <AsymGrid>
+        <AsymFeatured cols={8}>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-edge">
+            <div>
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-brand-soft text-brand-soft-text text-xs font-semibold mb-2">
+                <Zap size={13} className="shrink-0" />
+                <span>Automated Email Pipeline</span>
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-ink font-sans">
+                Email Automations & Workflows
+              </h1>
+              <p className="text-xs sm:text-sm text-ink-secondary mt-1">
+                Event-driven communication pipelines dispatched on student onboarding, event registration, and portfolio milestones.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+              <button
+                onClick={() => loadData(true)}
+                disabled={refreshing}
+                className="btn btn-secondary min-h-[40px] px-3.5 inline-flex items-center gap-1.5 cursor-pointer shadow-xs"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-brand' : ''}`} />
+                <span>Refresh</span>
+              </button>
+              <button
+                onClick={() => setIsModalOpen(true)}
+                className="btn btn-primary min-h-[40px] px-4 inline-flex items-center gap-1.5 cursor-pointer shadow-xs"
+              >
+                <Plus className="w-4 h-4" />
+                <span>New Workflow</span>
+              </button>
+            </div>
+          </div>
+
+          <AutomationKpiCards
+            total={automations.length}
+            activeCount={activeCount}
+            templatesCount={templates.length}
+          />
+        </AsymFeatured>
+
+        <AsymSide cols={4}>
+          <AsymAccent className="flex flex-col justify-between h-full">
+            <div>
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-brand text-on-primary shadow-xs">
+                  <Mail size={13} />
+                  Automation Core
+                </span>
+                <span className="text-xs font-mono font-semibold text-brand-soft-text">
+                  {activeCount} Active
+                </span>
+              </div>
+              <h2 className="text-base font-bold text-ink">Trigger-Action Rules Engine</h2>
+              <p className="text-xs text-ink-secondary mt-1 leading-relaxed">
+                Rules execute based on system webhooks or cron intervals, compiling dynamic tags into Resend transactional emails.
+              </p>
+              <div className="mt-4 pt-3 border-t border-brand/20 grid grid-cols-2 gap-2 text-xs">
+                <div className="p-2.5 bg-surface/70 rounded-lg border border-brand/10">
+                  <span className="text-ink-muted block text-[11px]">Workflow Rules</span>
+                  <span className="font-bold text-ink text-sm tabular-nums">{automations.length}</span>
+                </div>
+                <div className="p-2.5 bg-surface/70 rounded-lg border border-brand/10">
+                  <span className="text-ink-muted block text-[11px]">Email Engine</span>
+                  <span className="font-bold text-status-approved text-sm">Resend API</span>
+                </div>
+              </div>
+            </div>
+            <div className="mt-4 flex items-center gap-2 text-xs text-ink-muted">
+              <CheckCircle size={14} className="text-brand shrink-0" />
+              <span>Full deliverability audit enabled</span>
+            </div>
+          </AsymAccent>
+        </AsymSide>
+      </AsymGrid>
 
       {actionSuccess && (
-        <div className="p-4 rounded-xl bg-status-bg-approved border border-edge flex items-center justify-between text-xs text-ink">
+        <div className="p-4 rounded-xl bg-status-approved/10 border border-status-approved/20 flex items-center justify-between text-xs text-ink">
           <div className="flex items-center gap-2">
             <CheckCircle className="w-4 h-4 text-status-approved shrink-0" />
-            <span>{actionSuccess}</span>
+            <span className="font-medium">{actionSuccess}</span>
           </div>
           <button onClick={() => setActionSuccess(null)} className="font-bold underline text-status-approved cursor-pointer">
             Dismiss
@@ -93,10 +143,10 @@ export const EmailAutomationPage: React.FC = () => {
       )}
 
       {error && (
-        <div className="p-4 rounded-xl bg-status-bg-rejected border border-edge flex items-center justify-between text-xs text-ink">
+        <div className="p-4 rounded-xl bg-status-rejected/10 border border-status-rejected/20 flex items-center justify-between text-xs text-ink">
           <div className="flex items-center gap-2">
             <AlertCircle className="w-4 h-4 text-status-rejected shrink-0" />
-            <span>{error}</span>
+            <span className="font-medium">{error}</span>
           </div>
           <button onClick={() => setError(null)} className="font-bold underline text-status-rejected cursor-pointer">
             Dismiss
@@ -104,39 +154,29 @@ export const EmailAutomationPage: React.FC = () => {
         </div>
       )}
 
-      <AutomationKpiCards
-        total={automations.length}
-        activeCount={activeCount}
-        templatesCount={templates.length}
-      />
-
-      <div className="space-y-4">
-        {automations.length === 0 ? (
-          <div className="p-12 text-center bg-surface border border-edge rounded-xl">
-            <Mail className="w-10 h-10 text-ink-muted mx-auto mb-3" />
-            <h3 className="text-base font-bold text-ink mb-1">No automation rules configured</h3>
-            <p className="text-xs text-ink-muted mb-4">Create your first automated email trigger above.</p>
-          </div>
-        ) : (
-          automations.map((auto) => (
-            <AutomationCard
-              key={auto.id}
-              automation={auto}
-              isToggling={togglingId === auto.id}
-              isRunning={runningId === auto.id}
-              onToggle={handleToggle}
-              onRunNow={handleRunNow}
-            />
-          ))
-        )}
-      </div>
+      {/* 2. MASONRY GRID OF AUTOMATION CARDS */}
+      <MasonryGrid cols={2}>
+        {automations.map((a) => (
+          <MasonryItem key={a.id}>
+            <div className="card-hover">
+              <AutomationCard
+                automation={a}
+                isRunning={runningId === a.id}
+                isToggling={togglingId === a.id}
+                onToggle={() => handleToggle(a.id)}
+                onRunNow={() => handleRunNow(a.id, a.name)}
+              />
+            </div>
+          </MasonryItem>
+        ))}
+      </MasonryGrid>
 
       <CreateAutomationModal
         isOpen={isModalOpen}
-        templates={templates}
-        creating={creating}
         onClose={() => setIsModalOpen(false)}
         onCreate={handleCreate}
+        templates={templates}
+        creating={creating}
       />
     </div>
   );

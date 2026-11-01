@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trophy, ExternalLink, Star } from 'lucide-react';
+import { Trophy } from 'lucide-react';
 import type { CodeChefLeaderboardItem } from '../types';
 
 interface CodeChefLeaderboardCardProps {
@@ -70,7 +70,7 @@ export const CodeChefLeaderboardCard: React.FC<CodeChefLeaderboardCardProps> = (
             <tbody className="divide-y divide-edge">
               {leaderboard.map((item, idx) => (
                 <tr
-                  key={item.id}
+                  key={item.studentId}
                   onClick={() => onSelectStudent(item.studentId)}
                   className="hover:bg-brand-soft/40 cursor-pointer transition-colors group"
                 >
@@ -93,9 +93,9 @@ export const CodeChefLeaderboardCard: React.FC<CodeChefLeaderboardCardProps> = (
                   </td>
                   <td className="py-3.5 px-4">
                     <div className="font-semibold text-ink group-hover:text-brand transition-colors">
-                      {item.student?.name}
+                      {item.name}
                     </div>
-                    <div className="text-xs text-ink-muted font-mono">{item.student?.rollNo}</div>
+                    <div className="text-xs text-ink-muted font-mono">{item.rollNo}</div>
                   </td>
                   <td className="py-3.5 px-4 font-mono text-xs">
                     <span className="text-brand font-semibold">@{item.handle}</span>
@@ -109,7 +109,7 @@ export const CodeChefLeaderboardCard: React.FC<CodeChefLeaderboardCardProps> = (
                     {item.currentRating ?? '—'}
                   </td>
                   <td className="py-3.5 px-4 text-right font-mono text-ink-secondary tabular-nums">
-                    {item.problemsSolved ?? 0}
+                    {item.totalSolved ?? 0}
                   </td>
                 </tr>
               ))}

@@ -53,7 +53,7 @@ export const EventsTable: React.FC<EventsTableProps> = ({
               <tr key={ev.id} className="hover:bg-brand-soft/40 transition-colors">
                 <td className="px-4 py-3.5 font-semibold text-ink">
                   <div className="text-sm font-semibold">{ev.name}</div>
-                  {ev.tagline && <span className="text-xs text-ink-muted">{ev.tagline}</span>}
+                  {ev.description && <span className="text-xs text-ink-muted line-clamp-1">{ev.description}</span>}
                 </td>
                 <td className="px-4 py-3.5 text-xs text-ink-muted">{formatEventType(ev.type)}</td>
                 <td className="px-4 py-3.5 text-xs text-ink-secondary whitespace-nowrap">{formatDate(ev.eventDate)}</td>
@@ -125,7 +125,7 @@ export const EventsTable: React.FC<EventsTableProps> = ({
                             Publish Event
                           </button>
                         )}
-                        {ev.status === 'PUBLISHED' && (
+                        {ev.status === 'OPEN' && (
                           <button
                             type="button"
                             onClick={() => { setMenuOpenId(null); onCloseEvent(ev); }}

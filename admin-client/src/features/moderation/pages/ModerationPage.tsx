@@ -135,6 +135,7 @@ export const ModerationPage: React.FC = () => {
           selectedItem={selectedItem}
           filteredItems={filteredItems}
           selectedIndex={selectedIndex}
+          typeKeyFor={typeKeyFor}
           onClose={() => setSelectedItemId(null)}
           onSelectItem={(id) => setSelectedItemId(id)}
           onUpdateItems={(updater) => setItems(updater)}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { CalendarDays, Plus, AlertCircle, Loader2, CheckCircle, X, Layers, Users, Calendar } from 'lucide-react';
+import { CalendarDays, Plus, AlertCircle, Loader2, CheckCircle, X, Calendar } from 'lucide-react';
 import { useEvents } from '../hooks/useEvents';
 import { EventWizardModal } from '../components/EventWizardModal';
 import { EventDetailModal } from '../components/EventDetailModal';
@@ -34,7 +34,7 @@ export const AdminEventsPage: React.FC = () => {
     handleCloseEvent,
   } = useEvents();
 
-  const publishedCount = events.filter((e) => e.status === 'PUBLISHED').length;
+  const publishedCount = events.filter((e) => e.status === 'OPEN').length;
   const draftCount = events.filter((e) => e.status === 'DRAFT').length;
   const totalRegistrations = events.reduce((sum, e) => sum + (e.registrationCount ?? 0), 0);
 

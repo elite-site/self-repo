@@ -81,11 +81,11 @@ export const GithubSyncLogsTable: React.FC<GithubSyncLogsTableProps> = ({
                       {log.status}
                     </span>
                   </td>
-                  <td className="p-3.5 font-mono tabular-nums">{log.apiCallsMade ?? 0}</td>
+                  <td className="p-3.5 font-mono tabular-nums">{log.apiCalls ?? 0}</td>
                   <td className="p-3.5 font-mono tabular-nums">{log.rateRemaining ?? '—'}</td>
                   <td className="p-3.5 pr-5 max-w-xs truncate text-ink-muted">
-                    {log.errorDetails ? (
-                      <span className="text-status-rejected font-mono text-[11px]">{log.errorDetails}</span>
+                    {log.error || log.details ? (
+                      <span className="text-status-rejected font-mono text-[11px]">{log.error || log.details}</span>
                     ) : (
                       'Completed without errors'
                     )}

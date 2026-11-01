@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckCircle2, AlertCircle, Terminal, Download, Trophy, ShieldCheck, X } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Terminal, Download, Trophy, X } from 'lucide-react';
 import { useAdminCodeChef } from '../hooks/useAdminCodeChef';
 import {
   CodeChefMetricsCards,
@@ -164,12 +164,14 @@ export const AdminCodeChefPage: React.FC = () => {
               <div className="py-12 text-center text-sm text-ink-muted">Loading profile details...</div>
             ) : selectedStudentDetails ? (
               <AdminStudentCodeChefTab
-                student={selectedStudentDetails}
-                resyncStudent={resyncStudent}
+                studentId={selectedStudentId || ''}
+                details={selectedStudentDetails}
+                loading={detailsLoading}
+                onResync={resyncStudent}
                 resyncing={resyncing}
-                verifyStudent={verifyStudent}
+                onVerify={verifyStudent}
                 verifying={verifying}
-                unlinkStudent={unlinkStudent}
+                onUnlink={unlinkStudent}
                 unlinking={unlinking}
               />
             ) : (

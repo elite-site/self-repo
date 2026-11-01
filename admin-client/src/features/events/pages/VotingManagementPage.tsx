@@ -130,7 +130,7 @@ export const VotingManagementPage: React.FC = () => {
               <div className="card-hover">
                 <VotingCampaignCard
                   campaign={c}
-                  activating={activating === c.id}
+                  activating={activating}
                   onActivate={() => handleActivate(c.id)}
                   onClose={() => handleClose(c.id)}
                 />

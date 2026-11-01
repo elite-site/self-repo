@@ -1,5 +1,5 @@
 import React from 'react';
-import { Users, Link2, ShieldCheck, Flame, AlertTriangle } from 'lucide-react';
+import { Link2, ShieldCheck, Flame, AlertTriangle } from 'lucide-react';
 import type { CodeChefAdminStatsResponse } from '../types';
 
 interface CodeChefMetricsCardsProps {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckCircle2, AlertCircle, HardDrive, RefreshCw, GitBranch, ShieldCheck } from 'lucide-react';
+import { CheckCircle2, AlertCircle, HardDrive, GitBranch, ShieldCheck } from 'lucide-react';
 import { useGithub } from '../hooks/useGithub';
 import { GithubMetricsCards } from '../components/GithubMetricsCards';
 import { GithubAccountsTable } from '../components/GithubAccountsTable';

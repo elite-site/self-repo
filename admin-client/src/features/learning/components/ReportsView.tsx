@@ -4,7 +4,6 @@ import { AdminLearningReport } from '../types';
 import { learningAdminApi } from '../api';
 import { EnrollmentsTable } from './EnrollmentsTable';
 import { AsymGrid, AsymFeatured, AsymSide, AsymAccent } from '@/shared/layout/AsymGrid';
-import { MasonryGrid, MasonryItem } from '@/shared/layout/MasonryGrid';
 
 export interface ReportsViewProps {
   report: AdminLearningReport;
@@ -100,15 +99,15 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ report }) => {
               <div className="mt-4 pt-3 border-t border-brand/20 grid grid-cols-3 gap-2 text-xs">
                 <div className="p-2.5 bg-surface/70 rounded-lg border border-brand/10 text-center">
                   <span className="text-ink-muted block text-[10px] uppercase font-semibold">Attempts</span>
-                  <span className="font-bold text-ink text-base tabular-nums">{report.quizStats.totalAttempts}</span>
+                  <span className="font-bold text-ink text-base tabular-nums">{report.quizStats?.totalAttempts ?? 0}</span>
                 </div>
                 <div className="p-2.5 bg-surface/70 rounded-lg border border-brand/10 text-center">
                   <span className="text-ink-muted block text-[10px] uppercase font-semibold">Avg Score</span>
-                  <span className="font-bold text-brand text-base tabular-nums">{Math.round(report.quizStats.averageScore)}%</span>
+                  <span className="font-bold text-brand text-base tabular-nums">{report.quizStats ? `${Math.round(report.quizStats.averageScore)}%` : '0%'}</span>
                 </div>
                 <div className="p-2.5 bg-surface/70 rounded-lg border border-brand/10 text-center">
                   <span className="text-ink-muted block text-[10px] uppercase font-semibold">Pass Rate</span>
-                  <span className="font-bold text-status-approved text-base tabular-nums">{Math.round(report.quizStats.passRate)}%</span>
+                  <span className="font-bold text-status-approved text-base tabular-nums">{report.quizStats ? `${Math.round(report.quizStats.passRate)}%` : '0%'}</span>
                 </div>
               </div>
             </div>

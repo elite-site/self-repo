@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, RefreshCw, ExternalLink, GitFork } from 'lucide-react';
+import { Search, RefreshCw, ExternalLink } from 'lucide-react';
 import { GithubAccount } from '../types';
 
 interface GithubAccountsTableProps {

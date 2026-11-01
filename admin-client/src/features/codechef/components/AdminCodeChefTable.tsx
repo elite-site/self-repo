@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, Download, ChevronLeft, ChevronRight, ShieldCheck, X } from 'lucide-react';
+import { Search, Download, ChevronLeft, ChevronRight, ShieldCheck } from 'lucide-react';
 import type { AdminCodeChefStudentItem, AdminCodeChefFilters } from '../types';
 
 interface AdminCodeChefTableProps {
@@ -19,6 +19,7 @@ export const AdminCodeChefTable: React.FC<AdminCodeChefTableProps> = ({
   students,
   total,
   page,
+  limit,
   totalPages,
   loading,
   filters,
@@ -47,7 +48,7 @@ export const AdminCodeChefTable: React.FC<AdminCodeChefTableProps> = ({
       </div>
 
       {/* Filter Bar */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 text-xs">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 text-xs">
         <div className="relative col-span-2 sm:col-span-1">
           <input
             type="text"
@@ -117,46 +118,33 @@ export const AdminCodeChefTable: React.FC<AdminCodeChefTableProps> = ({
           onChange={(e) =>
             onFilterChange({
               ...filters,
-              status: e.target.value ? (e.target.value as any) : undefined,
+              status: e.target.value || undefined,
               page: 1,
             })
           }
           className="select text-xs min-h-[38px] cursor-pointer"
         >
-          <option value="">All Verification</option>
-          <option value="VERIFIED">Verified</option>
+          <option value="">All Statuses</option>
+          <option value="CONNECTED">Connected</option>
           <option value="UNVERIFIED">Unverified</option>
+          <option value="STALE">Stale</option>
+          <option value="ERROR">Error</option>
           <option value="NOT_CONNECTED">Not Connected</option>
-        </select>
-
-        <select
-          value={`${filters.sortBy || 'rating'}_${filters.sortOrder || 'desc'}`}
-          onChange={(e) => {
-            const [sortBy, sortOrder] = e.target.value.split('_');
-            onFilterChange({ ...filters, sortBy: sortBy as any, sortOrder: sortOrder as any, page: 1 });
-          }}
-          className="select text-xs min-h-[38px] cursor-pointer"
-        >
-          <option value="rating_desc">Highest Rating</option>
-          <option value="rating_asc">Lowest Rating</option>
-          <option value="problems_desc">Most Solved</option>
-          <option value="contests_desc">Most Contests</option>
-          <option value="name_asc">Name A-Z</option>
         </select>
       </div>
 
-      {/* Table view with table-responsive */}
-      <div className="table-responsive border border-edge rounded-xl overflow-x-auto">
-        <table className="w-full text-left text-xs border-collapse">
+      {/* Table Container - Strict horizontal container scrolling */}
+      <div className="table-responsive">
+        <table className="w-full text-left text-sm border-collapse">
           <thead>
-            <tr className="border-b border-edge bg-surface-sunken font-semibold text-ink-muted">
+            <tr className="border-b border-edge bg-surface-sunken text-xs font-semibold text-ink-secondary">
               <th className="py-3 px-4">Student</th>
-              <th className="py-3 px-4">Academic</th>
-              <th className="py-3 px-4">Handle</th>
+              <th className="py-3 px-4">Class</th>
+              <th className="py-3 px-4">CodeChef Handle</th>
               <th className="py-3 px-4 text-center">Stars</th>
               <th className="py-3 px-4 text-right">Rating</th>
-              <th className="py-3 px-4 text-right">Global Rank</th>
               <th className="py-3 px-4 text-right">Solved</th>
+              <th className="py-3 px-4 text-right">Contests</th>
               <th className="py-3 px-4 text-center">Status</th>
               <th className="py-3 px-4 text-right">Actions</th>
             </tr>
@@ -165,8 +153,8 @@ export const AdminCodeChefTable: React.FC<AdminCodeChefTableProps> = ({
             {loading ? (
               <tr>
                 <td colSpan={9} className="py-12 text-center text-ink-muted">
-                  <div className="w-5 h-5 border-2 border-brand border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-                  Loading student roster...
+                  <div className="w-6 h-6 border-2 border-brand border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                  Loading CodeChef directory...
                 </td>
               </tr>
             ) : students.length === 0 ? (
@@ -179,51 +167,59 @@ export const AdminCodeChefTable: React.FC<AdminCodeChefTableProps> = ({
               students.map((st) => (
                 <tr
                   key={st.id}
-                  onClick={() => onSelectStudent(st.id)}
+                  onClick={() => onSelectStudent(st.studentId || st.id)}
                   className="hover:bg-brand-soft/40 cursor-pointer transition-colors group"
                 >
                   <td className="py-3.5 px-4">
                     <div className="font-semibold text-ink group-hover:text-brand transition-colors text-sm">
                       {st.name}
                     </div>
-                    <div className="text-ink-muted font-mono">{st.rollNo}</div>
+                    <div className="text-ink-muted font-mono text-xs">{st.rollNo}</div>
                   </td>
-                  <td className="py-3.5 px-4 text-ink-secondary whitespace-nowrap">
+                  <td className="py-3.5 px-4 text-ink-secondary whitespace-nowrap text-xs">
                     Year {st.year} · Sec {st.section}
                   </td>
-                  <td className="py-3.5 px-4 font-mono">
-                    {st.codechef?.handle ? (
-                      <span className="text-brand font-semibold">@{st.codechef.handle}</span>
+                  <td className="py-3.5 px-4 font-mono text-xs">
+                    {st.handle ? (
+                      <span className="text-brand font-semibold">@{st.handle}</span>
                     ) : (
                       <span className="text-ink-muted italic">Not linked</span>
                     )}
                   </td>
                   <td className="py-3.5 px-4 text-center font-mono">
-                    {st.codechef?.stars ? (
+                    {st.stars ? (
                       <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-status-pending/10 text-status-pending border border-status-pending/20">
-                        {st.codechef.stars}★
+                        {st.stars}★
                       </span>
                     ) : (
                       <span className="text-ink-muted">—</span>
                     )}
                   </td>
                   <td className="py-3.5 px-4 text-right font-mono font-bold text-ink tabular-nums">
-                    {st.codechef?.currentRating ?? '—'}
-                  </td>
-                  <td className="py-3.5 px-4 text-right font-mono text-ink-muted tabular-nums">
-                    {st.codechef?.globalRank ? `#${st.codechef.globalRank.toLocaleString()}` : '—'}
+                    {st.currentRating ?? '—'}
                   </td>
                   <td className="py-3.5 px-4 text-right font-mono text-ink-secondary tabular-nums">
-                    {st.codechef?.problemsSolved ?? 0}
+                    {st.totalSolved ?? 0}
+                  </td>
+                  <td className="py-3.5 px-4 text-right font-mono text-ink-muted tabular-nums">
+                    {st.totalContests ?? 0}
                   </td>
                   <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                    {st.codechef?.isVerified ? (
+                    {st.verified ? (
                       <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-status-approved/10 text-status-approved border border-status-approved/20">
                         <ShieldCheck className="w-3 h-3" /> Verified
                       </span>
-                    ) : st.codechef ? (
+                    ) : st.status === 'CONNECTED' ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-brand-soft text-brand border border-brand/20">
+                        Connected
+                      </span>
+                    ) : st.status === 'UNVERIFIED' ? (
                       <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-status-pending/10 text-status-pending border border-status-pending/20">
                         Unverified
+                      </span>
+                    ) : st.status === 'ERROR' ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-status-flagged/10 text-status-flagged border border-status-flagged/20">
+                        Error
                       </span>
                     ) : (
                       <span className="text-ink-muted text-xs">—</span>
@@ -234,7 +230,7 @@ export const AdminCodeChefTable: React.FC<AdminCodeChefTableProps> = ({
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        onSelectStudent(st.id);
+                        onSelectStudent(st.studentId || st.id);
                       }}
                       className="btn btn-secondary text-xs px-2.5 py-1 min-h-[34px] cursor-pointer shadow-2xs hover:border-brand/40"
                     >
