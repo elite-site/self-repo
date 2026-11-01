@@ -257,3 +257,30 @@ npm run dev
 4. **Preservation of Untouchable Directories:**  
    *Assumption:* `backend/`, `docs/`, `netlify.toml`, and `Students_Master_List.xlsx` were marked strictly off-limits.  
    *Resolution:* Confirmed via `git diff --stat main...dashboard-redesign` that zero modifications occurred in any of those paths.
+
+---
+
+## 6. Post-Redesign Bug Fixes
+
+### 1. CodeChef Blank Screen Resolution
+- **Issue:** Navigating to `/codechef` on production (`itassociation.vercel.app/codechef`) rendered a blank white screen.
+- **Root Causes:**
+  1. `isCodeChefEnabled` was evaluated as `import.meta.env.VITE_FEATURE_CODECHEF === 'true'`. In deployment environments (like Vercel) where custom feature flags are not explicitly defined, this evaluated to `false`, omitting the route from the React Router route tree.
+  2. The router lacked a catch-all route (`<Route path="*" ... />`), causing React Router to match nothing and render `null`.
+  3. CodeChef sub-components had potential null dereferences when handling initial or empty competitive programming stats.
+- **Remediation:**
+  - In `web/src/App.tsx` and `web/src/shared/layout/NavItem.tsx`: changed `isCodeChefEnabled` to `import.meta.env.VITE_FEATURE_CODECHEF !== 'false'` so CodeChef is active by default in all deployments.
+  - Added fallback catch-all route `<Route path="*" element={<Navigate to="/dashboard" replace />} />`.
+  - Added null-coalescing safeguards throughout `CodeChefSummaryGrid`, `CodeChefContestTable`, `CodeChefHeatmap`, `CodeChefRatingChart`, `CodeChefTopicsDifficulty`, and `CodeChefPage`.
+
+### 2. Resources Tab Semester Switching (Eliminated Entire Page Reload)
+- **Issue:** Clicking between semester tabs in the Resources section caused the entire page to reload, flicker, and re-animate.
+- **Root Cause:**
+  - In `web/src/features/resources/hooks/useResources.ts`, `useQuery` did not specify `placeholderData: keepPreviousData`. When switching semesters, `queryKey` changed, clearing `data` to `undefined` and setting `isLoading: true`.
+  - `ResourcesPage.tsx` contained `if (isLoading) return <SkeletonPage ... />`, which unmounted the entire page (header, hero, semester tabs, filter bar) and replaced it with a full-page skeleton. When data returned, the page remounted and re-triggered the CSS `.page-enter` animation.
+- **Remediation:**
+  - Added `placeholderData: keepPreviousData` from `@tanstack/react-query` in `web/src/features/resources/hooks/useResources.ts`.
+  - In `web/src/features/resources/pages/ResourcesPage.tsx`, updated the top guard to `if (isLoading && !groupedBySubject.length)` so the skeleton only renders on cold initial load.
+  - Wrapped the resource masonry grid in a smooth opacity transition (`transition-opacity duration-200 ${isFetching ? 'opacity-60' : 'opacity-100'}`) so the header, tabs, spotlight block, and search bar stay rock-solid without unmounting or re-animating.
+  - Also applied `placeholderData: keepPreviousData` to `admin-client/src/features/resources/pages/AdminResourcesPage.tsx` for consistent behavior.
+
