@@ -15,24 +15,24 @@ export const AdminAccountsTable: React.FC<AdminAccountsTableProps> = ({
   onAssign,
 }) => {
   return (
-    <div className="bg-surface border border-edge rounded-xl shadow-sm overflow-hidden">
+    <div className="surface border border-edge rounded-xl shadow-xs overflow-hidden">
       <div className="p-5 border-b border-edge flex items-center justify-between">
         <div>
-          <h3 className="text-sm font-bold text-ink">
+          <h3 className="text-base font-bold text-ink font-sans">
             Administrator Accounts & Role Assignment
           </h3>
           <p className="text-xs text-ink-muted mt-0.5">
             Assigned credentials with administrative access to this portal instance
           </p>
         </div>
-        <span className="text-xs font-mono text-ink-muted">
+        <span className="text-xs font-mono font-semibold px-2.5 py-1 rounded-full bg-brand-soft text-brand-soft-text border border-brand/20">
           {admins.length} Organizers
         </span>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-xs">
-          <thead className="bg-surface-sunken text-ink-secondary font-semibold border-b border-edge">
+      <div className="table-responsive">
+        <table className="w-full text-left text-sm border-collapse">
+          <thead className="bg-surface-sunken text-ink-secondary text-xs font-semibold border-b border-edge">
             <tr>
               <th className="px-5 py-3">Username</th>
               <th className="px-5 py-3">Email Address</th>
@@ -40,30 +40,29 @@ export const AdminAccountsTable: React.FC<AdminAccountsTableProps> = ({
               <th className="px-5 py-3">Assigned Role Override</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-edge text-ink-secondary">
+          <tbody className="divide-y divide-edge">
             {admins.map((adm) => {
               const isAssigning = assigningAdminId === adm.id;
+              const matchingRole = roles.find((r) => r.name === adm.role);
               return (
-                <tr key={adm.id} className="hover:bg-surface-sunken/50 transition-colors">
-                  <td className="px-5 py-3.5 font-bold text-ink">
+                <tr key={adm.id} className="hover:bg-brand-soft/40 transition-colors">
+                  <td className="px-5 py-3.5 font-bold text-ink text-sm">
                     {adm.username}
                   </td>
-                  <td className="px-5 py-3.5 font-mono text-ink-secondary">
+                  <td className="px-5 py-3.5 font-mono text-xs text-ink-secondary">
                     {adm.email}
                   </td>
                   <td className="px-5 py-3.5">
-                    <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-surface-sunken text-ink border border-edge">
+                    <span className="font-mono text-xs font-bold px-2.5 py-1 rounded-full bg-surface-sunken text-ink border border-edge">
                       {adm.role}
                     </span>
                   </td>
                   <td className="px-5 py-3.5">
                     <select
+                      value={matchingRole ? matchingRole.id : ''}
                       disabled={isAssigning}
-                      defaultValue={roles.find((r) => r.assignments?.some((a) => a.adminId === adm.id))?.id || ''}
-                      onChange={(e) => {
-                        if (e.target.value) onAssign(adm.id, e.target.value);
-                      }}
-                      className="px-2.5 py-1 text-xs rounded border border-edge-strong bg-surface text-ink focus:outline-none focus:ring-1 focus:ring-brand"
+                      onChange={(e) => onAssign(adm.id, e.target.value)}
+                      className="select text-xs min-h-[38px] px-3 py-1.5 cursor-pointer max-w-[200px]"
                     >
                       <option value="">Default ({adm.role})</option>
                       {roles.map((r) => (
@@ -82,3 +81,5 @@ export const AdminAccountsTable: React.FC<AdminAccountsTableProps> = ({
     </div>
   );
 };
+
+export default AdminAccountsTable;
