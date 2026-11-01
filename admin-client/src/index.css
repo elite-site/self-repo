@@ -17,23 +17,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Nothing app-specific is left.
-
-   This file used to carry a 120-line `!important` override wall that repainted
-   light-mode utilities (`bg-white`, `text-neutral-900`, `border-slate-200`) with
-   dark values whenever `.dark` was on the ancestor. It existed because the admin
-   was dark-mode-first while its pages were written light-mode-first, and it is
-   why the two apps ended up with different dark palettes for the same brand.
-
-   Every page now names a semantic token, which is correct in both themes with no
-   `dark:` variant and nothing forcing it, so the wall is gone rather than
-   commented out: `node tools/check-utilities.mjs` fails if any page has drifted
-   back to a class the preset no longer defines. `.dark` on `<html>` is a no-op
-   class now; `data-theme` is the switch.
-
-   The scrollbar and focus-ring rules the wall duplicated live in
-   `shared/tokens.css` now, unprefixed and shared with the student portal. */
-
 /* ── Responsive table container ─────────────────────────────
    Identical to the shim in web/src/index.css; both apps need it and neither
    wants a dependency for six lines. */
@@ -41,4 +24,115 @@
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   width: 100%;
+}
+
+/* ── Asymmetrical Grid Layout Helpers ─────────────────────── */
+.asym-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+  width: 100%;
+}
+
+@media (min-width: 1024px) {
+  .asym-grid {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+  }
+}
+
+.asym-featured {
+  grid-column: span 1 / span 1;
+}
+
+@media (min-width: 1024px) {
+  .asym-featured {
+    grid-column: span 8 / span 8;
+  }
+}
+
+.asym-side {
+  grid-column: span 1 / span 1;
+}
+
+@media (min-width: 1024px) {
+  .asym-side {
+    grid-column: span 4 / span 4;
+  }
+}
+
+.asym-accent {
+  background-color: var(--brand-soft);
+  border: 1px solid var(--border-brand);
+  border-radius: var(--lg);
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--dur-quick) var(--ease-standard), box-shadow var(--dur-quick) var(--ease-standard);
+}
+
+.asym-accent:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+/* ── Masonry Grid Helpers ─────────────────────────────────── */
+.masonry-grid {
+  columns: 1;
+  column-gap: 1.5rem;
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .masonry-grid {
+    columns: 2;
+  }
+}
+
+@media (min-width: 1024px) {
+  .masonry-grid {
+    columns: 3;
+  }
+}
+
+.masonry-item {
+  break-inside: avoid;
+  page-break-inside: avoid;
+  margin-bottom: 1.5rem;
+  display: inline-block;
+  width: 100%;
+}
+
+/* ── Card Hover & Animation ───────────────────────────────── */
+.card-hover {
+  transition: transform var(--dur-quick) var(--ease-standard), box-shadow var(--dur-quick) var(--ease-standard);
+}
+
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+@keyframes adminFadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: adminFadeInUp var(--dur-normal) var(--ease-standard) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in-up {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .card-hover,
+  .asym-accent {
+    transform: none !important;
+  }
 }
