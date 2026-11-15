@@ -121,7 +121,7 @@ describe('CodeChef Service Business Logic', () => {
         id: 'acc_auto',
         studentId: 'stud_123',
         handle: 'auto_chef',
-        verified: false,
+        verified: true,
         status: 'CONNECTED',
         lastSyncedAt: null,
       } as any;

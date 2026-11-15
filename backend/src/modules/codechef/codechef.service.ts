@@ -22,6 +22,24 @@ export async function getStatus(studentId: string, skipProfileAutoConnect = fals
       }
     }
   } else if (account) {
+    // Legacy unverified accounts auto-heal to verified
+    if (!account.verified) {
+      try {
+        await repo.updateAccount(account.id, {
+          verified: true,
+          verifiedAt: new Date(),
+          verifyCode: null,
+          verifyCodeExpiresAt: null,
+        });
+      } catch (err: any) {
+        logger.warn(`[CodeChefService] Legacy account auto-heal failed for account.id=${account.id}:`, { err });
+      }
+      account.verified = true;
+      account.verifiedAt = new Date();
+      account.verifyCode = null;
+      account.verifyCodeExpiresAt = null;
+    }
+
     // If account exists, keep profile.codechefUrl in sync
     const student = await repo.findStudentWithProfile(studentId);
     if (!student?.profile?.codechefUrl && account.handle) {
@@ -212,9 +230,7 @@ export async function syncAccountFromProfile(studentId: string, handleOrUrl: str
   const cleanHandle = extractCodeChefHandle(handleOrUrl) || handleOrUrl.trim();
   if (!cleanHandle) return;
   const existing = await repo.findAccountByStudentId(studentId);
-  if (!existing) {
-    await connect(studentId, cleanHandle);
-  } else if (existing.handle.toLowerCase() !== cleanHandle.toLowerCase()) {
+  if (!existing || existing.handle.toLowerCase() !== cleanHandle.toLowerCase() || !existing.verified) {
     await connect(studentId, cleanHandle);
   }
 }
@@ -265,8 +281,8 @@ export async function getAdminStudents(params: AdminCodeChefFilterParams) {
         year: s.year,
         section: s.section,
         handle: effectiveHandle,
-        verified: s.codechefAccount?.verified || false,
-        status: (!isConnected ? 'NOT_CONNECTED' : !s.codechefAccount?.verified ? 'UNVERIFIED' : s.codechefAccount.status) as any,
+        verified: Boolean(s.codechefAccount?.verified ?? isConnected),
+        status: (!isConnected ? 'NOT_CONNECTED' : (s.codechefAccount?.status && s.codechefAccount.status !== 'UNVERIFIED' ? s.codechefAccount.status : 'CONNECTED')) as any,
         currentRating: s.codechefAccount?.currentRating || null,
         stars: s.codechefAccount?.stars || null,
         totalSolved: s.codechefAccount?.totalSolved || null,
