@@ -15,8 +15,6 @@ export const CODECHEF_HANDLE_REGEX = /^[A-Za-z0-9_.]{3,30}$/;
 export const CODECHEF_LIMITS = {
   DEFAULT_COOLDOWN_MIN: 15,
   DEFAULT_DAILY_CAP: 10,
-  VERIFY_CODE_EXPIRY_MINUTES: 30,
-  VERIFY_CODE_EXPIRY_MS: 30 * 60 * 1000,
   MAX_PAGE_LIMIT: 100,
   DEFAULT_PAGE_LIMIT: 20,
   CLIENT_TIMEOUT_MS: 8000,
@@ -42,19 +40,6 @@ export function computeCodeChefStars(rating: number | null | undefined): number 
   if (rating < 2200) return 5;
   if (rating < 2500) return 6;
   return 7;
-}
-
-/**
- * Generates an alphanumeric verification token: e.g. ELITE-7F3K9Q
- */
-export function generateVerificationCode(): string {
-  const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
-  let token = '';
-  for (let i = 0; i < 6; i++) {
-    const idx = Math.floor(Math.random() * chars.length);
-    token += chars[idx];
-  }
-  return `ELITE-${token}`;
 }
 
 /**

@@ -1,9 +1,8 @@
 import { AppError } from '../../utils/appError';
 import { logger } from '../../utils/logger';
-import { codeChefClient } from '../../infrastructure/codechef.client';
 import * as repo from './codechef.repository';
 import { executeSync } from './services/codechef.sync.service';
-import { generateVerificationCode, CODECHEF_LIMITS, extractCodeChefHandle } from './codechef.constants';
+import { CODECHEF_LIMITS, extractCodeChefHandle } from './codechef.constants';
 import type { CodeChefStatusDto, CodeChefDetailsDto, AdminCodeChefFilterParams } from './codechef.types';
 
 export async function getStatus(studentId: string, skipProfileAutoConnect = false): Promise<CodeChefStatusDto> {
@@ -157,69 +156,24 @@ export async function connect(studentId: string, rawHandle: string): Promise<Cod
     throw new AppError('CONFLICT', 'This CodeChef handle is already linked to another student account', 409);
   }
 
-  const verifyCode = generateVerificationCode();
-  const verifyCodeExpiresAt = new Date(Date.now() + CODECHEF_LIMITS.VERIFY_CODE_EXPIRY_MS);
-
   const account = await repo.upsertAccount(studentId, handle, {
     student: { connect: { id: studentId } },
     handle,
-    verified: false,
-    verifyCode,
-    verifyCodeExpiresAt,
+    verified: true,
+    verifiedAt: new Date(),
+    verifyCode: null,
+    verifyCodeExpiresAt: null,
     status: 'CONNECTED',
   });
 
-  // Always keep StudentProfile.codechefUrl in sync ("if not available fill on the codechef it should use same")
+  // Always keep StudentProfile.codechefUrl in sync
   const canonicalUrl = `https://www.codechef.com/users/${handle}`;
   await repo.updateProfileCodeChefUrl(studentId, canonicalUrl);
-
-  // Check auto-verification if student's GitHub matches CodeChef profile social.github
-  const profile = await codeChefClient.fetchProfile(handle);
-  const studentAccount = await repo.findAccountByStudentId(studentId);
-  const studentGithub = studentAccount?.student?.githubAccount?.login?.toLowerCase();
-  const codechefGithub = profile?.social?.github?.toLowerCase();
-
-  if (studentGithub && codechefGithub && studentGithub === codechefGithub) {
-    await repo.updateAccount(account.id, { verified: true, verifiedAt: new Date(), verifyCode: null, verifyCodeExpiresAt: null });
-  }
 
   // Trigger non-blocking initial sync
   void executeSync(account.id, handle, 'CONNECT');
 
   return getStatus(studentId, true);
-}
-
-export async function verify(studentId: string): Promise<{ verified: boolean; message: string; verifiedAt: string | null }> {
-  const account = await repo.findAccountByStudentId(studentId);
-  if (!account) throw new AppError('NOT_FOUND', 'No CodeChef account connected', 404);
-  if (account.verified) return { verified: true, message: 'Account is already verified', verifiedAt: account.verifiedAt?.toISOString() || null };
-
-  if (account.verifyCodeExpiresAt && new Date() > account.verifyCodeExpiresAt) {
-    const newCode = generateVerificationCode();
-    const newExpiresAt = new Date(Date.now() + CODECHEF_LIMITS.VERIFY_CODE_EXPIRY_MS);
-    await repo.updateAccount(account.id, { verifyCode: newCode, verifyCodeExpiresAt: newExpiresAt });
-    throw new AppError('VALIDATION_ERROR', `Verification code expired. A new code has been generated: ${newCode}. Please update your CodeChef bio and try again.`, 400);
-  }
-
-  const profile = await codeChefClient.fetchProfile(account.handle);
-  if (!profile) throw new AppError('UPSTREAM_FAILURE', 'Unable to fetch CodeChef profile to verify code. Please try again.', 503);
-
-  const code = account.verifyCode || '';
-  const inBio = profile.bio?.includes(code);
-  const inWebsites = profile.websites?.some((w) => w.includes(code));
-  const inName = profile.displayName?.includes(code);
-
-  const studentGithub = account.student?.githubAccount?.login?.toLowerCase();
-  const codechefGithub = profile.social?.github?.toLowerCase();
-  const githubMatched = Boolean(studentGithub && codechefGithub && studentGithub === codechefGithub);
-
-  if (inBio || inWebsites || inName || githubMatched) {
-    const verifiedAt = new Date();
-    await repo.updateAccount(account.id, { verified: true, verifiedAt, verifyCode: null, verifyCodeExpiresAt: null });
-    return { verified: true, message: 'Ownership verified successfully', verifiedAt: verifiedAt.toISOString() };
-  }
-
-  throw new AppError('VALIDATION_ERROR', `Verification code "${code}" was not found in your CodeChef bio. Please paste it into your bio and click Verify again.`, 400);
 }
 
 export async function sync(studentId: string): Promise<CodeChefStatusDto> {
@@ -275,15 +229,13 @@ export async function backfillUnlinkedProfileAccounts(): Promise<number> {
       const existing = await repo.findAccountByHandle(handle);
       if (existing && existing.studentId !== p.studentId) continue;
 
-      const verifyCode = generateVerificationCode();
-      const verifyCodeExpiresAt = new Date(Date.now() + CODECHEF_LIMITS.VERIFY_CODE_EXPIRY_MS);
-
       const account = await repo.upsertAccount(p.studentId, handle, {
         student: { connect: { id: p.studentId } },
         handle,
-        verified: false,
-        verifyCode,
-        verifyCodeExpiresAt,
+        verified: true,
+        verifiedAt: new Date(),
+        verifyCode: null,
+        verifyCodeExpiresAt: null,
         status: 'CONNECTED',
       });
 

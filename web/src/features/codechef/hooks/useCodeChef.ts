@@ -8,7 +8,6 @@ export const CODECHEF_DETAILS_KEY = ['codechef', 'details'];
 
 export function useCodeChef() {
   const queryClient = useQueryClient();
-  const [verifyModalOpen, setVerifyModalOpen] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const statusQuery = useQuery<CodeChefStatus>({
@@ -32,23 +31,9 @@ export function useCodeChef() {
       setActionError(null);
       queryClient.setQueryData(CODECHEF_QUERY_KEY, data);
       queryClient.invalidateQueries({ queryKey: CODECHEF_DETAILS_KEY });
-      if (!data.verified) setVerifyModalOpen(true);
     },
     onError: (err: any) => {
       setActionError(err.response?.data?.message || err.message || 'Failed to link CodeChef handle');
-    },
-  });
-
-  const verifyMutation = useMutation({
-    mutationFn: () => codechefApi.verify(),
-    onSuccess: () => {
-      setActionError(null);
-      setVerifyModalOpen(false);
-      queryClient.invalidateQueries({ queryKey: CODECHEF_QUERY_KEY });
-      queryClient.invalidateQueries({ queryKey: CODECHEF_DETAILS_KEY });
-    },
-    onError: (err: any) => {
-      setActionError(err.response?.data?.message || err.message || 'Verification failed');
     },
   });
 
@@ -102,14 +87,10 @@ export function useCodeChef() {
     error: statusQuery.error ? ((statusQuery.error as any).message || 'Failed to load CodeChef') : null,
     actionError,
     setActionError,
-    verifyModalOpen,
-    setVerifyModalOpen,
     cooldownText,
     canSync: Boolean(statusQuery.data?.syncCooldown?.canSync),
     connect: (handle: string) => connectMutation.mutate(handle),
     connecting: connectMutation.isPending,
-    verify: () => verifyMutation.mutate(),
-    verifying: verifyMutation.isPending,
     sync: () => syncMutation.mutate(),
     syncing: syncMutation.isPending,
     setVisibility: (show: boolean) => visibilityMutation.mutate(show),

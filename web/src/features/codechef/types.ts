@@ -102,9 +102,3 @@ export interface CodeChefDetails {
 export interface ConnectCodeChefPayload {
   handle: string;
 }
-
-export interface VerifyCodeChefResult {
-  verified: boolean;
-  message: string;
-  verifiedAt: string | null;
-}

@@ -11,7 +11,6 @@ studentCodeChefRouter.use(requireStudentAuth);
 studentCodeChefRouter.get('/status', asyncHandler(controller.getStatus));
 studentCodeChefRouter.get('/details', asyncHandler(controller.getDetails));
 studentCodeChefRouter.post('/connect', asyncHandler(controller.connect));
-studentCodeChefRouter.post('/verify', asyncHandler(controller.verify));
 studentCodeChefRouter.post('/sync', asyncHandler(controller.sync));
 studentCodeChefRouter.put('/visibility', asyncHandler(controller.setVisibility));
 studentCodeChefRouter.delete('/', asyncHandler(controller.disconnect));

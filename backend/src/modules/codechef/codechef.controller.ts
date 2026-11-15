@@ -29,12 +29,6 @@ export async function connect(req: Request, res: Response): Promise<void> {
   res.json(result);
 }
 
-export async function verify(req: Request, res: Response): Promise<void> {
-  const studentId = req.student!.studentId;
-  const result = await service.verify(studentId);
-  res.json(result);
-}
-
 export async function sync(req: Request, res: Response): Promise<void> {
   const studentId = req.student!.studentId;
   const result = await service.sync(studentId);

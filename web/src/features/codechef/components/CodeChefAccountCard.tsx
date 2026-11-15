@@ -11,7 +11,6 @@ interface CodeChefAccountCardProps {
   canSync: boolean;
   syncing: boolean;
   onSync: () => void;
-  onOpenVerify: () => void;
   onTogglePublic: (val: boolean) => void;
   onDisconnect: () => void;
   disconnecting: boolean;
@@ -23,15 +22,11 @@ export const CodeChefAccountCard: React.FC<CodeChefAccountCardProps> = ({
   canSync,
   syncing,
   onSync,
-  onOpenVerify,
   onTogglePublic,
   onDisconnect,
   disconnecting,
 }) => {
   const getStatusBadge = () => {
-    if (!status.verified) {
-      return <Badge variant="warning" label="Unverified" />;
-    }
     if (status.status === 'ERROR') {
       return <Badge variant="danger" label="Sync Error" />;
     }
@@ -85,11 +80,6 @@ export const CodeChefAccountCard: React.FC<CodeChefAccountCardProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {!status.verified && (
-            <Button size="sm" variant="secondary" onClick={onOpenVerify}>
-              Verify Ownership
-            </Button>
-          )}
           <Button
             size="sm"
             variant="secondary"

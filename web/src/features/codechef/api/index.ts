@@ -3,7 +3,6 @@ import type {
   CodeChefStatus,
   CodeChefDetails,
   ConnectCodeChefPayload,
-  VerifyCodeChefResult,
 } from '../types';
 
 const isMock = import.meta.env.VITE_CODECHEF_MOCK === 'true';
@@ -144,9 +143,9 @@ export const codechefApi = {
     if (fallbackToMock) {
       mockStatus.connected = true;
       mockStatus.handle = payload.handle;
-      mockStatus.verified = false;
-      mockStatus.status = 'UNVERIFIED';
-      mockStatus.verifyCode = 'ELITE-9X2K7Q';
+      mockStatus.verified = true;
+      mockStatus.status = 'CONNECTED';
+      mockStatus.verifyCode = null;
       return { ...mockStatus };
     }
     try {
@@ -157,32 +156,10 @@ export const codechefApi = {
         fallbackToMock = true;
         mockStatus.connected = true;
         mockStatus.handle = payload.handle;
-        mockStatus.verified = false;
-        mockStatus.status = 'UNVERIFIED';
-        mockStatus.verifyCode = 'ELITE-9X2K7Q';
-        return { ...mockStatus };
-      }
-      throw err;
-    }
-  },
-
-  async verify(): Promise<VerifyCodeChefResult> {
-    if (fallbackToMock) {
-      mockStatus.verified = true;
-      mockStatus.status = 'CONNECTED';
-      mockStatus.verifyCode = null;
-      return { verified: true, message: 'Ownership verified successfully', verifiedAt: new Date().toISOString() };
-    }
-    try {
-      const res = await client.post('/student/codechef/verify');
-      return res.data;
-    } catch (err: any) {
-      if (isIntegrationDisabled(err)) {
-        fallbackToMock = true;
         mockStatus.verified = true;
         mockStatus.status = 'CONNECTED';
         mockStatus.verifyCode = null;
-        return { verified: true, message: 'Ownership verified successfully', verifiedAt: new Date().toISOString() };
+        return { ...mockStatus };
       }
       throw err;
     }

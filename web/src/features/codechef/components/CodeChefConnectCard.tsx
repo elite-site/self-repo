@@ -80,7 +80,7 @@ export const CodeChefConnectCard: React.FC<CodeChefConnectCardProps> = ({ onConn
             </span>
           </div>
           <p className="text-[11px] text-foreground-muted/80 pl-6">
-            If your CodeChef account already links to your verified GitHub, it will verify automatically! Otherwise, you will receive a code to paste in your CodeChef bio.
+            Your handle will be linked immediately and data will sync automatically.
           </p>
         </div>
 

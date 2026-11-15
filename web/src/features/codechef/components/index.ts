@@ -1,6 +1,5 @@
 export { CodeChefAccountCard } from './CodeChefAccountCard';
 export { CodeChefConnectCard } from './CodeChefConnectCard';
-export { CodeChefVerifyModal } from './CodeChefVerifyModal';
 export { CodeChefSummaryGrid } from './CodeChefSummaryGrid';
 export { CodeChefRatingChart } from './CodeChefRatingChart';
 export { CodeChefContestTable } from './CodeChefContestTable';

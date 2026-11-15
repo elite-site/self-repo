@@ -8,7 +8,6 @@ import { useCodeChef } from '../hooks/useCodeChef';
 import {
   CodeChefAccountCard,
   CodeChefConnectCard,
-  CodeChefVerifyModal,
   CodeChefSummaryGrid,
   CodeChefRatingChart,
   CodeChefContestTable,
@@ -25,14 +24,10 @@ export const CodeChefPage: React.FC = () => {
     detailsLoading,
     error,
     actionError,
-    verifyModalOpen,
-    setVerifyModalOpen,
     cooldownText,
     canSync,
     connect,
     connecting,
-    verify,
-    verifying,
     sync,
     syncing,
     setVisibility,
@@ -72,7 +67,6 @@ export const CodeChefPage: React.FC = () => {
             canSync={canSync}
             syncing={syncing}
             onSync={sync}
-            onOpenVerify={() => setVerifyModalOpen(true)}
             onTogglePublic={setVisibility}
             onDisconnect={disconnect}
             disconnecting={disconnecting}
@@ -87,9 +81,7 @@ export const CodeChefPage: React.FC = () => {
                   <Star size={16} className="text-amber-500 fill-amber-500" aria-hidden="true" />
                   CodeChef Spotlight
                 </span>
-                <span className={`badge ${status.verified ? 'badge-approved' : 'badge-pending'} text-[11px]`}>
-                  {status.verified ? 'Verified' : 'Pending Verification'}
-                </span>
+                <span className="badge badge-approved text-[11px]">Connected</span>
               </div>
               <p className="text-body-xs text-ink-secondary leading-relaxed">
                 Competitive programming rating, contest rank, and badges are highlighted on your student profile.
@@ -103,7 +95,7 @@ export const CodeChefPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="mt-4 pt-3 border-t border-brand/20 flex items-center justify-between">
+            <div className="mt-4 pt-3 border-t border-brand/20">
               <button
                 type="button"
                 onClick={sync}
@@ -113,15 +105,6 @@ export const CodeChefPage: React.FC = () => {
                 <RefreshCw size={12} className={syncing ? 'animate-spin' : ''} />
                 <span>{cooldownText || (syncing ? 'Syncing...' : 'Sync CodeChef')}</span>
               </button>
-              {!status.verified && (
-                <button
-                  type="button"
-                  onClick={() => setVerifyModalOpen(true)}
-                  className="btn btn-secondary text-xs px-3 py-1.5 rounded-full"
-                >
-                  Verify Handle
-                </button>
-              )}
             </div>
           </AsymAccent>
         </AsymSide>
@@ -173,19 +156,8 @@ export const CodeChefPage: React.FC = () => {
           )}
         </MasonryGrid>
       )}
-
-      <CodeChefVerifyModal
-        isOpen={verifyModalOpen}
-        onClose={() => setVerifyModalOpen(false)}
-        verifyCode={status.verifyCode}
-        handle={status.handle}
-        onVerify={verify}
-        verifying={verifying}
-        error={actionError}
-      />
     </div>
   );
 };
 
 export default CodeChefPage;
-

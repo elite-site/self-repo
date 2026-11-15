@@ -1,12 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import fs from 'fs';
 import path from 'path';
-import { computeCodeChefStars, generateVerificationCode, CODECHEF_HANDLE_REGEX, extractCodeChefHandle } from '../src/modules/codechef/codechef.constants';
+import { computeCodeChefStars, CODECHEF_HANDLE_REGEX, extractCodeChefHandle } from '../src/modules/codechef/codechef.constants';
 import { parseConnectBody, parseVisibilityBody, parseAdminFilterQuery } from '../src/modules/codechef/codechef.schemas';
 import * as service from '../src/modules/codechef/codechef.service';
 import * as repo from '../src/modules/codechef/codechef.repository';
 import * as syncService from '../src/modules/codechef/services/codechef.sync.service';
-import { codeChefClient } from '../src/infrastructure/codechef.client';
 
 describe('CodeChef Constants & Star Ratings', () => {
   it('correctly validates handles with regex', () => {
@@ -36,11 +35,6 @@ describe('CodeChef Constants & Star Ratings', () => {
     expect(computeCodeChefStars(2499)).toBe(6);
     expect(computeCodeChefStars(2500)).toBe(7); // 7★ >= 2500
     expect(computeCodeChefStars(3355)).toBe(7);
-  });
-
-  it('generates verification codes prefixed with ELITE-', () => {
-    const code = generateVerificationCode();
-    expect(code).toMatch(/^ELITE-[2-9A-Z]{6}$/);
   });
 
   it('extracts CodeChef handle from diverse URL formats and usernames', () => {
@@ -147,7 +141,6 @@ describe('CodeChef Service Business Logic', () => {
       return { id: 'acc_auto' } as any;
     });
     const updateProfileSpy = vi.spyOn(repo, 'updateProfileCodeChefUrl').mockResolvedValue({} as any);
-    vi.spyOn(codeChefClient, 'fetchProfile').mockResolvedValue(null);
 
     const status = await service.getStatus('stud_123');
     expect(upsertAccountSpy).toHaveBeenCalledWith('stud_123', 'auto_chef', expect.any(Object));
@@ -169,23 +162,10 @@ describe('CodeChef Service Business Logic', () => {
     );
   });
 
-  it('auto-verifies if student GitHub login matches CodeChef social.github and updates profile link', async () => {
+  it('connects and immediately marks account as verified, syncing profile link', async () => {
     vi.spyOn(repo, 'findAccountByHandle').mockResolvedValue(null);
-    vi.spyOn(repo, 'upsertAccount').mockResolvedValue({ id: 'acc_1' } as any);
+    const upsertSpy = vi.spyOn(repo, 'upsertAccount').mockResolvedValue({ id: 'acc_1' } as any);
     const updateProfileSpy = vi.spyOn(repo, 'updateProfileCodeChefUrl').mockResolvedValue({} as any);
-    vi.spyOn(codeChefClient, 'fetchProfile').mockResolvedValue({
-      displayName: 'Dev',
-      username: 'dev_user',
-      avatar: null,
-      country: null,
-      countryFlag: null,
-      institution: null,
-      company: null,
-      bio: null,
-      websites: [],
-      social: { github: 'github_candidate', twitter: null, linkedin: null },
-      verified: false,
-    });
     vi.spyOn(repo, 'findAccountByStudentId').mockResolvedValue({
       id: 'acc_1',
       studentId: 'stud_1',
@@ -193,14 +173,17 @@ describe('CodeChef Service Business Logic', () => {
       verified: true,
       status: 'CONNECTED',
       showPublic: false,
-      student: { name: 'Dev', rollNo: '21A91A0501', githubAccount: { login: 'github_candidate' } },
+      student: { name: 'Dev', rollNo: '21A91A0501' },
     } as any);
-    const updateSpy = vi.spyOn(repo, 'updateAccount').mockResolvedValue({} as any);
 
     const result = await service.connect('stud_1', 'dev_user');
+    expect(upsertSpy).toHaveBeenCalledWith('stud_1', 'dev_user', expect.objectContaining({
+      verified: true,
+      verifyCode: null,
+    }));
     expect(updateProfileSpy).toHaveBeenCalledWith('stud_1', 'https://www.codechef.com/users/dev_user');
-    expect(updateSpy).toHaveBeenCalledWith('acc_1', expect.objectContaining({ verified: true }));
     expect(result.connected).toBe(true);
+    expect(result.verified).toBe(true);
   });
 
   it('clears student profile link on disconnect', async () => {
@@ -215,52 +198,6 @@ describe('CodeChef Service Business Logic', () => {
     expect(res.success).toBe(true);
     expect(deleteSpy).toHaveBeenCalledWith('stud_1');
     expect(updateProfileSpy).toHaveBeenCalledWith('stud_1', null);
-  });
-
-  it('verifies ownership when code is present in CodeChef bio', async () => {
-    vi.spyOn(repo, 'findAccountByStudentId').mockResolvedValue({
-      id: 'acc_1',
-      studentId: 'stud_1',
-      handle: 'codechef_user',
-      verified: false,
-      verifyCode: 'ELITE-9X2K7Q',
-      verifyCodeExpiresAt: new Date(Date.now() + 100000),
-      student: { githubAccount: null },
-    } as any);
-
-    vi.spyOn(codeChefClient, 'fetchProfile').mockResolvedValue({
-      displayName: 'CodeChef User',
-      username: 'codechef_user',
-      avatar: null,
-      country: null,
-      countryFlag: null,
-      institution: null,
-      company: null,
-      bio: 'Solving problems. Verification code: ELITE-9X2K7Q',
-      websites: [],
-      social: { github: null, twitter: null, linkedin: null },
-      verified: false,
-    });
-
-    const updateSpy = vi.spyOn(repo, 'updateAccount').mockResolvedValue({} as any);
-    const res = await service.verify('stud_1');
-    expect(res.verified).toBe(true);
-    expect(updateSpy).toHaveBeenCalledWith('acc_1', expect.objectContaining({ verified: true }));
-  });
-
-  it('rejects verification if code has expired and regenerates a new one', async () => {
-    vi.spyOn(repo, 'findAccountByStudentId').mockResolvedValue({
-      id: 'acc_1',
-      studentId: 'stud_1',
-      handle: 'codechef_user',
-      verified: false,
-      verifyCode: 'ELITE-OLD123',
-      verifyCodeExpiresAt: new Date(Date.now() - 10000), // expired
-    } as any);
-
-    const updateSpy = vi.spyOn(repo, 'updateAccount').mockResolvedValue({} as any);
-    await expect(service.verify('stud_1')).rejects.toThrow('Verification code expired');
-    expect(updateSpy).toHaveBeenCalledWith('acc_1', expect.objectContaining({ verifyCode: expect.stringMatching(/^ELITE-/) }));
   });
 
   it('enforces sync cooldown of 15 minutes', async () => {
