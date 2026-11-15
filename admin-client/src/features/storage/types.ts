@@ -27,3 +27,35 @@ export interface StorageStatsResponse {
     database: string;
   };
 }
+
+export type VideoCacheStatus = 'READY' | 'COPYING' | 'FAILED';
+
+export interface VideoCacheEntry {
+  id: string;
+  status: VideoCacheStatus;
+  sizeMb: number | null;
+  lastAccessedAt: string;
+  activeLeaseCount: number;
+  failReason: string | null;
+  createdAt: string;
+}
+
+export interface VideoCacheResponse {
+  entries: VideoCacheEntry[];
+  totals: {
+    usedBytes: string;
+    maxBytes: string;
+    counts: {
+      ready: number;
+      copying: number;
+      failed: number;
+      total: number;
+    };
+  };
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}

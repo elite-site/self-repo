@@ -19,6 +19,7 @@ import { learningApi } from '../api';
 import {
   YouTubePlayer,
   YouTubePlayerHandle,
+  VideoLessonPlayer,
   TranscriptViewer,
   NotesView,
   QuizView,
@@ -130,8 +131,15 @@ export const LessonPlayerPage: React.FC = () => {
   }, [lesson, activeTab, isTranscriptLoading, transcriptData]);
 
   const handleProgress = useCallback(
-    (seconds: number, completed: boolean) => {
+    (
+      secondsOrProgress: number | { secondsWatched: number; maxPositionSec?: number; completed?: boolean },
+      completedArg?: boolean,
+    ) => {
       if (!lesson) return;
+      const seconds = typeof secondsOrProgress === 'number' ? secondsOrProgress : secondsOrProgress.secondsWatched;
+      const maxPos = typeof secondsOrProgress === 'number' ? secondsOrProgress : (secondsOrProgress.maxPositionSec ?? seconds);
+      const completed = typeof secondsOrProgress === 'number' ? Boolean(completedArg) : Boolean(secondsOrProgress.completed);
+
       if (completed && !lesson.progress.completed) {
         void celebrate('success');
       }
@@ -139,7 +147,7 @@ export const LessonPlayerPage: React.FC = () => {
         lessonId: lesson.id,
         data: {
           secondsWatched: seconds,
-          maxPositionSec: seconds,
+          maxPositionSec: maxPos,
           completed,
         },
       });
@@ -261,6 +269,20 @@ export const LessonPlayerPage: React.FC = () => {
 
   const renderPlayerOrContent = () => (
     <div className="overflow-hidden rounded-xl bg-surface">
+      {lesson.type === 'VIDEO' && (
+        <VideoLessonPlayer
+          lessonId={lesson.id}
+          initialSeconds={lesson.progress.secondsWatched}
+          maxPositionSec={lesson.progress.maxPositionSec}
+          durationSec={lesson.durationSec}
+          onProgress={handleProgress}
+          onTimeUpdate={setCurrentTime}
+          isTheater={isTheater}
+          onToggleTheater={() => setIsTheater((prev) => !prev)}
+          nextLessonTitle={nextLessonSummary?.title}
+          onNextLesson={lesson.nextLessonId ? handleGoNext : undefined}
+        />
+      )}
       {lesson.type === 'YOUTUBE' && lesson.youtubeVideoId && (
         <YouTubePlayer
           videoId={lesson.youtubeVideoId}
@@ -315,7 +337,7 @@ export const LessonPlayerPage: React.FC = () => {
           <span>Back to {lesson.courseTitle}</span>
         </Link>
 
-        {lesson.type === 'YOUTUBE' && (
+        {(lesson.type === 'YOUTUBE' || lesson.type === 'VIDEO') && (
           <Button
             variant="ghost"
             size="sm"

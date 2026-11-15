@@ -4,3 +4,4 @@ export * from './useCourseDetail';
 export * from './useLesson';
 export * from './useQuiz';
 export * from './useLessonShortcuts';
+export * from './usePlayback';

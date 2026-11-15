@@ -45,7 +45,7 @@ const LessonPlayerPage = lazy(() => import('@/features/learning/pages/LessonPlay
 const MyLearningPage = lazy(() => import('@/features/learning/pages/MyLearningPage'));
 
 const isLearningHubEnabled = import.meta.env.VITE_FEATURE_LEARNINGHUB !== 'false';
-const isCodeChefEnabled = import.meta.env.VITE_FEATURE_CODECHEF === 'true';
+const isCodeChefEnabled = import.meta.env.VITE_FEATURE_CODECHEF !== 'false';
 
 const RouteLoadingFallback: React.FC = () => (
   <div className="min-h-[100dvh] bg-surface-canvas px-4 py-8 sm:px-6 sm:py-10">

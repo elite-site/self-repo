@@ -1,7 +1,7 @@
 export type CourseLevel = 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
 export type CourseStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
 export type EnrolmentType = 'OPEN' | 'ASSIGNED_ONLY';
-export type LessonType = 'YOUTUBE' | 'LINK' | 'NOTES' | 'QUIZ';
+export type LessonType = 'YOUTUBE' | 'LINK' | 'NOTES' | 'QUIZ' | 'VIDEO';
 export type TargetType = 'ALL' | 'STUDENT' | 'BATCH';
 export type EnrollmentSource = 'SELF' | 'ASSIGNED';
 export type EnrollmentStatus = 'ACTIVE' | 'COMPLETED';
@@ -177,4 +177,21 @@ export interface LessonTranscriptResponse {
   language?: string;
   segments: TranscriptSegment[];
   message?: string;
+}
+
+export type PlaybackStatus = 'PREPARING' | 'READY';
+export interface PlaybackPreparingResponse {
+  status: 'PREPARING';
+  retryAfterSec: number;
+}
+export interface PlaybackReadyResponse {
+  status: 'READY';
+  url: string;
+  expiresAt: string;
+  leaseId: string;
+}
+export type PlaybackResponse = PlaybackPreparingResponse | PlaybackReadyResponse;
+export interface PlaybackHeartbeatResponse {
+  url: string;
+  expiresAt: string;
 }

@@ -23,6 +23,7 @@ import { LessonType } from '../types';
 
 const TYPE_ICONS: Record<LessonType, React.ComponentType<{ className?: string }>> = {
   YOUTUBE: Play,
+  VIDEO: Play,
   NOTES: FileText,
   QUIZ: HelpCircle,
   LINK: ExternalLink,

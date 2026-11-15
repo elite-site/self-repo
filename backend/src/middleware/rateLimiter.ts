@@ -101,6 +101,23 @@ export const resourceDownloadRateLimiter = rateLimit({
   },
 });
 
+/**
+ * Video playback request and heartbeat limiter.
+ * Allows regular playback and heartbeats while guarding against presigned URL flooding.
+ * 60 requests per minute per authenticated student.
+ */
+export const videoPlaybackRateLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => getClientIdentity(req),
+  message: {
+    error: 'TOO_MANY_REQUESTS',
+    message: 'Too many video playback requests. Please wait a moment before trying again.',
+  },
+});
+
 // Admin login: strict brute-force guard
 export const adminLoginRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,

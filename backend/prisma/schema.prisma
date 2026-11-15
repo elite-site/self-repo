@@ -389,6 +389,9 @@ model Student {
   // CodeChef integration
   codechefAccount            CodeChefAccount?
 
+  // Video cache leases
+  videoLeases                VideoLease[]
+
   @@index([name])
   @@index([section, year])
   @@index([status, year, section])
@@ -1153,6 +1156,13 @@ enum LessonType {
   LINK
   NOTES
   QUIZ
+  VIDEO
+}
+
+enum VideoCacheStatus {
+  COPYING
+  READY
+  FAILED
 }
 
 enum CourseTargetType {
@@ -1226,6 +1236,9 @@ model Lesson {
   url            String?
   notes          String?          @db.Text
   durationSec    Int?
+  // Drive file ID for VIDEO-type lessons — server-side only, never exposed to clients (SEC-4)
+  driveFileId    String?
+  videoCache     VideoCache?      @relation(fields: [driveFileId], references: [driveFileId])
 
   quiz           Quiz?
   progress       LessonProgress[]
@@ -1434,5 +1447,43 @@ model CodeChefSyncLog {
   @@index([accountId, startedAt])
 }
 
+// ============================================================
+// VIDEO CACHE (Drive → Cloudflare R2)
+// ============================================================
 
+model VideoCache {
+  id              String           @id @default(cuid())
+  driveFileId     String           @unique
+  r2Key           String           @unique
+  status          VideoCacheStatus @default(COPYING)
+  sizeBytes       BigInt?
+  md5             String?
+  claimedAt       DateTime?
+  lastAccessedAt  DateTime         @default(now())
+  lastUrlIssuedAt DateTime?
+  failReason      String?
+  copyAttempts    Int              @default(0)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  lessons Lesson[]
+  leases  VideoLease[]
+
+  @@index([status, lastAccessedAt])
+}
+
+model VideoLease {
+  id        String     @id @default(cuid())
+  cacheId   String
+  cache     VideoCache @relation(fields: [cacheId], references: [id], onDelete: Cascade)
+  studentId String
+  student   Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  lessonId  String
+  expiresAt DateTime
+  createdAt DateTime   @default(now())
+
+  @@unique([studentId, lessonId])
+  @@index([cacheId])
+  @@index([expiresAt])
+}
 

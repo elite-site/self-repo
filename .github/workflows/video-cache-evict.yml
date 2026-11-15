@@ -1,0 +1,34 @@
+name: Video Cache Eviction
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+    inputs:
+      backend_url:
+        description: Override BACKEND_URL
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: video-cache-evict
+  cancel-in-progress: false
+
+jobs:
+  evict:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      BACKEND_URL: ${{ inputs.backend_url || vars.BACKEND_URL || vars.API_URL }}
+      INTERNAL_SYNC_SECRET: ${{ secrets.INTERNAL_SYNC_SECRET }}
+    steps:
+      - name: Trigger Video Cache Eviction
+        run: |
+          test -n "$BACKEND_URL" || { echo "::error::Set repo variable BACKEND_URL or API_URL"; exit 1; }
+          test -n "$INTERNAL_SYNC_SECRET" || { echo "::error::Set repo secret INTERNAL_SYNC_SECRET"; exit 1; }
+          curl --fail --silent --show-error --max-time 60 \
+            -X POST "$BACKEND_URL/api/internal/video-cache/evict" \
+            -H "Authorization: Bearer $INTERNAL_SYNC_SECRET" \
+            -H "Content-Type: application/json"

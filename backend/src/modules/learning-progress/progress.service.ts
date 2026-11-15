@@ -1,9 +1,43 @@
 import { progressRepository, ProgressRepository } from './progress.repository';
-import { NotFoundError, ForbiddenError } from '../../utils/appError';
-import { EnrollmentStatus, CourseStatus, EnrolmentType, LessonType } from '@prisma/client';
-import { LessonProgressPayload, LessonDetailResponse, MyLearningResponse, StudentDeadlineItem } from './progress.types';
+import { NotFoundError, ForbiddenError, ValidationError } from '../../utils/appError';
+import { EnrollmentStatus, CourseStatus, EnrolmentType, LessonType, Enrollment } from '@prisma/client';
+import {
+  LessonProgressPayload,
+  LessonDetailResponse,
+  MyLearningResponse,
+  StudentDeadlineItem,
+  LessonWithCourse,
+  LessonPlaybackResponse,
+  PlaybackHeartbeatResponse,
+  PlaybackReleaseResponse,
+} from './progress.types';
 import { mapCourseCard } from '../learning-courses/courses.mappers';
 import { TtlCache } from '../../utils/ttlCache';
+import { cacheService } from '../video-cache';
+import { r2Adapter } from '../../infrastructure/r2';
+import { env } from '../../config/env';
+
+/**
+ * Access check helper: validates that lesson exists, course is published,
+ * and if course is ASSIGNED_ONLY, student is enrolled.
+ */
+export async function assertLessonAccess(
+  lessonId: string,
+  studentId: string,
+  repo: ProgressRepository = progressRepository,
+): Promise<{ lesson: LessonWithCourse; enrollment: Enrollment | null }> {
+  const lesson = await repo.findLessonWithCourse(lessonId);
+  if (!lesson || lesson.course.status === CourseStatus.DRAFT) {
+    throw new NotFoundError('Lesson not found');
+  }
+
+  const enrollment = await repo.findEnrollment(studentId, lesson.course.id);
+  if (!enrollment && lesson.course.enrolment === EnrolmentType.ASSIGNED_ONLY) {
+    throw new ForbiddenError('You are not enrolled in this course');
+  }
+
+  return { lesson, enrollment };
+}
 
 export class ProgressService {
   private readonly lessonMetadataCache = new TtlCache<{
@@ -22,19 +56,20 @@ export class ProgressService {
     this.courseProgressCache.clear();
   }
 
-  async getLessonDetail(lessonId: string, studentId: string): Promise<LessonDetailResponse> {
-    const lesson = await this.repo.findLessonWithCourse(lessonId);
-    if (!lesson || lesson.course.status === CourseStatus.DRAFT) throw new NotFoundError('Lesson not found');
+  async assertLessonAccess(
+    lessonId: string,
+    studentId: string,
+  ): Promise<{ lesson: LessonWithCourse; enrollment: Enrollment | null }> {
+    return assertLessonAccess(lessonId, studentId, this.repo);
+  }
 
-    const [enrollment, courseLessons, initialProgress] = await Promise.all([
-      this.repo.findEnrollment(studentId, lesson.course.id),
+  async getLessonDetail(lessonId: string, studentId: string): Promise<LessonDetailResponse> {
+    const { lesson, enrollment } = await this.assertLessonAccess(lessonId, studentId);
+
+    const [courseLessons, initialProgress] = await Promise.all([
       this.repo.findCourseLessons(lesson.course.id),
       this.repo.findLessonProgress(studentId, lessonId),
     ]);
-
-    if (!enrollment && lesson.course.enrolment === EnrolmentType.ASSIGNED_ONLY) {
-      throw new ForbiddenError('You are not enrolled in this course');
-    }
 
     const currentIndex = courseLessons.findIndex((l) => l.id === lessonId);
     const prevLessonId = currentIndex > 0 ? courseLessons[currentIndex - 1].id : null;
@@ -81,6 +116,7 @@ export class ProgressService {
       durationSec: lesson.durationSec,
       youtubeVideoId: lesson.youtubeVideoId,
       url: lesson.url,
+      hasVideo: Boolean((lesson as any).driveFileId),
       notes: lesson.notes,
       quizId: lesson.quiz?.id || null,
       nextLessonId,
@@ -109,7 +145,7 @@ export class ProgressService {
     const maxPositionSec = Math.max(existing?.maxPositionSec || 0, payload.maxPositionSec);
 
     const isVideoComplete =
-      lesson.type === 'YOUTUBE' &&
+      (lesson.type === 'YOUTUBE' || lesson.type === 'VIDEO') &&
       !!lesson.durationSec &&
       lesson.durationSec > 0 &&
       secondsWatched / lesson.durationSec >= 0.9;
@@ -251,6 +287,89 @@ export class ProgressService {
 
     deadlines.sort((a, b) => new Date(a.dueAt).getTime() - new Date(b.dueAt).getTime());
     return { inProgress, completed, deadlines };
+  }
+
+  /**
+   * Request video playback.
+   * Ensures the video is cached in R2, creates/renews a VideoLease,
+   * generates a presigned R2 GET URL, and touches lastUrlIssuedAt.
+   */
+  async getLessonPlayback(
+    lessonId: string,
+    studentId: string,
+  ): Promise<LessonPlaybackResponse> {
+    const { lesson } = await this.assertLessonAccess(lessonId, studentId);
+
+    if (lesson.type !== 'VIDEO' || !lesson.driveFileId) {
+      throw new ValidationError('Lesson is not a hosted video');
+    }
+
+    const cached = await cacheService.ensureCached(lesson.driveFileId);
+    if (cached.status === 'PREPARING') {
+      return { status: 'PREPARING', retryAfterSec: 3 };
+    }
+
+    const videoCache = await cacheService.findByDriveFileId(lesson.driveFileId);
+    if (!videoCache) {
+      return { status: 'PREPARING', retryAfterSec: 3 };
+    }
+
+    const now = Date.now();
+    const expiresAt = new Date(now + env.VIDEO_LEASE_TTL_SEC * 1000);
+
+    const lease = await cacheService.upsertLease({
+      studentId,
+      lessonId,
+      cacheId: videoCache.id,
+      expiresAt,
+    });
+
+    await cacheService.touchUrlIssued(videoCache.id);
+
+    const url = await r2Adapter.presignGet(videoCache.r2Key, env.VIDEO_URL_TTL_SEC);
+
+    return {
+      status: 'READY',
+      url,
+      expiresAt: lease.expiresAt.toISOString(),
+      leaseId: lease.id,
+    };
+  }
+
+  /**
+   * Playback heartbeat: extends active lease and issues fresh presigned URL.
+   */
+  async heartbeatPlayback(
+    lessonId: string,
+    studentId: string,
+  ): Promise<PlaybackHeartbeatResponse> {
+    const lease = await cacheService.findActiveLease(studentId, lessonId);
+    if (!lease || lease.expiresAt <= new Date()) {
+      throw new NotFoundError('Active playback lease not found');
+    }
+
+    const expiresAt = new Date(Date.now() + env.VIDEO_LEASE_TTL_SEC * 1000);
+    const updated = await cacheService.extendLease(lease.id, expiresAt);
+
+    await cacheService.touchUrlIssued(updated.cacheId);
+
+    const url = await r2Adapter.presignGet(updated.cache.r2Key, env.VIDEO_URL_TTL_SEC);
+
+    return {
+      url,
+      expiresAt: updated.expiresAt.toISOString(),
+    };
+  }
+
+  /**
+   * Release playback lease (on unload/stop or sendBeacon).
+   */
+  async releasePlayback(
+    lessonId: string,
+    studentId: string,
+  ): Promise<PlaybackReleaseResponse> {
+    await cacheService.deleteLease(studentId, lessonId);
+    return { released: true };
   }
 }
 

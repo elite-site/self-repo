@@ -2,6 +2,7 @@ import React from 'react';
 import { HardDrive, RefreshCw, CheckCircle, AlertCircle, Database } from 'lucide-react';
 import { useStorage } from '../hooks/useStorage';
 import { DriveConnectorCard } from '../components/DriveConnectorCard';
+import { VideoCacheCard } from '../components/VideoCacheCard';
 import { MediaInventoryGrid } from '../components/MediaInventoryGrid';
 import { CacheDirectoryTable } from '../components/CacheDirectoryTable';
 
@@ -104,6 +105,9 @@ export const StoragePage: React.FC = () => {
         onSyncPermissions={handleSyncPermissions}
         onClearCache={handleClearCache}
       />
+
+      {/* Cloudflare R2 Video Cache Card */}
+      <VideoCacheCard />
 
       {/* Media Inventory Grid */}
       <MediaInventoryGrid inventory={inventory} />

@@ -1,7 +1,7 @@
 export type CourseLevel = 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
 export type CourseStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
 export type EnrolmentType = 'OPEN' | 'ASSIGNED_ONLY';
-export type LessonType = 'YOUTUBE' | 'LINK' | 'NOTES' | 'QUIZ';
+export type LessonType = 'YOUTUBE' | 'LINK' | 'NOTES' | 'QUIZ' | 'VIDEO';
 export type TargetType = 'ALL' | 'STUDENT' | 'BATCH';
 export type EnrollmentSource = 'SELF' | 'ASSIGNED';
 export type EnrollmentStatus = 'ACTIVE' | 'COMPLETED';

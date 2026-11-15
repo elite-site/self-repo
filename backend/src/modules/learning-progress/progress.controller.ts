@@ -17,3 +17,18 @@ export async function getMyLearning(req: Request, res: Response) {
   const result = await progressService.getMyLearning(req.student!.studentId);
   res.json(result);
 }
+
+export async function getLessonPlayback(req: Request, res: Response) {
+  const result = await progressService.getLessonPlayback(req.params.id, req.student!.studentId);
+  res.json(result);
+}
+
+export async function heartbeatLessonPlayback(req: Request, res: Response) {
+  const result = await progressService.heartbeatPlayback(req.params.id, req.student!.studentId);
+  res.json(result);
+}
+
+export async function releaseLessonPlayback(req: Request, res: Response) {
+  const result = await progressService.releasePlayback(req.params.id, req.student!.studentId);
+  res.json(result);
+}

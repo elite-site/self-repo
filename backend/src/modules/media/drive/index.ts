@@ -8,10 +8,39 @@ import * as mediaFns from './media';
 import * as cleanupFns from './cleanup';
 import { getStorageQuota, DriveStorageQuota } from './quota';
 import { DriveStreamResult, parseContentRangeHeader } from './stream';
+import { getFileStream, DriveFileStreamResult } from './fileStream';
 
 export * from './types';
-export { DriveStreamResult, parseContentRangeHeader };
+export { DriveStreamResult, parseContentRangeHeader, DriveFileStreamResult, getFileStream };
 export type { DriveStorageQuota };
+
+/**
+ * Extracts a Google Drive file ID from a URL or raw file ID string.
+ * Supports:
+ * - https://drive.google.com/file/d/<fileId>/...
+ * - https://drive.google.com/open?id=<fileId>
+ * - https://drive.google.com/uc?id=<fileId>...
+ * - Plain file ID string
+ */
+export function extractDriveFileId(input?: string | null): string | null {
+  if (!input || typeof input !== 'string') return null;
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+
+  const urlMatch =
+    trimmed.match(/\/file\/d\/([a-zA-Z0-9_-]+)/i) ||
+    trimmed.match(/[?&]id=([a-zA-Z0-9_-]+)/i);
+
+  if (urlMatch && urlMatch[1]) {
+    return urlMatch[1];
+  }
+
+  if (!trimmed.includes('/') && !trimmed.includes('?') && !trimmed.includes(':') && /^[a-zA-Z0-9_-]+$/.test(trimmed)) {
+    return trimmed;
+  }
+
+  return null;
+}
 
 export class DriveService {
   private ctx: DriveContext;
@@ -73,6 +102,42 @@ export class DriveService {
 
   public async checkFileExists(fileId?: string | null, relativePath?: string): Promise<boolean> {
     return mediaFns.checkFileExists(this.ctx, fileId, relativePath);
+  }
+
+  public async getFileMetadata(fileId: string): Promise<{
+    id: string;
+    mimeType: string;
+    sizeBytes: number;
+    name?: string;
+  } | null> {
+    if (!fileId || typeof fileId !== 'string') return null;
+    if (this.ctx.isMock || !this.ctx.drive || fileId.startsWith('mock_')) {
+      return {
+        id: fileId,
+        mimeType: 'video/mp4',
+        sizeBytes: 1024 * 1024,
+        name: `${fileId}.mp4`,
+      };
+    }
+    try {
+      const res = await this.ctx.drive.files.get({
+        fileId,
+        supportsAllDrives: true,
+        fields: 'id,mimeType,size,name,trashed',
+      });
+      const data = res.data;
+      if (!data || !data.id || data.trashed) {
+        return null;
+      }
+      return {
+        id: data.id,
+        mimeType: data.mimeType || 'application/octet-stream',
+        sizeBytes: data.size ? parseInt(data.size, 10) : 0,
+        name: data.name || undefined,
+      };
+    } catch {
+      return null;
+    }
   }
 
   // Permissions
@@ -173,6 +238,15 @@ export class DriveService {
   }
 
   // Streaming & Thumbnail
+  public async getFileStream(fileId: string): Promise<{
+    stream: Readable;
+    mimeType: string;
+    sizeBytes: number;
+    md5Checksum: string | null;
+  }> {
+    return getFileStream(this.ctx, fileId);
+  }
+
   public async streamDriveFile(
     fileId: string,
     relativePath?: string,

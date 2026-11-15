@@ -40,6 +40,7 @@ export function mapCourseDetail(course: any, enrollment: any, progressList: any[
     order: l.order,
     type: l.type,
     durationSec: l.durationSec,
+    hasVideo: Boolean(l.driveFileId),
     completed: progressMap.get(l.id)?.completed || false,
     secondsWatched: progressMap.get(l.id)?.secondsWatched || 0,
   }));

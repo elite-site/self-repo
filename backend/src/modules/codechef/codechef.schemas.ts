@@ -1,5 +1,5 @@
 import { AppError } from '../../utils/appError';
-import { CODECHEF_HANDLE_REGEX, CODECHEF_LIMITS } from './codechef.constants';
+import { CODECHEF_HANDLE_REGEX, CODECHEF_LIMITS, extractCodeChefHandle } from './codechef.constants';
 import type { AdminCodeChefFilterParams } from './codechef.types';
 
 export function parseConnectBody(body: unknown): { handle: string } {
@@ -10,7 +10,8 @@ export function parseConnectBody(body: unknown): { handle: string } {
   if (!rawHandle || typeof rawHandle !== 'string') {
     throw new AppError('VALIDATION_ERROR', 'Handle is required and must be a string', 400);
   }
-  const handle = rawHandle.trim();
+  const clean = rawHandle.trim();
+  const handle = extractCodeChefHandle(clean) || clean;
   if (handle.length < 3 || handle.length > 30) {
     throw new AppError('VALIDATION_ERROR', 'Handle must be between 3 and 30 characters', 400);
   }

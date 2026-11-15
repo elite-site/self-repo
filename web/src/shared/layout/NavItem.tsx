@@ -26,7 +26,7 @@ import { selectVariantsByName, transitionTabSpring } from '@/shared/lib/motion';
 import { prefetchRoute } from '@/shared/utils/prefetch';
 
 const isLearningHubEnabled = import.meta.env.VITE_FEATURE_LEARNINGHUB !== 'false';
-const isCodeChefEnabled = import.meta.env.VITE_FEATURE_CODECHEF === 'true';
+const isCodeChefEnabled = import.meta.env.VITE_FEATURE_CODECHEF !== 'false';
 
 // ============================================================================
 // Navigation vocabulary

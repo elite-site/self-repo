@@ -115,4 +115,49 @@ describe('useLessonShortcuts hook', () => {
 
     expect(onNext).not.toHaveBeenCalled();
   });
+
+  it('triggers player shortcuts: play/pause, seek, mute, fullscreen', () => {
+    const onPlayPause = vi.fn();
+    const onSeek = vi.fn();
+    const onToggleMute = vi.fn();
+    const onToggleFullscreen = vi.fn();
+
+    renderHook(() =>
+      useLessonShortcuts({
+        onPlayPause,
+        onSeek,
+        onToggleMute,
+        onToggleFullscreen,
+      }),
+    );
+
+    // Space / k for play/pause
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true }));
+    expect(onPlayPause).toHaveBeenCalledTimes(1);
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', bubbles: true, cancelable: true }));
+    expect(onPlayPause).toHaveBeenCalledTimes(2);
+
+    // ArrowLeft / j for seek -5s
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, cancelable: true }));
+    expect(onSeek).toHaveBeenCalledWith(-5);
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'j', bubbles: true, cancelable: true }));
+    expect(onSeek).toHaveBeenCalledWith(-5);
+
+    // ArrowRight / l for seek +5s
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+    expect(onSeek).toHaveBeenCalledWith(5);
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'l', bubbles: true, cancelable: true }));
+    expect(onSeek).toHaveBeenCalledWith(5);
+
+    // m for mute
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'm', bubbles: true, cancelable: true }));
+    expect(onToggleMute).toHaveBeenCalledTimes(1);
+
+    // f for fullscreen
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'f', bubbles: true, cancelable: true }));
+    expect(onToggleFullscreen).toHaveBeenCalledTimes(1);
+  });
 });

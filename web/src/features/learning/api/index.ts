@@ -7,6 +7,8 @@ import {
   QuizDetailResponse,
   QuizAttemptResult,
   LessonTranscriptResponse,
+  PlaybackResponse,
+  PlaybackHeartbeatResponse,
 } from '../types';
 import {
   mockHomeFeed,
@@ -140,6 +142,36 @@ export const learningApi = {
   async getLessonTranscript(lessonId: string): Promise<LessonTranscriptResponse> {
     if (isMock()) return mockTranscript;
     const res = await client.get(`/student/learning/lessons/${lessonId}/transcript`);
+    return res.data;
+  },
+
+  async getPlayback(lessonId: string): Promise<PlaybackResponse> {
+    if (isMock()) {
+      return {
+        status: 'READY',
+        url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+        expiresAt: new Date(Date.now() + 300_000).toISOString(),
+        leaseId: 'mock-lease-1',
+      };
+    }
+    const res = await client.post(`/student/learning/lessons/${lessonId}/playback`);
+    return res.data;
+  },
+
+  async heartbeatPlayback(lessonId: string): Promise<PlaybackHeartbeatResponse> {
+    if (isMock()) {
+      return {
+        url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+        expiresAt: new Date(Date.now() + 300_000).toISOString(),
+      };
+    }
+    const res = await client.post(`/student/learning/lessons/${lessonId}/playback/heartbeat`);
+    return res.data;
+  },
+
+  async releasePlayback(lessonId: string): Promise<{ released: boolean }> {
+    if (isMock()) return { released: true };
+    const res = await client.delete(`/student/learning/lessons/${lessonId}/playback`);
     return res.data;
   },
 };

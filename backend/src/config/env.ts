@@ -104,11 +104,32 @@ export const env = {
   GITHUB_SYNC_DAILY_CAP: parseInt(process.env.GITHUB_SYNC_DAILY_CAP || '5', 10),
   FEATURE_GITHUB_PORTFOLIO: process.env.FEATURE_GITHUB_PORTFOLIO === 'true',
   FEATURE_LEARNINGHUB: process.env.FEATURE_LEARNINGHUB !== 'false',
-  FEATURE_CODECHEF: process.env.FEATURE_CODECHEF === 'true',
+  FEATURE_CODECHEF: process.env.FEATURE_CODECHEF !== 'false',
   CODECHEF_STATS_BASE_URL: process.env.CODECHEF_STATS_BASE_URL || 'https://codechef-stats.tashif.codes',
   CODECHEF_SYNC_COOLDOWN_MIN: parseInt(process.env.CODECHEF_SYNC_COOLDOWN_MIN || '15', 10),
   CODECHEF_SYNC_DAILY_CAP: parseInt(process.env.CODECHEF_SYNC_DAILY_CAP || '10', 10),
   INTERNAL_SYNC_SECRET: process.env.INTERNAL_SYNC_SECRET || '',
+
+  // ── Video cache (Drive → Cloudflare R2) ──────────────────────────────────
+  // Feature gate — all R2 config is ignored when false (default)
+  FEATURE_VIDEO_CACHE: process.env.FEATURE_VIDEO_CACHE === 'true',
+
+  // R2 credentials — required only when FEATURE_VIDEO_CACHE is true
+  R2_ACCOUNT_ID: process.env.R2_ACCOUNT_ID || '',
+  R2_ACCESS_KEY_ID: process.env.R2_ACCESS_KEY_ID || '',
+  R2_SECRET_ACCESS_KEY: process.env.R2_SECRET_ACCESS_KEY || '',
+  R2_BUCKET: process.env.R2_BUCKET || '',
+  R2_ENDPOINT: process.env.R2_ENDPOINT || '',
+  R2_REGION: process.env.R2_REGION || 'auto',
+
+  // Tuning knobs with safe production defaults
+  VIDEO_CACHE_MAX_BYTES: BigInt(process.env.VIDEO_CACHE_MAX_BYTES || String(9 * 1024 * 1024 * 1024)),
+  VIDEO_CACHE_IDLE_HOURS: parseInt(process.env.VIDEO_CACHE_IDLE_HOURS || '6', 10),
+  VIDEO_CACHE_MAX_IDLE_HOURS: parseInt(process.env.VIDEO_CACHE_MAX_IDLE_HOURS || '24', 10),
+  VIDEO_LEASE_TTL_SEC: parseInt(process.env.VIDEO_LEASE_TTL_SEC || '180', 10),
+  VIDEO_URL_TTL_SEC: parseInt(process.env.VIDEO_URL_TTL_SEC || '600', 10),
+  VIDEO_COPY_CONCURRENCY: parseInt(process.env.VIDEO_COPY_CONCURRENCY || '2', 10),
+  VIDEO_MAX_FILE_MB: parseInt(process.env.VIDEO_MAX_FILE_MB || '1024', 10),
 
   // Operational toggles & limits
   AUTO_MIGRATE_PENDING: process.env.AUTO_MIGRATE_PENDING === 'true',
@@ -195,6 +216,27 @@ if (nodeEnv === 'production') {
       `⚠️ [ENV WARNING] Still using default values for: ${seedOnlyWarnings.join(', ')}. ` +
         `These are only used by seed/import scripts, not at runtime, but set them ` +
         `before re-seeding the database.`,
+    );
+  }
+}
+
+// Conditional validation: R2 credentials are required when video cache is enabled.
+// Checked outside the production block so misconfiguration is caught in any environment.
+if (process.env.FEATURE_VIDEO_CACHE === 'true') {
+  const endpointProvided = Boolean(process.env.R2_ENDPOINT);
+  const requiredVars = [
+    ...(endpointProvided ? [] : ['R2_ACCOUNT_ID']),
+    'R2_ACCESS_KEY_ID',
+    'R2_SECRET_ACCESS_KEY',
+    'R2_BUCKET',
+  ];
+  const missingR2 = requiredVars.filter((name) => !process.env[name]);
+
+  if (missingR2.length > 0) {
+    throw new Error(
+      `FEATURE_VIDEO_CACHE=true but the following R2 environment variables are missing or empty: ` +
+        `${missingR2.join(', ')}. ` +
+        `Set them or disable the feature with FEATURE_VIDEO_CACHE=false.`,
     );
   }
 }
