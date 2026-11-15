@@ -236,6 +236,10 @@ export async function syncAccountFromProfile(studentId: string, handleOrUrl: str
 }
 
 export async function backfillUnlinkedProfileAccounts(): Promise<number> {
+  await repo.verifyAllUnverifiedAccounts().catch((err: any) => {
+    logger.warn('[CodeChefService] Bulk verify auto-heal failed:', { err });
+  });
+
   const unlinkedProfiles = await repo.findUnlinkedProfilesWithCodeChef();
   let count = 0;
   for (const p of unlinkedProfiles) {

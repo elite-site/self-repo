@@ -308,3 +308,15 @@ export async function findStaleAccounts(limit = 10) {
     select: { id: true, studentId: true, handle: true, lastSyncedAt: true },
   });
 }
+
+export async function verifyAllUnverifiedAccounts() {
+  return prisma.codeChefAccount.updateMany({
+    where: { verified: false },
+    data: {
+      verified: true,
+      verifiedAt: new Date(),
+      verifyCode: null,
+      verifyCodeExpiresAt: null,
+    },
+  });
+}
