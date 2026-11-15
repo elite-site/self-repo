@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import fs from 'fs';
 import path from 'path';
-import { computeCodeChefStars, generateVerificationCode, CODECHEF_HANDLE_REGEX } from '../src/modules/codechef/codechef.constants';
+import { computeCodeChefStars, generateVerificationCode, CODECHEF_HANDLE_REGEX, extractCodeChefHandle } from '../src/modules/codechef/codechef.constants';
 import { parseConnectBody, parseVisibilityBody, parseAdminFilterQuery } from '../src/modules/codechef/codechef.schemas';
 import * as service from '../src/modules/codechef/codechef.service';
 import * as repo from '../src/modules/codechef/codechef.repository';
+import * as syncService from '../src/modules/codechef/services/codechef.sync.service';
 import { codeChefClient } from '../src/infrastructure/codechef.client';
 
 describe('CodeChef Constants & Star Ratings', () => {
@@ -42,8 +43,22 @@ describe('CodeChef Constants & Star Ratings', () => {
     expect(code).toMatch(/^ELITE-[2-9A-Z]{6}$/);
   });
 
-  it('parses connect body and rejects invalid handles', () => {
-    expect(() => parseConnectBody({ handle: 'tourist' })).not.toThrow();
+  it('extracts CodeChef handle from diverse URL formats and usernames', () => {
+    expect(extractCodeChefHandle('https://www.codechef.com/users/tourist')).toBe('tourist');
+    expect(extractCodeChefHandle('https://codechef.com/users/sathvikganti/')).toBe('sathvikganti');
+    expect(extractCodeChefHandle('codechef.com/users/chetu_213')).toBe('chetu_213');
+    expect(extractCodeChefHandle('@chef123')).toBe('chef123');
+    expect(extractCodeChefHandle('chef123')).toBe('chef123');
+    expect(extractCodeChefHandle('https://www.codechef.com/users/p_pavan_1435?tab=ratings#top')).toBe('p_pavan_1435');
+    expect(extractCodeChefHandle('')).toBeNull();
+    expect(extractCodeChefHandle(null)).toBeNull();
+    expect(extractCodeChefHandle('https://codechef.com')).toBeNull();
+    expect(extractCodeChefHandle('invalid handle spaces')).toBeNull();
+  });
+
+  it('parses connect body and extracts handle from profile URL or bare handle', () => {
+    expect(parseConnectBody({ handle: 'tourist' })).toEqual({ handle: 'tourist' });
+    expect(parseConnectBody({ handle: 'https://codechef.com/users/tourist' })).toEqual({ handle: 'tourist' });
     expect(() => parseConnectBody({ handle: 'ab' })).toThrow('between 3 and 30 characters');
     expect(() => parseConnectBody({ handle: 'bad-handle' })).toThrow('may only contain');
     expect(() => parseConnectBody(null)).toThrow('must be an object');
@@ -92,13 +107,53 @@ describe('CodeChef Real Fixtures Parsing', () => {
 describe('CodeChef Service Business Logic', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    vi.spyOn(syncService, 'executeSync').mockResolvedValue({ success: true });
+    vi.spyOn(repo, 'updateProfileCodeChefUrl').mockResolvedValue({} as any);
   });
 
-  it('returns NOT_CONNECTED when student has no account', async () => {
+  it('returns NOT_CONNECTED when student has no account and no profile link', async () => {
     vi.spyOn(repo, 'findAccountByStudentId').mockResolvedValue(null);
+    vi.spyOn(repo, 'findStudentWithProfile').mockResolvedValue(null);
     const status = await service.getStatus('non_existent_student');
     expect(status.connected).toBe(false);
     expect(status.status).toBe('NOT_CONNECTED');
+  });
+
+  it('auto-connects student from profile links when no account exists yet', async () => {
+    let accountCreated = false;
+    vi.spyOn(repo, 'findAccountByStudentId').mockImplementation(async () => {
+      if (!accountCreated) return null;
+      return {
+        id: 'acc_auto',
+        studentId: 'stud_123',
+        handle: 'auto_chef',
+        verified: false,
+        status: 'CONNECTED',
+        lastSyncedAt: null,
+      } as any;
+    });
+
+    vi.spyOn(repo, 'findStudentWithProfile').mockResolvedValue({
+      id: 'stud_123',
+      rollNo: '21A91A0501',
+      name: 'Chef Student',
+      profile: { id: 'prof_1', codechefUrl: 'https://www.codechef.com/users/auto_chef' },
+      githubAccount: null,
+    } as any);
+
+    vi.spyOn(repo, 'findAccountByHandle').mockResolvedValue(null);
+    const upsertAccountSpy = vi.spyOn(repo, 'upsertAccount').mockImplementation(async () => {
+      accountCreated = true;
+      return { id: 'acc_auto' } as any;
+    });
+    const updateProfileSpy = vi.spyOn(repo, 'updateProfileCodeChefUrl').mockResolvedValue({} as any);
+    vi.spyOn(codeChefClient, 'fetchProfile').mockResolvedValue(null);
+
+    const status = await service.getStatus('stud_123');
+    expect(upsertAccountSpy).toHaveBeenCalledWith('stud_123', 'auto_chef', expect.any(Object));
+    expect(updateProfileSpy).toHaveBeenCalledWith('stud_123', 'https://www.codechef.com/users/auto_chef');
+    expect(status.connected).toBe(true);
+    expect(status.handle).toBe('auto_chef');
   });
 
   it('prevents linking handle already owned by another student', async () => {
@@ -114,9 +169,10 @@ describe('CodeChef Service Business Logic', () => {
     );
   });
 
-  it('auto-verifies if student GitHub login matches CodeChef social.github', async () => {
+  it('auto-verifies if student GitHub login matches CodeChef social.github and updates profile link', async () => {
     vi.spyOn(repo, 'findAccountByHandle').mockResolvedValue(null);
     vi.spyOn(repo, 'upsertAccount').mockResolvedValue({ id: 'acc_1' } as any);
+    const updateProfileSpy = vi.spyOn(repo, 'updateProfileCodeChefUrl').mockResolvedValue({} as any);
     vi.spyOn(codeChefClient, 'fetchProfile').mockResolvedValue({
       displayName: 'Dev',
       username: 'dev_user',
@@ -142,8 +198,23 @@ describe('CodeChef Service Business Logic', () => {
     const updateSpy = vi.spyOn(repo, 'updateAccount').mockResolvedValue({} as any);
 
     const result = await service.connect('stud_1', 'dev_user');
+    expect(updateProfileSpy).toHaveBeenCalledWith('stud_1', 'https://www.codechef.com/users/dev_user');
     expect(updateSpy).toHaveBeenCalledWith('acc_1', expect.objectContaining({ verified: true }));
     expect(result.connected).toBe(true);
+  });
+
+  it('clears student profile link on disconnect', async () => {
+    vi.spyOn(repo, 'findAccountByStudentId').mockResolvedValue({
+      id: 'acc_1',
+      studentId: 'stud_1',
+    } as any);
+    const deleteSpy = vi.spyOn(repo, 'deleteAccountByStudentId').mockResolvedValue({} as any);
+    const updateProfileSpy = vi.spyOn(repo, 'updateProfileCodeChefUrl').mockResolvedValue({} as any);
+
+    const res = await service.disconnect('stud_1');
+    expect(res.success).toBe(true);
+    expect(deleteSpy).toHaveBeenCalledWith('stud_1');
+    expect(updateProfileSpy).toHaveBeenCalledWith('stud_1', null);
   });
 
   it('verifies ownership when code is present in CodeChef bio', async () => {

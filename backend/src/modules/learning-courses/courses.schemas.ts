@@ -70,6 +70,9 @@ export function parseCourseInput(body: any, isUpdate = false) {
       type: (l.type as LessonType) || LessonType.YOUTUBE,
       youtubeVideoId: l.youtubeVideoId ? String(l.youtubeVideoId).trim() : null,
       url: l.url ? String(l.url).trim() : null,
+      driveUrl: l.driveUrl ? String(l.driveUrl).trim() : undefined,
+      driveVideoId: l.driveVideoId ? String(l.driveVideoId).trim() : undefined,
+      driveFileId: l.driveFileId ? String(l.driveFileId).trim() : undefined,
       notes: l.notes ? String(l.notes).trim() : null,
       durationSec: l.durationSec !== undefined && l.durationSec !== null ? Number(l.durationSec) : null,
       order: l.order !== undefined ? Number(l.order) : idx + 1,
@@ -99,7 +102,7 @@ export function parseCourseInput(body: any, isUpdate = false) {
 
 export function parseLessonInput(body: any, isUpdate = false) {
   if (!body || typeof body !== 'object') throw new ValidationError('Request body must be an object');
-  const { title, type, order, youtubeVideoId, url, notes, durationSec } = body;
+  const { title, type, order, youtubeVideoId, url, driveUrl, driveVideoId, driveFileId, notes, durationSec } = body;
 
   if (!isUpdate && (!title || typeof title !== 'string' || !title.trim())) {
     throw new ValidationError('Lesson title is required', [{ field: 'title', message: 'Title is required' }]);
@@ -111,6 +114,9 @@ export function parseLessonInput(body: any, isUpdate = false) {
     ...(order !== undefined && { order: Number(order) }),
     ...(youtubeVideoId !== undefined && { youtubeVideoId: youtubeVideoId ? String(youtubeVideoId).trim() : null }),
     ...(url !== undefined && { url: url ? String(url).trim() : null }),
+    ...(driveUrl !== undefined && { driveUrl: driveUrl ? String(driveUrl).trim() : null }),
+    ...(driveVideoId !== undefined && { driveVideoId: driveVideoId ? String(driveVideoId).trim() : null }),
+    ...(driveFileId !== undefined && { driveFileId: driveFileId ? String(driveFileId).trim() : null }),
     ...(notes !== undefined && { notes: notes ? String(notes).trim() : null }),
     ...(durationSec !== undefined && { durationSec: durationSec !== null ? Number(durationSec) : null }),
   };
@@ -131,6 +137,9 @@ export function parseBulkLessonsInput(body: any): BulkLessonItem[] {
       type: (l.type as LessonType) || LessonType.YOUTUBE,
       youtubeVideoId: l.youtubeVideoId ? String(l.youtubeVideoId).trim() : null,
       url: l.url ? String(l.url).trim() : null,
+      driveUrl: l.driveUrl ? String(l.driveUrl).trim() : undefined,
+      driveVideoId: l.driveVideoId ? String(l.driveVideoId).trim() : undefined,
+      driveFileId: l.driveFileId ? String(l.driveFileId).trim() : undefined,
       notes: l.notes ? String(l.notes).trim() : null,
       durationSec: l.durationSec !== undefined && l.durationSec !== null ? Number(l.durationSec) : null,
       order: l.order !== undefined ? Number(l.order) : idx + 1,

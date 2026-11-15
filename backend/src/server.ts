@@ -25,6 +25,7 @@ import studentRoutes, { studentProfileRouter as studentProfileRoutes, studentInt
 import { portfolioRouter as studentPortfolioRoutes } from './modules/portfolio';
 import { studentGithubRouter as studentGithubRoutes, internalGithubRouter } from './modules/github';
 import { studentCodeChefRouter, adminCodeChefRouter, internalCodeChefRouter } from './modules/codechef';
+import { internalVideoCacheRouter, adminVideoCacheRouter } from './modules/video-cache';
 import { eventsRouter as studentEventsRoutes } from './modules/events';
 import { adminAuthRouter as adminAuthRoutes } from './modules/auth';
 import adminApiRoutes, { adminPortalRouter as adminPortalRoutes, adminAcademicYearRouter as adminAcademicYearRoutes } from './modules/admin';
@@ -158,9 +159,10 @@ app.use('/api', generalApiRateLimiter);
 app.get('/health', healthCheckHandler);
 app.get('/ready', readyCheckHandler);
 
-// Internal routes (e.g. external-cron triggered GitHub sync tick)
+// Internal routes (e.g. external-cron triggered GitHub sync tick, video cache eviction)
 app.use('/api/internal', internalGithubRouter);
 app.use('/api/internal', internalCodeChefRouter);
+app.use('/api/internal', internalVideoCacheRouter);
 
 
 // 1. Public API routes (existing submission form + new public directory)
@@ -210,6 +212,9 @@ app.use('/admin/api/resources', adminResourcesRouter);
 
 // 2d. Admin CodeChef routes (gated by FEATURE_CODECHEF)
 app.use('/admin/api/codechef', codechefFlagGuard, adminCodeChefRouter);
+
+// 2e. Admin Video Cache routes (health, status, retry, purge)
+app.use(['/api/admin', '/admin/api'], adminVideoCacheRouter);
 
 // 3. Admin API routes — existing (stats, submissions, media proxy, email)
 app.use('/admin/api', adminApiRoutes);

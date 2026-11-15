@@ -24,7 +24,7 @@ export function serializeProfileView(student: any, submission: any, introVideo: 
     githubUrl: student.profile?.githubUrl || '',
     linkedinUrl: student.profile?.linkedinUrl || '',
     leetcodeUrl: student.profile?.leetcodeUrl || '',
-    codechefUrl: student.profile?.codechefUrl || '',
+    codechefUrl: student.profile?.codechefUrl || (student.codechefAccount?.handle ? `https://www.codechef.com/users/${student.codechefAccount.handle}` : ''),
     hackerrankUrl: student.profile?.hackerrankUrl || '',
     codeforcesUrl: student.profile?.codeforcesUrl || '',
     portfolioUrl: student.profile?.portfolioUrl || '',

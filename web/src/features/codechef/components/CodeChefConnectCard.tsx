@@ -18,15 +18,28 @@ export const CodeChefConnectCard: React.FC<CodeChefConnectCardProps> = ({ onConn
     e.preventDefault();
     const clean = handle.trim();
     if (!clean) {
-      setValidationErr('Please enter your CodeChef handle');
+      setValidationErr('Please enter your CodeChef handle or profile link');
       return;
     }
-    if (!/^[A-Za-z0-9_.]{3,30}$/.test(clean)) {
+
+    // Extract handle if user pasted a CodeChef URL
+    let parsedHandle = clean
+      .replace(/^https?:\/\//i, '')
+      .replace(/[?#].*$/, '')
+      .replace(/\/+$/, '')
+      .replace(/^@+/, '')
+      .replace(/^(?:www\.)?codechef\.com\/?/i, '')
+      .replace(/^\/?users\/?/i, '');
+
+    const segments = parsedHandle.split('/').filter(Boolean);
+    const candidate = (segments[0] || '').trim();
+
+    if (!/^[A-Za-z0-9_.]{3,30}$/.test(candidate)) {
       setValidationErr('Handle must be 3-30 characters (letters, numbers, underscore, dot)');
       return;
     }
     setValidationErr(null);
-    onConnect(clean);
+    onConnect(candidate);
   };
 
   return (
@@ -44,13 +57,13 @@ export const CodeChefConnectCard: React.FC<CodeChefConnectCardProps> = ({ onConn
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <Input
-            label="CodeChef Handle"
+            label="CodeChef Handle or Profile URL"
             value={handle}
             onChange={(e) => {
               setHandle(e.target.value);
               setValidationErr(null);
             }}
-            placeholder="e.g. tourist, chef_123"
+            placeholder="e.g. tourist or https://codechef.com/users/tourist"
             disabled={connecting}
             className="w-full"
           />
@@ -59,13 +72,16 @@ export const CodeChefConnectCard: React.FC<CodeChefConnectCardProps> = ({ onConn
           )}
         </div>
 
-        <div className="p-3 bg-surface-muted border border-border rounded-lg text-xs text-foreground-muted space-y-1">
+        <div className="p-3 bg-surface-muted border border-border rounded-lg text-xs text-foreground-muted space-y-1.5">
           <div className="flex items-start gap-2">
             <Shield className="w-4 h-4 text-primary shrink-0 mt-0.5" />
             <span>
-              <strong>Ownership Verification:</strong> After connecting, you will receive a 30-minute code to paste in your CodeChef bio. If your CodeChef account already links to your verified GitHub, it will verify automatically!
+              <strong>Auto-Sync with Profile:</strong> Connecting your handle here will automatically link it to your student profile links as well.
             </span>
           </div>
+          <p className="text-[11px] text-foreground-muted/80 pl-6">
+            If your CodeChef account already links to your verified GitHub, it will verify automatically! Otherwise, you will receive a code to paste in your CodeChef bio.
+          </p>
         </div>
 
         <Button type="submit" variant="primary" disabled={connecting} className="w-full">

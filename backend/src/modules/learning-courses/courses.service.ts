@@ -1,7 +1,8 @@
 import { coursesRepository, CoursesRepository } from './courses.repository';
-import { NotFoundError, ForbiddenError } from '../../utils/appError';
+import { NotFoundError, ForbiddenError, ValidationError } from '../../utils/appError';
 import { CourseStatus, EnrolmentType, CourseTargetType, Prisma } from '@prisma/client';
 import { ActivityService } from '../admin';
+import { driveService, extractDriveFileId } from '../media/drive/index';
 import {
   AssignCoursePayload,
   YouTubePreviewResult,
@@ -85,10 +86,50 @@ export class CoursesService {
     return { courses: mapped, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) || 1 } };
   }
 
+  private async validateAndResolveDriveVideo(rawInput?: string | null): Promise<string> {
+    const driveFileId = extractDriveFileId(rawInput);
+    if (!driveFileId) {
+      throw new ValidationError('Provided Drive file is not a valid video or is inaccessible');
+    }
+
+    try {
+      let meta: { mimeType?: string; sizeBytes?: number } | null = null;
+      if (typeof (driveService as any).getFileMetadata === 'function') {
+        meta = await (driveService as any).getFileMetadata(driveFileId);
+      } else if (typeof driveService.getFileStream === 'function') {
+        const res = await driveService.getFileStream(driveFileId);
+        if (res?.stream) res.stream.destroy();
+        meta = res;
+      }
+
+      if (!meta || !meta.mimeType || !meta.mimeType.startsWith('video/')) {
+        throw new ValidationError('Provided Drive file is not a valid video or is inaccessible');
+      }
+    } catch (err: any) {
+      if (err instanceof ValidationError) throw err;
+      throw new ValidationError('Provided Drive file is not a valid video or is inaccessible');
+    }
+
+    return driveFileId;
+  }
+
+  private sanitizeLessonResponse<T extends { driveFileId?: string | null }>(lesson: T): Omit<T, 'driveFileId'> & { hasVideo: boolean } {
+    const { driveFileId, ...rest } = lesson;
+    return {
+      ...rest,
+      hasVideo: Boolean(driveFileId),
+    };
+  }
+
   async getAdminCourse(id: string) {
     const course = await this.repo.findCourseById(id);
     if (!course) throw new NotFoundError('Course not found');
-    return course;
+    return {
+      ...course,
+      lessons: Array.isArray(course.lessons)
+        ? course.lessons.map((l: any) => this.sanitizeLessonResponse(l))
+        : [],
+    };
   }
 
   async createCourse(data: any, adminUser?: { email?: string }) {
@@ -96,16 +137,28 @@ export class CoursesService {
     const created = await this.repo.createCourse(courseData);
 
     if (Array.isArray(lessons) && lessons.length > 0) {
-      const records = lessons.map((l: BulkLessonItem, idx: number) => ({
-        courseId: created.id,
-        title: l.title,
-        type: l.type || 'YOUTUBE',
-        youtubeVideoId: l.youtubeVideoId || null,
-        url: l.url || null,
-        notes: l.notes || null,
-        durationSec: l.durationSec || null,
-        order: l.order !== undefined ? l.order : idx + 1,
-      }));
+      const records: any[] = [];
+      for (let idx = 0; idx < lessons.length; idx++) {
+        const l = lessons[idx];
+        let driveFileId: string | null = null;
+        let url = l.url || null;
+        if (l.type === 'VIDEO') {
+          const raw = l.driveFileId || l.driveUrl || l.driveVideoId || l.url;
+          driveFileId = await this.validateAndResolveDriveVideo(raw);
+          url = null;
+        }
+        records.push({
+          courseId: created.id,
+          title: l.title,
+          type: l.type || 'YOUTUBE',
+          youtubeVideoId: l.youtubeVideoId || null,
+          url,
+          driveFileId,
+          notes: l.notes || null,
+          durationSec: l.durationSec || null,
+          order: l.order !== undefined ? l.order : idx + 1,
+        });
+      }
       await this.repo.createLessonsBulk(records);
     }
 
@@ -134,29 +187,79 @@ export class CoursesService {
 
   async createLesson(courseId: string, data: any) {
     await this.getAdminCourse(courseId);
+    let driveFileId: string | null = null;
+    let url = data.url || null;
+    if (data.type === 'VIDEO') {
+      const raw = data.driveFileId || data.driveUrl || data.driveVideoId || data.url;
+      driveFileId = await this.validateAndResolveDriveVideo(raw);
+      url = null;
+    }
     const order = data.order !== undefined ? data.order : (await this.repo.getLessonMaxOrder(courseId)) + 1;
-    return this.repo.createLesson({ ...data, courseId, order });
+    const { driveUrl, driveVideoId, ...payload } = data;
+    const created = await this.repo.createLesson({
+      ...payload,
+      courseId,
+      order,
+      url,
+      driveFileId,
+    });
+    return this.sanitizeLessonResponse(created);
   }
 
   async bulkCreateLessons(courseId: string, lessons: BulkLessonItem[]) {
     await this.getAdminCourse(courseId);
     const maxOrder = await this.repo.getLessonMaxOrder(courseId);
-    const records = lessons.map((l, idx) => ({
-      courseId,
-      title: l.title,
-      type: l.type || 'YOUTUBE',
-      youtubeVideoId: l.youtubeVideoId || null,
-      url: l.url || null,
-      notes: l.notes || null,
-      durationSec: l.durationSec || null,
-      order: l.order !== undefined ? l.order : maxOrder + idx + 1,
-    }));
+    const records: any[] = [];
+    for (let idx = 0; idx < lessons.length; idx++) {
+      const l = lessons[idx];
+      let driveFileId: string | null = null;
+      let url = l.url || null;
+      if (l.type === 'VIDEO') {
+        const raw = l.driveFileId || l.driveUrl || l.driveVideoId || l.url;
+        driveFileId = await this.validateAndResolveDriveVideo(raw);
+        url = null;
+      }
+      records.push({
+        courseId,
+        title: l.title,
+        type: l.type || 'YOUTUBE',
+        youtubeVideoId: l.youtubeVideoId || null,
+        url,
+        driveFileId,
+        notes: l.notes || null,
+        durationSec: l.durationSec || null,
+        order: l.order !== undefined ? l.order : maxOrder + idx + 1,
+      });
+    }
     await this.repo.createLessonsBulk(records);
     return { success: true, count: records.length };
   }
 
   async updateLesson(lessonId: string, data: any) {
-    return this.repo.updateLesson(lessonId, data);
+    const existing = await this.repo.findLessonById(lessonId);
+    if (!existing) throw new NotFoundError('Lesson not found');
+
+    const effectiveType = data.type || existing.type;
+    let driveFileId = existing.driveFileId;
+    let url = data.url !== undefined ? data.url : existing.url;
+
+    if (effectiveType === 'VIDEO') {
+      const raw = data.driveFileId || data.driveUrl || data.driveVideoId || data.url;
+      if (raw !== undefined) {
+        driveFileId = await this.validateAndResolveDriveVideo(raw);
+        url = null;
+      }
+    } else if (data.type && data.type !== 'VIDEO') {
+      driveFileId = null;
+    }
+
+    const { driveUrl, driveVideoId, ...payload } = data;
+    const updated = await this.repo.updateLesson(lessonId, {
+      ...payload,
+      ...(url !== undefined && { url }),
+      driveFileId,
+    });
+    return this.sanitizeLessonResponse(updated);
   }
 
   async deleteLesson(lessonId: string) {

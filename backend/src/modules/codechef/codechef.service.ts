@@ -1,12 +1,45 @@
 import { AppError } from '../../utils/appError';
+import { logger } from '../../utils/logger';
 import { codeChefClient } from '../../infrastructure/codechef.client';
 import * as repo from './codechef.repository';
 import { executeSync } from './services/codechef.sync.service';
-import { generateVerificationCode, CODECHEF_LIMITS } from './codechef.constants';
+import { generateVerificationCode, CODECHEF_LIMITS, extractCodeChefHandle } from './codechef.constants';
 import type { CodeChefStatusDto, CodeChefDetailsDto, AdminCodeChefFilterParams } from './codechef.types';
 
-export async function getStatus(studentId: string): Promise<CodeChefStatusDto> {
-  const account = await repo.findAccountByStudentId(studentId);
+export async function getStatus(studentId: string, skipProfileAutoConnect = false): Promise<CodeChefStatusDto> {
+  let account = await repo.findAccountByStudentId(studentId);
+
+  // Auto-connect from student profile links if no account exists yet
+  if (!account && !skipProfileAutoConnect) {
+    const student = await repo.findStudentWithProfile(studentId);
+    const profileUrl = student?.profile?.codechefUrl;
+    const handle = extractCodeChefHandle(profileUrl);
+    if (handle) {
+      try {
+        await connect(studentId, handle);
+        account = await repo.findAccountByStudentId(studentId);
+      } catch (err: any) {
+        logger.warn(`[CodeChefService] Auto-connect from profile failed for studentId=${studentId}:`, { err });
+      }
+    }
+  } else if (account) {
+    // If account exists, keep profile.codechefUrl in sync
+    const student = await repo.findStudentWithProfile(studentId);
+    if (!student?.profile?.codechefUrl && account.handle) {
+      await repo.updateProfileCodeChefUrl(studentId, `https://www.codechef.com/users/${account.handle}`);
+    } else if (student?.profile?.codechefUrl && !skipProfileAutoConnect) {
+      const profileHandle = extractCodeChefHandle(student.profile.codechefUrl);
+      if (profileHandle && profileHandle.toLowerCase() !== account.handle.toLowerCase()) {
+        try {
+          await connect(studentId, profileHandle);
+          account = await repo.findAccountByStudentId(studentId);
+        } catch (err: any) {
+          logger.warn(`[CodeChefService] Re-sync from updated profile handle failed for studentId=${studentId}:`, { err });
+        }
+      }
+    }
+  }
+
   if (!account) {
     return {
       connected: false,
@@ -69,7 +102,21 @@ export async function getStatus(studentId: string): Promise<CodeChefStatusDto> {
 }
 
 export async function getDetails(studentId: string): Promise<CodeChefDetailsDto> {
-  const account = await repo.findAccountByStudentId(studentId);
+  let account = await repo.findAccountByStudentId(studentId);
+  if (!account) {
+    const student = await repo.findStudentWithProfile(studentId);
+    const profileUrl = student?.profile?.codechefUrl;
+    const handle = extractCodeChefHandle(profileUrl);
+    if (handle) {
+      try {
+        await connect(studentId, handle);
+        account = await repo.findAccountByStudentId(studentId);
+      } catch (err: any) {
+        logger.warn(`[CodeChefService] Auto-connect in getDetails failed for studentId=${studentId}:`, { err });
+      }
+    }
+  }
+
   if (!account) throw new AppError('NOT_FOUND', 'No CodeChef account connected for this student', 404);
 
   const profileData = await repo.findProfileDataByAccountId(account.id);
@@ -104,7 +151,7 @@ export async function getDetails(studentId: string): Promise<CodeChefDetailsDto>
 }
 
 export async function connect(studentId: string, rawHandle: string): Promise<CodeChefStatusDto> {
-  const handle = rawHandle.trim();
+  const handle = extractCodeChefHandle(rawHandle) || rawHandle.trim();
   const existing = await repo.findAccountByHandle(handle);
   if (existing && existing.studentId !== studentId) {
     throw new AppError('CONFLICT', 'This CodeChef handle is already linked to another student account', 409);
@@ -122,6 +169,10 @@ export async function connect(studentId: string, rawHandle: string): Promise<Cod
     status: 'CONNECTED',
   });
 
+  // Always keep StudentProfile.codechefUrl in sync ("if not available fill on the codechef it should use same")
+  const canonicalUrl = `https://www.codechef.com/users/${handle}`;
+  await repo.updateProfileCodeChefUrl(studentId, canonicalUrl);
+
   // Check auto-verification if student's GitHub matches CodeChef profile social.github
   const profile = await codeChefClient.fetchProfile(handle);
   const studentAccount = await repo.findAccountByStudentId(studentId);
@@ -135,7 +186,7 @@ export async function connect(studentId: string, rawHandle: string): Promise<Cod
   // Trigger non-blocking initial sync
   void executeSync(account.id, handle, 'CONNECT');
 
-  return getStatus(studentId);
+  return getStatus(studentId, true);
 }
 
 export async function verify(studentId: string): Promise<{ verified: boolean; message: string; verifiedAt: string | null }> {
@@ -198,28 +249,79 @@ export async function disconnect(studentId: string): Promise<{ success: boolean 
   const account = await repo.findAccountByStudentId(studentId);
   if (!account) throw new AppError('NOT_FOUND', 'No CodeChef account connected', 404);
   await repo.deleteAccountByStudentId(studentId);
+  // Clear profile link as well so it doesn't immediately re-link on getStatus
+  await repo.updateProfileCodeChefUrl(studentId, null);
   return { success: true };
+}
+
+export async function syncAccountFromProfile(studentId: string, handleOrUrl: string): Promise<void> {
+  const cleanHandle = extractCodeChefHandle(handleOrUrl) || handleOrUrl.trim();
+  if (!cleanHandle) return;
+  const existing = await repo.findAccountByStudentId(studentId);
+  if (!existing) {
+    await connect(studentId, cleanHandle);
+  } else if (existing.handle.toLowerCase() !== cleanHandle.toLowerCase()) {
+    await connect(studentId, cleanHandle);
+  }
+}
+
+export async function backfillUnlinkedProfileAccounts(): Promise<number> {
+  const unlinkedProfiles = await repo.findUnlinkedProfilesWithCodeChef();
+  let count = 0;
+  for (const p of unlinkedProfiles) {
+    const handle = extractCodeChefHandle(p.codechefUrl);
+    if (!handle) continue;
+    try {
+      const existing = await repo.findAccountByHandle(handle);
+      if (existing && existing.studentId !== p.studentId) continue;
+
+      const verifyCode = generateVerificationCode();
+      const verifyCodeExpiresAt = new Date(Date.now() + CODECHEF_LIMITS.VERIFY_CODE_EXPIRY_MS);
+
+      const account = await repo.upsertAccount(p.studentId, handle, {
+        student: { connect: { id: p.studentId } },
+        handle,
+        verified: false,
+        verifyCode,
+        verifyCodeExpiresAt,
+        status: 'CONNECTED',
+      });
+
+      // Non-blocking initial sync
+      void executeSync(account.id, handle, 'CONNECT');
+      count++;
+    } catch (err: any) {
+      logger.warn(`[CodeChefService] Backfill failed for studentId=${p.studentId}:`, { err });
+    }
+  }
+  return count;
 }
 
 export async function getAdminStudents(params: AdminCodeChefFilterParams) {
   const result = await repo.findStudentsWithCodeChef(params);
   return {
-    students: result.students.map((s) => ({
-      id: s.codechefAccount?.id || s.id,
-      studentId: s.id,
-      name: s.name,
-      rollNo: s.rollNo,
-      year: s.year,
-      section: s.section,
-      handle: s.codechefAccount?.handle || null,
-      verified: s.codechefAccount?.verified || false,
-      status: (!s.codechefAccount ? 'NOT_CONNECTED' : !s.codechefAccount.verified ? 'UNVERIFIED' : s.codechefAccount.status) as any,
-      currentRating: s.codechefAccount?.currentRating || null,
-      stars: s.codechefAccount?.stars || null,
-      totalSolved: s.codechefAccount?.totalSolved || null,
-      totalContests: s.codechefAccount?.totalContests || null,
-      lastSyncedAt: s.codechefAccount?.lastSyncedAt?.toISOString() || null,
-    })),
+    students: result.students.map((s: any) => {
+      const profileHandle = extractCodeChefHandle(s.profile?.codechefUrl);
+      const effectiveHandle = s.codechefAccount?.handle || profileHandle || null;
+      const isConnected = Boolean(s.codechefAccount || effectiveHandle);
+
+      return {
+        id: s.codechefAccount?.id || s.id,
+        studentId: s.id,
+        name: s.name,
+        rollNo: s.rollNo,
+        year: s.year,
+        section: s.section,
+        handle: effectiveHandle,
+        verified: s.codechefAccount?.verified || false,
+        status: (!isConnected ? 'NOT_CONNECTED' : !s.codechefAccount?.verified ? 'UNVERIFIED' : s.codechefAccount.status) as any,
+        currentRating: s.codechefAccount?.currentRating || null,
+        stars: s.codechefAccount?.stars || null,
+        totalSolved: s.codechefAccount?.totalSolved || null,
+        totalContests: s.codechefAccount?.totalContests || null,
+        lastSyncedAt: s.codechefAccount?.lastSyncedAt?.toISOString() || null,
+      };
+    }),
     total: result.total,
     page: result.page,
     limit: result.limit,

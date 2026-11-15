@@ -15,10 +15,11 @@ export interface LessonListEditorProps {
 }
 
 const typeIcon = (type: LessonType) => {
-  if (type === 'YOUTUBE') return <span className="badge badge-draft"><Video className="w-3 h-3" /> YouTube</span>;
-  if (type === 'LINK') return <span className="badge badge-draft"><ExternalLink className="w-3 h-3" /> Link</span>;
-  if (type === 'NOTES') return <span className="badge badge-draft"><FileText className="w-3 h-3" /> Notes</span>;
-  return <span className="badge badge-approved"><HelpCircle className="w-3 h-3" /> Quiz</span>;
+  if (type === 'VIDEO') return <span className="badge badge-submitted inline-flex items-center gap-1"><Video className="w-3 h-3 text-status-submitted" /> Drive Video</span>;
+  if (type === 'YOUTUBE') return <span className="badge badge-draft inline-flex items-center gap-1"><Video className="w-3 h-3" /> YouTube</span>;
+  if (type === 'LINK') return <span className="badge badge-draft inline-flex items-center gap-1"><ExternalLink className="w-3 h-3" /> Link</span>;
+  if (type === 'NOTES') return <span className="badge badge-draft inline-flex items-center gap-1"><FileText className="w-3 h-3" /> Notes</span>;
+  return <span className="badge badge-approved inline-flex items-center gap-1"><HelpCircle className="w-3 h-3" /> Quiz</span>;
 };
 
 export const LessonListEditor: React.FC<LessonListEditorProps> = ({
@@ -58,7 +59,7 @@ export const LessonListEditor: React.FC<LessonListEditorProps> = ({
       type,
       durationSec: durationSec ? Number(durationSec) : null,
       notes: type === 'NOTES' ? notes.trim() : null,
-      url: type === 'LINK' ? url.trim() : null,
+      url: (type === 'LINK' || type === 'VIDEO') ? url.trim() : null,
       youtubeVideoId: type === 'YOUTUBE' ? url.trim() : null,
       order: editingLesson ? editingLesson.order : lessons.length + 1,
     };
@@ -162,7 +163,11 @@ export const LessonListEditor: React.FC<LessonListEditorProps> = ({
             <div>
               <label className="block text-xs font-medium text-ink-muted mb-1" htmlFor="l-type">Type</label>
               <select id="l-type" value={type} onChange={(e) => setType(e.target.value as LessonType)} className="select text-sm">
-                <option value="YOUTUBE">YouTube</option><option value="LINK">Link</option><option value="NOTES">Notes</option><option value="QUIZ">Quiz</option>
+                <option value="YOUTUBE">YouTube</option>
+                <option value="VIDEO">Drive Video</option>
+                <option value="LINK">Link</option>
+                <option value="NOTES">Notes</option>
+                <option value="QUIZ">Quiz</option>
               </select>
             </div>
             <div>
@@ -174,6 +179,21 @@ export const LessonListEditor: React.FC<LessonListEditorProps> = ({
             <div>
               <label className="block text-xs font-medium text-ink-muted mb-1" htmlFor="l-notes">Notes (Markdown)</label>
               <textarea id="l-notes" value={notes} onChange={(e) => setNotes(e.target.value)} className="textarea text-sm" rows={3} />
+            </div>
+          ) : type === 'VIDEO' ? (
+            <div>
+              <label className="block text-xs font-medium text-ink-muted mb-1" htmlFor="l-url">Google Drive Video Link or ID *</label>
+              <input
+                id="l-url"
+                required
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                className="input text-sm"
+                placeholder="https://drive.google.com/file/d/... or File ID"
+              />
+              <p className="text-[11px] text-ink-muted mt-1">
+                Students will stream this video securely through Cloudflare R2 cache. Raw Drive links are never exposed.
+              </p>
             </div>
           ) : (
             <div>

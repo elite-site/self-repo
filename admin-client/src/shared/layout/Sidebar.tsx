@@ -33,7 +33,7 @@ import {
  */
 export const ACTIVE_EVENT_ID = 'self-introduction-2026';
 
-const isCodeChefEnabled = import.meta.env.VITE_FEATURE_CODECHEF === 'true';
+const isCodeChefEnabled = import.meta.env.VITE_FEATURE_CODECHEF !== 'false';
 
 export type AdminTab =
   | 'dashboard'

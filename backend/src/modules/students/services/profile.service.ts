@@ -4,6 +4,7 @@ import { logger } from '../../../utils/logger';
 import { ProfileUpdateInput } from '../schemas/profile.schema';
 import { serializeProfileView } from './profile.serializer';
 import { clearPublicStudentCaches } from '../../public';
+import { syncAccountFromProfile, disconnect as disconnectCodeChef } from '../../codechef';
 
 export * from './profilePhoto.service';
 export * from './profileSkills.service';
@@ -45,7 +46,23 @@ export async function updateStudentProfile(studentId: string, data: ProfileUpdat
     if (data.normalizedLinks.githubUrl !== undefined) updateData.githubUrl = data.normalizedLinks.githubUrl;
     if (data.normalizedLinks.linkedinUrl !== undefined) updateData.linkedinUrl = data.normalizedLinks.linkedinUrl;
     if (data.normalizedLinks.leetcodeUrl !== undefined) updateData.leetcodeUrl = data.normalizedLinks.leetcodeUrl;
-    if (data.normalizedLinks.codechefUrl !== undefined) updateData.codechefUrl = data.normalizedLinks.codechefUrl;
+    if (data.normalizedLinks.codechefUrl !== undefined) {
+      updateData.codechefUrl = data.normalizedLinks.codechefUrl;
+      const rawUrl = data.normalizedLinks.codechefUrl;
+      if (rawUrl) {
+        try {
+          await syncAccountFromProfile(studentId, rawUrl);
+        } catch (err: any) {
+          logger.warn(`[profile.service] Failed to sync CodeChef from profile for studentId=${studentId}:`, { err });
+        }
+      } else {
+        try {
+          await disconnectCodeChef(studentId);
+        } catch {
+          // non-fatal if already not connected
+        }
+      }
+    }
     if (data.normalizedLinks.hackerrankUrl !== undefined) updateData.hackerrankUrl = data.normalizedLinks.hackerrankUrl;
     if (data.normalizedLinks.codeforcesUrl !== undefined) updateData.codeforcesUrl = data.normalizedLinks.codeforcesUrl;
     if (data.normalizedLinks.portfolioUrl !== undefined) updateData.portfolioUrl = data.normalizedLinks.portfolioUrl;

@@ -33,6 +33,7 @@ export interface LessonSummary {
   type: LessonType;
   youtubeVideoId?: string | null;
   url?: string | null;
+  hasVideo?: boolean;
   notes?: string | null;
   durationSec?: number | null;
   completed?: boolean;
@@ -93,6 +94,9 @@ export interface BulkLessonItem {
   type?: LessonType;
   youtubeVideoId?: string | null;
   url?: string | null;
+  driveUrl?: string | null;
+  driveVideoId?: string | null;
+  driveFileId?: string | null;
   notes?: string | null;
   durationSec?: number | null;
   order?: number;

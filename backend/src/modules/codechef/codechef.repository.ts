@@ -80,6 +80,56 @@ export async function findProfileDataByAccountId(accountId: string) {
   return prisma.codeChefProfileData.findUnique({ where: { accountId } });
 }
 
+export async function findStudentWithProfile(studentId: string) {
+  return prisma.student.findUnique({
+    where: { id: studentId },
+    select: {
+      id: true,
+      rollNo: true,
+      name: true,
+      profile: {
+        select: {
+          id: true,
+          codechefUrl: true,
+        },
+      },
+      githubAccount: {
+        select: {
+          login: true,
+        },
+      },
+    },
+  });
+}
+
+export async function updateProfileCodeChefUrl(studentId: string, codechefUrl: string | null) {
+  return prisma.studentProfile.upsert({
+    where: { studentId },
+    create: {
+      studentId,
+      codechefUrl,
+      biography: '',
+      specialQualities: '',
+    },
+    update: {
+      codechefUrl,
+    },
+  });
+}
+
+export async function findUnlinkedProfilesWithCodeChef() {
+  return prisma.studentProfile.findMany({
+    where: {
+      codechefUrl: { not: null, notIn: [''] },
+      student: { codechefAccount: null },
+    },
+    select: {
+      studentId: true,
+      codechefUrl: true,
+    },
+  });
+}
+
 export async function upsertProfileData(accountId: string, data: Prisma.CodeChefProfileDataCreateInput) {
   return prisma.codeChefProfileData.upsert({
     where: { accountId },
@@ -120,10 +170,21 @@ export async function findStudentsWithCodeChef(params: AdminCodeChefFilterParams
       { name: { contains: params.search, mode: 'insensitive' } },
       { rollNo: { contains: params.search, mode: 'insensitive' } },
       { codechefAccount: { handle: { contains: params.search, mode: 'insensitive' } } },
+      { profile: { codechefUrl: { contains: params.search, mode: 'insensitive' } } },
     ];
   }
-  if (params.connected === true) where.codechefAccount = { isNot: null };
-  if (params.connected === false) where.codechefAccount = { is: null };
+  if (params.connected === true) {
+    where.OR = [
+      { codechefAccount: { isNot: null } },
+      { profile: { codechefUrl: { not: null, notIn: [''] } } },
+    ];
+  }
+  if (params.connected === false) {
+    where.AND = [
+      { codechefAccount: { is: null } },
+      { OR: [{ profile: { is: null } }, { profile: { codechefUrl: null } }, { profile: { codechefUrl: '' } }] },
+    ];
+  }
 
   const accountWhere: Prisma.CodeChefAccountWhereInput = {};
   if (params.minRating !== undefined) accountWhere.currentRating = { gte: params.minRating };
@@ -152,6 +213,9 @@ export async function findStudentsWithCodeChef(params: AdminCodeChefFilterParams
         rollNo: true,
         year: true,
         section: true,
+        profile: {
+          select: { codechefUrl: true },
+        },
         codechefAccount: {
           select: {
             id: true,

@@ -2,6 +2,7 @@ import React from 'react';
 import { HardDrive, RefreshCw, CheckCircle, AlertCircle, Database, ShieldCheck, Cloud } from 'lucide-react';
 import { useStorage } from '../hooks/useStorage';
 import { DriveConnectorCard } from '../components/DriveConnectorCard';
+import { VideoCacheCard } from '../components/VideoCacheCard';
 import { MediaInventoryGrid } from '../components/MediaInventoryGrid';
 import { CacheDirectoryTable } from '../components/CacheDirectoryTable';
 import { AsymGrid, AsymFeatured, AsymSide, AsymAccent } from '@/shared/layout/AsymGrid';
@@ -145,6 +146,9 @@ export const StoragePage: React.FC = () => {
           </button>
         </div>
       )}
+
+      {/* Cloudflare R2 Video Cache Card */}
+      <VideoCacheCard />
 
       {/* 2. MEDIA INVENTORY SECTION */}
       <MediaInventoryGrid inventory={inventory} />

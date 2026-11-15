@@ -208,6 +208,12 @@ export async function findStudentProfileWithDetails(studentId: string) {
           skills: { include: { skill: true } },
         },
       },
+      codechefAccount: {
+        select: {
+          handle: true,
+          verified: true,
+        },
+      },
       changeRequests: {
         take: 5,
         orderBy: { createdAt: 'desc' },

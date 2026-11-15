@@ -56,3 +56,41 @@ export function generateVerificationCode(): string {
   }
   return `ELITE-${token}`;
 }
+
+/**
+ * Extracts a CodeChef username/handle from any valid handle, URL, or @handle string.
+ *
+ * Examples:
+ *   'https://www.codechef.com/users/tourist' -> 'tourist'
+ *   'https://codechef.com/users/tourist/'    -> 'tourist'
+ *   'codechef.com/users/tourist'             -> 'tourist'
+ *   '@tourist'                               -> 'tourist'
+ *   'tourist'                                -> 'tourist'
+ *   'https://www.codechef.com/users/tourist?tab=ratings' -> 'tourist'
+ */
+export function extractCodeChefHandle(input: string | null | undefined): string | null {
+  if (!input || typeof input !== 'string') return null;
+  const raw = input.trim();
+  if (!raw) return null;
+
+  // Strip scheme, queries, fragments, and trailing slashes
+  let rest = raw.replace(/^https?:\/\//i, '').replace(/[?#].*$/, '').replace(/\/+$/, '');
+
+  // Strip leading @
+  rest = rest.replace(/^@+/, '');
+
+  // Strip host prefix (codechef.com or www.codechef.com)
+  rest = rest.replace(/^(?:www\.)?codechef\.com\/?/i, '');
+
+  // Strip /users/ or users/
+  rest = rest.replace(/^\/?users\/?/i, '');
+
+  // If there are still slashes (e.g. users/tourist/recent), take the first segment
+  const segments = rest.split('/').filter(Boolean);
+  const candidate = (segments[0] || '').trim();
+
+  if (candidate && CODECHEF_HANDLE_REGEX.test(candidate)) {
+    return candidate;
+  }
+  return null;
+}

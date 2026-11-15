@@ -25,3 +25,4 @@ skills-lock.json
 # Stray documents dropped at the repository root. Nothing in the app reads them,
 # and they are not release artefacts.
 *.pdf
+.impeccable/
