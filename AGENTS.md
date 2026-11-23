@@ -329,6 +329,8 @@ Domain-specific codes (`ALREADY_VOTED`, `EVENT_CLOSED`) are allowed, are `UPPER_
 - **Integrity:** never disable or weaken auth, CORS, rate limits, validation, or security headers to make something work.
 - **Scope:** never delete features, routes, or data to make a task easier. Never replace real functionality with mock data.
 - **Honesty:** never mark unfinished work as done, never fabricate output.
+- **No color gradients:** never use CSS gradients (`linear-gradient`, `radial-gradient`, `conic-gradient`, `gradient-to-*` Tailwind utilities, `bg-gradient-*`) anywhere in the codebase — UI, tokens, or inline styles. Flat, solid color fills only.
+- **Portfolio page is frozen:** never modify any file under `web/src/features/portfolio/` or `backend/src/modules/portfolio/`. Leave those files exactly as they are unless the task is explicitly and exclusively about the portfolio feature.
 
 ## 17. Documentation
 
