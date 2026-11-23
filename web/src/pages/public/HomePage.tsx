@@ -5,9 +5,10 @@ import { directoryApi } from '@/features/directory/api';
 import { authApi } from '@/features/auth/api';
 import { Navbar } from '@/shared/layout/Navbar';
 import { FooterReveal } from '@/shared/layout/FooterReveal';
-import { useCountUp } from '@/shared/hooks/useCountUp';
 import { HomeHero } from './components/HomeHero';
+import { HomeStudentStrip } from './components/HomeStudentStrip';
 import { HomeSearchBand } from './components/HomeSearchBand';
+import { HomeSpotlightSection } from './components/HomeSpotlightCard';
 import { HomeEventsBand } from './components/HomeEventsBand';
 
 interface HomePageProps {
@@ -29,7 +30,7 @@ export const HomePage: React.FC<HomePageProps> = ({ session, onLogout }) => {
     setStudentsError(null);
 
     directoryApi
-      .getPublicStudents({ limit: 3 })
+      .getPublicStudents({ limit: 6 })
       .then((data) => {
         setFeaturedStudents(Array.isArray(data?.students) ? data.students : []);
         if (typeof data?.total === 'number') setStudentTotal(data.total);
@@ -68,57 +69,40 @@ export const HomePage: React.FC<HomePageProps> = ({ session, onLogout }) => {
     window.location.href = authApi.getOAuthAuthorizeUrl();
   };
 
-  const stats = [
-    studentTotal !== null ? { label: 'Profiles in the directory', value: studentTotal } : null,
-  ].filter((stat): stat is { label: string; value: number } => stat !== null);
+  // Split students: first 3 go to spotlight cards, all go to the marquee strip
+  const spotlightStudents = featuredStudents.slice(0, 3);
 
   return (
     <div className="flex min-h-[100dvh] flex-col bg-surface-canvas text-ink">
       <Navbar session={session} onLogout={onLogout} />
 
       <main className="flex-1">
-        <HomeHero
-          onSignIn={handleSignIn}
+        {/* 1. Full-width hero with word-stagger headline */}
+        <HomeHero onSignIn={handleSignIn} studentTotal={studentTotal} />
+
+        {/* 2. Living proof: scrolling strip of student avatar chips */}
+        <HomeStudentStrip students={featuredStudents} loading={studentsLoading} />
+
+        {/* 3. Spotlight cards — 3 students, scroll-reveal stagger */}
+        <HomeSpotlightSection
           loading={studentsLoading}
-          featuredStudents={featuredStudents}
+          students={spotlightStudents}
           error={studentsError}
           onRetry={loadFeaturedStudents}
         />
 
-        {stats.length > 0 && (
-          <section aria-label="Directory highlights" className="border-b border-edge">
-            <div className="mx-auto max-w-canvas px-6 py-10 sm:px-10">
-              <dl className="grid grid-cols-1 gap-8 sm:grid-cols-2">
-                {stats.map((stat) => (
-                  <HomeStatCounter key={stat.label} label={stat.label} value={stat.value} />
-                ))}
-              </dl>
-            </div>
-          </section>
-        )}
-
+        {/* 4. Search — slide-in-left/right reveal */}
         <HomeSearchBand
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
           onSearch={handleSearch}
         />
 
+        {/* 5. Events CTA — scale-pop reveal */}
         <HomeEventsBand />
       </main>
 
       <FooterReveal />
-    </div>
-  );
-};
-
-const HomeStatCounter: React.FC<{ label: string; value: number }> = ({ label, value }) => {
-  const animatedValue = useCountUp(value);
-  return (
-    <div>
-      <dd className="font-heading text-headline-lg font-extrabold tabular-nums text-ink">
-        {animatedValue}
-      </dd>
-      <dt className="mt-1 text-body-sm text-ink-secondary">{label}</dt>
     </div>
   );
 };
