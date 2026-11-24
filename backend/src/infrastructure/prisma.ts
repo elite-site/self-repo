@@ -46,12 +46,12 @@ export function buildDatabaseUrl(base: string): string {
       url.searchParams.set('pgbouncer', 'true');
       url.searchParams.set('statement_cache_size', '0');
       if (!url.searchParams.has('connection_limit')) {
-        const envLimit = process.env.DB_CONNECTION_LIMIT;
+        const envLimit = getDbConnectionLimit();
         url.searchParams.set('connection_limit', envLimit || '5');
       }
     } else {
       if (!url.searchParams.has('connection_limit')) {
-        const envLimit = process.env.DB_CONNECTION_LIMIT;
+        const envLimit = getDbConnectionLimit();
         url.searchParams.set('connection_limit', envLimit || '5');
       }
       if (!url.searchParams.has('statement_cache_size')) {
@@ -76,11 +76,16 @@ export function buildDatabaseUrl(base: string): string {
 }
 
 import { logger } from '../utils/logger';
-import { env } from '../config/env';
+import {
+  env,
+  getDbConnectionLimit,
+  isDevelopmentEnv,
+  isProductionEnv,
+} from '../config/env';
 import { dbTimingStorage } from './dbTiming';
 export { dbTimingStorage };
 
-const DATABASE_URL = buildDatabaseUrl(process.env.DATABASE_URL || '');
+const DATABASE_URL = buildDatabaseUrl(env.DATABASE_URL_RAW);
 const SLOW_QUERY_THRESHOLD_MS = env.SLOW_QUERY_THRESHOLD_MS;
 
 function createPrismaClient(): PrismaClient {
@@ -88,7 +93,7 @@ function createPrismaClient(): PrismaClient {
     datasources: DATABASE_URL
       ? { db: { url: DATABASE_URL } }
       : undefined,
-    log: process.env.NODE_ENV === 'development' ? ['warn', 'error'] : ['error'],
+    log: isDevelopmentEnv() ? ['warn', 'error'] : ['error'],
   });
 
   client.$use(async (params, next) => {
@@ -140,7 +145,7 @@ function createPrismaClient(): PrismaClient {
 
 export const prisma = global.__prisma || createPrismaClient();
 
-if (process.env.NODE_ENV !== 'production') {
+if (!isProductionEnv()) {
   global.__prisma = prisma;
 }
 

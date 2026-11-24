@@ -1,5 +1,5 @@
 export * from './types';
-export * from './api';
+export * from './api/index';
 export * from './hooks/useGithub';
 export * from './components/GithubMetricsCards';
 export * from './components/GithubAccountsTable';

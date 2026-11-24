@@ -1,5 +1,5 @@
 import * as adminRepo from '../admin.repository';
-import { driveService } from '../../media/drive';
+import { driveService } from '../../media';
 import { UpstreamError } from '../../../utils/appError';
 import { logger } from '../../../utils/logger';
 

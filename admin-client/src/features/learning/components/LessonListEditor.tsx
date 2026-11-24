@@ -15,7 +15,7 @@ export interface LessonListEditorProps {
 }
 
 const typeIcon = (type: LessonType) => {
-  if (type === 'VIDEO') return <span className="badge badge-submitted inline-flex items-center gap-1"><Video className="w-3 h-3 text-status-submitted" /> Drive Video</span>;
+  if (type === 'VIDEO') return <span className="badge badge-review inline-flex items-center gap-1"><Video className="w-3 h-3 text-status-review" /> Drive Video</span>;
   if (type === 'YOUTUBE') return <span className="badge badge-draft inline-flex items-center gap-1"><Video className="w-3 h-3" /> YouTube</span>;
   if (type === 'LINK') return <span className="badge badge-draft inline-flex items-center gap-1"><ExternalLink className="w-3 h-3" /> Link</span>;
   if (type === 'NOTES') return <span className="badge badge-draft inline-flex items-center gap-1"><FileText className="w-3 h-3" /> Notes</span>;

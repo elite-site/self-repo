@@ -6,7 +6,44 @@ if (!process.env.SKIP_DOTENV) {
   dotenv.config({ path: process.env.DOTENV_CONFIG_PATH || path.resolve(__dirname, '../../.env') });
 }
 
-const nodeEnv = process.env.NODE_ENV || 'development';
+function readEnv(name: string): string | undefined {
+  return process.env[name];
+}
+
+export function getNodeEnv(): string {
+  return readEnv('NODE_ENV') || 'development';
+}
+
+export function isProductionEnv(): boolean {
+  return env.NODE_ENV === 'production' || getNodeEnv() === 'production';
+}
+
+export function isDevelopmentEnv(): boolean {
+  return env.NODE_ENV === 'development' || getNodeEnv() === 'development';
+}
+
+export function isTestEnv(): boolean {
+  return env.NODE_ENV === 'test' || isVitestEnv();
+}
+
+export function isVitestEnv(): boolean {
+  return readEnv('VITEST') === 'true';
+}
+
+export function getDbConnectionLimit(): string {
+  return readEnv('DB_CONNECTION_LIMIT') || '5';
+}
+
+export function getMaxVideoSizeHardCapMb(): number {
+  const configured = parseInt(readEnv('MAX_VIDEO_SIZE_HARD_CAP_MB') || '', 10);
+  return Number.isFinite(configured) && configured > 0 ? configured : 100;
+}
+
+export function isAutoMigratePending(): boolean {
+  return readEnv('AUTO_MIGRATE_PENDING') === 'true';
+}
+
+const nodeEnv = getNodeEnv();
 
 // Secrets that must be explicitly overridden (not missing, not the dev fallback) in production
 const PROD_VALUE_CHECKS = [
@@ -19,6 +56,7 @@ const PROD_VALUE_CHECKS = [
 export const env = {
   PORT: parseInt(process.env.PORT || '5001', 10),
   NODE_ENV: nodeEnv,
+  DATABASE_URL_RAW: readEnv('DATABASE_URL') || '',
   DATABASE_URL: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/photoclub?schema=public',
   DIRECT_URL: process.env.DIRECT_URL || process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/photoclub?schema=public',
   JWT_SECRET: process.env.JWT_SECRET || 'dev_secret_photoclub_change_in_production',
@@ -132,10 +170,10 @@ export const env = {
   VIDEO_MAX_FILE_MB: parseInt(process.env.VIDEO_MAX_FILE_MB || '1024', 10),
 
   // Operational toggles & limits
-  AUTO_MIGRATE_PENDING: process.env.AUTO_MIGRATE_PENDING === 'true',
+  AUTO_MIGRATE_PENDING: isAutoMigratePending(),
   SYNC_DRIVE_PERMISSIONS: process.env.SYNC_DRIVE_PERMISSIONS === 'true',
-  MAX_VIDEO_SIZE_HARD_CAP_MB: parseInt(process.env.MAX_VIDEO_SIZE_HARD_CAP_MB || '100', 10),
-  DB_CONNECTION_LIMIT: process.env.DB_CONNECTION_LIMIT || '5',
+  MAX_VIDEO_SIZE_HARD_CAP_MB: getMaxVideoSizeHardCapMb(),
+  DB_CONNECTION_LIMIT: getDbConnectionLimit(),
   SLOW_QUERY_THRESHOLD_MS: parseInt(process.env.SLOW_QUERY_THRESHOLD_MS || process.env.PRISMA_SLOW_QUERY_THRESHOLD_MS || '500', 10),
 };
 
@@ -151,7 +189,7 @@ const KNOWN_FALLBACK_SECRETS = new Set([
 ]);
 
 // Production configuration sanity check
-if (nodeEnv === 'production') {
+if (isProductionEnv()) {
   if (!process.env.DATABASE_URL) {
     throw new Error('Refusing to start in production: missing DATABASE_URL');
   }

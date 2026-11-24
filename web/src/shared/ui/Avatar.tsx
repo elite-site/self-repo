@@ -106,22 +106,4 @@ export const Avatar: React.FC<AvatarProps> = ({
   );
 };
 
-export interface AvatarGroupProps extends React.HTMLAttributes<HTMLDivElement> {
-  /** Every avatar in the stack, in order. */
-  children: React.ReactNode;
-}
-
-/**
- * An overlapping stack for team rosters. §4.8 "Group Avatar": each avatar
- * overlaps the previous by 8px (`-ml-2`, the plan's `ml-[-8px]`), and a
- * surface-coloured ring is what keeps the overlap from reading as a smudge.
- */
-export const AvatarGroup: React.FC<AvatarGroupProps> = ({ children, className, ...rest }) => (
-  <div className={cn('flex items-center', className)} {...rest}>
-    {React.Children.map(children, (child) => (
-      <span className="-ml-2 rounded-full ring-2 ring-surface first:ml-0">{child}</span>
-    ))}
-  </div>
-);
-
 export default Avatar;

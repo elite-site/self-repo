@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { storageApi } from '../api';
+import { storageApi } from '../api/index';
 import { StorageStatsResponse } from '../types';
 import { useConfirm } from '@/shared/ui/ConfirmDialog';
 

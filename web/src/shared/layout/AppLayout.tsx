@@ -1,9 +1,8 @@
-import React, { Suspense, useCallback, useEffect, useState } from 'react';
+import React, { Suspense, useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { SkeletonPage } from '@/shared/ui/Skeleton';
 import { ErrorBoundary } from '@/shared/ui/ErrorBoundary';
 import { useCommandPalette } from '@/shared/hooks/useCommandPalette';
-import { notificationsApi, isNotificationPollingPaused } from '@/features/notifications/api';
 import type { StudentSession } from '@/shared/types';
 import { CommandPalette, recordRecentRoute } from './CommandPalette';
 import { BottomTabBar } from './BottomTabBar';
@@ -13,6 +12,7 @@ import { TopBar } from './TopBar';
 
 export interface AppLayoutProps {
   session: StudentSession | null;
+  unreadCount: number;
   onLogout: () => void;
   /**
    * Patches the app-level session so a change made inside a portal page (an
@@ -43,10 +43,9 @@ const SPACER_COLLAPSED = 'w-16'; // 64px — SIDEBAR_COLLAPSED_WIDTH
  * one clock and the page never squeezes. The spacer is `hidden` below `md`, where
  * the rail is too, so it contributes nothing and animates nothing.
  */
-export const AppLayout: React.FC<AppLayoutProps> = ({ session, onLogout, onPhotoChange }) => {
+export const AppLayout: React.FC<AppLayoutProps> = ({ session, unreadCount, onLogout, onPhotoChange }) => {
   const { pathname } = useLocation();
   const [collapsed, toggleCollapsed] = useSidebarCollapsed();
-  const unreadCount = useUnreadCount(pathname);
   const palette = useCommandPalette({ onOpenChange: lockBodyScroll });
 
   // §5.4's "Recent" group: a note of every page visit, written from the one
@@ -135,47 +134,6 @@ function lockBodyScroll(open: boolean): void {
   }
 
   document.body.style.overflow = previousBodyOverflow;
-}
-
-/**
- * The unread count behind the rail's badge, the tab bar's "More" dot and the top
- * bar's bell. §5.1/§5.2/§5.3 all want the same number, so it is fetched once
- * here and passed down.
- *
- * Deliberately a plain effect rather than a query: Batch 5 owns the data layer
- * and this hook is the one place to replace when `QueryClientProvider` lands.
- */
-const MIN_UNREAD_POLL_INTERVAL_MS = 15_000;
-let lastUnreadFetchTimestamp = 0;
-
-function useUnreadCount(pathname: string): number {
-  const [unreadCount, setUnreadCount] = useState(0);
-
-  const refresh = useCallback((force = false) => {
-    if (isNotificationPollingPaused()) return;
-    const now = Date.now();
-    if (!force && now - lastUnreadFetchTimestamp < MIN_UNREAD_POLL_INTERVAL_MS) {
-      return;
-    }
-    lastUnreadFetchTimestamp = now;
-
-    notificationsApi
-      .getNotifications({ limit: 10, isBackgroundPoll: true })
-      .then((data: unknown) => {
-        const summary = data as { unreadCount?: number } | null;
-        setUnreadCount(typeof summary?.unreadCount === 'number' ? summary.unreadCount : 0);
-      })
-      .catch(() => {
-        // A failed notification poll must not take the shell down with it; the
-        // badge simply stays where it was.
-      });
-  }, []);
-
-  useEffect(() => {
-    refresh();
-  }, [pathname, refresh]);
-
-  return unreadCount;
 }
 
 export default AppLayout;

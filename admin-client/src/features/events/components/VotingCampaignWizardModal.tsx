@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, Loader2 } from 'lucide-react';
-import { eventsApi } from '../api';
+import { eventsApi } from '../api/index';
 
 const campaignSteps = ['Name & Event', 'Voting Period', 'Eligibility', 'Candidates', 'Rules', 'Review'];
 

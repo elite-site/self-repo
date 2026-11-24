@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { githubApi } from '../api';
+import { githubApi } from '../api/index';
 import { GithubOverview, GithubLog } from '../types';
 
 export const useGithub = () => {

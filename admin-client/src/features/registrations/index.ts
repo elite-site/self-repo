@@ -18,7 +18,7 @@ export * from './hooks/useRegistrations';
 export * from './hooks/useTeams';
 
 // API
-export * from './api';
+export * from './api/index';
 
 // Types
 export * from './types';

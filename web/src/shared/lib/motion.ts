@@ -93,7 +93,6 @@ export const transitionSlow: Transition = {
   ease: MOTION_EASINGS.out,
 };
 export const transitionSpring: Transition = MOTION_SPRINGS.spring;
-export const transitionBounce: Transition = MOTION_SPRINGS.bounce;
 export const transitionTabSpring: Transition = MOTION_SPRINGS.tab;
 
 /**

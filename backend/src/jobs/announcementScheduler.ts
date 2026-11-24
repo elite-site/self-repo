@@ -1,4 +1,6 @@
 import cron from 'node-cron';
+import { isTestEnv } from '../config/env';
+import { logger } from '../utils/logger';
 import { processDueScheduledAnnouncements } from '../modules/announcements';
 
 let isRunning = false;
@@ -10,14 +12,14 @@ async function tick(): Promise<void> {
   try {
     await processDueScheduledAnnouncements();
   } catch (err) {
-    console.error('Announcement scheduler tick failed:', err);
+    logger.error('[AnnouncementScheduler] Tick failed', { err });
   } finally {
     isRunning = false;
   }
 }
 
 export function startAnnouncementScheduler(): void {
-  if (process.env.NODE_ENV === 'test') return;
+  if (isTestEnv()) return;
   if (started) return;
   started = true;
   cron.schedule('* * * * *', () => {

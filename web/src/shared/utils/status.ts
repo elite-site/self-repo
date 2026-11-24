@@ -20,22 +20,3 @@ export const formatContentStatus = (status?: string | null): string => {
       return status;
   }
 };
-
-export const getContentStatusBadgeClass = (status?: string | null): string => {
-  if (!status) return 'badge badge-draft';
-  switch (status.toUpperCase()) {
-    case 'APPROVED':
-      return 'badge badge-approved';
-    case 'PENDING':
-    case 'UNDER_REVIEW':
-    case 'SUBMITTED':
-      return 'badge badge-pending';
-    case 'CHANGES_REQUESTED':
-      return 'badge badge-changes';
-    case 'REJECTED':
-      return 'badge badge-rejected';
-    case 'HIDDEN':
-    default:
-      return 'badge badge-draft';
-  }
-};

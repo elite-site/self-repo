@@ -1,23 +1,22 @@
 import { client } from '@/shared/api/client';
+import {
+  isNotificationPollingPaused,
+  pauseNotificationPolling,
+  resumeNotificationPolling,
+} from '@/shared/api';
 import { Announcement } from '../types';
 
-let notificationPollingPaused = false;
+export { isNotificationPollingPaused, pauseNotificationPolling, resumeNotificationPolling };
 
-export function pauseNotificationPolling(): void {
-  notificationPollingPaused = true;
-}
-
-export function resumeNotificationPolling(): void {
-  notificationPollingPaused = false;
-}
-
-export function isNotificationPollingPaused(): boolean {
-  return notificationPollingPaused;
+interface NotificationFilters {
+  limit?: number;
+  offset?: number;
+  isBackgroundPoll?: boolean;
 }
 
 export const notificationsApi = {
-  async getNotifications(filters?: any) {
-    if (notificationPollingPaused && filters?.isBackgroundPoll) {
+  async getNotifications(filters?: NotificationFilters) {
+    if (isNotificationPollingPaused() && filters?.isBackgroundPoll) {
       return { notifications: [], unreadCount: 0 };
     }
     const res = await client.get('/student/notifications', { params: filters });

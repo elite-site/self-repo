@@ -6,9 +6,8 @@ import { Skeleton, SkeletonText } from '@/shared/ui/Skeleton';
 export const PublicProfileSkeleton: React.FC = () => {
   return (
     <div className="min-h-[100dvh] bg-[#070B16] text-slate-100 flex flex-col antialiased overflow-x-clip">
-      {/* Background ambient lighting */}
-      <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(ellipse_80%_60%_at_50%_-20%,rgba(225,29,72,0.14),rgba(255,255,255,0))]" />
-      <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(ellipse_60%_50%_at_80%_100%,rgba(59,130,246,0.08),rgba(0,0,0,0))]" />
+      {/* Flat ambient wash */}
+      <div className="pointer-events-none fixed inset-0 -z-10 bg-scrim/20" />
 
       <nav className="sticky top-0 z-50 w-full backdrop-blur-xl bg-[#070B16]/80 border-b border-slate-800/80">
         <div className="mx-auto flex h-16 max-w-[1200px] items-center justify-between px-4 sm:px-6 lg:px-8">

@@ -2,8 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X, LogOut, ChevronDown, ArrowRight, LayoutDashboard, Search } from 'lucide-react';
 import { StudentSession } from '@/shared/types';
-import { authApi } from '@/features/auth/api';
-import { resolveMediaUrl } from '@/shared/api';
+import { getStudentOAuthAuthorizeUrl, resolveMediaUrl } from '@/shared/api';
 import { getPhotoStyle } from '@/shared/utils/photoStyle';
 import { prefetchRoute } from '@/shared/utils/prefetch';
 
@@ -81,7 +80,7 @@ export const Navbar: React.FC<NavbarProps> = ({ session, onLogout }) => {
   };
 
   const handleSignIn = () => {
-    window.location.href = authApi.getOAuthAuthorizeUrl();
+    window.location.href = getStudentOAuthAuthorizeUrl();
   };
 
   return (

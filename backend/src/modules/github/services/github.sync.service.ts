@@ -1,7 +1,9 @@
 import { GithubSyncStatus, GithubSyncTrigger, GithubSyncLogStatus } from '@prisma/client';
-import { prisma } from '../../../infrastructure/prisma';
+import type { Prisma } from '@prisma/client';
+import * as repo from '../github.repository';
 import { env } from '../../../config/env';
 import { githubApiService, GithubRateLimitError } from './github.api.service';
+import { logger } from '../../../utils/logger';
 
 export class GithubSyncCooldownError extends Error {
   secondsRemaining: number;
@@ -40,9 +42,8 @@ export class GithubSyncService {
       await this.enforceManualLimits(studentId);
     }
 
-    await prisma.githubAccount.update({
-      where: { studentId },
-      data: { syncStatus: GithubSyncStatus.QUEUED },
+    await repo.updateGithubAccountSyncState(studentId, {
+      syncStatus: GithubSyncStatus.QUEUED,
     });
 
     return new Promise((resolve, reject) => {
@@ -52,9 +53,7 @@ export class GithubSyncService {
   }
 
   private async enforceManualLimits(studentId: string): Promise<void> {
-    const account = await prisma.githubAccount.findUnique({
-      where: { studentId },
-    });
+    const account = await repo.findGithubAccount(studentId);
     if (!account) {
       throw new Error('No connected GitHub account found for student');
     }
@@ -86,13 +85,10 @@ export class GithubSyncService {
     }
 
     // Set next allowed sync timestamp and increment daily counter
-    await prisma.githubAccount.update({
-      where: { studentId },
-      data: {
-        manualSyncCountToday: countToday + 1,
-        manualSyncDay: now,
-        nextSyncAllowedAt: new Date(Date.now() + env.GITHUB_SYNC_COOLDOWN_MIN * 60 * 1000),
-      },
+    await repo.updateGithubAccountSyncState(studentId, {
+      manualSyncCountToday: countToday + 1,
+      manualSyncDay: now,
+      nextSyncAllowedAt: new Date(Date.now() + env.GITHUB_SYNC_COOLDOWN_MIN * 60 * 1000),
     });
   }
 
@@ -121,16 +117,14 @@ export class GithubSyncService {
    * Execute full sync for a student
    */
   async executeSync(studentId: string, trigger: GithubSyncTrigger) {
-    const account = await prisma.githubAccount.findUnique({
-      where: { studentId },
-    });
+    const account = await repo.findGithubAccount(studentId);
     if (!account) {
       throw new Error(`Cannot sync: GitHub account for student ${studentId} not found`);
     }
 
-    await prisma.githubAccount.update({
-      where: { studentId },
-      data: { syncStatus: GithubSyncStatus.RUNNING, syncError: null },
+    await repo.updateGithubAccountSyncState(studentId, {
+      syncStatus: GithubSyncStatus.RUNNING,
+      syncError: null,
     });
 
     const startTime = new Date();
@@ -151,7 +145,10 @@ export class GithubSyncService {
           githubRepos = await githubApiService.fetchUserReposGraphQL(account.login);
           usedGraphQL = true;
         } catch (gqlErr) {
-          console.warn(`[GitHubSync] GraphQL query failed for ${account.login}, falling back to REST:`, gqlErr);
+          logger.warn('[GitHubSync] GraphQL query failed, falling back to REST', {
+            login: account.login,
+            err: gqlErr,
+          });
         }
       }
 
@@ -164,12 +161,10 @@ export class GithubSyncService {
       const fetchedRepoIds = new Set<string>();
 
       // Existing repos in DB for this student
-      const existingRepos = await prisma.githubRepo.findMany({
-        where: { studentId },
-      });
+      const existingRepos = await repo.findStudentReposForSync(studentId);
       const existingRepoMap = new Map(existingRepos.map((r) => [String(r.githubRepoId), r]));
 
-      const writes: any[] = [];
+      const writes: Prisma.PrismaPromise<unknown>[] = [];
 
       // 2. Process each repo
       for (const repoData of githubRepos) {
@@ -207,7 +202,7 @@ export class GithubSyncService {
         }
 
         writes.push(
-          prisma.githubRepo.upsert({
+          repo.upsertSyncedGithubRepo({
             where: {
               studentId_githubRepoId: {
                 studentId,
@@ -266,7 +261,7 @@ export class GithubSyncService {
       for (const existing of existingRepos) {
         if (!fetchedRepoIds.has(String(existing.githubRepoId)) && !existing.removedFromGithub) {
           writes.push(
-            prisma.githubRepo.update({
+            repo.updateSyncedGithubRepo({
               where: { id: existing.id },
               data: {
                 removedFromGithub: true,
@@ -282,15 +277,13 @@ export class GithubSyncService {
 
       // Execute all pending writes in one batch transaction
       if (writes.length > 0) {
-        await prisma.$transaction(writes);
+        await repo.commitGithubRepoWrites(writes);
       }
 
       // Auto-showcase on first sync if no showcased repos exist (prefer non-fork with >= 1 commit, up to 30)
       const hasExistingShowcase = existingRepos.some((r) => r.isShowcased && !r.removedFromGithub);
       if (!hasExistingShowcase) {
-        const activeRepos = await prisma.githubRepo.findMany({
-          where: { studentId, removedFromGithub: false },
-        });
+        const activeRepos = await repo.findActiveReposForShowcase(studentId);
 
         if (activeRepos.length > 0) {
           const sortedCandidates = [...activeRepos].sort((a, b) => {
@@ -305,13 +298,8 @@ export class GithubSyncService {
 
           const topToPick = sortedCandidates.slice(0, 30);
           if (topToPick.length > 0) {
-            await prisma.$transaction(
-              topToPick.map((r, idx) =>
-                prisma.githubRepo.update({
-                  where: { id: r.id },
-                  data: { isShowcased: true, showcaseRank: idx + 1 },
-                })
-              )
+            await repo.setShowcasedRepoRanks(
+              topToPick.map((r, idx) => ({ id: r.id, showcaseRank: idx + 1 }))
             );
           }
         }
@@ -321,13 +309,10 @@ export class GithubSyncService {
       await this.recomputeStudentSkills(studentId);
 
       // 5. Update GithubAccount status
-      await prisma.githubAccount.update({
-        where: { studentId },
-        data: {
-          lastSyncedAt: new Date(),
-          syncStatus: GithubSyncStatus.IDLE,
-          syncError: null,
-        },
+      await repo.updateGithubAccountSyncState(studentId, {
+        lastSyncedAt: new Date(),
+        syncStatus: GithubSyncStatus.IDLE,
+        syncError: null,
       });
 
       logStatus = GithubSyncLogStatus.SUCCESS;
@@ -340,28 +325,23 @@ export class GithubSyncService {
         syncError = err?.message || String(err);
       }
 
-      await prisma.githubAccount.update({
-        where: { studentId },
-        data: {
-          syncStatus: GithubSyncStatus.FAILED,
-          syncError,
-        },
+      await repo.updateGithubAccountSyncState(studentId, {
+        syncStatus: GithubSyncStatus.FAILED,
+        syncError,
       });
     } finally {
       // 6. Record log
       const rateStatus = githubApiService.getRateLimitStatus();
-      await prisma.githubSyncLog.create({
-        data: {
-          studentId,
-          trigger,
-          status: logStatus,
-          reposSeen,
-          apiCalls,
-          rateRemaining: rateStatus.remaining,
-          startedAt: startTime,
-          finishedAt: new Date(),
-          error: syncError,
-        },
+      await repo.createGithubSyncLog({
+        studentId,
+        trigger,
+        status: logStatus,
+        reposSeen,
+        apiCalls,
+        rateRemaining: rateStatus.remaining,
+        startedAt: startTime,
+        finishedAt: new Date(),
+        error: syncError,
       });
     }
 
@@ -379,13 +359,9 @@ export class GithubSyncService {
    * Recompute skills for a student from their active non-fork GitHub repositories
    */
   async recomputeStudentSkills(studentId: string): Promise<void> {
-    let repos = await prisma.githubRepo.findMany({
-      where: { studentId, removedFromGithub: false, isFork: false },
-    });
+    let repos = await repo.findNonForkActiveRepos(studentId);
     if (repos.length === 0) {
-      repos = await prisma.githubRepo.findMany({
-        where: { studentId, removedFromGithub: false },
-      });
+      repos = await repo.findActiveReposForShowcase(studentId);
     }
 
     const langMap = new Map<string, { displayName: string; bytes: number; repoIds: Set<string>; lastDate: Date | null }>();
@@ -465,20 +441,10 @@ export class GithubSyncService {
       sourceType: 'LANGUAGE' | 'DEPENDENCY' | 'TOPIC';
       ecosystem: string | null;
       sourceKey: string;
-    }> = await prisma.skillSourceMap.findMany({
-      where: {
-        OR: [
-          { sourceType: 'LANGUAGE', sourceKey: { in: allLangKeys } },
-          { sourceType: 'DEPENDENCY', sourceKey: { in: allDepKeys } },
-          { sourceType: 'TOPIC', sourceKey: { in: allTopicKeys } },
-        ],
-      },
-      select: {
-        skillId: true,
-        sourceType: true,
-        ecosystem: true,
-        sourceKey: true,
-      },
+    }> = await repo.findMatchingSkillSourceMaps({
+      languageKeys: allLangKeys,
+      dependencyKeys: allDepKeys,
+      topicKeys: allTopicKeys,
     });
 
     // Check for unmapped languages and link or auto-create Skill and SkillSourceMap
@@ -489,9 +455,7 @@ export class GithubSyncService {
 
     if (unmappedLangKeys.length > 0) {
       try {
-        const allSkills = await prisma.skill.findMany({
-          select: { id: true, name: true },
-        });
+        const allSkills = await repo.findSkillsForLanguageMatching();
         const skillByNameLower = new Map<string, { id: string; name: string }>();
         for (const sk of allSkills) {
           skillByNameLower.set(sk.name.trim().toLowerCase(), sk);
@@ -504,21 +468,15 @@ export class GithubSyncService {
 
           if (!skill) {
             try {
-              const created = await prisma.skill.create({
-                data: {
-                  name: langInfo.displayName,
-                  category: 'Languages',
-                  isActive: true,
-                },
-                select: { id: true, name: true },
+              const created = await repo.createSkill({
+                name: langInfo.displayName,
+                category: 'Languages',
+                isActive: true,
               });
               skill = created;
               skillByNameLower.set(langKey, created);
             } catch {
-              const found = await prisma.skill.findFirst({
-                where: { name: { equals: langInfo.displayName, mode: 'insensitive' } },
-                select: { id: true, name: true },
-              });
+              const found = await repo.findSkillByName(langInfo.displayName);
               if (found) {
                 skill = found;
                 skillByNameLower.set(langKey, found);
@@ -528,12 +486,10 @@ export class GithubSyncService {
 
           if (skill) {
             try {
-              await prisma.skillSourceMap.create({
-                data: {
-                  skillId: skill.id,
-                  sourceType: 'LANGUAGE',
-                  sourceKey: langKey,
-                },
+              await repo.createSkillSourceMap({
+                skillId: skill.id,
+                sourceType: 'LANGUAGE',
+                sourceKey: langKey,
               });
             } catch {
               // Ignore if mapping already exists
@@ -559,10 +515,7 @@ export class GithubSyncService {
 
     if (unmappedTopicKeys.length > 0) {
       try {
-        const allSkills = await prisma.skill.findMany({
-          where: { isActive: true },
-          select: { id: true, name: true },
-        });
+        const allSkills = await repo.findActiveSkillsForTopicMatching();
         const skillByNameLower = new Map<string, { id: string; name: string }>();
         for (const sk of allSkills) {
           skillByNameLower.set(sk.name.trim().toLowerCase(), sk);
@@ -572,12 +525,10 @@ export class GithubSyncService {
           const skill = skillByNameLower.get(tKey);
           if (skill) {
             try {
-              await prisma.skillSourceMap.create({
-                data: {
-                  skillId: skill.id,
-                  sourceType: 'TOPIC',
-                  sourceKey: tKey,
-                },
+              await repo.createSkillSourceMap({
+                skillId: skill.id,
+                sourceType: 'TOPIC',
+                sourceKey: tKey,
               });
             } catch {
               // Ignore if duplicate
@@ -647,44 +598,21 @@ export class GithubSyncService {
       if (agg.repoIds.size === 0) continue;
       activeSkillIds.push(skillId);
 
-      await prisma.githubStudentSkill.upsert({
-        where: {
-          studentId_skillId: {
-            studentId,
-            skillId,
-          },
-        },
-        update: {
-          repoCount: agg.repoIds.size,
-          totalBytes: agg.totalBytes,
-          lastEvidenceAt: agg.lastEvidenceAt,
-        },
-        create: {
-          studentId,
-          skillId,
-          repoCount: agg.repoIds.size,
-          totalBytes: agg.totalBytes,
-          lastEvidenceAt: agg.lastEvidenceAt,
-        },
+      await repo.upsertGithubStudentSkill({
+        studentId,
+        skillId,
+        repoCount: agg.repoIds.size,
+        totalBytes: agg.totalBytes,
+        lastEvidenceAt: agg.lastEvidenceAt,
       });
     }
 
     // Delete any skills for this student that no longer have evidence
-    await prisma.githubStudentSkill.deleteMany({
-      where: {
-        studentId,
-        skillId: { notIn: activeSkillIds },
-      },
-    });
+    await repo.deleteStaleGithubStudentSkills(studentId, activeSkillIds);
 
     // Initialize profile skills if empty so showcased skills are visible by default
     try {
-      const profile = await prisma.studentProfile.upsert({
-        where: { studentId },
-        update: {},
-        create: { studentId },
-        include: { skills: true },
-      });
+      const profile = await repo.ensureStudentProfileWithSkills(studentId);
 
       if (profile && profile.skills.length === 0 && activeSkillIds.length > 0) {
         const topSkillIds = Array.from(skillAggregates.entries())
@@ -693,10 +621,7 @@ export class GithubSyncService {
           .map(([skillId]) => skillId);
 
         if (topSkillIds.length > 0) {
-          await prisma.studentSkill.createMany({
-            data: topSkillIds.map((skillId) => ({ profileId: profile.id, skillId })),
-            skipDuplicates: true,
-          });
+          await repo.createStudentSkills(profile.id, topSkillIds);
         }
       }
     } catch {

@@ -11,9 +11,9 @@ import { cn } from '@/shared/lib/cn';
  * the real content will take, so the swap is almost invisible (§3.5: skeletons
  * instead of spinners is a design decision, not a fallback).
  *
- * The variants below are the five REDESIGN_PLAN §4.8 names: text, card, avatar,
- * video and the bento grid. Every block is sized to match the content it stands
- * in for, because a placeholder of the wrong size is worse than none.
+ * The variants below cover the REDESIGN_PLAN §4.8 shapes still in use: text,
+ * card, avatar and list. Every block is sized to match the content it stands in
+ * for, because a placeholder of the wrong size is worse than none.
  *
  * Built from the `.skeleton` class in `shared/tokens.css`, which carries the
  * pulse animation, the `pointer-events` opt-out and — via the token system's
@@ -97,45 +97,6 @@ export const SkeletonCard: React.FC<{ rows?: number; className?: string }> = ({
 /** The `size-10` circle that stands in for a face while its photo loads. */
 export const SkeletonAvatar: React.FC<{ className?: string }> = ({ className = '' }) => (
   <Skeleton className={cn('size-10 shrink-0 rounded-full', className)} />
-);
-
-/** A 16:9 block for an introduction video or a project cover. */
-export const SkeletonVideo: React.FC<{ className?: string }> = ({ className = '' }) => (
-  <Skeleton className={cn('aspect-video w-full rounded-lg', className)} />
-);
-
-/**
- * Cell spans from the Projects bento grid (§6): one featured cell at 8×2, then
- * the rest stepping down. The placeholder has to carry the same hierarchy as the
- * real grid, or the featured project jumps when the data lands.
- */
-const BENTO_SPANS = [
-  'lg:col-span-8 lg:row-span-2',
-  'lg:col-span-4 lg:row-span-2',
-  'lg:col-span-4 lg:row-span-1',
-  'lg:col-span-6 lg:row-span-1',
-] as const;
-
-/** The portfolio bento grid, cell for cell, at the same sizes as the real one. */
-export const SkeletonBento: React.FC<{ cells?: number; className?: string }> = ({
-  cells = 4,
-  className = '',
-}) => (
-  <div className={cn('grid grid-cols-1 gap-4 lg:grid-cols-12', className)} aria-hidden="true">
-    {Array.from({ length: cells }).map((_, index) => (
-      <div
-        key={index}
-        className={cn(
-          'surface flex flex-col gap-3 p-5',
-          BENTO_SPANS[index % BENTO_SPANS.length],
-        )}
-      >
-        <Skeleton className={cn('w-full rounded-lg', index === 0 ? 'aspect-video' : 'h-24')} />
-        <Skeleton className="h-4 w-2/5" />
-        <Skeleton className="h-3 w-4/5" />
-      </div>
-    ))}
-  </div>
 );
 
 /** List rows, each a leading square beside two lines of text. */

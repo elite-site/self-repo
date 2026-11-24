@@ -25,7 +25,7 @@ export const PublicProfileEducation: React.FC<PublicProfileEducationProps> = ({
       <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 p-6 backdrop-blur-sm space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-800/80">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-gradient-to-tr from-rose-500/20 to-pink-500/20 text-rose-400 border border-rose-500/30">
+            <div className="p-2.5 rounded-xl bg-red-500/20 text-rose-400 border border-rose-500/30">
               <GraduationCap size={22} />
             </div>
             <div>

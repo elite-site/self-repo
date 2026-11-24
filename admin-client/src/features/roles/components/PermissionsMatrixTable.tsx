@@ -51,7 +51,7 @@ export const PermissionsMatrixTable: React.FC = () => {
                       <Check className="w-3.5 h-3.5" />
                     </span>
                   ) : (
-                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-surface-sunken text-ink-disabled">
+                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-surface-sunken text-ink-muted">
                       <Minus className="w-3.5 h-3.5" />
                     </span>
                   )}
@@ -62,7 +62,7 @@ export const PermissionsMatrixTable: React.FC = () => {
                       <Check className="w-3.5 h-3.5" />
                     </span>
                   ) : (
-                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-surface-sunken text-ink-disabled">
+                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-surface-sunken text-ink-muted">
                       <Minus className="w-3.5 h-3.5" />
                     </span>
                   )}

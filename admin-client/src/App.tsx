@@ -12,7 +12,8 @@ import { Sidebar, AdminHeader, AdminTab } from '@/shared/layout';
 import { BrandedLoading, ConfirmProvider, LoginPage } from '@/shared/ui';
 import { ErrorBoundary } from '@/shared/ui/ErrorBoundary';
 import { AdminUser } from '@/shared/types';
-import { authApi } from '@/shared/api';
+import { authApi, ApiError } from '@/shared/api';
+import { usePortalStats } from '@/features/analytics/hooks/usePortalStats';
 import { useTheme } from './context/ThemeContext';
 
 // Lazy Loaded Pages
@@ -81,8 +82,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(null);
         setAdminUser(null);
       }
-    } catch (err: any) {
-      const status = err?.status || err?.response?.status;
+    } catch (err: unknown) {
+      const status = err instanceof ApiError ? err.status : null;
       if (status === 401 || status === 403) {
         setUser(null);
         setAdminUser(null);
@@ -136,6 +137,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 export const ProtectedLayout: React.FC = () => {
   const { user, authChecking, authError, completeLogin, logout, retryAuthCheck } = useAuth();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const portalStats = usePortalStats();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -215,6 +217,7 @@ export const ProtectedLayout: React.FC = () => {
         {/* TOP HEADER BAR */}
         <AdminHeader
           user={user}
+          portalStats={portalStats}
           onToggleMobileSidebar={() => setMobileSidebarOpen(!mobileSidebarOpen)}
           onLogout={logout}
         />

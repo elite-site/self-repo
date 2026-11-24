@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { driveService } from '../../media/drive';
+import { driveService } from '../../media';
 import { resolveContentRange } from '../../../utils/rangeParser';
 import { NotFoundError } from '../../../utils/appError';
 import { logger } from '../../../utils/logger';

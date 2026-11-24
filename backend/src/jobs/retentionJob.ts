@@ -1,4 +1,5 @@
 import cron from 'node-cron';
+import { isTestEnv } from '../config/env';
 import { runRetentionCleanup } from '../modules/admin/services/retention.service';
 import { logger } from '../utils/logger';
 
@@ -19,7 +20,7 @@ async function tick(): Promise<void> {
 }
 
 export function startRetentionScheduler(): void {
-  if (process.env.NODE_ENV === 'test') return;
+  if (isTestEnv()) return;
   if (started) return;
   started = true;
 

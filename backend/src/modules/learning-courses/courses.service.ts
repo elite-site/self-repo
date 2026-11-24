@@ -2,7 +2,7 @@ import { coursesRepository, CoursesRepository } from './courses.repository';
 import { NotFoundError, ForbiddenError, ValidationError } from '../../utils/appError';
 import { CourseStatus, EnrolmentType, CourseTargetType, Prisma } from '@prisma/client';
 import { ActivityService } from '../admin';
-import { driveService, extractDriveFileId } from '../media/drive/index';
+import { driveService, extractDriveFileId } from '../media';
 import {
   AssignCoursePayload,
   YouTubePreviewResult,

@@ -89,7 +89,7 @@ export const AdminStudentCodeChefTab: React.FC<AdminStudentCodeChefTabProps> = (
             type="button"
             onClick={() => onResync(studentId)}
             disabled={resyncing}
-            className="px-3 py-1.5 rounded-lg border border-border bg-surface hover:bg-surface-muted text-xs font-medium text-ink flex items-center gap-1.5 transition-colors disabled:opacity-50"
+            className="px-3 py-1.5 rounded-lg border border-border bg-surface hover:bg-surface-sunken text-xs font-medium text-ink flex items-center gap-1.5 transition-colors disabled:opacity-50"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${resyncing ? 'animate-spin' : ''}`} />
             {resyncing ? 'Syncing...' : 'Force Re-sync'}

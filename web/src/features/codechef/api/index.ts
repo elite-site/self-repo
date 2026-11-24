@@ -5,7 +5,16 @@ import type {
   ConnectCodeChefPayload,
 } from '../types';
 
-const isMock = import.meta.env.VITE_CODECHEF_MOCK === 'true';
+const isMock = (): boolean => {
+  // Fixtures are development-only. A production build must never render fake
+  // CodeChef data even if VITE_CODECHEF_MOCK was left set in the environment.
+  return import.meta.env.DEV && import.meta.env.VITE_CODECHEF_MOCK === 'true';
+};
+
+// A disabled integration may still fall back to fixtures while developing;
+// a production build surfaces the API error instead.
+let fallbackToMock = false;
+const useMock = (): boolean => fallbackToMock || isMock();
 
 const mockStatus: CodeChefStatus = {
   connected: true,
@@ -100,8 +109,6 @@ const mockDetails: CodeChefDetails = {
   ],
 };
 
-let fallbackToMock = isMock;
-
 function isIntegrationDisabled(err: any): boolean {
   return (
     err?.response?.status === 404 &&
@@ -112,12 +119,12 @@ function isIntegrationDisabled(err: any): boolean {
 
 export const codechefApi = {
   async getStatus(): Promise<CodeChefStatus> {
-    if (fallbackToMock) return { ...mockStatus };
+    if (useMock()) return { ...mockStatus };
     try {
       const res = await client.get('/student/codechef/status');
       return res.data;
     } catch (err: any) {
-      if (isIntegrationDisabled(err)) {
+      if (import.meta.env.DEV && isIntegrationDisabled(err)) {
         fallbackToMock = true;
         return { ...mockStatus };
       }
@@ -126,12 +133,12 @@ export const codechefApi = {
   },
 
   async getDetails(): Promise<CodeChefDetails> {
-    if (fallbackToMock) return { ...mockDetails };
+    if (useMock()) return { ...mockDetails };
     try {
       const res = await client.get('/student/codechef/details');
       return res.data;
     } catch (err: any) {
-      if (isIntegrationDisabled(err)) {
+      if (import.meta.env.DEV && isIntegrationDisabled(err)) {
         fallbackToMock = true;
         return { ...mockDetails };
       }
@@ -140,7 +147,7 @@ export const codechefApi = {
   },
 
   async connect(payload: ConnectCodeChefPayload): Promise<CodeChefStatus> {
-    if (fallbackToMock) {
+    if (useMock()) {
       mockStatus.connected = true;
       mockStatus.handle = payload.handle;
       mockStatus.verified = true;
@@ -152,7 +159,7 @@ export const codechefApi = {
       const res = await client.post('/student/codechef/connect', payload);
       return res.data;
     } catch (err: any) {
-      if (isIntegrationDisabled(err)) {
+      if (import.meta.env.DEV && isIntegrationDisabled(err)) {
         fallbackToMock = true;
         mockStatus.connected = true;
         mockStatus.handle = payload.handle;
@@ -166,7 +173,7 @@ export const codechefApi = {
   },
 
   async sync(): Promise<CodeChefStatus> {
-    if (fallbackToMock) {
+    if (useMock()) {
       mockStatus.lastSyncedAt = new Date().toISOString();
       return { ...mockStatus };
     }
@@ -174,7 +181,7 @@ export const codechefApi = {
       const res = await client.post('/student/codechef/sync');
       return res.data;
     } catch (err: any) {
-      if (isIntegrationDisabled(err)) {
+      if (import.meta.env.DEV && isIntegrationDisabled(err)) {
         fallbackToMock = true;
         mockStatus.lastSyncedAt = new Date().toISOString();
         return { ...mockStatus };
@@ -184,7 +191,7 @@ export const codechefApi = {
   },
 
   async setVisibility(showPublic: boolean): Promise<{ success: boolean; showPublic: boolean }> {
-    if (fallbackToMock) {
+    if (useMock()) {
       mockStatus.showPublic = showPublic;
       return { success: true, showPublic };
     }
@@ -192,7 +199,7 @@ export const codechefApi = {
       const res = await client.put('/student/codechef/visibility', { showPublic });
       return res.data;
     } catch (err: any) {
-      if (isIntegrationDisabled(err)) {
+      if (import.meta.env.DEV && isIntegrationDisabled(err)) {
         fallbackToMock = true;
         mockStatus.showPublic = showPublic;
         return { success: true, showPublic };
@@ -202,7 +209,7 @@ export const codechefApi = {
   },
 
   async disconnect(): Promise<{ success: boolean }> {
-    if (fallbackToMock) {
+    if (useMock()) {
       mockStatus.connected = false;
       mockStatus.status = 'NOT_CONNECTED';
       mockStatus.handle = null;
@@ -213,7 +220,7 @@ export const codechefApi = {
       const res = await client.delete('/student/codechef');
       return res.data;
     } catch (err: any) {
-      if (isIntegrationDisabled(err)) {
+      if (import.meta.env.DEV && isIntegrationDisabled(err)) {
         fallbackToMock = true;
         mockStatus.connected = false;
         mockStatus.status = 'NOT_CONNECTED';

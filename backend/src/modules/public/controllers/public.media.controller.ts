@@ -1,7 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
-import * as repo from '../public.repository';
 import * as service from '../public.service';
-import { driveService } from '../../media/drive';
+import { driveService } from '../../media';
 import { AppError, NotFoundError, ValidationError } from '../../../utils/appError';
 import { logger } from '../../../utils/logger';
 
@@ -19,22 +18,22 @@ export async function getMediaThumbnail(req: Request, res: Response): Promise<vo
     let thumbnail: Buffer | null = null;
 
     if (type === 'certificate') {
-      record = await repo.findCertificateById(id);
+      record = await service.findCertificateById(id);
       driveFileId = record?.fileDriveId ?? null;
     } else if (type === 'achievement') {
-      record = await repo.findAchievementById(id);
+      record = await service.findAchievementById(id);
       driveFileId = record?.proofDriveId ?? null;
     } else if (type === 'resume') {
-      record = await repo.findResumeById(id);
+      record = await service.findResumeById(id);
       driveFileId = record?.driveFileId ?? null;
     } else if (type === 'video') {
-      record = await repo.findIntroVideoById(id);
+      record = await service.findIntroVideoById(id);
       driveFileId = record?.driveFileId ?? null;
       if (!record) {
-        const sub = await repo.findSubmissionByIdOrRollNo(id);
+        const sub = await service.findSubmissionByIdOrRollNo(id);
         driveFileId = sub?.videoDriveId ?? null;
         if (driveFileId) {
-          const iv = await repo.findIntroVideoByStudent(sub?.rollNo || id);
+          const iv = await service.findIntroVideoByStudent(sub?.rollNo || id);
           if (iv) record = iv;
         }
       }
@@ -78,17 +77,17 @@ export async function getMediaThumbnail(req: Request, res: Response): Promise<vo
         if (generated) {
           thumbnail = generated;
           if (type === 'resume') {
-            await repo.updateResumeThumbnail(id, generated);
+            await service.updateResumeThumbnail(id, generated);
           } else if (type === 'video') {
             if (record?.id) {
-              await repo.updateVideoThumbnail(record.id, generated);
+              await service.updateVideoThumbnail(record.id, generated);
             } else {
-              await repo.updateVideoThumbnailByDriveId(driveFileId, generated);
+              await service.updateVideoThumbnailByDriveId(driveFileId, generated);
             }
           } else if (type === 'achievement') {
-            await repo.updateAchievementThumbnail(id, generated);
+            await service.updateAchievementThumbnail(id, generated);
           } else if (type === 'certificate') {
-            await repo.updateCertificateThumbnail(id, generated);
+            await service.updateCertificateThumbnail(id, generated);
           }
         }
       } catch (genErr) {
@@ -149,23 +148,23 @@ export async function streamPublicMedia(
     } else if (!resolvedDriveId) {
       try {
         if (type === 'certificate') {
-          const cert = await repo.findCertificateById(fileId);
+          const cert = await service.findCertificateById(fileId);
           if (cert?.fileDriveId) resolvedDriveId = cert.fileDriveId;
         } else if (type === 'achievement') {
-          const ach = await repo.findAchievementById(fileId);
+          const ach = await service.findAchievementById(fileId);
           if (ach?.proofDriveId) resolvedDriveId = ach.proofDriveId;
         } else if (type === 'resume') {
-          const resRec = await repo.findResumeById(fileId);
+          const resRec = await service.findResumeById(fileId);
           if (resRec?.driveFileId) resolvedDriveId = resRec.driveFileId;
         } else if (type === 'photo') {
-          const prof = await repo.findStudentProfileByIdOrStudent(fileId);
+          const prof = await service.findStudentProfileByIdOrStudent(fileId);
           if (prof?.photoDriveId) resolvedDriveId = prof.photoDriveId;
         } else if (type === 'video') {
-          const vid = await repo.findIntroVideoForPublicMedia(fileId);
+          const vid = await service.findIntroVideoForPublicMedia(fileId);
           if (vid?.driveFileId) {
             resolvedDriveId = vid.driveFileId;
           } else {
-            const sub = await repo.findSubmissionByIdOrRollNo(fileId);
+            const sub = await service.findSubmissionByIdOrRollNo(fileId);
             if (sub?.videoDriveId) resolvedDriveId = sub.videoDriveId;
           }
         }

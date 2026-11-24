@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { emailAutomationApi } from '../api';
+import { emailAutomationApi } from '../api/index';
 import { EmailHistoryResponse } from '../types';
 
 export const useEmailHistory = () => {

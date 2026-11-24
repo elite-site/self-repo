@@ -958,8 +958,8 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
 
       {/* Controls overlay */}
       <div className={controlsClass}>
-        {/* Gradient scrim */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent pointer-events-none" />
+        {/* Flat scrim behind controls */}
+        <div className="absolute inset-x-0 bottom-0 h-1/2 bg-scrim pointer-events-none" />
 
         {/* Time bar */}
         <div

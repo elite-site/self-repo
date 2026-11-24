@@ -71,7 +71,7 @@ export const DashboardQuickActions: React.FC<DashboardQuickActionsProps> = ({ ac
         <div className="absolute left-0 top-0 bottom-0 z-10 flex items-center pointer-events-none">
           <div
             aria-hidden="true"
-            className="absolute left-0 top-0 bottom-0 w-12 sm:w-16 bg-gradient-to-r from-surface-canvas via-surface-canvas/80 to-transparent"
+            className="absolute left-0 top-0 bottom-0 w-12 sm:w-16 bg-surface-canvas/80"
           />
           <button
             type="button"
@@ -116,7 +116,7 @@ export const DashboardQuickActions: React.FC<DashboardQuickActionsProps> = ({ ac
         <div className="absolute right-0 top-0 bottom-0 z-10 flex items-center justify-end pointer-events-none">
           <div
             aria-hidden="true"
-            className="absolute right-0 top-0 bottom-0 w-12 sm:w-16 bg-gradient-to-l from-surface-canvas via-surface-canvas/80 to-transparent"
+            className="absolute right-0 top-0 bottom-0 w-12 sm:w-16 bg-surface-canvas/80"
           />
           <button
             type="button"

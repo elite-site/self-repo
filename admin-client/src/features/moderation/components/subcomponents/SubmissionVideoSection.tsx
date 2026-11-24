@@ -11,7 +11,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { Submission, IntroVideoState } from '@/types';
-import { moderationApi } from '../../api';
+import { moderationApi } from '../../api/index';
 
 const VIDEO_STATUS_BADGE: Record<string, { label: string; cls: string }> = {
   PENDING: { label: 'Pending review', cls: 'badge badge-pending' },

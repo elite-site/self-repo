@@ -85,7 +85,7 @@ for (const { status, file } of changed) {
     fail(
       file,
       `Risky migration: ${[...new Set(problems)].join('; ')}. ` +
-        'If intended, add a line "-- migration-safety: reviewed (<reason>)" and use expand/contract (see docs/DELIVERY.md).',
+        'If intended, add a line "-- migration-safety: reviewed (<reason>)" and use expand/contract (see docs/operations.md).',
     );
   } else if (problems.length) {
     note(file, `Risky statements signed off: ${[...new Set(problems)].join('; ')}`);

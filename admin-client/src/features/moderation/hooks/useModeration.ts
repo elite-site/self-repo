@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { moderationApi } from '../api';
-import { githubApi } from '@/features/github/api';
+import { moderationApi } from '../api/index';
+import { githubApi } from '@/features/github/api/index';
 import type { GithubShowcasedProject } from '@/features/github/types';
 import { UnifiedModerationItem, ModerationType, TabType, StatusFilter } from '../types';
 

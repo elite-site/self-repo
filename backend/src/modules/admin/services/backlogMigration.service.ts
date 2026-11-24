@@ -1,8 +1,9 @@
 import * as migrationRepo from '../repositories/migration.repository';
+import { isAutoMigratePending, isProductionEnv } from '../../../config/env';
 import { logger } from '../../../utils/logger';
 
 export async function autoMigratePendingItems(): Promise<void> {
-  if (process.env.NODE_ENV === 'production' || process.env.AUTO_MIGRATE_PENDING !== 'true') return;
+  if (isProductionEnv() || !isAutoMigratePending()) return;
   try {
     const [resumeRes, achRes, certRes, profRes] = await migrationRepo.approvePendingBacklog();
     if (resumeRes.count > 0 || achRes.count > 0 || certRes.count > 0 || profRes.count > 0) {

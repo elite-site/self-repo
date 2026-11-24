@@ -9,7 +9,7 @@
 
 ## Release safety  (delete rows that don't apply)
 - [ ] **Migration**: additive only (expand step). No `CONCURRENTLY`. Destructive change? Signed off with `-- migration-safety: reviewed (...)` and the matching code already shipped in a previous release.
-- [ ] **API**: response changes are additive; `docs/openapi.yaml` updated; old web build still works against this API.
+- [ ] **API**: response changes are additive; `docs/api-and-data.md` updated; old web build still works against this API.
 - [ ] **Deploy order**: backend first, then web. Anything that must be done by hand (env var, Drive setting) is listed below.
 - [ ] **Feature flag**: user-facing feature ships OFF and is enabled from admin after deploy.
 - [ ] **Rollback**: reverting this PR (or redeploying the previous build) is safe.

@@ -247,7 +247,7 @@ export const StatsDashboard: React.FC<StatsDashboardProps> = ({
                       className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-brand transition-colors cursor-pointer group/hint self-start text-left"
                     >
                       <CheckCircle2 size={13} strokeWidth={2.5} className="shrink-0 text-emerald-500 dark:text-emerald-400" aria-hidden="true" />
-                      <span className="truncate underline decoration-emerald-500/40 underline-offset-2 group-hover/hint:decoration-brand">{kpi.hint}</span>
+                      <span className="truncate underline decoration-emerald-500/40 underline-offset-2 group-hover/hint:decoration-[var(--brand)]">{kpi.hint}</span>
                       <ArrowRight size={11} className="opacity-60 group-hover/hint:opacity-100 group-hover/hint:translate-x-0.5 transition-all shrink-0" />
                     </button>
                   )}

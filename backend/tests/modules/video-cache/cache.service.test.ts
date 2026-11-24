@@ -41,11 +41,20 @@ const {
 
 vi.mock('../../../src/config/env', () => ({
   env: {
+    NODE_ENV: 'test',
     FEATURE_VIDEO_CACHE: true,
     VIDEO_COPY_CONCURRENCY: 2,
     VIDEO_MAX_FILE_MB: 1024,
     VIDEO_CACHE_MAX_BYTES: BigInt(9 * 1024 * 1024 * 1024),
   },
+  getNodeEnv: () => 'test',
+  isProductionEnv: () => false,
+  isDevelopmentEnv: () => false,
+  isTestEnv: () => true,
+  isVitestEnv: () => true,
+  getDbConnectionLimit: () => '5',
+  getMaxVideoSizeHardCapMb: () => 100,
+  isAutoMigratePending: () => false,
 }));
 
 vi.mock('../../../src/infrastructure/r2', () => ({

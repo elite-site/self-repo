@@ -5,7 +5,7 @@ import { env } from '../../config/env';
 import { logger } from '../../utils/logger';
 import { NotFoundError, ValidationError } from '../../utils/appError';
 import { r2Adapter } from '../../infrastructure/r2';
-import { driveService } from '../media/drive/index';
+import { driveService } from '../media';
 import { cacheRepository, CacheRepository } from './cache.repository';
 import { cacheEvictionService } from './cache-eviction.service';
 import { VIDEO_CACHE_ERRORS } from './video-cache.errors';

@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { VideoOff, Trash2 } from 'lucide-react';
 import { Submission } from '@/types';
-import { moderationApi } from '../../api';
+import { useDeleteSubmissionMutation, useDeleteVideoMutation } from '../../hooks/useSubmissionDetail';
 import { useConfirm } from '@/shared/ui/ConfirmDialog';
 
 interface SubmissionManageActionsProps {
@@ -22,8 +22,10 @@ export const SubmissionManageActions: React.FC<SubmissionManageActionsProps> = (
   onError,
 }) => {
   const confirm = useConfirm();
-  const [deletingVideo, setDeletingVideo] = useState(false);
-  const [deletingRecord, setDeletingRecord] = useState(false);
+  const deleteVideo = useDeleteVideoMutation();
+  const deleteSubmission = useDeleteSubmissionMutation();
+  const deletingVideo = deleteVideo.isPending;
+  const deletingRecord = deleteSubmission.isPending;
 
   const handleDeleteVideo = async () => {
     const confirmed = await confirm({
@@ -34,17 +36,14 @@ export const SubmissionManageActions: React.FC<SubmissionManageActionsProps> = (
     });
     if (!confirmed) return;
 
-    setDeletingVideo(true);
     onError(null);
     try {
-      const res = await moderationApi.deleteVideo(submission.id);
+      const res = await deleteVideo.mutateAsync(submission.id);
       if (res.success) {
         onVideoDeleted(res.submission);
       }
-    } catch (err: any) {
-      onError(`Failed to delete video: ${err.message || 'Unknown error'}`);
-    } finally {
-      setDeletingVideo(false);
+    } catch (err) {
+      onError(`Failed to delete video: ${err instanceof Error ? err.message : 'Unknown error'}`);
     }
   };
 
@@ -57,17 +56,14 @@ export const SubmissionManageActions: React.FC<SubmissionManageActionsProps> = (
     });
     if (!confirmed) return;
 
-    setDeletingRecord(true);
     onError(null);
     try {
-      const res = await moderationApi.deleteSubmission(submission.id);
+      const res = await deleteSubmission.mutateAsync(submission.id);
       if (res.success) {
         onSubmissionDeleted(submission.id);
       }
-    } catch (err: any) {
-      onError(`Failed to delete submission: ${err.message || 'Unknown error'}`);
-    } finally {
-      setDeletingRecord(false);
+    } catch (err) {
+      onError(`Failed to delete submission: ${err instanceof Error ? err.message : 'Unknown error'}`);
     }
   };
 

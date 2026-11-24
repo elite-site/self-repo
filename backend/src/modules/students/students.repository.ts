@@ -1,4 +1,5 @@
 import { prisma } from '../../infrastructure/prisma';
+import { isTestEnv } from '../../config/env';
 import { TtlCache } from '../../utils/ttlCache';
 import type { Prisma } from '@prisma/client';
 
@@ -463,7 +464,7 @@ export async function findOpenEventsForDashboard(excludeInternalClause: any) {
       },
     });
 
-  if (process.env.NODE_ENV === 'test') return fetcher();
+  if (isTestEnv()) return fetcher();
   return dashboardEventsCache.wrap('open_events', fetcher);
 }
 
@@ -487,7 +488,7 @@ export async function findActiveVotingCampaigns() {
       select: { id: true, title: true, description: true },
     });
 
-  if (process.env.NODE_ENV === 'test') return fetcher();
+  if (isTestEnv()) return fetcher();
   return votingCampaignsCache.wrap('active_campaigns', fetcher);
 }
 

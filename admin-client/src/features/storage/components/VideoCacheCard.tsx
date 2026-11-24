@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import {
   Film,
   RotateCw,
@@ -10,8 +10,12 @@ import {
   HardDrive,
   Users,
 } from 'lucide-react';
-import { storageApi } from '../api';
-import { VideoCacheEntry, VideoCacheResponse } from '../types';
+import { VideoCacheEntry } from '../types';
+import {
+  usePurgeIdleVideoCacheMutation,
+  useRetryVideoCacheMutation,
+  useVideoCacheQuery,
+} from '../hooks/useVideoCache';
 import { useConfirm } from '@/shared/ui/ConfirmDialog';
 
 function formatBytes(bytesStr: string): string {
@@ -41,53 +45,28 @@ function formatDate(isoString: string): string {
 
 export const VideoCacheCard: React.FC = () => {
   const confirm = useConfirm();
-  const [data, setData] = useState<VideoCacheResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [page, setPage] = useState(1);
-  const [purging, setPurging] = useState(false);
-  const [retryingId, setRetryingId] = useState<string | null>(null);
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
-
-  const loadData = useCallback(async (showLoading = true) => {
-    if (showLoading) setLoading(true);
-    setError(null);
-    try {
-      const res = await storageApi.getVideoCache({
-        page,
-        limit: 10,
-        status: filterStatus === 'ALL' ? undefined : filterStatus,
-      });
-      setData(res);
-    } catch (err: any) {
-      setError(err?.response?.data?.message || err?.message || 'Failed to load video cache status');
-    } finally {
-      setLoading(false);
-    }
-  }, [page, filterStatus]);
-
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  const { data, loading, error, refetch } = useVideoCacheQuery(page, filterStatus);
+  const retryMutation = useRetryVideoCacheMutation();
+  const purgeMutation = usePurgeIdleVideoCacheMutation();
+  const retryingId = retryMutation.isPending ? retryMutation.variables : null;
+  const purging = purgeMutation.isPending;
 
   const handleRetry = async (id: string) => {
-    setRetryingId(id);
     setMessage(null);
     try {
-      const res = await storageApi.retryVideoCache(id);
+      const res = await retryMutation.mutateAsync(id);
       setMessage({
         text: res.message || 'Video copy retry initiated successfully.',
         type: 'success',
       });
-      await loadData(false);
-    } catch (err: any) {
+    } catch (err) {
       setMessage({
-        text: err?.response?.data?.message || err?.message || 'Failed to retry video copy',
+        text: err instanceof Error ? err.message : 'Failed to retry video copy',
         type: 'error',
       });
-    } finally {
-      setRetryingId(null);
     }
   };
 
@@ -101,23 +80,19 @@ export const VideoCacheCard: React.FC = () => {
     });
     if (!confirmed) return;
 
-    setPurging(true);
     setMessage(null);
     try {
-      const res = await storageApi.purgeIdleVideoCache();
+      const res = await purgeMutation.mutateAsync();
       const freedMb = (Number(res.freedBytes || 0) / (1024 * 1024)).toFixed(1);
       setMessage({
         text: `Purged ${res.evictedCount} idle video(s), freeing ${freedMb} MB.`,
         type: 'success',
       });
-      await loadData(false);
-    } catch (err: any) {
+    } catch (err) {
       setMessage({
-        text: err?.response?.data?.message || err?.message || 'Failed to purge idle video cache',
+        text: err instanceof Error ? err.message : 'Failed to purge idle video cache',
         type: 'error',
       });
-    } finally {
-      setPurging(false);
     }
   };
 
@@ -159,7 +134,7 @@ export const VideoCacheCard: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-edge">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-status-bg-submitted text-status-submitted flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-status-bg-review text-status-review flex items-center justify-center shrink-0">
             <Film className="w-5 h-5" />
           </div>
           <div>
@@ -185,7 +160,7 @@ export const VideoCacheCard: React.FC = () => {
           </button>
           <button
             type="button"
-            onClick={() => loadData(true)}
+            onClick={() => void refetch()}
             disabled={loading}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-ink-secondary bg-surface-sunken border border-edge rounded-lg hover:bg-surface transition-colors disabled:opacity-50 cursor-pointer"
             title="Refresh video cache status"
@@ -322,7 +297,7 @@ export const VideoCacheCard: React.FC = () => {
           <p className="font-semibold mb-3">{error}</p>
           <button
             type="button"
-            onClick={() => loadData(true)}
+            onClick={() => void refetch()}
             className="btn btn-secondary text-xs inline-flex items-center gap-1"
           >
             <RotateCw className="w-3.5 h-3.5" /> Retry

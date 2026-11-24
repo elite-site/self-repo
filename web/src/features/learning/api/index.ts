@@ -112,18 +112,6 @@ export const learningApi = {
     return res.data;
   },
 
-  async startQuiz(quizId: string): Promise<{ attemptId: string; startedAt: string; timeLimitMin: number | null }> {
-    if (isMock()) {
-      return {
-        attemptId: 'attempt-mock-1',
-        startedAt: new Date().toISOString(),
-        timeLimitMin: 15,
-      };
-    }
-    const res = await client.post(`/student/learning/quizzes/${quizId}/start`);
-    return res.data;
-  },
-
   async submitQuiz(
     quizId: string,
     data: { attemptId: string; answers: Array<{ questionId: string; selectedOptionIds: string[] }> }

@@ -2,7 +2,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import { AlertCircle } from 'lucide-react';
 import { IntroVideoState, Submission, SubmissionRating } from '@/types';
-import { moderationApi } from '../api';
+import {
+  useRequestNewVideoMutation,
+  useSetVideoPublicMutation,
+  useSubmissionQuery,
+  useUpdateRatingMutation,
+  useUpdateReviewMutation,
+} from '../hooks/useSubmissionDetail';
 import { SubmissionDetailHeader } from './subcomponents/SubmissionDetailHeader';
 import { SubmissionIdentityCard } from './subcomponents/SubmissionIdentityCard';
 import { SubmissionVideoSection } from './subcomponents/SubmissionVideoSection';
@@ -26,18 +32,25 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
   const modalRef = useRef<HTMLDivElement>(null);
   const previousActiveElement = useRef<HTMLElement | null>(null);
 
+  const submissionDetail = useSubmissionQuery(submission?.id);
+  const requestNewVideo = useRequestNewVideoMutation();
+  const setVideoPublic = useSetVideoPublicMutation();
+  const updateRating = useUpdateRatingMutation();
+  const updateReview = useUpdateReviewMutation();
+
   const [rating, setRating] = useState<SubmissionRating | null>(submission?.rating || null);
-  const [updating, setUpdating] = useState(false);
   const [hasVideo, setHasVideo] = useState<boolean>(Boolean(submission?.videoDriveId));
   const [introVideo, setIntroVideo] = useState<IntroVideoState | null>(submission?.introVideo ?? null);
-  const [requestingVideo, setRequestingVideo] = useState(false);
-  const [togglingPublic, setTogglingPublic] = useState(false);
   const [videoNotice, setVideoNotice] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [reviewText, setReviewText] = useState(submission?.reviewText || '');
   const [reviewPros, setReviewPros] = useState<string[]>(submission?.reviewPros || []);
   const [reviewCons, setReviewCons] = useState<string[]>(submission?.reviewCons || []);
-  const [sendingReview, setSendingReview] = useState(false);
+
+  const updating = updateRating.isPending;
+  const requestingVideo = requestNewVideo.isPending;
+  const togglingPublic = setVideoPublic.isPending;
+  const sendingReview = updateReview.isPending;
 
   useEffect(() => {
     previousActiveElement.current = document.activeElement as HTMLElement;
@@ -77,26 +90,17 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
   }, []);
 
   useEffect(() => {
-    if (!submission) return;
-    let cancelled = false;
-    moderationApi
-      .getSubmission(submission.id)
-      .then((data) => {
-        if (!cancelled && data?.introVideo) setIntroVideo(data.introVideo as IntroVideoState);
-      })
-      .catch(() => undefined);
-    return () => {
-      cancelled = true;
-    };
-  }, [submission]);
+    if (submissionDetail?.introVideo) {
+      setIntroVideo(submissionDetail.introVideo as IntroVideoState);
+    }
+  }, [submissionDetail]);
 
   if (!submission) return null;
 
   const handleRequestNewVideo = async (reason: string) => {
-    setRequestingVideo(true);
     setVideoNotice(null);
     try {
-      const res = await moderationApi.requestNewVideo(submission.id, reason);
+      const res = await requestNewVideo.mutateAsync({ id: submission.id, reason });
       setVideoNotice(res.message || 'The student has been notified.');
       setIntroVideo((prev) =>
         prev
@@ -110,40 +114,32 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
       );
     } catch {
       setVideoNotice('Failed to request a new video. Try again.');
-    } finally {
-      setRequestingVideo(false);
     }
   };
 
   const handleTogglePublic = async () => {
     if (!introVideo) return;
     const next = !introVideo.isPublic;
-    setTogglingPublic(true);
     setVideoNotice(null);
     try {
-      const res = await moderationApi.setVideoPublic(introVideo.id, next);
+      const res = await setVideoPublic.mutateAsync({ id: introVideo.id, isPublic: next });
       setIntroVideo((prev) => (prev ? { ...prev, isPublic: next } : prev));
       setVideoNotice(res.message || 'Public visibility updated.');
-    } catch (err: any) {
-      setVideoNotice(err?.response?.data?.message || 'Failed to update public visibility.');
-    } finally {
-      setTogglingPublic(false);
+    } catch (err) {
+      setVideoNotice(err instanceof Error ? err.message : 'Failed to update public visibility.');
     }
   };
 
   const handleRate = async (value: SubmissionRating | null) => {
-    setUpdating(true);
     setActionError(null);
     try {
-      const res = await moderationApi.updateRating(submission.id, value);
+      const res = await updateRating.mutateAsync({ id: submission.id, rating: value });
       if (res.success) {
         setRating(res.submission.rating || null);
         onUpdated(res.submission);
       }
     } catch {
       setActionError('Failed to update rating.');
-    } finally {
-      setUpdating(false);
     }
   };
 
@@ -156,13 +152,15 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
   };
 
   const handleSubmitReview = async (clear: boolean) => {
-    setSendingReview(true);
     setActionError(null);
     try {
-      const res = await moderationApi.updateReview(submission.id, {
-        reviewText: clear ? '' : reviewText,
-        pros: clear ? [] : reviewPros,
-        cons: clear ? [] : reviewCons,
+      const res = await updateReview.mutateAsync({
+        id: submission.id,
+        review: {
+          reviewText: clear ? '' : reviewText,
+          pros: clear ? [] : reviewPros,
+          cons: clear ? [] : reviewCons,
+        },
       });
       if (res.success) {
         if (clear) {
@@ -176,10 +174,8 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
         }
         onUpdated(res.submission);
       }
-    } catch (err: any) {
-      setActionError(`Failed to send response: ${err.message || 'Unknown error'}`);
-    } finally {
-      setSendingReview(false);
+    } catch (err) {
+      setActionError(`Failed to send response: ${err instanceof Error ? err.message : 'Unknown error'}`);
     }
   };
 

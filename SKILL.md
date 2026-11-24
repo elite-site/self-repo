@@ -5,7 +5,7 @@ description: >
   page. Use when creating, editing, or reviewing any page, component, or layout
   in web/src/features/** or web/src/shared/**. Covers layout, color tokens,
   shape language, animation standards, and per-page consistency requirements
-  derived from the approved reference mockup in docs/design/elite-portal-reference-mockup.jpg.
+  derived from the approved reference mockup in assets/elite-portal-reference-mockup.jpg.
 ---
 
 # ELITE Portal Design Skill
@@ -13,7 +13,7 @@ description: >
 ## Purpose
 
 This skill ensures every student portal page is visually consistent with the
-approved reference mockup (`docs/design/elite-portal-reference-mockup.jpg`).
+approved reference mockup (`assets/elite-portal-reference-mockup.jpg`).
 It governs layout structure, token usage, shape language, and animation
 patterns.
 
@@ -22,7 +22,7 @@ patterns.
 | Document | Path | Role |
 |---|---|---|
 | **Primary Spec** | `DESIGN.md` | Full design system spec (colors, layout, animation, per-page specs) |
-| **Reference Mockup** | `docs/design/elite-portal-reference-mockup.jpg` | Approved side-by-side light/dark UI mockup |
+| **Reference Mockup** | `assets/elite-portal-reference-mockup.jpg` | Approved side-by-side light/dark UI mockup |
 | **Design Tokens (CSS)** | `shared/tokens.css` | All CSS custom properties |
 | **Design Tokens (JS)** | `shared/tokens.mjs` | Radius, motion, type scales |
 | **Tailwind Preset** | `shared/tailwind-preset.mjs` | Tailwind token integration |
@@ -33,7 +33,7 @@ patterns.
 
 ### Before writing or editing any UI file:
 1. Read `DESIGN.md` sections 1–5 (color, geometry, layout, typography, animation).
-2. Look at `docs/design/elite-portal-reference-mockup.jpg` to ground your decisions visually.
+2. Look at `assets/elite-portal-reference-mockup.jpg` to ground your decisions visually.
 3. Identify which page spec in `DESIGN.md §7` applies to your current page.
 
 ### During implementation:
@@ -41,9 +41,8 @@ patterns.
 5. Add the **Metric Tiles Row** from `DESIGN.md §3.5` where applicable.
 6. Use `RadialRing` from `@/shared/ui/RadialRing` for circular progress displays.
 7. Use `MetricTile` from `@/shared/ui/MetricTile` for the quick-stats row.
-8. Use `scrollReveal` from `@/shared/lib/scrollReveal` for non-React reveal animations.
-9. Always wrap pages in a `motion.div` stagger container using `selectVariantsByName`.
-10. Cards use `rounded-2xl` (feature) or `rounded-xl` (compact) — **never** `rounded`.
+8. Always wrap pages in a `motion.div` stagger container using `selectVariantsByName`.
+9. Cards use `rounded-2xl` (feature) or `rounded-xl` (compact) — **never** `rounded`.
 
 ### Color rules (hard):
 - Primary brand interactions use `--brand` (`#2563EB` light / `#3B82F6` dark).
@@ -60,8 +59,8 @@ patterns.
 - Every animation respects `prefers-reduced-motion` via `useReducedMotion()`.
 
 ### After implementation:
-11. Run through the **Per-Page Consistency Checklist** in `DESIGN.md §6`.
-12. Visually verify the component in both light mode and dark mode.
+10. Run through the **Per-Page Consistency Checklist** in `DESIGN.md §6`.
+11. Visually verify the component in both light mode and dark mode.
 
 ## Quick Component Reference
 
@@ -73,11 +72,6 @@ import { RadialRing } from '@/shared/ui/RadialRing';
 // Metric tile with count-up
 import { MetricTile } from '@/shared/ui/MetricTile';
 <MetricTile icon={<BookOpen size={16} aria-hidden="true" />} label="Active Courses" value={8} />
-
-// Scroll reveal (non-React)
-import { scrollReveal } from '@/shared/lib/scrollReveal';
-useEffect(() => scrollReveal(), []);
-// In HTML: <div data-reveal data-reveal-delay="100"> ... </div>
 
 // Page stagger
 import { selectVariantsByName } from '@/shared/lib/motion';

@@ -1,7 +1,13 @@
+import type { ReactElement } from 'react';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { CourseFormModal, parseYouTubeVideoId, isYouTubePlaylist } from '../components/CourseFormModal';
 import { learningAdminApi } from '../api';
+import { createQueryClient } from '@/shared/lib/queryClient';
+
+const renderModal = (modal: ReactElement) =>
+  render(<QueryClientProvider client={createQueryClient()}>{modal}</QueryClientProvider>);
 
 describe('YouTube URL Helpers', () => {
   it('identifies playlist links correctly', () => {
@@ -29,7 +35,7 @@ describe('CourseFormModal Component', () => {
   });
 
   it('renders updated header label and placeholder inside Basic Details tab', () => {
-    render(
+    renderModal(
       <CourseFormModal
         open={true}
         onClose={vi.fn()}
@@ -43,7 +49,7 @@ describe('CourseFormModal Component', () => {
   });
 
   it('shows validation error when entering non-YouTube or invalid URL', async () => {
-    render(
+    renderModal(
       <CourseFormModal
         open={true}
         onClose={vi.fn()}
@@ -77,7 +83,7 @@ describe('CourseFormModal Component', () => {
       ],
     });
 
-    render(
+    renderModal(
       <CourseFormModal
         open={true}
         onClose={vi.fn()}
@@ -122,7 +128,7 @@ describe('CourseFormModal Component', () => {
 
     const onSubmit = vi.fn();
 
-    render(
+    renderModal(
       <CourseFormModal
         open={true}
         onClose={vi.fn()}

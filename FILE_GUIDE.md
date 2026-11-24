@@ -326,17 +326,24 @@ These are scripts created for developers to maintain and inspect the project:
 
 ## 10. Documentation (`docs/`)
 
-The `docs/` folder contains in-depth documentation and engineering records:
+`docs/README.md` is the index. The documents below describe the system as it is built; when code and documentation disagree, the code wins.
 
 | File / Folder | What It Does |
 | :--- | :--- |
-| `docs/architecture/ARCHITECTURE.md` | Explains the detailed technical design of the entire platform. |
-| `docs/architecture/REFACTOR_LOG.md` | A diary of past code cleanups and structural improvements. |
-| `docs/decisions/` | **Architecture Decision Records (ADRs):** Explains why certain technical choices were made (like how errors are handled, how folders are structured). |
-| `docs/openapi.yaml` | The official API specification. Lists all backend endpoints and their inputs/outputs in standard OpenAPI format. |
-| `docs/perf/BASELINE.md` | Speed, memory, and performance benchmark records. |
+| `docs/README.md` | Documentation index and the verification commands to run before reporting a change. |
+| `docs/system-architecture.md` | System overview, request flow and Mermaid diagram. |
+| `docs/architecture/layers.md` | Dependency rules for backend layers and frontend features. |
+| `docs/architecture/backend.md` | Modules, middleware, jobs, errors and validated config. |
+| `docs/architecture/frontend.md` | The two clients, routing, data flow, tokens and UI conventions. |
+| `docs/architecture/database.md` | Prisma, migrations, indexing, retention and open schema questions. |
+| `docs/api-and-data.md` | Route conventions, contracts, response envelopes and endpoint catalogue. |
+| `docs/security.md` | Authentication, authorization, secrets and privacy controls. |
+| `docs/operations.md` | Build, checks, health probes, scheduled work and delivery rules. |
+| `docs/testing.md` | Test tooling, commands, coverage expectations and known gaps. |
+| `docs/style-and-principles.md` | Engineering principles, naming, comments and hard limits. |
+| `docs/decisions/` | **Architecture Decision Records (ADRs):** why technical choices were made. |
 | `docs/runbooks/github-sync.md` | Step-by-step instructions for troubleshooting and running the GitHub sync job. |
-| `docs/DELIVERY.md` | Deployment and delivery checklist. |
+| `docs/runbooks/video-cache.md` | Step-by-step instructions for the Drive to Cloudflare R2 video cache. |
 
 ---
 

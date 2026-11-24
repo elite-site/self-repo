@@ -1,41 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { AlertCircle, ArrowLeft, Bell, CalendarDays, Megaphone } from 'lucide-react';
-import { notificationsApi } from '../api';
-import { Announcement } from '../types';
+import { useAnnouncement } from '../hooks/useAnnouncement';
 import { SkeletonPage } from '@/shared/ui/Skeleton';
 
 export const AnnouncementDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const [announcement, setAnnouncement] = useState<Announcement | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const loadAnnouncement = async () => {
-      if (!id) return;
-      setLoading(true);
-      setError(null);
-
-      try {
-        const data = await notificationsApi.getAnnouncement(id);
-        if (!cancelled) setAnnouncement(data);
-      } catch {
-        if (!cancelled) {
-          setError('This announcement is no longer available.');
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
-
-    void loadAnnouncement();
-    return () => {
-      cancelled = true;
-    };
-  }, [id]);
+  const { announcement, loading, error } = useAnnouncement(id);
 
   if (loading) {
     return <SkeletonPage label="Loading announcement" cards={1} rows={5} />;
@@ -65,7 +36,7 @@ export const AnnouncementDetailPage: React.FC = () => {
       </Link>
 
       <article className="bg-surface border border-edge rounded-lg shadow-card overflow-hidden">
-        <div className="bg-gradient-to-br from-ink to-surface-inverse px-6 sm:px-8 py-7 text-on-primary">
+        <div className="bg-surface-inverse px-6 sm:px-8 py-7 text-on-primary">
           <div className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-brand-soft mb-4">
             <Megaphone className="w-4 h-4 text-brand-soft" />
             Department announcement

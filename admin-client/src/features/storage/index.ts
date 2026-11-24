@@ -1,5 +1,5 @@
 export * from './types';
-export * from './api';
+export * from './api/index';
 export * from './hooks/useStorage';
 export * from './components/DriveConnectorCard';
 export * from './components/MediaInventoryGrid';

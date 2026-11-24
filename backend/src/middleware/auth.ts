@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { env } from '../config/env';
+import { AppError, UnauthorizedError } from '../utils/appError';
 
 export interface AdminJwtPayload {
   userId: string;
@@ -16,7 +17,7 @@ declare global {
   }
 }
 
-export const requireAdminAuth = (req: Request, res: Response, next: NextFunction): void => {
+export const requireAdminAuth = (req: Request, _res: Response, next: NextFunction): void => {
   let token = req.cookies?.[env.ADMIN_SESSION_COOKIE_NAME];
 
   if (!token && req.headers.authorization?.startsWith('Bearer ')) {
@@ -24,10 +25,7 @@ export const requireAdminAuth = (req: Request, res: Response, next: NextFunction
   }
 
   if (!token) {
-    res.status(401).json({
-      error: 'UNAUTHORIZED',
-      message: 'Admin authentication required. Please log in.',
-    });
+    next(new UnauthorizedError('Admin authentication required. Please log in.'));
     return;
   }
 
@@ -35,10 +33,7 @@ export const requireAdminAuth = (req: Request, res: Response, next: NextFunction
     const decoded = jwt.verify(token, env.JWT_SECRET) as AdminJwtPayload;
     req.adminUser = decoded;
     next();
-  } catch (err) {
-    res.status(401).json({
-      error: 'INVALID_TOKEN',
-      message: 'Your session has expired or is invalid. Please log in again.',
-    });
+  } catch {
+    next(new AppError('INVALID_TOKEN', 'Your session has expired or is invalid. Please log in again.', 401));
   }
 };

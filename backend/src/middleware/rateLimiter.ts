@@ -86,22 +86,6 @@ export const submissionRateLimiter = rateLimit({
 });
 
 /**
- * Resource downloads/previews: generous enough for normal reading, bounded so a
- * single client cannot pull the whole library repeatedly.
- */
-export const resourceDownloadRateLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 60,
-  standardHeaders: true,
-  legacyHeaders: false,
-  keyGenerator: (req) => getClientIdentity(req),
-  message: {
-    error: 'TOO_MANY_REQUESTS',
-    message: 'Too many file downloads. Please wait a moment before trying again.',
-  },
-});
-
-/**
  * Video playback request and heartbeat limiter.
  * Allows regular playback and heartbeats while guarding against presigned URL flooding.
  * 60 requests per minute per authenticated student.

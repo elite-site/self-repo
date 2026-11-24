@@ -90,6 +90,7 @@ jobs:
       - run: npx prisma validate
       - name: Typecheck and compile
         run: npx tsc
+      - run: npm run lint
       - name: Migrations apply cleanly from scratch
         run: npx prisma migrate deploy
       - name: Schema matches migrations (no drift)
@@ -124,6 +125,7 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
       - run: npm ci --ignore-scripts
+      - run: npm run lint
       - run: npm test
       - name: Typecheck and build
         run: npm run build
@@ -148,6 +150,7 @@ jobs:
           cache: npm
           cache-dependency-path: admin-client/package-lock.json
       - run: npm ci --ignore-scripts
+      - run: npm run lint
       - run: npm test
       - name: Typecheck and build
         run: npm run build
@@ -171,11 +174,7 @@ jobs:
       - run: npm ci --ignore-scripts --prefix admin-client
       - run: node tools/build-tokens.mjs --check
       - run: node tools/check-contrast.mjs
-      # Red on main today: bg-brand-subtle (Badge.tsx), bg-surface-foreground
-      # (SettingsPage.tsx), border-surface-border (LoginPage.tsx) generate no CSS.
-      # Fix those three classes, then delete the next line to make this blocking.
       - run: node tools/check-utilities.mjs
-        continue-on-error: true
 
   # ------------------------------------------------------------ migrations
   migrations:

@@ -1,4 +1,4 @@
-import { driveService } from '../../media/drive';
+import { driveService } from '../../media';
 import { ActivityService } from './activity.service';
 import { notifyVideoChangeRequested } from '../../students';
 import { AppError } from '../../../utils/appError';

@@ -1,5 +1,5 @@
 import React, { useCallback, lazy, Suspense } from 'react';
-import { Routes, Route, Navigate, Outlet, useNavigate, BrowserRouter } from 'react-router-dom';
+import { Routes, Route, Navigate, Outlet, useLocation, useNavigate, BrowserRouter } from 'react-router-dom';
 import { PublicThemeProvider, StudentThemeProvider } from './context/ThemeContext';
 import { SessionProvider, useSession } from './context/SessionContext';
 import { ToastProvider } from '@/shared/ui/Toast';
@@ -7,6 +7,8 @@ import { ConfirmProvider } from '@/shared/ui/ConfirmDialog';
 import { SkeletonPage } from '@/shared/ui/Skeleton';
 import { ErrorBoundary } from '@/shared/ui/ErrorBoundary';
 import { hasStoredToken } from '@/shared/utils/sessionBootstrap';
+import { useUnreadCount } from '@/features/notifications/hooks/useUnreadCount';
+import './router/routePrefetch';
 
 // Public Pages (isolated chunk for public visitors)
 const HomePage = lazy(() => import('./pages/public/HomePage'));
@@ -59,6 +61,8 @@ const RouteLoadingFallback: React.FC = () => (
 const AuthWrapper: React.FC = () => {
   const { session, authChecking, sessionError, retrySessionCheck, logout, setPhoto } = useSession();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const unreadCount = useUnreadCount(session ? pathname : null);
 
   const handleLogout = useCallback(async () => {
     await logout();
@@ -91,7 +95,7 @@ const AuthWrapper: React.FC = () => {
     }
     return (
       <StudentThemeProvider>
-        <AppLayout session={session} onLogout={handleLogout} onPhotoChange={setPhoto} />
+        <AppLayout session={session} unreadCount={unreadCount} onLogout={handleLogout} onPhotoChange={setPhoto} />
       </StudentThemeProvider>
     );
   };
@@ -159,7 +163,7 @@ const AuthWrapper: React.FC = () => {
               <RouteLoadingFallback />
             ) : session ? (
               <StudentThemeProvider>
-                <AppLayout session={session} onLogout={handleLogout} onPhotoChange={setPhoto} />
+                <AppLayout session={session} unreadCount={unreadCount} onLogout={handleLogout} onPhotoChange={setPhoto} />
               </StudentThemeProvider>
             ) : (
               <PublicThemeProvider>

@@ -1,9 +1,8 @@
 import { Request, Response } from 'express';
 import { BRANCHES, SECTIONS, YEARS, INTERNAL_EVENT_ID } from '../../../config/constants';
 import { env } from '../../../config/env';
-import * as repo from '../public.repository';
 import * as service from '../public.service';
-import { driveService } from '../../media/drive';
+import { driveService } from '../../media';
 import { ActivityService } from '../../admin';
 import { ValidationService } from '../../../services/validation.service';
 import { logger } from '../../../utils/logger';
@@ -104,7 +103,7 @@ export async function submitLegacyApplication(req: Request, res: Response): Prom
     throw new ValidationError(message, [{ field: 'video', message }]);
   }
 
-  const existing = await repo.findSubmissionByEventAndStudent(EVENT_ID, rollNo, year, branch, section);
+  const existing = await service.findSubmissionByEventAndStudent(EVENT_ID, rollNo, year, branch, section);
   if (existing && existing.videoDriveId) {
     ActivityService.logNonBlocking({
       eventId: EVENT_ID,
@@ -122,9 +121,9 @@ export async function submitLegacyApplication(req: Request, res: Response): Prom
   }
 
   try {
-    const dbEvent = await repo.findEventById(EVENT_ID);
+    const dbEvent = await service.findEventById(EVENT_ID);
     if (!dbEvent) {
-      await repo.createEventRecord({
+      await service.createEventRecord({
         id: EVENT_ID,
         name: EVENT_NAME,
         slug: 'self-introduction',
@@ -155,7 +154,7 @@ export async function submitLegacyApplication(req: Request, res: Response): Prom
 
     let submission;
     if (existing) {
-      submission = await repo.updateSubmissionRecord(existing.id, {
+      submission = await service.updateSubmissionRecord(existing.id, {
         name,
         section,
         year,
@@ -167,7 +166,7 @@ export async function submitLegacyApplication(req: Request, res: Response): Prom
         submittedAt: new Date(),
       });
     } else {
-      submission = await repo.createSubmissionRecord({
+      submission = await service.createSubmissionRecord({
         eventId: EVENT_ID,
         name,
         rollNo,
@@ -185,7 +184,7 @@ export async function submitLegacyApplication(req: Request, res: Response): Prom
 
     if (uploadResult.videoDriveId) {
       try {
-        const student = await repo.findStudentForSubmissionSync(rollNo, email);
+        const student = await service.findStudentForSubmissionSync(rollNo, email);
         if (student) {
           const sizeMb = parseFloat((videoFile.size / (1024 * 1024)).toFixed(2));
           let thumbnailBuffer: Buffer | null = null;
@@ -213,11 +212,11 @@ export async function submitLegacyApplication(req: Request, res: Response): Prom
             changeRequestedAt: null,
             changeRequestNote: null,
           };
-          const iv = await repo.findIntroVideoByStudent(student.id);
+          const iv = await service.findIntroVideoByStudent(student.id);
           if (iv) {
-            await repo.updateIntroVideoRecord(iv.id, ivData);
+            await service.updateIntroVideoRecord(iv.id, ivData);
           } else {
-            await repo.createIntroVideoRecord({ studentId: student.id, ...ivData });
+            await service.createIntroVideoRecord({ studentId: student.id, ...ivData });
           }
         }
       } catch (syncErr) {

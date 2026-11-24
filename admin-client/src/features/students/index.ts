@@ -17,7 +17,7 @@ export * from './hooks/useStudents';
 export * from './hooks/useStudentDetail';
 
 // API
-export * from './api';
+export * from './api/index';
 
 // Types
 export * from './types';

@@ -1,5 +1,5 @@
 export * from './types';
-export * from './api';
+export * from './api/index';
 export * from './hooks/useRoles';
 export * from './components/RolesCardsGrid';
 export * from './components/PermissionsMatrixTable';

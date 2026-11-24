@@ -2,7 +2,7 @@ import { NextFunction, Request, Response } from 'express';
 import { env } from '../../../config/env';
 import { logger } from '../../../utils/logger';
 import { AppError } from '../../../utils/appError';
-import { driveService } from '../../media/drive';
+import { driveService } from '../../media';
 import { resolveContentRange } from '../../../utils/rangeParser';
 import {
   withdrawStudentVideo,

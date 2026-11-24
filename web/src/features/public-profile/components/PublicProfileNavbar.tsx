@@ -54,7 +54,7 @@ export const PublicProfileNavbar: React.FC<PublicProfileNavbarProps> = ({
           <div className="h-4 w-px bg-slate-800 hidden sm:block" />
 
           <a href="#home" className="flex items-center gap-2.5 min-h-[44px]">
-            <span className="flex size-8 items-center justify-center rounded-lg bg-gradient-to-tr from-rose-500 to-pink-500 font-heading text-xs font-black text-white shadow-sm">
+            <span className="flex size-8 items-center justify-center rounded-lg bg-red-500 font-heading text-xs font-black text-white shadow-sm">
               {initials}
             </span>
             <span className="font-heading text-sm font-bold text-white tracking-tight hidden md:inline">
@@ -107,7 +107,7 @@ export const PublicProfileNavbar: React.FC<PublicProfileNavbarProps> = ({
               href={resumeDownloadHref}
               target="_blank"
               rel="noopener noreferrer"
-              className="hidden sm:inline-flex min-h-[44px] items-center gap-1.5 rounded-lg bg-gradient-to-r from-rose-500 to-pink-500 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:from-rose-600 hover:to-pink-600 transition-all"
+              className="hidden sm:inline-flex min-h-[44px] items-center gap-1.5 rounded-lg bg-red-500 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-red-600 transition-all"
             >
               <FileText size={14} />
               <span>Resume</span>
@@ -151,7 +151,7 @@ export const PublicProfileNavbar: React.FC<PublicProfileNavbarProps> = ({
                 href={resumeDownloadHref}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex min-h-[44px] items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 text-xs font-semibold text-white"
+                className="flex min-h-[44px] items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-red-500 text-xs font-semibold text-white"
               >
                 <FileText size={15} />
                 <span>Download Resume PDF</span>

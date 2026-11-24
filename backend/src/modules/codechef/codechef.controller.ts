@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { env } from '../../config/env';
+import { UnauthorizedError } from '../../utils/appError';
 import * as service from './codechef.service';
 import {
   parseConnectBody,
@@ -125,6 +127,14 @@ export async function exportStudentsCsv(req: Request, res: Response): Promise<vo
 }
 
 export async function handleInternalSyncTick(req: Request, res: Response): Promise<void> {
+  const secretHeader =
+    (req.headers['x-internal-secret'] as string | undefined) ||
+    ((req.headers['authorization'] as string | undefined) || '').replace(/^Bearer\s+/i, '');
+
+  if (!env.INTERNAL_SYNC_SECRET || secretHeader !== env.INTERNAL_SYNC_SECRET) {
+    throw new UnauthorizedError('Invalid or missing internal sync secret');
+  }
+
   const limit = parseInt((req.query.limit as string) || '10', 10);
   const result = await service.syncScheduledBatch(limit);
   res.json(result);

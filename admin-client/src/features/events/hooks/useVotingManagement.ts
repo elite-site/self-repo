@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useConfirm } from '@/shared/ui';
-import { eventsApi } from '../api';
+import { eventsApi } from '../api/index';
 import { VotingCampaign } from '../types';
 
 export const useVotingManagement = () => {

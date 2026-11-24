@@ -146,7 +146,7 @@ const TaskRowCarousel: React.FC<TaskRowCarouselProps> = ({ tasks, title }) => {
         <div className="absolute left-0 top-0 bottom-0 z-10 flex items-center pointer-events-none">
           <div
             aria-hidden="true"
-            className="absolute left-0 top-0 bottom-0 w-12 sm:w-16 bg-gradient-to-r from-surface via-surface/80 to-transparent"
+            className="absolute left-0 top-0 bottom-0 w-12 sm:w-16 bg-surface/80"
           />
           <button
             type="button"
@@ -185,7 +185,7 @@ const TaskRowCarousel: React.FC<TaskRowCarouselProps> = ({ tasks, title }) => {
         <div className="absolute right-0 top-0 bottom-0 z-10 flex items-center justify-end pointer-events-none">
           <div
             aria-hidden="true"
-            className="absolute right-0 top-0 bottom-0 w-12 sm:w-16 bg-gradient-to-l from-surface via-surface/80 to-transparent"
+            className="absolute right-0 top-0 bottom-0 w-12 sm:w-16 bg-surface/80"
           />
           <button
             type="button"

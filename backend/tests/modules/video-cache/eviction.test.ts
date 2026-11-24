@@ -27,6 +27,7 @@ const { mockPrisma, mockR2 } = vi.hoisted(() => {
 
 vi.mock('../../../src/config/env', () => ({
   env: {
+    NODE_ENV: 'test',
     FEATURE_VIDEO_CACHE: true,
     VIDEO_CACHE_MAX_BYTES: BigInt(100_000_000), // 100MB limit for tests
     VIDEO_CACHE_IDLE_HOURS: 6,
@@ -34,6 +35,14 @@ vi.mock('../../../src/config/env', () => ({
     VIDEO_URL_TTL_SEC: 600, // 10 minutes
     INTERNAL_SYNC_SECRET: 'test-sync-secret-evict-999',
   },
+  getNodeEnv: () => 'test',
+  isProductionEnv: () => false,
+  isDevelopmentEnv: () => false,
+  isTestEnv: () => true,
+  isVitestEnv: () => true,
+  getDbConnectionLimit: () => '5',
+  getMaxVideoSizeHardCapMb: () => 100,
+  isAutoMigratePending: () => false,
 }));
 
 vi.mock('../../../src/infrastructure/prisma', () => ({

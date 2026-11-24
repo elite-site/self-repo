@@ -1,8 +1,7 @@
 import { Request, Response } from 'express';
 import crypto from 'crypto';
-import * as repo from '../public.repository';
 import * as service from '../public.service';
-import { driveService } from '../../media/drive';
+import { driveService } from '../../media';
 import { dbTimingStorage } from '../../../infrastructure/dbTiming';
 import { NotFoundError } from '../../../utils/appError';
 
@@ -31,7 +30,7 @@ export async function getPublicStudentsIndex(req: Request, res: Response): Promi
 
   await runWithTiming(async () => {
     const dbStart = Date.now();
-    const students = await repo.findPublicStudentsIndex();
+    const students = await service.findPublicStudentsIndex();
     const store = dbTimingStorage?.getStore?.();
     const dbDur = store?.dbDuration !== undefined && store.dbDuration > 0
       ? store.dbDuration
@@ -158,8 +157,8 @@ export async function listPublicStudents(req: Request, res: Response): Promise<v
     const dbStart = Date.now();
     const payload = await service.studentListCache.wrap(cacheKey, async () => {
       const [total, students] = await Promise.all([
-        repo.countPublicStudents(where),
-        repo.findPublicStudents(where, skip, limit),
+        service.countPublicStudents(where),
+        service.findPublicStudents(where, skip, limit),
       ]);
 
       const mapped = students.map((s) => {
@@ -190,13 +189,13 @@ export async function listPublicStudents(req: Request, res: Response): Promise<v
 }
 
 export async function listPublicSkills(_req: Request, res: Response): Promise<void> {
-  const skills = await service.skillsCache.wrap('all', () => repo.findActiveSkills());
+  const skills = await service.skillsCache.wrap('all', () => service.findActiveSkills());
   res.setHeader('Cache-Control', 'public, max-age=300');
   res.json(skills);
 }
 
 export async function getPublicStudentsEvents(_req: Request, res: Response): Promise<void> {
-  const events = await repo.findPublicStudentEvents();
+  const events = await service.findPublicStudentEvents();
   res.set('Cache-Control', 'public, max-age=60');
   res.json(events);
 }
@@ -205,7 +204,7 @@ export async function getPublicStudentByRollNo(req: Request, res: Response): Pro
   res.setHeader('Cache-Control', 'public, max-age=60');
   const student = await service.studentProfileCache.wrap(
     req.params.rollNo,
-    () => repo.loadPublicProfile(req.params.rollNo),
+    () => service.loadPublicProfile(req.params.rollNo),
   );
   if (!student || (student.status !== 'ACTIVE' && student.status !== 'GRADUATED')) {
     throw new NotFoundError('Student not found');
@@ -350,7 +349,7 @@ export async function getPublicStudentByRollNo(req: Request, res: Response): Pro
 }
 
 export async function getPublicStudentResume(req: Request, res: Response): Promise<void> {
-  const student = await repo.findPublicStudentWithResume(req.params.rollNo);
+  const student = await service.findPublicStudentWithResume(req.params.rollNo);
   if (!student || (student.status !== 'ACTIVE' && student.status !== 'GRADUATED') || !student.resumes.length) {
     throw new NotFoundError('Resume not available');
   }

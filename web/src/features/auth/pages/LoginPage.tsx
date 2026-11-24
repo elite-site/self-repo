@@ -33,7 +33,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     return (
       <div className="min-h-[100dvh] bg-surface-canvas flex items-center justify-center px-6 py-8">
         <div className="card max-w-md w-full text-center p-8 bg-surface border border-edge rounded-2xl shadow-modal space-y-4">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-status-soft-rejected text-status-rejected">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-status-bg-rejected text-status-rejected">
             <AlertCircle size={24} aria-hidden="true" />
           </div>
           <h1 className="font-heading text-headline-sm font-bold text-ink">

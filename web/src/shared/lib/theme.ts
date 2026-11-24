@@ -108,34 +108,3 @@ export function applyTheme(resolved: ResolvedTheme): ResolvedTheme {
 
   return resolved;
 }
-
-/**
- * Reads storage + system preference and applies the result. Called by the
- * hook once on mount; the pre-paint script already did the same thing earlier,
- * so this is a no-op in the normal case and a repair if the script was blocked.
- */
-export function syncTheme(): ResolvedTheme {
-  return applyTheme(resolveTheme(readStoredTheme(), prefersDarkScheme()));
-}
-
-/**
- * The `<head>` script body, kept here as a string so the copy in `index.html`
- * has something to be checked against. Read-only; the script runs before this
- * module is even fetched.
- *
- * It is intentionally not generated into the HTML at build time — a static
- * string in `index.html` is the only way to run before first paint.
- */
-export const THEME_INIT_SCRIPT = `(function () {
-  try {
-    var stored = localStorage.getItem('${THEME_STORAGE_KEY}');
-    if (stored !== 'light' && stored !== 'dark' && stored !== 'system') stored = null;
-    var prefersDark = window.matchMedia('${DARK_SCHEME_QUERY}').matches;
-    var dark = stored === 'dark' || ((stored === 'system' || stored === null) && prefersDark);
-    var resolved = dark ? 'dark' : 'light';
-    document.documentElement.setAttribute('${THEME_ATTRIBUTE}', resolved);
-    document.documentElement.classList.toggle('${DARK_CLASS}', resolved === 'dark');
-  } catch (e) {
-    document.documentElement.setAttribute('${THEME_ATTRIBUTE}', 'light');
-  }
-})();`;

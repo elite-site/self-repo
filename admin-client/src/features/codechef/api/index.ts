@@ -7,7 +7,11 @@ import type {
   CodeChefDetails,
 } from '../types';
 
-const isMock = import.meta.env.VITE_CODECHEF_MOCK === 'true';
+const isMock = (): boolean => {
+  // Fixtures are development-only. A production build must never render fake
+  // student data even if VITE_CODECHEF_MOCK was left set in the environment.
+  return import.meta.env.DEV && import.meta.env.VITE_CODECHEF_MOCK === 'true';
+};
 
 const mockStudents: AdminCodeChefStudentsResponse = {
   students: [
@@ -80,25 +84,25 @@ const mockStats: CodeChefAdminStatsResponse = {
 
 export const adminCodeChefApi = {
   async getStudents(filters?: AdminCodeChefFilters): Promise<AdminCodeChefStudentsResponse> {
-    if (isMock) return { ...mockStudents };
+    if (isMock()) return { ...mockStudents };
     const res = await apiClient.get('/admin/api/codechef/students', { params: filters });
     return res.data;
   },
 
   async getLeaderboard(params?: { year?: number; limit?: number }): Promise<CodeChefLeaderboardResponse> {
-    if (isMock) return { ...mockLeaderboard };
+    if (isMock()) return { ...mockLeaderboard };
     const res = await apiClient.get('/admin/api/codechef/leaderboard', { params });
     return res.data;
   },
 
   async getStats(): Promise<CodeChefAdminStatsResponse> {
-    if (isMock) return { ...mockStats };
+    if (isMock()) return { ...mockStats };
     const res = await apiClient.get('/admin/api/codechef/stats');
     return res.data;
   },
 
   async getStudentDetails(studentId: string): Promise<CodeChefDetails> {
-    if (isMock) {
+    if (isMock()) {
       return {
         handle: 'mock_student',
         verified: true,
@@ -142,19 +146,19 @@ export const adminCodeChefApi = {
   },
 
   async resyncStudent(studentId: string): Promise<{ success: boolean; message: string }> {
-    if (isMock) return { success: true, message: 'Sync initiated' };
+    if (isMock()) return { success: true, message: 'Sync initiated' };
     const res = await apiClient.post(`/admin/api/codechef/students/${studentId}/resync`);
     return res.data;
   },
 
   async verifyStudent(studentId: string): Promise<{ success: boolean; verified: boolean }> {
-    if (isMock) return { success: true, verified: true };
+    if (isMock()) return { success: true, verified: true };
     const res = await apiClient.post(`/admin/api/codechef/students/${studentId}/verify`);
     return res.data;
   },
 
   async unlinkStudent(studentId: string): Promise<{ success: boolean; message: string }> {
-    if (isMock) return { success: true, message: 'Account unlinked' };
+    if (isMock()) return { success: true, message: 'Account unlinked' };
     const res = await apiClient.delete(`/admin/api/codechef/students/${studentId}`);
     return res.data;
   },

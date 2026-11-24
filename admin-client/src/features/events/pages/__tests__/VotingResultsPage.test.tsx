@@ -3,10 +3,10 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { renderHook, act } from '@testing-library/react';
 import { VotingResultsPage } from '../VotingResultsPage';
 import { useVotingResults } from '../../hooks/useVotingResults';
-import { eventsApi } from '../../api';
+import { eventsApi } from '../../api/index';
 import { VotingCampaign, CampaignResult } from '../../types';
 
-vi.mock('../../api', () => ({
+vi.mock('../../api/index', () => ({
   eventsApi: {
     getVotingCampaigns: vi.fn(),
     getVotingResults: vi.fn(),

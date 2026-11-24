@@ -1,42 +1,26 @@
 import { clearPublicStudentCaches } from '../../public';
-import { prisma } from '../../../infrastructure/prisma';
+import * as repo from '../github.repository';
 import { githubAccountService } from './github.account.service';
 import { githubSyncService } from './github.sync.service';
 import { githubApiService } from './github.api.service';
 import { GithubSyncTrigger } from '@prisma/client';
 import { AppError } from '../../../utils/appError';
-
-const SHOWCASED_REPO_SELECT = {
-  id: true,
-  studentId: true,
-  githubRepoId: true,
-  fullName: true,
-  name: true,
-  description: true,
-  htmlUrl: true,
-  isFork: true,
-  primaryLanguage: true,
-  topics: true,
-  stars: true,
-  githubCreatedAt: true,
-  pushedAt: true,
-  languages: true,
-  commitCount: true,
-  isShowcased: true,
-  showcaseRank: true,
-} as const;
+import { logger } from '../../../utils/logger';
 
 export async function handleOAuthCallback(code: string, state: string): Promise<void> {
   let studentId = 'unknown';
   try {
-    const stateRecord = await prisma.githubOAuthState.findUnique({ where: { state } });
+    const stateRecord = await repo.findGithubOAuthStateByState(state);
     if (!stateRecord || stateRecord.usedAt || new Date() > stateRecord.expiresAt) {
       throw new AppError('INVALID_STATE', 'OAuth session expired or invalid. Please try again.', 400, 'github.service:handleOAuthCallback');
     }
     studentId = stateRecord.studentId;
     await githubAccountService.handleCallback(studentId, code, state);
   } catch (err: any) {
-    console.error(`[github.service:handleOAuthCallback] Failed to complete callback for studentId=${studentId}:`, err?.message || err);
+    logger.error('[github.service:handleOAuthCallback] Failed to complete callback', {
+      studentId,
+      err,
+    });
     throw err;
   }
 }
@@ -45,7 +29,7 @@ export async function getGithubStatus(studentId: string) {
   try {
     return await githubAccountService.getStatus(studentId);
   } catch (err: any) {
-    console.error(`[github.service:getGithubStatus] Failed to get status for studentId=${studentId}:`, err?.message || err);
+    logger.error('[github.service:getGithubStatus] Failed to get status', { studentId, err });
     throw err;
   }
 }
@@ -54,38 +38,36 @@ export async function getGithubSummary(studentId: string) {
   try {
     return await githubAccountService.getSummary(studentId);
   } catch (err: any) {
-    console.error(`[github.service:getGithubSummary] Failed to get summary for studentId=${studentId}:`, err?.message || err);
+    logger.error('[github.service:getGithubSummary] Failed to get summary', { studentId, err });
     throw err;
   }
 }
 
 export async function getRepoReadmeExcerpt(studentId: string, repoId: string) {
   try {
-    const repo = await prisma.githubRepo.findFirst({
-      where: { id: repoId, studentId },
-      select: { id: true, fullName: true, readmeExcerpt: true },
-    });
+    const repoRecord = await repo.findRepoReadmeRecord(studentId, repoId);
 
-    if (!repo) {
+    if (!repoRecord) {
       throw new AppError('NOT_FOUND', 'Repository not found', 404, 'github.service:getRepoReadmeExcerpt');
     }
-    if (repo.readmeExcerpt) {
-      return { id: repo.id, readmeExcerpt: repo.readmeExcerpt };
+    if (repoRecord.readmeExcerpt) {
+      return { id: repoRecord.id, readmeExcerpt: repoRecord.readmeExcerpt };
     }
 
-    const fetched = await githubApiService.fetchReadmeExcerpt(repo.fullName);
+    const fetched = await githubApiService.fetchReadmeExcerpt(repoRecord.fullName);
     if (fetched) {
-      await prisma.githubRepo.update({
-        where: { id: repo.id },
-        data: { readmeExcerpt: fetched, readmeFetchedAt: new Date() },
-      });
-      return { id: repo.id, readmeExcerpt: fetched };
+      await repo.updateRepoReadmeExcerpt(repoRecord.id, fetched, new Date());
+      return { id: repoRecord.id, readmeExcerpt: fetched };
     }
 
-    return { id: repo.id, readmeExcerpt: null };
+    return { id: repoRecord.id, readmeExcerpt: null };
   } catch (err: any) {
     if (err instanceof AppError) throw err;
-    console.error(`[github.service:getRepoReadmeExcerpt] Failed to get readme for repoId=${repoId}, studentId=${studentId}:`, err?.message || err);
+    logger.error('[github.service:getRepoReadmeExcerpt] Failed to get readme', {
+      repoId,
+      studentId,
+      err,
+    });
     throw err;
   }
 }
@@ -94,7 +76,7 @@ export async function initiateGithubConnect(studentId: string): Promise<string> 
   try {
     return await githubAccountService.createConnectUrl(studentId);
   } catch (err: any) {
-    console.error(`[github.service:initiateGithubConnect] Failed to create connect URL for studentId=${studentId}:`, err?.message || err);
+    logger.error('[github.service:initiateGithubConnect] Failed to create connect URL', { studentId, err });
     throw err;
   }
 }
@@ -104,44 +86,27 @@ export async function triggerGithubSync(studentId: string) {
     await githubSyncService.queueSync(studentId, GithubSyncTrigger.MANUAL);
     return { message: 'Sync queued successfully', status: 'QUEUED' };
   } catch (err: any) {
-    console.error(`[github.service:triggerGithubSync] Failed to queue sync for studentId=${studentId}:`, err?.message || err);
+    logger.error('[github.service:triggerGithubSync] Failed to queue sync', { studentId, err });
     throw err;
   }
 }
 
 export async function updateShowcasedRepos(studentId: string, uniqueIds: string[]) {
   try {
-    const repos = await prisma.githubRepo.findMany({
-      where: { id: { in: uniqueIds }, studentId, removedFromGithub: false },
-    });
+    const repos = await repo.findShowcaseCandidateRepos(studentId, uniqueIds);
 
     if (repos.length !== uniqueIds.length) {
       throw new AppError('INVALID_REPOSITORIES', 'One or more selected repositories do not exist or belong to another student.', 400, 'github.service:updateShowcasedRepos');
     }
 
-    await prisma.$transaction([
-      prisma.githubRepo.updateMany({
-        where: { studentId },
-        data: { isShowcased: false, showcaseRank: null },
-      }),
-      ...uniqueIds.map((id, i) =>
-        prisma.githubRepo.update({
-          where: { id },
-          data: { isShowcased: true, showcaseRank: i + 1 },
-        })
-      ),
-    ]);
+    await repo.setShowcasedRepos(studentId, uniqueIds);
 
-    const updated = await prisma.githubRepo.findMany({
-      where: { studentId, isShowcased: true },
-      orderBy: { showcaseRank: 'asc' },
-      select: SHOWCASED_REPO_SELECT,
-    });
+    const updated = await repo.findShowcasedReposForStudent(studentId);
 
     return updated.map((r) => ({ ...r, githubRepoId: String(r.githubRepoId) }));
   } catch (err: any) {
     if (err instanceof AppError) throw err;
-    console.error(`[github.service:updateShowcasedRepos] Failed to update showcase for studentId=${studentId}:`, err?.message || err);
+    logger.error('[github.service:updateShowcasedRepos] Failed to update showcase', { studentId, err });
     throw err;
   }
 }
@@ -150,7 +115,7 @@ export async function disconnectGithub(studentId: string): Promise<void> {
   try {
     await githubAccountService.disconnect(studentId);
   } catch (err: any) {
-    console.error(`[github.service:disconnectGithub] Failed to disconnect GitHub for studentId=${studentId}:`, err?.message || err);
+    logger.error('[github.service:disconnectGithub] Failed to disconnect GitHub', { studentId, err });
     throw err;
   }
 }
@@ -159,24 +124,17 @@ export async function snoozeGithubReminder(studentId: string) {
   try {
     return await githubAccountService.snoozeReminder(studentId);
   } catch (err: any) {
-    console.error(`[github.service:snoozeGithubReminder] Failed to snooze reminder for studentId=${studentId}:`, err?.message || err);
+    logger.error('[github.service:snoozeGithubReminder] Failed to snooze reminder', { studentId, err });
     throw err;
   }
 }
 
 export async function updateShowcasedSkills(studentId: string, skillIds: string[]) {
   try {
-    const profile = await prisma.studentProfile.upsert({
-      where: { studentId },
-      update: {},
-      create: { studentId },
-    });
+    const profile = await repo.ensureStudentProfile(studentId);
 
     if (skillIds.length > 0) {
-      const existingSkills = await prisma.skill.findMany({
-        where: { id: { in: skillIds } },
-        select: { id: true },
-      });
+      const existingSkills = await repo.findExistingSkillIds(skillIds);
       const existingSkillIdSet = new Set(existingSkills.map((s) => s.id));
       const invalid = skillIds.filter((id) => !existingSkillIdSet.has(id));
       if (invalid.length > 0) {
@@ -189,22 +147,7 @@ export async function updateShowcasedSkills(studentId: string, skillIds: string[
       }
     }
 
-    await prisma.$transaction([
-      prisma.studentSkill.deleteMany({
-        where: { profileId: profile.id },
-      }),
-      ...(skillIds.length > 0
-        ? [
-            prisma.studentSkill.createMany({
-              data: skillIds.map((skillId) => ({
-                profileId: profile.id,
-                skillId,
-              })),
-              skipDuplicates: true,
-            }),
-          ]
-        : []),
-    ]);
+    await repo.replaceProfileSkills(profile.id, skillIds);
 
     clearPublicStudentCaches();
 
@@ -214,7 +157,7 @@ export async function updateShowcasedSkills(studentId: string, skillIds: string[
     };
   } catch (err: any) {
     if (err instanceof AppError) throw err;
-    console.error(`[github.service:updateShowcasedSkills] Failed to update skills showcase for studentId=${studentId}:`, err?.message || err);
+    logger.error('[github.service:updateShowcasedSkills] Failed to update skills showcase', { studentId, err });
     throw err;
   }
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { studentsApi } from '../api';
+import { studentsApi } from '../api/index';
 
 export const useStudentDetail = (studentId: string) => {
   const [student, setStudent] = useState<any | null>(null);

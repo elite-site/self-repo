@@ -40,7 +40,7 @@ export const CodeChefHeatmap: React.FC<CodeChefHeatmapProps> = ({ heatmap }) => 
   }, [contributionsMap]);
 
   const levelColors = [
-    'bg-surface-muted/60 border-border/40',
+    'bg-surface-sunken/60 border-border/40',
     'bg-emerald-300 dark:bg-emerald-900 border-emerald-400/30',
     'bg-emerald-400 dark:bg-emerald-700 border-emerald-500/30',
     'bg-emerald-500 dark:bg-emerald-600 border-emerald-600/30',

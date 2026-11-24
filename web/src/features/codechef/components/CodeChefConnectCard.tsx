@@ -23,7 +23,7 @@ export const CodeChefConnectCard: React.FC<CodeChefConnectCardProps> = ({ onConn
     }
 
     // Extract handle if user pasted a CodeChef URL
-    let parsedHandle = clean
+    const parsedHandle = clean
       .replace(/^https?:\/\//i, '')
       .replace(/[?#].*$/, '')
       .replace(/\/+$/, '')
@@ -72,7 +72,7 @@ export const CodeChefConnectCard: React.FC<CodeChefConnectCardProps> = ({ onConn
           )}
         </div>
 
-        <div className="p-3 bg-surface-muted border border-border rounded-lg text-xs text-foreground-muted space-y-1.5">
+        <div className="p-3 bg-surface-sunken border border-border rounded-lg text-xs text-foreground-muted space-y-1.5">
           <div className="flex items-start gap-2">
             <Shield className="w-4 h-4 text-primary shrink-0 mt-0.5" />
             <span>

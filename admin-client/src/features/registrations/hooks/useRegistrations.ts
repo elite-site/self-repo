@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useConfirm } from '@/shared/ui';
-import { registrationsApi } from '../api';
-import { eventsApi } from '@/features/events/api';
+import { registrationsApi } from '../api/index';
+import { eventsApi } from '@/features/events/api/index';
 import { EventItem } from '@/features/events/types';
 import {
   RegistrationItem,

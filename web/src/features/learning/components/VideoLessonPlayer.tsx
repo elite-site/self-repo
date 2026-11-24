@@ -710,8 +710,8 @@ export const VideoLessonPlayer: React.FC<VideoLessonPlayerProps> = ({
 
       {/* Controls overlay */}
       <div className={controlsClass}>
-        {/* Scrim gradient */}
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent" />
+        {/* Flat scrim behind controls */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 bg-scrim" />
 
         {/* Time / Seek bar */}
         <div className="relative px-3 pt-6 sm:px-4">

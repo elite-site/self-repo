@@ -1,7 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
-import * as repo from '../public.repository';
 import * as service from '../public.service';
-import { driveService } from '../../media/drive';
+import { driveService } from '../../media';
 import { AppError, NotFoundError } from '../../../utils/appError';
 import { logger } from '../../../utils/logger';
 
@@ -16,7 +15,7 @@ export async function listPublicVideos(req: Request, res: Response): Promise<voi
   const limit = Number.isNaN(rawLimit) || rawLimit <= 0 ? 24 : Math.min(rawLimit, 60);
 
   const payload = await service.videoListCache.wrap(`list:${limit}`, () =>
-    repo.listPublishedVideos(limit, PUBLIC_VIDEO_WHERE).then(({ items, total }) => ({
+    service.listPublishedVideos(limit, PUBLIC_VIDEO_WHERE).then(({ items, total }) => ({
       items: items.map(service.serializePublicVideo),
       total,
     }))
@@ -28,7 +27,7 @@ export async function listPublicVideos(req: Request, res: Response): Promise<voi
 
 export async function getFeaturedPublicVideos(_req: Request, res: Response): Promise<void> {
   const payload = await service.videoListCache.wrap('featured:6', () =>
-    repo.listPublishedVideos(6, PUBLIC_VIDEO_WHERE).then(({ items, total }) => ({
+    service.listPublishedVideos(6, PUBLIC_VIDEO_WHERE).then(({ items, total }) => ({
       items: items.map(service.serializePublicVideo),
       total,
     }))
@@ -47,7 +46,7 @@ export async function streamPublicVideo(
     let fileId = service.videoFileIdCache.get(req.params.id);
 
     if (!fileId) {
-      const video = await repo.findPublishedVideoById(req.params.id, PUBLIC_VIDEO_WHERE);
+      const video = await service.findPublishedVideoById(req.params.id, PUBLIC_VIDEO_WHERE);
       if (!video?.driveFileId) {
         throw new NotFoundError('This video is not published.');
       }

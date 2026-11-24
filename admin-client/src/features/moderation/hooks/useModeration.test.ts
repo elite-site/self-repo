@@ -9,8 +9,8 @@ const githubApiMock = vi.hoisted(() => ({
   getGithubShowcasedProjects: vi.fn(),
 }));
 
-vi.mock('../api', () => ({ moderationApi: moderationApiMock }));
-vi.mock('@/features/github/api', () => ({ githubApi: githubApiMock }));
+vi.mock('../api/index', () => ({ moderationApi: moderationApiMock }));
+vi.mock('@/features/github/api/index', () => ({ githubApi: githubApiMock }));
 
 import { useModeration } from './useModeration';
 import type { UnifiedModerationItem } from '../types';

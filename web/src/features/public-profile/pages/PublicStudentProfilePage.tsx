@@ -80,8 +80,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
           }
         }
       `}</style>
-      <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(ellipse_80%_60%_at_50%_-20%,rgba(225,29,72,0.14),rgba(255,255,255,0))] print:hidden" />
-      <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(ellipse_60%_50%_at_80%_100%,rgba(59,130,246,0.08),rgba(0,0,0,0))] print:hidden" />
+      <div className="pointer-events-none fixed inset-0 -z-10 bg-scrim/20 print:hidden" />
 
       {/* Sticky Navbar */}
       <PublicProfileNavbar

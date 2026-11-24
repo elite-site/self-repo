@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { registrationsApi } from '../api';
+import { registrationsApi } from '../api/index';
 import { RegistrationTeam, TeamStatus, MemberToRemove } from '../types';
 
 export const useTeams = (

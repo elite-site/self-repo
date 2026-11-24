@@ -107,7 +107,7 @@ const adminPayload = {
 const adminToken = jwt.sign(adminPayload, env.JWT_SECRET);
 const adminCookie = `${env.ADMIN_SESSION_COOKIE_NAME}=${adminToken}`;
 
-describe('LearningHub - Contract Verification Tests (API_CONTRACT.md)', () => {
+describe('LearningHub - Contract Verification Tests', () => {
   beforeEach(() => {
     env.FEATURE_LEARNINGHUB = true;
     vi.clearAllMocks();

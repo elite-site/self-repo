@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { announcementsApi } from '../api';
+import { announcementsApi } from '../api/index';
 import { Announcement } from '../types';
 import { useConfirm } from '@/shared/ui/ConfirmDialog';
 

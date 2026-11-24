@@ -20,7 +20,7 @@ export * from './hooks/useVotingManagement';
 export * from './hooks/useVotingResults';
 
 // API
-export * from './api';
+export * from './api/index';
 
 // Types
 export * from './types';

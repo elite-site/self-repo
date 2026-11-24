@@ -2,7 +2,7 @@ import * as repo from './moderation.repository';
 import { parseModerationStatus } from './moderation.schemas';
 import { ConflictError, NotFoundError, ValidationError } from '../../utils/appError';
 import { notifyStudent, notifyVideoChangeRequested } from '../students';
-import { driveService } from '../media/drive';
+import { driveService } from '../media';
 import { logger } from '../../utils/logger';
 import type {
   ModerationDecision,

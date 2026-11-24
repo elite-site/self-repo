@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   Search,
@@ -15,8 +15,8 @@ import {
   CheckCircle,
   X,
 } from 'lucide-react';
-import { StudentsResponse, Student } from '@/types';
-import { studentsApi } from '../api';
+import { Student } from '@/types';
+import { useStudents } from '../hooks/useStudents';
 import { formatDateTime } from '@/shared/utils/formatDate';
 import { AsymGrid, AsymFeatured, AsymSide, AsymAccent } from '@/shared/layout/AsymGrid';
 
@@ -44,13 +44,21 @@ export const StudentsTable: React.FC<StudentsTableProps> = ({
   const initialSection = searchParams.get('section') || '';
   const initialSearch = searchParams.get('search') || '';
 
-  const [data, setData] = useState<StudentsResponse | null>(null);
-  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState(initialSearch);
+  const [appliedSearch, setAppliedSearch] = useState(initialSearch);
   const [yearFilter, setYearFilter] = useState<string>(initialYear);
   const [sectionFilter, setSectionFilter] = useState<string>(initialSection);
   const [uploadedFilter, setUploadedFilter] = useState<string>(initialUploaded);
+
+  const { data, loading, error, refetch, exportUrl } = useStudents({
+    eventId: activeEventId,
+    page,
+    search: appliedSearch,
+    year: yearFilter,
+    section: sectionFilter,
+    uploaded: uploadedFilter,
+  });
 
   useEffect(() => {
     const uploaded = searchParams.get('uploaded') || (searchParams.get('filter') === 'active' ? 'yes' : '');
@@ -62,37 +70,14 @@ export const StudentsTable: React.FC<StudentsTableProps> = ({
     setYearFilter(year);
     setSectionFilter(section);
     setSearch(q);
+    setAppliedSearch(q);
     setPage(1);
   }, [searchParams]);
-
-  const loadStudents = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await studentsApi.getStudents({
-        eventId: activeEventId,
-        page,
-        limit: 25,
-        search: search.trim() || undefined,
-        year: yearFilter ? parseInt(yearFilter, 10) : undefined,
-        section: sectionFilter || undefined,
-        uploaded: uploadedFilter || undefined,
-      });
-      setData(res);
-    } catch (err) {
-      console.error('Error loading students', err);
-    } finally {
-      setLoading(false);
-    }
-  }, [activeEventId, page, search, yearFilter, sectionFilter, uploadedFilter]);
-
-  useEffect(() => {
-    loadStudents();
-  }, [loadStudents]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setPage(1);
-    loadStudents();
+    setAppliedSearch(search);
   };
 
   const handleView = (student: Student) => {
@@ -125,7 +110,7 @@ export const StudentsTable: React.FC<StudentsTableProps> = ({
 
             <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
               <button
-                onClick={loadStudents}
+                onClick={() => void refetch()}
                 className="btn btn-secondary min-h-[40px] inline-flex items-center gap-2 cursor-pointer shadow-xs"
               >
                 <RefreshCw size={15} strokeWidth={1.75} className={loading ? 'animate-spin text-brand' : ''} aria-hidden="true" />
@@ -133,7 +118,7 @@ export const StudentsTable: React.FC<StudentsTableProps> = ({
               </button>
 
               <button
-                onClick={() => window.open(studentsApi.getStudentsExportUrl(activeEventId), '_blank')}
+                onClick={() => window.open(exportUrl, '_blank')}
                 className="btn btn-primary min-h-[40px] inline-flex items-center gap-2 cursor-pointer shadow-xs"
                 title="Download the full student roster as an Excel (.xlsx) file"
               >
@@ -213,6 +198,7 @@ export const StudentsTable: React.FC<StudentsTableProps> = ({
               type="button"
               onClick={() => {
                 setSearch('');
+                setAppliedSearch('');
                 setPage(1);
               }}
               className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-ink-muted hover:text-ink cursor-pointer"
@@ -280,6 +266,18 @@ export const StudentsTable: React.FC<StudentsTableProps> = ({
               ))}
             </div>
           </>
+        ) : error ? (
+          <div className="space-y-2 p-16 text-center" role="alert">
+            <p className="font-heading text-lg font-bold text-ink">Couldn’t load the student roster</p>
+            <p className="text-xs sm:text-sm text-ink-secondary">{error}</p>
+            <button
+              type="button"
+              onClick={() => void refetch()}
+              className="btn btn-secondary text-xs mt-3 inline-flex items-center gap-1"
+            >
+              <RefreshCw size={13} aria-hidden="true" /> Retry
+            </button>
+          </div>
         ) : !data || data.data.length === 0 ? (
           <div className="space-y-2 p-16 text-center">
             <p className="font-heading text-lg font-bold text-ink">No students match these filters</p>
@@ -343,7 +341,7 @@ export const StudentsTable: React.FC<StudentsTableProps> = ({
                             {formatTime(submittedAt)}
                           </span>
                         ) : (
-                          <span className="text-ink-disabled">—</span>
+                          <span className="text-ink-muted">—</span>
                         )}
                       </td>
 

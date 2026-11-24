@@ -1,6 +1,6 @@
 import path from 'path';
 import * as repo from '../students.repository';
-import { driveService } from '../../media/drive';
+import { driveService } from '../../media';
 import { env } from '../../../config/env';
 import { invalidateMediaDriveIdCache, clearPublicStudentCaches } from '../../public';
 import { AppError } from '../../../utils/appError';

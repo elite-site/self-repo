@@ -42,7 +42,7 @@ export const CodeChefPublicSection: React.FC<CodeChefPublicSectionProps> = ({ da
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="p-3 bg-surface-muted/50 rounded-xl text-center">
+        <div className="p-3 bg-surface-sunken/50 rounded-xl text-center">
           <div className="flex items-center justify-center gap-1 text-xs text-foreground-muted mb-1">
             <Star className="w-3.5 h-3.5 text-amber-500" /> CodeChef Rating
           </div>
@@ -54,7 +54,7 @@ export const CodeChefPublicSection: React.FC<CodeChefPublicSectionProps> = ({ da
           )}
         </div>
 
-        <div className="p-3 bg-surface-muted/50 rounded-xl text-center">
+        <div className="p-3 bg-surface-sunken/50 rounded-xl text-center">
           <div className="flex items-center justify-center gap-1 text-xs text-foreground-muted mb-1">
             <CheckCircle className="w-3.5 h-3.5 text-emerald-500" /> Problems Solved
           </div>
@@ -64,7 +64,7 @@ export const CodeChefPublicSection: React.FC<CodeChefPublicSectionProps> = ({ da
           <p className="text-[11px] text-foreground-muted mt-0.5">Challenges</p>
         </div>
 
-        <div className="p-3 bg-surface-muted/50 rounded-xl text-center">
+        <div className="p-3 bg-surface-sunken/50 rounded-xl text-center">
           <div className="flex items-center justify-center gap-1 text-xs text-foreground-muted mb-1">
             <Calendar className="w-3.5 h-3.5 text-sky-500" /> Contests
           </div>
@@ -74,7 +74,7 @@ export const CodeChefPublicSection: React.FC<CodeChefPublicSectionProps> = ({ da
           <p className="text-[11px] text-foreground-muted mt-0.5">Rated Rounds</p>
         </div>
 
-        <div className="p-3 bg-surface-muted/50 rounded-xl text-center">
+        <div className="p-3 bg-surface-sunken/50 rounded-xl text-center">
           <div className="flex items-center justify-center gap-1 text-xs text-foreground-muted mb-1">
             <Trophy className="w-3.5 h-3.5 text-primary" /> Global Rank
           </div>

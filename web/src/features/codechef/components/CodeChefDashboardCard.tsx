@@ -46,7 +46,7 @@ export const CodeChefDashboardCard: React.FC<CodeChefDashboardCardProps> = ({ da
       </div>
 
       <div className="grid grid-cols-2 gap-2 pt-2 border-t border-border text-center">
-        <div className="p-2 bg-surface-muted/50 rounded-lg">
+        <div className="p-2 bg-surface-sunken/50 rounded-lg">
           <div className="flex items-center justify-center gap-1 text-xs text-foreground-muted mb-0.5">
             <Star className="w-3 h-3 text-amber-500" /> Rating
           </div>
@@ -55,7 +55,7 @@ export const CodeChefDashboardCard: React.FC<CodeChefDashboardCardProps> = ({ da
           </span>
         </div>
 
-        <div className="p-2 bg-surface-muted/50 rounded-lg">
+        <div className="p-2 bg-surface-sunken/50 rounded-lg">
           <div className="flex items-center justify-center gap-1 text-xs text-foreground-muted mb-0.5">
             <CheckCircle className="w-3 h-3 text-emerald-500" /> Solved
           </div>

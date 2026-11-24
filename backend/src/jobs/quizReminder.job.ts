@@ -1,5 +1,5 @@
 import cron from 'node-cron';
-import { env } from '../config/env';
+import { env, isTestEnv } from '../config/env';
 import { quizReminderRepository, QuizReminderRepository } from '../modules/learning-home/quizReminder.repository';
 import { logger } from '../utils/logger';
 
@@ -62,7 +62,7 @@ async function tick(): Promise<void> {
 }
 
 export function startQuizReminderScheduler(): void {
-  if (process.env.NODE_ENV === 'test') return;
+  if (isTestEnv()) return;
   if (!env.FEATURE_LEARNINGHUB) return;
   if (started) return;
   started = true;

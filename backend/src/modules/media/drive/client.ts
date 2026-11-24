@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { google, drive_v3 } from 'googleapis';
 import { env } from '../../../config/env';
+import { logger } from '../../../utils/logger';
 import { DriveContext } from './types';
 
 export interface DriveClientInitResult {
@@ -37,12 +38,12 @@ export function initDriveClient(): DriveClientInitResult {
       drive = google.drive({ version: 'v3', auth: oauth2 });
       oauthClient = oauth2; // store for token refresh
       isMock = false;
-      console.log('✅ Google Drive API initialized with OAuth 2.0 Refresh Token (Workspace Account)');
+      logger.info('[Drive] Initialized Google Drive API with OAuth 2.0 Refresh Token');
     } catch (err) {
-      if (process.env.NODE_ENV === 'production' || env.NODE_ENV === 'production') {
+      if (env.NODE_ENV === 'production') {
         throw new Error('[FATAL] Google Drive credentials must be configured in production (NODE_ENV=production). Mock storage is prohibited in production.', { cause: err });
       }
-      console.warn('⚠️ Failed to initialize Google Drive OAuth 2.0 auth. Falling back to local storage mock.', err);
+      logger.warn('[Drive] Failed to initialize OAuth 2.0 auth; falling back to local storage mock', { err });
       isMock = true;
     }
   }
@@ -63,19 +64,19 @@ export function initDriveClient(): DriveClientInitResult {
       drive = google.drive({ version: 'v3', auth });
       serviceAccountAuth = auth; // store for token refresh
       isMock = false;
-      console.log('✅ Google Drive API initialized with Service Account');
+      logger.info('[Drive] Initialized Google Drive API with Service Account');
     } catch (err) {
-      if (process.env.NODE_ENV === 'production' || env.NODE_ENV === 'production') {
+      if (env.NODE_ENV === 'production') {
         throw new Error('[FATAL] Google Drive credentials must be configured in production (NODE_ENV=production). Mock storage is prohibited in production.', { cause: err });
       }
-      console.warn('⚠️ Failed to initialize Google Drive auth. Falling back to local storage mock.', err);
+      logger.warn('[Drive] Failed to initialize Google Drive auth; falling back to local storage mock', { err });
       isMock = true;
     }
   } else {
-    if (process.env.NODE_ENV === 'production' || env.NODE_ENV === 'production') {
+    if (env.NODE_ENV === 'production') {
       throw new Error('[FATAL] Google Drive credentials must be configured in production (NODE_ENV=production). Mock storage is prohibited in production.');
     }
-    console.log('ℹ️ Google Drive credentials not set. Using local mock storage for Drive.');
+    logger.info('[Drive] Credentials not set; using local mock storage');
     isMock = true;
   }
 
@@ -122,9 +123,11 @@ export async function assertRootReachable(
   });
   if (res.data.trashed) throw new Error('Drive root folder is trashed');
   if (env.GOOGLE_DRIVE_ROOT_FOLDER_ID) {
-    setViewerPerm(env.GOOGLE_DRIVE_ROOT_FOLDER_ID).catch(() => {});
+    setViewerPerm(env.GOOGLE_DRIVE_ROOT_FOLDER_ID).catch((err) => {
+      logger.warn('[Drive] Failed to set viewer permission on root folder', { err });
+    });
     resolveFolder('Students', env.GOOGLE_DRIVE_ROOT_FOLDER_ID).catch((err) => {
-      console.warn('[Drive] Pre-creating Students folder notice:', err?.message || err);
+      logger.warn('[Drive] Failed to pre-create Students folder', { err });
     });
   }
 }

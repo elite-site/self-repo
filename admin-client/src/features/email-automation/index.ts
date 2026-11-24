@@ -1,8 +1,7 @@
 export * from './types';
-export * from './api';
+export * from './api/index';
 export * from './hooks/useEmailAutomation';
 export * from './hooks/useEmailHistory';
-export * from './hooks/useEmailTemplates';
 export * from './components/AutomationCard';
 export * from './components/AutomationKpiCards';
 export * from './components/CreateAutomationModal';
@@ -10,4 +9,3 @@ export * from './components/EmailRunsTable';
 export * from './components/EmailLogsTable';
 export * from './pages/EmailAutomationPage';
 export * from './pages/EmailHistoryPage';
-export * from './pages/EmailTemplateEditorPage';

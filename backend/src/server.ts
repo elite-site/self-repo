@@ -2,9 +2,11 @@ import dns from 'dns';
 dns.setDefaultResultOrder('ipv4first');
 
 // Safely serialize BigInt values in JSON responses throughout Express
-(BigInt.prototype as any).toJSON = function () {
-  return this.toString();
-};
+Object.assign(BigInt.prototype, {
+  toJSON(this: bigint): string {
+    return this.toString();
+  },
+});
 
 import express from 'express';
 import helmet from 'helmet';
@@ -102,7 +104,10 @@ app.use(
         return callback(null, true);
       }
 
-      console.warn(`[CORS Blocked] Request origin "${origin}" is not in allowed list:`, allowedOrigins);
+      logger.warn('[CORS Blocked] Request origin is not in allowed list', {
+        origin,
+        allowedOrigins,
+      });
       return callback(null, false);
     },
     credentials: true,
@@ -314,15 +319,15 @@ if (env.NODE_ENV !== 'test') {
   (async () => {
     try {
       await connectDatabase();
-    } catch (err: any) {
+    } catch (err: unknown) {
       logger.warn('[Prisma] Initial database connection on boot failed', { err });
     }
 
     app.listen(port, () => {
-      console.log(`🚀 Self Introduction Portal running on port ${port}`);
-      console.log(`🌐 Web Portal:    http://localhost:${port}/`);
-      console.log(`📡 Public API:    http://localhost:${port}/api`);
-      console.log(`🛡️ Admin Portal:  http://localhost:${port}/admin`);
+      logger.info(`🚀 Self Introduction Portal running on port ${port}`);
+      logger.info(`🌐 Web Portal:    http://localhost:${port}/`);
+      logger.info(`📡 Public API:    http://localhost:${port}/api`);
+      logger.info(`🛡️ Admin Portal:  http://localhost:${port}/admin`);
 
       // Start background announcement scheduler
       startAnnouncementScheduler();
@@ -356,7 +361,7 @@ if (env.NODE_ENV !== 'test') {
           }, 5000);
         }
       } else {
-        console.log(
+        logger.info(
           '[Drive] Skipping boot-time viewer permission sweep (set SYNC_DRIVE_PERMISSIONS=true to enable).',
         );
       }

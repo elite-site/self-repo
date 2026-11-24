@@ -1,5 +1,5 @@
 import cron from 'node-cron';
-import { env } from '../config/env';
+import { env, isTestEnv } from '../config/env';
 import { syncScheduledBatch, backfillUnlinkedProfileAccounts } from '../modules/codechef';
 
 let isRunning = false;
@@ -25,7 +25,7 @@ export async function tick(): Promise<{ processed: number; succeeded: number; fa
 }
 
 export function startCodeChefSyncScheduler(): void {
-  if (process.env.NODE_ENV === 'test') return;
+  if (isTestEnv()) return;
   if (!env.FEATURE_CODECHEF) return;
   if (started) return;
   started = true;

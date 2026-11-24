@@ -218,7 +218,7 @@ export const AdminCodeChefTable: React.FC<AdminCodeChefTableProps> = ({
                         Unverified
                       </span>
                     ) : st.status === 'ERROR' ? (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-status-flagged/10 text-status-flagged border border-status-flagged/20">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-status-rejected/10 text-status-rejected border border-status-rejected/20">
                         Error
                       </span>
                     ) : (

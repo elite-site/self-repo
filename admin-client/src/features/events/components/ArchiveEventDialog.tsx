@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, AlertCircle, Loader2 } from 'lucide-react';
-import { eventsApi } from '../api';
+import { eventsApi } from '../api/index';
 import { EventItem } from '../types';
 
 export interface ArchiveEventDialogProps {

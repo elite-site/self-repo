@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { env } from '../config/env';
+import { AppError, UnauthorizedError } from '../utils/appError';
 
 export interface StudentJwtPayload {
   studentId: string;
@@ -19,7 +20,7 @@ declare global {
   }
 }
 
-export const requireStudentAuth = (req: Request, res: Response, next: NextFunction): void => {
+export const requireStudentAuth = (req: Request, _res: Response, next: NextFunction): void => {
   let token = req.cookies?.[STUDENT_SESSION_COOKIE_NAME] || null;
 
   if (!token && req.headers.authorization?.startsWith('Bearer ')) {
@@ -31,10 +32,7 @@ export const requireStudentAuth = (req: Request, res: Response, next: NextFuncti
   }
 
   if (!token) {
-    res.status(401).json({
-      error: 'UNAUTHORIZED',
-      message: 'Student authentication required. Please log in.',
-    });
+    next(new UnauthorizedError('Student authentication required. Please log in.'));
     return;
   }
 
@@ -44,9 +42,6 @@ export const requireStudentAuth = (req: Request, res: Response, next: NextFuncti
     (req as any).studentId = decoded.studentId;
     next();
   } catch {
-    res.status(401).json({
-      error: 'INVALID_TOKEN',
-      message: 'Your session has expired or is invalid. Please log in again.',
-    });
+    next(new AppError('INVALID_TOKEN', 'Your session has expired or is invalid. Please log in again.', 401));
   }
 };

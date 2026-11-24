@@ -1,6 +1,6 @@
 import * as repo from './public.repository';
 import { TtlCache } from '../../utils/ttlCache';
-import { driveService } from '../media/drive';
+import { driveService } from '../media';
 import { isInternalEvent } from '../../config/constants';
 import { AppError } from '../../utils/appError';
 
@@ -156,3 +156,45 @@ export function serializePublicVideo(video: {
     previewUrl: typeof driveService.getPreviewUrl === 'function' ? driveService.getPreviewUrl(video.driveFileId) : null,
   };
 }
+
+// Controllers must not import the repository directly (ARCH-1/ARCH-2). These
+// delegates preserve each query's exact signature and behavior.
+function delegateToRepository<Args extends unknown[], Result>(
+  query: (...args: Args) => Promise<Result>,
+): (...args: Args) => Promise<Result> {
+  return (...args: Args) => query(...args);
+}
+
+export const findPublicStudentsIndex = delegateToRepository(repo.findPublicStudentsIndex);
+export const countPublicStudents = delegateToRepository(repo.countPublicStudents);
+export const findPublicStudents = delegateToRepository(repo.findPublicStudents);
+export const findActiveSkills = delegateToRepository(repo.findActiveSkills);
+export const findPublicStudentEvents = delegateToRepository(repo.findPublicStudentEvents);
+export const loadPublicProfile = delegateToRepository(repo.loadPublicProfile);
+export const findPublicStudentWithResume = delegateToRepository(repo.findPublicStudentWithResume);
+
+export const findCertificateById = delegateToRepository(repo.findCertificateById);
+export const findAchievementById = delegateToRepository(repo.findAchievementById);
+export const findResumeById = delegateToRepository(repo.findResumeById);
+export const findIntroVideoById = delegateToRepository(repo.findIntroVideoById);
+export const findIntroVideoByStudent = delegateToRepository(repo.findIntroVideoByStudent);
+export const findIntroVideoForPublicMedia = delegateToRepository(repo.findIntroVideoForPublicMedia);
+export const findSubmissionByIdOrRollNo = delegateToRepository(repo.findSubmissionByIdOrRollNo);
+export const findStudentProfileByIdOrStudent = delegateToRepository(repo.findStudentProfileByIdOrStudent);
+export const updateResumeThumbnail = delegateToRepository(repo.updateResumeThumbnail);
+export const updateVideoThumbnail = delegateToRepository(repo.updateVideoThumbnail);
+export const updateVideoThumbnailByDriveId = delegateToRepository(repo.updateVideoThumbnailByDriveId);
+export const updateAchievementThumbnail = delegateToRepository(repo.updateAchievementThumbnail);
+export const updateCertificateThumbnail = delegateToRepository(repo.updateCertificateThumbnail);
+
+export const listPublishedVideos = delegateToRepository(repo.listPublishedVideos);
+export const findPublishedVideoById = delegateToRepository(repo.findPublishedVideoById);
+
+export const findSubmissionByEventAndStudent = delegateToRepository(repo.findSubmissionByEventAndStudent);
+export const findEventById = delegateToRepository(repo.findEventById);
+export const createEventRecord = delegateToRepository(repo.createEventRecord);
+export const updateSubmissionRecord = delegateToRepository(repo.updateSubmissionRecord);
+export const createSubmissionRecord = delegateToRepository(repo.createSubmissionRecord);
+export const findStudentForSubmissionSync = delegateToRepository(repo.findStudentForSubmissionSync);
+export const updateIntroVideoRecord = delegateToRepository(repo.updateIntroVideoRecord);
+export const createIntroVideoRecord = delegateToRepository(repo.createIntroVideoRecord);

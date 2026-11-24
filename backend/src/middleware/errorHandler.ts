@@ -1,15 +1,42 @@
 import { Request, Response, NextFunction } from 'express';
 import { AppError } from '../utils/appError';
+import { isProductionEnv } from '../config/env';
 import { logger } from '../utils/logger';
 
+const SAFE_ERROR_CODE = /^[A-Z][A-Z0-9_]*$/;
+const CLIENT_ERROR_MESSAGE = 'The request could not be processed.';
+const FILE_TOO_LARGE_MESSAGE = 'One of your uploaded files exceeds the maximum allowed size limit.';
+const UPLOAD_ERROR_MESSAGE = 'The upload could not be completed. Please try again.';
+
+const MULTER_ERROR_MESSAGES: Readonly<Record<string, string>> = {
+  LIMIT_FILE_SIZE: FILE_TOO_LARGE_MESSAGE,
+  LIMIT_FILE_COUNT: 'Too many files were uploaded. Please upload fewer files.',
+  LIMIT_UNEXPECTED_FILE: 'An unexpected upload field was provided.',
+  LIMIT_FIELD_KEY: 'A form field name is too long.',
+  LIMIT_FIELD_VALUE: 'A form field value is too long.',
+  LIMIT_FIELD_COUNT: 'Too many form fields were provided.',
+  LIMIT_PART_COUNT: 'Too many parts were included in the upload.',
+};
+
+interface ErrorLike {
+  code?: string;
+  name?: string;
+  message?: string;
+  stack?: string;
+  status?: number;
+  statusCode?: number;
+  meta?: unknown;
+}
+
 export function errorHandler(
-  err: any,
+  err: unknown,
   req: Request,
   res: Response,
   _next: NextFunction
 ): void {
   const requestId =
     req.id || (res.getHeader('X-Request-Id') as string) || 'req_unknown';
+  const failure = (err !== null && typeof err === 'object' ? err : {}) as ErrorLike;
 
   // 1. AppError subclasses (typed application errors)
   if (err instanceof AppError) {
@@ -31,8 +58,8 @@ export function errorHandler(
   }
 
   // 2. Prisma infrastructure error mapping (ERR-7)
-  if (err?.code === 'P2002') {
-    logger.warn('Prisma unique constraint conflict', { requestId, meta: err?.meta });
+  if (failure.code === 'P2002') {
+    logger.warn('Prisma unique constraint conflict', { requestId, meta: failure.meta });
     res.status(409).json({
       error: 'CONFLICT',
       message: 'A resource with this identifier already exists.',
@@ -41,7 +68,7 @@ export function errorHandler(
     return;
   }
 
-  if (err?.code === 'P2025') {
+  if (failure.code === 'P2025') {
     logger.warn('Prisma record not found', { requestId });
     res.status(404).json({
       error: 'NOT_FOUND',
@@ -51,7 +78,7 @@ export function errorHandler(
     return;
   }
 
-  if (err?.code === 'P2003') {
+  if (failure.code === 'P2003') {
     logger.warn('Prisma foreign key conflict', { requestId });
     res.status(409).json({
       error: 'CONFLICT',
@@ -63,16 +90,16 @@ export function errorHandler(
 
   // 2b. Prisma database connection / pool errors (ERR-7)
   if (
-    err?.code === 'P1001' || // Can't reach database server
-    err?.code === 'P1002' || // Database server reached but timed out
-    err?.code === 'P1008' || // Operations timed out
-    err?.code === 'P1017' || // Server has closed the connection
-    err?.code === 'P2024'    // Timed out fetching a connection from the pool
+    failure.code === 'P1001' || // Can't reach database server
+    failure.code === 'P1002' || // Database server reached but timed out
+    failure.code === 'P1008' || // Operations timed out
+    failure.code === 'P1017' || // Server has closed the connection
+    failure.code === 'P2024'    // Timed out fetching a connection from the pool
   ) {
     logger.warn('Database temporarily busy or unreachable', {
       requestId,
-      code: err.code,
-      message: err.message,
+      code: failure.code,
+      message: failure.message,
     });
     res.setHeader('Retry-After', '2');
     res.status(503).json({
@@ -84,59 +111,59 @@ export function errorHandler(
   }
 
   // 3. JWT Authentication error mapping (ERR-7)
-  if (err?.name === 'JsonWebTokenError' || err?.name === 'TokenExpiredError') {
-    logger.warn('JWT verification failed', { requestId, name: err.name });
+  if (failure.name === 'JsonWebTokenError' || failure.name === 'TokenExpiredError') {
+    logger.warn('JWT verification failed', { requestId, name: failure.name });
     res.status(401).json({
       error: 'UNAUTHORIZED',
-      message: err.name === 'TokenExpiredError' ? 'Your session has expired.' : 'Invalid session token.',
+      message: failure.name === 'TokenExpiredError' ? 'Your session has expired.' : 'Invalid session token.',
       requestId,
     });
     return;
   }
 
   // 4. Multer upload errors
-  if (err?.name === 'MulterError') {
-    logger.warn('Multer upload error', { requestId, code: err.code });
-    if (err.code === 'LIMIT_FILE_SIZE') {
-      res.status(400).json({
-        error: 'FILE_TOO_LARGE',
-        message: 'One of your uploaded files exceeds the maximum allowed size limit.',
-        requestId,
-      });
-      return;
-    }
+  if (failure.name === 'MulterError') {
+    logger.warn('Multer upload error', { requestId, code: failure.code });
+    const isFileTooLarge = failure.code === 'LIMIT_FILE_SIZE';
     res.status(400).json({
-      error: 'UPLOAD_ERROR',
-      message: err.message || 'Error occurred during file upload.',
+      error: isFileTooLarge ? 'FILE_TOO_LARGE' : 'UPLOAD_ERROR',
+      message: MULTER_ERROR_MESSAGES[failure.code ?? ''] ?? UPLOAD_ERROR_MESSAGE,
       requestId,
     });
     return;
   }
 
-  // 5. Declared 4xx errors from middleware/parsers
-  const declaredStatus = err?.status ?? err?.statusCode;
+  // 5. Declared 4xx errors from middleware/parsers. Only messages authored by
+  // our own upload validators are safe to echo; parser/provider messages can
+  // contain request bodies, paths, or provider text (ERR-6).
+  const declaredStatus = failure.status ?? failure.statusCode;
   if (typeof declaredStatus === 'number' && declaredStatus >= 400 && declaredStatus < 500) {
-    logger.warn(err.message || 'Client error', { requestId, status: declaredStatus });
+    const code =
+      typeof failure.code === 'string' && SAFE_ERROR_CODE.test(failure.code)
+        ? failure.code
+        : 'VALIDATION_ERROR';
+    const isKnownClientError = failure.name === 'UploadValidationError' && typeof failure.message === 'string';
+    logger.warn('Client error', { requestId, status: declaredStatus, code, name: failure.name });
     res.status(declaredStatus).json({
-      error: err.code || 'VALIDATION_ERROR',
-      message: err.message || 'The request could not be processed.',
+      error: code,
+      message: isKnownClientError ? failure.message : CLIENT_ERROR_MESSAGE,
       requestId,
     });
     return;
   }
 
   // 6. Unknown 5xx errors (ERR-6: never expose internal message or SQL in production)
-  logger.error(err?.message || 'Unexpected server error', {
+  logger.error(failure.message || 'Unexpected server error', {
     requestId,
-    stack: err?.stack,
+    stack: failure.stack,
   });
 
   res.status(500).json({
     error: 'INTERNAL_SERVER_ERROR',
     message:
-      process.env.NODE_ENV === 'production'
+      isProductionEnv()
         ? 'An unexpected error occurred. Please try again later.'
-        : err?.message || 'An unexpected error occurred. Please try again later.',
+        : failure.message || 'An unexpected error occurred. Please try again later.',
     requestId,
   });
 }

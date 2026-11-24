@@ -74,12 +74,21 @@ vi.mock('@aws-sdk/s3-request-presigner', () => ({
 
 vi.mock('../../src/config/env', () => ({
   env: {
+    NODE_ENV: 'test',
     FEATURE_VIDEO_CACHE: true,
     R2_ACCOUNT_ID: 'test-account-id',
     R2_ACCESS_KEY_ID: 'test-access-key',
     R2_SECRET_ACCESS_KEY: 'test-secret',
     R2_BUCKET: 'test-bucket',
   },
+  getNodeEnv: () => 'test',
+  isProductionEnv: () => false,
+  isDevelopmentEnv: () => false,
+  isTestEnv: () => true,
+  isVitestEnv: () => true,
+  getDbConnectionLimit: () => '5',
+  getMaxVideoSizeHardCapMb: () => 100,
+  isAutoMigratePending: () => false,
 }));
 
 // ─────────────────────────────────────────────────────────────────────────────

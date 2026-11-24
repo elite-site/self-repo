@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { eventsApi } from '../api';
+import { eventsApi } from '../api/index';
 import { CampaignOption, CampaignResult } from '../types';
 
 export const useVotingResults = () => {

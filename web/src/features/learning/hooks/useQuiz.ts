@@ -11,19 +11,6 @@ export function useQuizQuery(quizId: string) {
   });
 }
 
-export function useStartQuizMutation(quizId?: string) {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (qId: string) => learningApi.startQuiz(qId),
-    onSuccess: () => {
-      if (quizId) {
-        queryClient.invalidateQueries({ queryKey: ['learning', 'quiz', quizId] });
-      }
-    },
-  });
-}
-
 export function useSubmitQuizMutation(quizId?: string) {
   const queryClient = useQueryClient();
 

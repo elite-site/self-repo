@@ -177,12 +177,3 @@ export function normalizeSocialLink(kind: SocialLinkKind, input: string | null |
 
   return ok(`https://${host}${path ? `/${path}` : ''}`);
 }
-
-/** Convenience wrapper for callers that only need the stored value or `null`. */
-export function normalizeSocialLinkOrNull(
-  kind: SocialLinkKind,
-  input: string | null | undefined,
-): string | null {
-  const result = normalizeSocialLink(kind, input);
-  return result.ok ? result.value || null : null;
-}

@@ -1,4 +1,4 @@
-import { client, cachedFetch, uploadDirectToDrive, UploadProgressInfo } from '@/shared/api';
+import { client, publicVideosApi, uploadDirectToDrive, UploadProgressInfo } from '@/shared/api';
 import { PublicIntroVideo } from '@/shared/types';
 
 export const videoApi = {
@@ -118,9 +118,6 @@ export const videoApi = {
   },
 
   async getPublicVideos(limit?: number): Promise<{ items: PublicIntroVideo[]; total: number }> {
-    return cachedFetch(`videos_${limit || 0}`, 30_000, async () => {
-      const res = await client.get('/public/videos', { params: limit ? { limit } : undefined });
-      return { items: res.data?.items ?? [], total: res.data?.total ?? 0 };
-    });
+    return publicVideosApi.getPublicVideos(limit);
   },
 };

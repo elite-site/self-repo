@@ -15,7 +15,7 @@ export const PublicProfileNotFound: React.FC = () => {
           action={
             <Link
               to="/students"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 text-sm font-semibold text-white shadow-md hover:from-rose-600 hover:to-pink-600 transition-colors"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-red-500 text-sm font-semibold text-white shadow-md hover:bg-red-600 transition-colors"
             >
               <ArrowLeft size={16} />
               <span>Back to Directory</span>

@@ -1,4 +1,4 @@
-import { driveService } from '../../media/drive';
+import { driveService } from '../../media';
 import { AppError } from '../../../utils/appError';
 import * as adminRepo from '../admin.repository';
 

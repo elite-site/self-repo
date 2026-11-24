@@ -59,7 +59,7 @@ export const CodeChefContestTable: React.FC<CodeChefContestTableProps> = ({ cont
           </thead>
           <tbody className="divide-y divide-border">
             {pageItems.map((c, i) => (
-              <tr key={i} className="hover:bg-surface-muted/50 transition-colors">
+              <tr key={i} className="hover:bg-surface-sunken/50 transition-colors">
                 <td className="py-2.5 px-3 font-medium text-foreground max-w-xs truncate">{c.name}</td>
                 <td className="py-2.5 px-3 text-foreground-muted whitespace-nowrap">{c.date || '—'}</td>
                 <td className="py-2.5 px-3 text-right font-semibold text-primary">{c.rating ?? '—'}</td>

@@ -26,7 +26,7 @@ export const CodeChefBadges: React.FC<CodeChefBadgesProps> = ({ badges }) => {
         {badges.map((b, idx) => (
           <div
             key={idx}
-            className="p-3 bg-surface-muted/50 border border-border rounded-xl flex flex-col items-center text-center hover:bg-surface-muted transition-colors"
+            className="p-3 bg-surface-sunken/50 border border-border rounded-xl flex flex-col items-center text-center hover:bg-surface-sunken transition-colors"
           >
             {b.icon && b.icon.startsWith('http') ? (
               <img src={b.icon} alt={b.title || 'Badge'} className="w-12 h-12 object-contain mb-2" />

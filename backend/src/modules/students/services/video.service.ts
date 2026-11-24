@@ -3,7 +3,7 @@ import path from 'path';
 import * as repo from '../students.repository';
 import { env } from '../../../config/env';
 import { INTERNAL_EVENT_ID } from '../../../config/constants';
-import { driveService } from '../../media/drive';
+import { driveService } from '../../media';
 import { ActivityService } from '../../admin/services/activity.service';
 import { getMaxVideoSizeMb } from '../../../services/limits.service';
 import { AppError } from '../../../utils/appError';

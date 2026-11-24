@@ -1,5 +1,5 @@
 export * from './types';
-export * from './api';
+export * from './api/index';
 export * from './hooks/useModeration';
 export * from './components/ModerationPreview';
 export * from './components/ModerationHeader';

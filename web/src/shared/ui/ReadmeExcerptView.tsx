@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeSanitize from 'rehype-sanitize';
 import { ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
-import { githubApi } from '@/features/github/api';
+import { getGithubRepoReadme } from '@/shared/api';
 
 interface ReadmeExcerptViewProps {
   excerpt?: string | null;
@@ -31,7 +31,7 @@ export const ReadmeExcerptView: React.FC<ReadmeExcerptViewProps> = ({
     if (!expanded && !loadedExcerpt && repoId) {
       setLoading(true);
       try {
-        const data = await githubApi.getGithubRepoReadme(repoId);
+        const data = await getGithubRepoReadme(repoId);
         if (data?.readmeExcerpt) {
           setLoadedExcerpt(data.readmeExcerpt);
         } else {
@@ -94,7 +94,7 @@ export const ReadmeExcerptView: React.FC<ReadmeExcerptViewProps> = ({
           <ReactMarkdown
             rehypePlugins={[rehypeSanitize]}
             components={{
-              a: ({ node, ...props }) => (
+              a: ({ node: _node, ...props }) => (
                 <a
                   {...props}
                   target="_blank"
@@ -111,7 +111,7 @@ export const ReadmeExcerptView: React.FC<ReadmeExcerptViewProps> = ({
         </div>
 
         {!expanded && isLong && (
-          <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-surface to-transparent pointer-events-none" />
+          <div className="absolute inset-x-0 bottom-0 h-10 bg-surface/90 pointer-events-none" />
         )}
       </div>
 

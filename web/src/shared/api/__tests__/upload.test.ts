@@ -4,7 +4,7 @@ import {
   isNotificationPollingPaused,
   pauseNotificationPolling,
   resumeNotificationPolling,
-} from '@/features/notifications/api';
+} from '../notificationPolling';
 
 describe('Direct-to-Drive uploadDirectToDrive', () => {
   beforeEach(() => {
@@ -31,17 +31,21 @@ describe('Direct-to-Drive uploadDirectToDrive', () => {
     const sendSpy = vi.fn();
 
     const originalXHR = window.XMLHttpRequest;
-    (window as any).XMLHttpRequest = vi.fn(function (this: any) {
-      this.upload = { addEventListener: vi.fn() };
-      this.open = openSpy;
-      this.setRequestHeader = setHeaderSpy;
-      this.send = sendSpy.mockImplementation(() => {
+    class MockXHR {
+      upload = { addEventListener: vi.fn() };
+      open = openSpy;
+      setRequestHeader = setHeaderSpy;
+      getResponseHeader = vi.fn();
+      status = 0;
+      responseText = '';
+      onload: (() => void) | null = null;
+      send = sendSpy.mockImplementation(() => {
         this.status = 200;
         this.responseText = JSON.stringify({ id: 'drive_file_completed_123' });
-        this.onload();
+        this.onload?.();
       });
-      this.getResponseHeader = vi.fn();
-    });
+    }
+    window.XMLHttpRequest = MockXHR as unknown as typeof XMLHttpRequest;
 
     try {
       const result = await uploadDirectToDrive({

@@ -1,54 +1,47 @@
-import { useState, useEffect, useCallback } from 'react';
-import { studentsApi } from '../api';
+import { useQuery } from '@tanstack/react-query';
+import { studentsApi } from '../api/index';
 import { StudentsResponse } from '../types';
 
-export const useStudents = (activeEventId: string) => {
-  const [data, setData] = useState<StudentsResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState('');
-  const [yearFilter, setYearFilter] = useState<string>('');
-  const [sectionFilter, setSectionFilter] = useState<string>('');
-  const [uploadedFilter, setUploadedFilter] = useState<string>('');
+export interface StudentsQueryParams {
+  eventId: string;
+  page: number;
+  search: string;
+  year: string;
+  section: string;
+  uploaded: string;
+}
 
-  const loadStudents = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await studentsApi.getStudents({
-        eventId: activeEventId,
-        page,
+export const STUDENTS_QUERY_KEY = ['admin', 'students'] as const;
+
+export const useStudents = (params: StudentsQueryParams) => {
+  const query = useQuery<StudentsResponse>({
+    queryKey: [
+      ...STUDENTS_QUERY_KEY,
+      params.eventId,
+      params.page,
+      params.search.trim() || undefined,
+      params.year ? parseInt(params.year, 10) : undefined,
+      params.section || undefined,
+      params.uploaded || undefined,
+    ],
+    queryFn: () =>
+      studentsApi.getStudents({
+        eventId: params.eventId,
+        page: params.page,
         limit: 25,
-        search: search.trim() || undefined,
-        year: yearFilter ? parseInt(yearFilter, 10) : undefined,
-        section: sectionFilter || undefined,
-        uploaded: uploadedFilter || undefined,
-      });
-      setData(res);
-    } catch (err) {
-      console.error('Error loading students', err);
-    } finally {
-      setLoading(false);
-    }
-  }, [activeEventId, page, search, yearFilter, sectionFilter, uploadedFilter]);
-
-  useEffect(() => {
-    loadStudents();
-  }, [loadStudents]);
+        search: params.search.trim() || undefined,
+        year: params.year ? parseInt(params.year, 10) : undefined,
+        section: params.section || undefined,
+        uploaded: params.uploaded || undefined,
+      }),
+    retry: false,
+  });
 
   return {
-    data,
-    loading,
-    page,
-    setPage,
-    search,
-    setSearch,
-    yearFilter,
-    setYearFilter,
-    sectionFilter,
-    setSectionFilter,
-    uploadedFilter,
-    setUploadedFilter,
-    loadStudents,
-    exportUrl: studentsApi.getStudentsExportUrl(activeEventId),
+    data: query.data ?? null,
+    loading: query.isPending || query.isFetching,
+    error: query.isError ? 'Couldn’t reach the server. Please try again.' : null,
+    refetch: query.refetch,
+    exportUrl: studentsApi.getStudentsExportUrl(params.eventId),
   };
 };

@@ -1,8 +1,13 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import fs from 'fs';
 import path from 'path';
+import express from 'express';
+import request from 'supertest';
+import { env } from '../src/config/env';
+import { errorHandler } from '../src/middleware/errorHandler';
 import { computeCodeChefStars, CODECHEF_HANDLE_REGEX, extractCodeChefHandle } from '../src/modules/codechef/codechef.constants';
 import { parseConnectBody, parseVisibilityBody, parseAdminFilterQuery } from '../src/modules/codechef/codechef.schemas';
+import { internalCodeChefRouter } from '../src/modules/codechef/codechef.routes';
 import * as service from '../src/modules/codechef/codechef.service';
 import * as repo from '../src/modules/codechef/codechef.repository';
 import * as syncService from '../src/modules/codechef/services/codechef.sync.service';
@@ -209,5 +214,81 @@ describe('CodeChef Service Business Logic', () => {
     } as any);
 
     await expect(service.sync('stud_1')).rejects.toThrow('Please wait');
+  });
+});
+
+describe('POST /api/internal/codechef-sync-tick — internal secret guard', () => {
+  const app = express();
+  app.use(express.json());
+  app.use('/api/internal', internalCodeChefRouter);
+  app.use(errorHandler);
+
+  const originalSecret = env.INTERNAL_SYNC_SECRET;
+
+  beforeEach(() => {
+    (env as { INTERNAL_SYNC_SECRET: string }).INTERNAL_SYNC_SECRET = 'test_internal_secret';
+  });
+
+  afterEach(() => {
+    (env as { INTERNAL_SYNC_SECRET: string }).INTERNAL_SYNC_SECRET = originalSecret;
+    vi.restoreAllMocks();
+  });
+
+  it('returns 401 without a secret and never dispatches the sync', async () => {
+    const dispatch = vi.spyOn(service, 'syncScheduledBatch').mockResolvedValue({ processed: 0, succeeded: 0, failed: 0 });
+
+    const res = await request(app).post('/api/internal/codechef-sync-tick');
+
+    expect(res.status).toBe(401);
+    expect(res.body.error).toBe('UNAUTHORIZED');
+    expect(dispatch).not.toHaveBeenCalled();
+  });
+
+  it('returns 401 for a wrong secret', async () => {
+    const dispatch = vi.spyOn(service, 'syncScheduledBatch').mockResolvedValue({ processed: 0, succeeded: 0, failed: 0 });
+
+    const res = await request(app)
+      .post('/api/internal/codechef-sync-tick')
+      .set('x-internal-secret', 'wrong_secret');
+
+    expect(res.status).toBe(401);
+    expect(res.body.error).toBe('UNAUTHORIZED');
+    expect(dispatch).not.toHaveBeenCalled();
+  });
+
+  it('dispatches the sync when x-internal-secret is correct', async () => {
+    const dispatch = vi.spyOn(service, 'syncScheduledBatch').mockResolvedValue({ processed: 2, succeeded: 2, failed: 0 });
+
+    const res = await request(app)
+      .post('/api/internal/codechef-sync-tick?limit=3')
+      .set('x-internal-secret', 'test_internal_secret');
+
+    expect(res.status).toBe(200);
+    expect(dispatch).toHaveBeenCalledWith(3);
+    expect(res.body).toEqual({ processed: 2, succeeded: 2, failed: 0 });
+  });
+
+  it('accepts the secret as a Bearer token', async () => {
+    const dispatch = vi.spyOn(service, 'syncScheduledBatch').mockResolvedValue({ processed: 1, succeeded: 1, failed: 0 });
+
+    const res = await request(app)
+      .post('/api/internal/codechef-sync-tick')
+      .set('Authorization', 'Bearer test_internal_secret');
+
+    expect(res.status).toBe(200);
+    expect(dispatch).toHaveBeenCalledWith(10);
+    expect(res.body).toEqual({ processed: 1, succeeded: 1, failed: 0 });
+  });
+
+  it('rejects every request when no internal secret is configured', async () => {
+    (env as { INTERNAL_SYNC_SECRET: string }).INTERNAL_SYNC_SECRET = '';
+    const dispatch = vi.spyOn(service, 'syncScheduledBatch').mockResolvedValue({ processed: 0, succeeded: 0, failed: 0 });
+
+    const res = await request(app)
+      .post('/api/internal/codechef-sync-tick')
+      .set('x-internal-secret', '');
+
+    expect(res.status).toBe(401);
+    expect(dispatch).not.toHaveBeenCalled();
   });
 });

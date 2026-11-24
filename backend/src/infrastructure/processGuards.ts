@@ -1,4 +1,4 @@
-import { env } from '../config/env';
+import { isTestEnv, isVitestEnv } from '../config/env';
 import { logger } from '../utils/logger';
 
 /**
@@ -23,7 +23,7 @@ interface FailureSummary {
 let guardsInstalled = false;
 
 function isTestProcess(): boolean {
-  return env.NODE_ENV === 'test' || process.env.VITEST === 'true';
+  return isTestEnv() || isVitestEnv();
 }
 
 // A rejection reason can be any value (an Axios config with auth headers, a

@@ -29,7 +29,7 @@ export const CodeChefTopicsDifficulty: React.FC<CodeChefTopicsDifficultyProps> =
               <span className="font-medium text-emerald-500">Easy</span>
               <span className="font-semibold text-foreground">{easy} ({Math.round((easy / total) * 100)}%)</span>
             </div>
-            <div className="w-full h-2 bg-surface-muted rounded-full overflow-hidden">
+            <div className="w-full h-2 bg-surface-sunken rounded-full overflow-hidden">
               <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${(easy / total) * 100}%` }} />
             </div>
           </div>
@@ -39,7 +39,7 @@ export const CodeChefTopicsDifficulty: React.FC<CodeChefTopicsDifficultyProps> =
               <span className="font-medium text-amber-500">Medium</span>
               <span className="font-semibold text-foreground">{medium} ({Math.round((medium / total) * 100)}%)</span>
             </div>
-            <div className="w-full h-2 bg-surface-muted rounded-full overflow-hidden">
+            <div className="w-full h-2 bg-surface-sunken rounded-full overflow-hidden">
               <div className="h-full bg-amber-500 rounded-full" style={{ width: `${(medium / total) * 100}%` }} />
             </div>
           </div>
@@ -49,7 +49,7 @@ export const CodeChefTopicsDifficulty: React.FC<CodeChefTopicsDifficultyProps> =
               <span className="font-medium text-rose-500">Hard</span>
               <span className="font-semibold text-foreground">{hard} ({Math.round((hard / total) * 100)}%)</span>
             </div>
-            <div className="w-full h-2 bg-surface-muted rounded-full overflow-hidden">
+            <div className="w-full h-2 bg-surface-sunken rounded-full overflow-hidden">
               <div className="h-full bg-rose-500 rounded-full" style={{ width: `${(hard / total) * 100}%` }} />
             </div>
           </div>
@@ -71,7 +71,7 @@ export const CodeChefTopicsDifficulty: React.FC<CodeChefTopicsDifficultyProps> =
                   <span className="font-medium text-foreground truncate max-w-[200px]">{t.topic}</span>
                   <span className="text-foreground-muted font-semibold">{t.count} solved</span>
                 </div>
-                <div className="w-full h-2 bg-surface-muted rounded-full overflow-hidden">
+                <div className="w-full h-2 bg-surface-sunken rounded-full overflow-hidden">
                   <div className="h-full bg-primary rounded-full" style={{ width: `${(t.count / maxTopicCount) * 100}%` }} />
                 </div>
               </div>

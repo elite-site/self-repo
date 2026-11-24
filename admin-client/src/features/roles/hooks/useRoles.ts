@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { rolesApi } from '../api';
+import { rolesApi } from '../api/index';
 import { RolesResponse } from '../types';
 
 export const useRoles = () => {

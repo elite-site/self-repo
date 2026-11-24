@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { analyticsApi } from '../api';
+import { analyticsApi } from '../api/index';
 import { AnalyticsResponse } from '../types';
 
 export const useAnalytics = () => {

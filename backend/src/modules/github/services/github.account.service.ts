@@ -1,8 +1,9 @@
 import crypto from 'crypto';
-import { prisma } from '../../../infrastructure/prisma';
+import * as repo from '../github.repository';
 import { env } from '../../../config/env';
 import { githubSyncService } from './github.sync.service';
 import { GithubSyncTrigger } from '@prisma/client';
+import { logger } from '../../../utils/logger';
 
 export class GithubAccountError extends Error {
   statusCode: number;
@@ -21,9 +22,7 @@ export class GithubAccountService {
    * State and verifier are persisted in GithubOAuthState for 10 minutes.
    */
   async createConnectUrl(studentId: string): Promise<string> {
-    const student = await prisma.student.findUnique({
-      where: { id: studentId },
-    });
+    const student = await repo.findStudentById(studentId);
     if (!student) {
       throw new GithubAccountError(404, 'Student not found', 'STUDENT_NOT_FOUND');
     }
@@ -35,13 +34,11 @@ export class GithubAccountService {
 
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes expiry
 
-    await prisma.githubOAuthState.create({
-      data: {
-        studentId,
-        state,
-        codeVerifier,
-        expiresAt,
-      },
+    await repo.createGithubOAuthState({
+      studentId,
+      state,
+      codeVerifier,
+      expiresAt,
     });
 
     const params = new URLSearchParams({
@@ -62,9 +59,7 @@ export class GithubAccountService {
    * immediately discards user token, and enqueues initial sync.
    */
   async handleCallback(studentId: string, code: string, state: string) {
-    const stateRecord = await prisma.githubOAuthState.findUnique({
-      where: { state },
-    });
+    const stateRecord = await repo.findGithubOAuthStateByState(state);
 
     if (!stateRecord) {
       throw new GithubAccountError(400, 'Invalid OAuth state parameter', 'INVALID_STATE');
@@ -83,10 +78,7 @@ export class GithubAccountService {
     }
 
     // Mark state as consumed (single-use)
-    await prisma.githubOAuthState.update({
-      where: { id: stateRecord.id },
-      data: { usedAt: new Date() },
-    });
+    await repo.markGithubOAuthStateUsed(stateRecord.id, new Date());
 
     // Exchange authorization code for user access token with PKCE code_verifier
     const tokenRes = await fetch('https://github.com/login/oauth/access_token', {
@@ -136,9 +128,7 @@ export class GithubAccountService {
     const githubUserId = BigInt(githubUser.id);
 
     // Ensure this GitHub account is not already linked to another student
-    const existingOther = await prisma.githubAccount.findUnique({
-      where: { githubUserId },
-    });
+    const existingOther = await repo.findGithubAccountByUserId(githubUserId);
 
     if (existingOther && existingOther.studentId !== studentId) {
       throw new GithubAccountError(
@@ -149,27 +139,16 @@ export class GithubAccountService {
     }
 
     // Upsert GithubAccount for this student
-    const account = await prisma.githubAccount.upsert({
-      where: { studentId },
-      update: {
-        githubUserId,
-        login: githubUser.login,
-        avatarUrl: githubUser.avatar_url || null,
-        syncStatus: 'QUEUED',
-        syncError: null,
-      },
-      create: {
-        studentId,
-        githubUserId,
-        login: githubUser.login,
-        avatarUrl: githubUser.avatar_url || null,
-        syncStatus: 'QUEUED',
-      },
+    const account = await repo.upsertConnectedGithubAccount({
+      studentId,
+      githubUserId,
+      login: githubUser.login,
+      avatarUrl: githubUser.avatar_url || null,
     });
 
     // Enqueue initial sync in background
     githubSyncService.queueSync(studentId, GithubSyncTrigger.CONNECT).catch((err) => {
-      console.error(`[GitHubSync] Initial connect sync failed for student ${studentId}:`, err);
+      logger.error('[GitHubSync] Initial connect sync failed', { studentId, err });
     });
 
     return {
@@ -185,18 +164,7 @@ export class GithubAccountService {
    * All legacy manual data (Student, Project, StudentSkill) remains intact.
    */
   async disconnect(studentId: string): Promise<void> {
-    await prisma.$transaction(async (tx) => {
-      // Unlink any Project relations to GithubRepo to preserve projects
-      await tx.project.updateMany({
-        where: { studentId, githubRepoId: { not: null } },
-        data: { githubRepoId: null },
-      });
-
-      await tx.githubStudentSkill.deleteMany({ where: { studentId } });
-      await tx.githubRepo.deleteMany({ where: { studentId } });
-      await tx.githubAccount.deleteMany({ where: { studentId } });
-      await tx.githubOAuthState.deleteMany({ where: { studentId } });
-    }, { maxWait: 2000, timeout: 5000 });
+    await repo.deleteGithubConnection(studentId);
   }
 
   /**
@@ -204,10 +172,7 @@ export class GithubAccountService {
    */
   async snoozeReminder(studentId: string): Promise<{ snoozedUntil: Date }> {
     const snoozedUntil = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-    await prisma.student.update({
-      where: { id: studentId },
-      data: { githubReminderSnoozedUntil: snoozedUntil },
-    });
+    await repo.updateStudentGithubReminder(studentId, snoozedUntil);
     return { snoozedUntil };
   }
 
@@ -215,19 +180,7 @@ export class GithubAccountService {
    * Returns lightweight summary of GitHub status and counts without repo rows.
    */
   async getSummary(studentId: string) {
-    const student = await prisma.student.findUnique({
-      where: { id: studentId },
-      select: {
-        githubReminderSnoozedUntil: true,
-        githubAccount: {
-          select: {
-            login: true,
-            lastSyncedAt: true,
-            syncStatus: true,
-          },
-        },
-      },
-    });
+    const student = await repo.findStudentGithubSummary(studentId);
 
     if (!student || !student.githubAccount) {
       return {
@@ -242,12 +195,8 @@ export class GithubAccountService {
     }
 
     const [repoCount, showcasedCount] = await Promise.all([
-      prisma.githubRepo.count({
-        where: { studentId, removedFromGithub: false },
-      }),
-      prisma.githubRepo.count({
-        where: { studentId, isShowcased: true, removedFromGithub: false },
-      }),
+      repo.countActiveGithubRepos(studentId),
+      repo.countShowcasedActiveGithubRepos(studentId),
     ]);
 
     return {
@@ -266,14 +215,7 @@ export class GithubAccountService {
    * repos, showcased repos, and computed skills with BigInt values serialized to string.
    */
   async getStatus(studentId: string) {
-    const student = await prisma.student.findUnique({
-      where: { id: studentId },
-      select: {
-        id: true,
-        githubReminderSnoozedUntil: true,
-        githubAccount: true,
-      },
-    });
+    const student = await repo.findStudentForGithubStatus(studentId);
 
     if (!student || !student.githubAccount) {
       return {
@@ -306,52 +248,16 @@ export class GithubAccountService {
     const dailySyncsRemaining = Math.max(0, env.GITHUB_SYNC_DAILY_CAP - dailyCount);
 
     const [repos, skills, profile] = await Promise.all([
-      prisma.githubRepo.findMany({
-        where: { studentId, removedFromGithub: false },
-        orderBy: [{ isShowcased: 'desc' }, { showcaseRank: 'asc' }, { stars: 'desc' }, { pushedAt: 'desc' }],
-        select: {
-          id: true,
-          studentId: true,
-          githubRepoId: true,
-          fullName: true,
-          name: true,
-          description: true,
-          htmlUrl: true,
-          isFork: true,
-          primaryLanguage: true,
-          topics: true,
-          stars: true,
-          githubCreatedAt: true,
-          pushedAt: true,
-          languages: true,
-          commitCount: true,
-          firstCommitAt: true,
-          lastCommitAt: true,
-          isShowcased: true,
-          showcaseRank: true,
-          removedFromGithub: true,
-        },
-      }),
-      prisma.githubStudentSkill.findMany({
-        where: { studentId },
-        include: { skill: true },
-        orderBy: [{ repoCount: 'desc' }, { totalBytes: 'desc' }],
-      }),
-      prisma.studentProfile.findUnique({
-        where: { studentId },
-        include: { skills: true },
-      }),
+      repo.findStatusRepos(studentId),
+      repo.findGithubStudentSkills(studentId),
+      repo.findStudentProfileWithSkills(studentId),
     ]);
 
     let currentSkills = skills;
     if (repos.length > 0 && currentSkills.length === 0) {
       try {
         await githubSyncService.recomputeStudentSkills(studentId);
-        currentSkills = await prisma.githubStudentSkill.findMany({
-          where: { studentId },
-          include: { skill: true },
-          orderBy: [{ repoCount: 'desc' }, { totalBytes: 'desc' }],
-        });
+        currentSkills = await repo.findGithubStudentSkills(studentId);
       } catch {
         // Continue with currentSkills
       }

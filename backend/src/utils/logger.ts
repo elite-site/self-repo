@@ -1,4 +1,6 @@
 /* eslint-disable no-console */
+import { isProductionEnv } from '../config/env';
+
 export type LogLevel = 'error' | 'warn' | 'info' | 'debug';
 
 interface LogContext {
@@ -11,9 +13,8 @@ interface LogContext {
   [key: string]: unknown;
 }
 
-const isProduction = process.env.NODE_ENV === 'production';
-
 function formatLog(level: LogLevel, message: string, context?: LogContext): void {
+  const isProduction = isProductionEnv();
   const timestamp = new Date().toISOString();
 
   if (isProduction) {

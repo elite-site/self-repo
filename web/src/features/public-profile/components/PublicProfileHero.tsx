@@ -55,7 +55,7 @@ export const PublicProfileHero: React.FC<PublicProfileHeroProps> = ({
 
           <h1 className="mt-3 font-heading text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-white leading-tight">
             {firstName}{' '}
-            <span className="bg-gradient-to-r from-rose-500 via-pink-500 to-amber-300 bg-clip-text text-transparent">
+            <span className="text-red-500">
               {restOfName}
             </span>
           </h1>
@@ -74,7 +74,7 @@ export const PublicProfileHero: React.FC<PublicProfileHeroProps> = ({
           <div className="mt-6 flex flex-wrap items-center justify-center lg:justify-start gap-3">
             <a
               href="#contact"
-              className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 px-5 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-md shadow-rose-950/40 hover:from-rose-600 hover:to-pink-600 transition-all duration-200"
+              className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-red-500 px-5 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-md shadow-rose-950/40 hover:bg-red-600 transition-all duration-200"
             >
               <Mail size={15} />
               <span>Contact Me</span>
@@ -186,7 +186,7 @@ export const PublicProfileHero: React.FC<PublicProfileHeroProps> = ({
 
         {/* Center Profile Image */}
         <div className="lg:col-span-4 flex flex-col items-center justify-center order-1 lg:order-2">
-          <div className="relative p-1.5 rounded-full bg-gradient-to-tr from-rose-500 via-pink-500 to-indigo-500 shadow-xl shadow-rose-950/30">
+          <div className="relative p-1.5 rounded-full bg-red-500 shadow-xl shadow-rose-950/30">
             <div className="relative size-36 sm:size-44 lg:size-48 rounded-full overflow-hidden bg-slate-950 border-4 border-[#070B16]">
               {photo && !imageError ? (
                 <img

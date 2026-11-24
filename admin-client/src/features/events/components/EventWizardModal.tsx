@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, CheckCircle, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { formatDate, formatRegistrationRange } from '@/shared/utils/formatDate';
-import { eventsApi } from '../api';
+import { eventsApi } from '../api/index';
 import { EventItem, EventPayload, FormState } from '../types';
 import { fromEvent, emptyEventForm } from '../hooks/useEvents';
 import { EventStatusBadge } from './EventStatusBadge';

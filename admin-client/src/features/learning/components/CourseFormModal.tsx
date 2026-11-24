@@ -11,13 +11,27 @@ import {
   Users,
 } from 'lucide-react';
 import { AdminCourseItem, CourseLevel, CourseStatus, EnrolmentType, YouTubePlaylistItem } from '../types';
-import { learningAdminApi } from '../api';
+import {
+  usePreviewYouTubeMutation,
+  usePreviewYouTubePlaylistMutation,
+} from '../hooks/useYouTubePreview';
+
+export interface CourseFormPayload extends Partial<AdminCourseItem> {
+  target?: { targetType: 'ALL' | 'BATCH'; year?: number; section?: string };
+  lessons?: Array<{
+    title: string;
+    type: 'YOUTUBE';
+    youtubeVideoId: string;
+    durationSec: number | null;
+    order: number;
+  }>;
+}
 
 export interface CourseFormModalProps {
   open: boolean;
   onClose: () => void;
   course?: AdminCourseItem | null;
-  onSubmit: (data: any) => void | Promise<void>;
+  onSubmit: (data: CourseFormPayload) => void | Promise<void>;
   isSubmitting?: boolean;
 }
 
@@ -104,7 +118,9 @@ export const CourseFormModal: React.FC<CourseFormModalProps> = ({
 
   // YouTube Video / Playlist Quick Import
   const [quickStartUrl, setQuickStartUrl] = useState('');
-  const [quickStartLoading, setQuickStartLoading] = useState(false);
+  const previewPlaylist = usePreviewYouTubePlaylistMutation();
+  const previewVideo = usePreviewYouTubeMutation();
+  const quickStartLoading = previewPlaylist.isPending || previewVideo.isPending;
   const [quickStartSuccess, setQuickStartSuccess] = useState<string | null>(null);
   const [quickStartError, setQuickStartError] = useState<string | null>(null);
   const [stagedLessons, setStagedLessons] = useState<YouTubePlaylistItem[]>([]);
@@ -181,7 +197,6 @@ export const CourseFormModal: React.FC<CourseFormModalProps> = ({
     const trimmed = quickStartUrl.trim();
     if (!trimmed) return;
 
-    setQuickStartLoading(true);
     setQuickStartError(null);
     setQuickStartSuccess(null);
 
@@ -189,7 +204,6 @@ export const CourseFormModal: React.FC<CourseFormModalProps> = ({
     const videoId = parseYouTubeVideoId(trimmed);
 
     if (!isPlaylist && !videoId) {
-      setQuickStartLoading(false);
       setQuickStartError(
         'Invalid YouTube URL. Please enter a valid YouTube video (watch, youtu.be, embed) or playlist link.'
       );
@@ -199,7 +213,7 @@ export const CourseFormModal: React.FC<CourseFormModalProps> = ({
     try {
       if (isPlaylist) {
         // Case A (Playlist Link detected): Maintain existing workflow
-        const data = await learningAdminApi.previewYouTubePlaylist(trimmed);
+        const data = await previewPlaylist.mutateAsync(trimmed);
         if (data.title && !title) {
           setTitle(data.title);
           if (!course) {
@@ -221,7 +235,7 @@ export const CourseFormModal: React.FC<CourseFormModalProps> = ({
         setQuickStartSuccess(`Successfully loaded ${data.videos.length} videos from "${data.title || 'Playlist'}"!`);
       } else if (videoId) {
         // Case B (Single Video Link detected): Parse out specific Video ID, auto-fill Title/Description, push as Lesson 1
-        const data = await learningAdminApi.previewYouTube(trimmed);
+        const data = await previewVideo.mutateAsync(trimmed);
         const resolvedTitle = data.title || 'Lesson 1';
         const resolvedDescription =
           data.description ||
@@ -261,14 +275,14 @@ export const CourseFormModal: React.FC<CourseFormModalProps> = ({
         setStagedLessons([singleLesson]);
         setQuickStartSuccess(`Successfully loaded "${resolvedTitle}" and staged as Lesson 1!`);
       }
-    } catch (err: any) {
+    } catch (err) {
       setQuickStartError(
-        err?.response?.data?.message ||
-          err?.message ||
-          (isPlaylist ? 'Could not fetch YouTube playlist' : 'Could not fetch YouTube video details')
+        err instanceof Error
+          ? err.message
+          : isPlaylist
+          ? 'Could not fetch YouTube playlist'
+          : 'Could not fetch YouTube video details'
       );
-    } finally {
-      setQuickStartLoading(false);
     }
   };
 
@@ -287,7 +301,7 @@ export const CourseFormModal: React.FC<CourseFormModalProps> = ({
       return;
     }
 
-    const payload: any = {
+    const payload: CourseFormPayload = {
       title: title.trim(),
       slug: slug.trim(),
       description: description.trim(),

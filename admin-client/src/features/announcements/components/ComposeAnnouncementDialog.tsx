@@ -1,6 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { X, Users, Loader2, Send } from 'lucide-react';
-import { announcementsApi } from '../api';
+import {
+  useAudiencePreviewQuery,
+  useCreateAnnouncementMutation,
+} from '../hooks/useAnnouncementComposer';
 
 const audienceToTargeting = (audience: string) => {
   const match = /^YEAR_(\d+)$/.exec(audience);
@@ -18,32 +21,20 @@ export const ComposeAnnouncementDialog: React.FC<ComposeAnnouncementDialogProps>
   onPublished,
 }) => {
   const [form, setForm] = useState({ title: '', body: '', audience: 'ALL', scheduledAt: '' });
-  const [preview, setPreview] = useState<number | null>(null);
-  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const update = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
 
-  const fetchPreview = async () => {
-    try {
-      const res = await announcementsApi.getAnnouncementAudiencePreview(form.audience);
-      setPreview(res?.count ?? 0);
-    } catch {
-      setPreview(null);
-    }
-  };
-
-  useEffect(() => {
-    fetchPreview();
-  }, [form.audience]);
+  const preview = useAudiencePreviewQuery(form.audience);
+  const createAnnouncement = useCreateAnnouncementMutation();
 
   const handlePublish = async () => {
     if (!form.title.trim() || !form.body.trim()) {
       setError('Title and body are required.');
       return;
     }
-    setSubmitting(true);
+    setError('');
     try {
-      await announcementsApi.createAnnouncement({
+      await createAnnouncement.mutateAsync({
         title: form.title,
         body: form.body,
         scheduledAt: form.scheduledAt || null,
@@ -53,8 +44,6 @@ export const ComposeAnnouncementDialog: React.FC<ComposeAnnouncementDialogProps>
       onClose();
     } catch {
       setError('Failed to publish. Try again.');
-    } finally {
-      setSubmitting(false);
     }
   };
 
@@ -134,10 +123,10 @@ export const ComposeAnnouncementDialog: React.FC<ComposeAnnouncementDialogProps>
           </button>
           <button
             onClick={handlePublish}
-            disabled={submitting}
+            disabled={createAnnouncement.isPending}
             className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-status-solid-rejected text-on-primary rounded-lg text-xs font-bold hover:bg-brand disabled:opacity-50 cursor-pointer"
           >
-            {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+            {createAnnouncement.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
             {form.scheduledAt ? 'Schedule' : 'Publish Now'}
           </button>
         </div>

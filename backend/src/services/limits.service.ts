@@ -1,5 +1,5 @@
 import { findPortalSettingByKey } from '../modules/admin/repositories/settings.repository';
-import { env } from '../config/env';
+import { env, getMaxVideoSizeHardCapMb, isTestEnv } from '../config/env';
 import { logger } from '../utils/logger';
 import { TtlCache } from '../utils/ttlCache';
 
@@ -27,9 +27,7 @@ export function clearLimitsCache(): void {
 
 /** Hard ceiling on an upload body, independent of the configured limit. */
 export function getMaxVideoHardCapMb(): number {
-  const configured = parseInt(process.env.MAX_VIDEO_SIZE_HARD_CAP_MB || '', 10);
-  if (Number.isFinite(configured) && configured > 0) return configured;
-  return 100;
+  return getMaxVideoSizeHardCapMb();
 }
 
 function parsePositiveInt(value: unknown): number | null {
@@ -62,7 +60,7 @@ async function fetchMaxVideoSizeMb(): Promise<number> {
  * Cached in-memory with a 60s TTL to prevent database roundtrips on hot student endpoints.
  */
 export async function getMaxVideoSizeMb(): Promise<number> {
-  if (process.env.NODE_ENV === 'test') {
+  if (isTestEnv()) {
     return fetchMaxVideoSizeMb();
   }
   return limitsCache.wrap('max_video_size_mb', fetchMaxVideoSizeMb);

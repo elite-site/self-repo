@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { emailAutomationApi } from '../api';
+import { emailAutomationApi } from '../api/index';
 import { EmailAutomationItem, EmailTemplateItem } from '../types';
 import { useConfirm } from '@/shared/ui/ConfirmDialog';
 

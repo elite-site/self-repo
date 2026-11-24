@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { eventsApi } from '../api';
+import { eventsApi } from '../api/index';
 import { EventItem, EventPayload, FormState } from '../types';
 
 export const toLocalInput = (iso?: string | null) => {

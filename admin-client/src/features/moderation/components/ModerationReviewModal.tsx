@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { UnifiedModerationItem, ModerationType } from '../types';
-import { moderationApi } from '../api';
+import {
+  useDeleteModerationItemMutation,
+  useModerationDecisionMutation,
+  useModerationVisibilityMutation,
+} from '../hooks/useModerationActions';
 import { useConfirm } from '@/shared/ui/ConfirmDialog';
 import { ModerationReviewHeader } from './subcomponents/ModerationReviewHeader';
 import { ModerationItemPreview } from './subcomponents/ModerationItemPreview';
@@ -32,15 +36,18 @@ export const ModerationReviewModal: React.FC<ModerationReviewModalProps> = ({
   typeKeyFor,
 }) => {
   const confirm = useConfirm();
+  const decisionMutation = useModerationDecisionMutation();
+  const visibilityMutation = useModerationVisibilityMutation();
+  const deleteMutation = useDeleteModerationItemMutation();
 
   // Decision Form State
   const [action, setAction] = useState<'approve' | 'reject' | 'changes' | 'hide' | null>(null);
   const [reason, setReason] = useState('');
   const [approvalNote, setApprovalNote] = useState('');
   const [publishOnApprove, setPublishOnApprove] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [visibilityBusy, setVisibilityBusy] = useState(false);
-  const [deleteBusy, setDeleteBusy] = useState(false);
+  const submitting = decisionMutation.isPending;
+  const visibilityBusy = visibilityMutation.isPending;
+  const deleteBusy = deleteMutation.isPending;
 
   // Reset form whenever selectedItem changes
   useEffect(() => {
@@ -96,15 +103,18 @@ export const ModerationReviewModal: React.FC<ModerationReviewModalProps> = ({
       return;
     }
 
-    setSubmitting(true);
     try {
       const typeKey: ModerationType = typeKeyFor(selectedItem);
 
-      await moderationApi.moderationDecision(typeKey, selectedItem.id, {
-        action,
-        reason: reason.trim() || undefined,
-        approvalNote: approvalNote.trim() || undefined,
-        publish: action === 'approve' ? publishOnApprove : false,
+      await decisionMutation.mutateAsync({
+        type: typeKey,
+        id: selectedItem.id,
+        data: {
+          action,
+          reason: reason.trim() || undefined,
+          approvalNote: approvalNote.trim() || undefined,
+          publish: action === 'approve' ? publishOnApprove : false,
+        },
       });
 
       const readableType = readableTypeOf(selectedItem);
@@ -148,26 +158,24 @@ export const ModerationReviewModal: React.FC<ModerationReviewModalProps> = ({
       } else {
         onClose();
       }
-    } catch (err: any) {
-      console.error('Decision error:', err);
+    } catch {
       showToast("Couldn't save the decision. Try again.", 'error');
-    } finally {
-      setSubmitting(false);
     }
   };
 
   /** Publish / unpublish without altering the approval decision. */
   const handleToggleVisibility = async () => {
     const next = !selectedItem.isPublic;
-    setVisibilityBusy(true);
     try {
-      await moderationApi.setModerationVisibility(typeKeyFor(selectedItem), selectedItem.id, next);
+      await visibilityMutation.mutateAsync({
+        type: typeKeyFor(selectedItem),
+        id: selectedItem.id,
+        isPublic: next,
+      });
       onUpdateItems((prev) => prev.map((i) => (i.id === selectedItem.id ? { ...i, isPublic: next } : i)));
       showToast(next ? 'Showing on public profile.' : 'Hidden from public profile.');
     } catch {
       showToast("Couldn't change visibility. Try again.", 'error');
-    } finally {
-      setVisibilityBusy(false);
     }
   };
 
@@ -187,9 +195,8 @@ export const ModerationReviewModal: React.FC<ModerationReviewModalProps> = ({
     });
     if (!confirmed) return;
 
-    setDeleteBusy(true);
     try {
-      await moderationApi.deleteModerationItem(typeKeyFor(selectedItem), selectedItem.id);
+      await deleteMutation.mutateAsync({ type: typeKeyFor(selectedItem), id: selectedItem.id });
       showToast(`Deleted ${readableTypeOf(selectedItem).toLowerCase()}.`);
 
       const nextRemaining = filteredItems.filter((i) => i.id !== selectedItem.id);
@@ -201,8 +208,6 @@ export const ModerationReviewModal: React.FC<ModerationReviewModalProps> = ({
       }
     } catch {
       showToast("Couldn't delete this item. Try again.", 'error');
-    } finally {
-      setDeleteBusy(false);
     }
   };
 

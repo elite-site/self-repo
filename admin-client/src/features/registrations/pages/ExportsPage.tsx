@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Calendar, ShieldAlert, Layers, Users, Video, ClipboardList, Lock, DownloadCloud, ShieldCheck } from 'lucide-react';
 import { ACTIVE_EVENT_ID } from '@/shared/layout';
-import { registrationsApi } from '../api';
+import { registrationsApi } from '../api/index';
 import { ExportCard, DatasetItem } from '../components/ExportCard';
 import { AsymGrid, AsymFeatured, AsymSide, AsymAccent } from '@/shared/layout/AsymGrid';
 import { MasonryGrid, MasonryItem } from '@/shared/layout/MasonryGrid';

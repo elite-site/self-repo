@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { videoApi } from '../api';
 import { profileApi } from '@/features/profile/api';
 import { resolveMediaUrl, UploadProgressInfo } from '@/shared/api';
-import { pauseNotificationPolling, resumeNotificationPolling } from '@/features/notifications/api';
+import { pauseNotificationPolling, resumeNotificationPolling } from '@/shared/api';
 import { StudentIntroVideo, StudentSubmission, UploadStats, VideoMeta } from '../types';
 import { useSession } from '@/context/SessionContext';
 import { useToast } from '@/shared/ui/Toast';

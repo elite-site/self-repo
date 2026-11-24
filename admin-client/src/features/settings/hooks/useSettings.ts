@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { settingsApi } from '../api';
+import { settingsApi } from '../api/index';
 
 export const useSettings = () => {
   const [settings, setSettings] = useState<Record<string, string>>({

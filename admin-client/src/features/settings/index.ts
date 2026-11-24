@@ -1,5 +1,5 @@
 export * from './types';
-export * from './api';
+export * from './api/index';
 export * from './hooks/useSettings';
 export * from './components/InstitutionalIdentitySection';
 export * from './components/StorageLimitsSection';

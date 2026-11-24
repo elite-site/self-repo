@@ -16,40 +16,29 @@ import {
 } from 'lucide-react';
 import { AdminUser, AdminStats } from '@/types';
 import { useTheme, ThemeMode } from '@/context/ThemeContext';
-import { analyticsApi } from '@/features/analytics/api';
 
 interface AdminHeaderProps {
   user?: AdminUser | null;
+  portalStats?: AdminStats | null;
   onToggleMobileSidebar?: () => void;
   onLogout?: () => void;
 }
 
 export const AdminHeader: React.FC<AdminHeaderProps> = ({
   user,
+  portalStats = null,
   onToggleMobileSidebar,
   onLogout,
 }) => {
   const [themeDropdownOpen, setThemeDropdownOpen] = useState(false);
   const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
   const [accountDropdownOpen, setAccountDropdownOpen] = useState(false);
-  const [portalStats, setPortalStats] = useState<AdminStats | null>(null);
 
   const { theme, setTheme } = useTheme();
 
   const themeRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
   const accountRef = useRef<HTMLDivElement>(null);
-
-  // Fetch quick stats for notification badge
-  useEffect(() => {
-    analyticsApi
-      .getStats()
-      .then((data) => setPortalStats(data))
-      .catch((err) => {
-        // Non-fatal: the header keeps working without the notification badge count.
-        console.warn('Could not load header stats:', err);
-      });
-  }, []);
 
   // Close menus on outside click or Escape
   useEffect(() => {

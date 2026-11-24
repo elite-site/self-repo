@@ -1,5 +1,5 @@
 export * from './types';
-export * from './api';
+export * from './api/index';
 export * from './hooks/useAnnouncements';
 export * from './components/ComposeAnnouncementDialog';
 export * from './components/AnnouncementCard';

@@ -1,4 +1,5 @@
 import { client } from '@/shared/api/client';
+import { getGithubRepoReadme } from '@/shared/api';
 import {
   GithubStatusResponse,
   GithubSummaryResponse,
@@ -15,8 +16,7 @@ export const githubApi = {
     return res.data;
   },
   async getGithubRepoReadme(repoId: string): Promise<{ id: string; readmeExcerpt: string | null }> {
-    const res = await client.get(`/student/github/repos/${encodeURIComponent(repoId)}/readme`);
-    return res.data;
+    return getGithubRepoReadme(repoId);
   },
   async connectGithub(): Promise<{ url: string }> {
     const res = await client.post('/student/github/connect');

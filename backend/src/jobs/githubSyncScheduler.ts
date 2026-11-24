@@ -1,4 +1,6 @@
 import cron from 'node-cron';
+import { isTestEnv } from '../config/env';
+import { logger } from '../utils/logger';
 import { syncScheduledBatch } from '../modules/github/github.service';
 
 let isRunning = false;
@@ -11,7 +13,7 @@ export async function tick(): Promise<{ processed: number }> {
   try {
     return await syncScheduledBatch(10);
   } catch (err) {
-    console.error('[GitHubSyncScheduler] Periodic tick failed:', err);
+    logger.error('[GitHubSyncScheduler] Periodic tick failed', { err });
     return { processed: 0 };
   } finally {
     isRunning = false;
@@ -19,7 +21,7 @@ export async function tick(): Promise<{ processed: number }> {
 }
 
 export function startGithubSyncScheduler(): void {
-  if (process.env.NODE_ENV === 'test') return;
+  if (isTestEnv()) return;
   if (started) return;
   started = true;
 

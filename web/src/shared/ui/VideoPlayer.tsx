@@ -285,7 +285,7 @@ export const VideoPlayer = React.forwardRef<HTMLDivElement, VideoPlayerProps>(fu
       animate={{ opacity: controlsVisible || !isPlaying || error ? 1 : 0 }}
       transition={shouldReduce ? transitionReduced : transitionQuick}
       className={cn(
-        'absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-3 pb-2 pt-8 md:px-4',
+        'absolute inset-x-0 bottom-0 bg-scrim px-3 pb-2 pt-8 md:px-4',
         !controlsVisible && isPlaying && !error && 'pointer-events-none',
       )}
     >

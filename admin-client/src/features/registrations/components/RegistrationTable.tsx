@@ -158,7 +158,7 @@ export const RegistrationTable: React.FC<RegistrationTableProps> = ({
                           {reg.answers.length} {reg.answers.length === 1 ? 'answer' : 'answers'}
                         </span>
                       ) : (
-                        <span className="text-ink-disabled text-xs">—</span>
+                        <span className="text-ink-muted text-xs">—</span>
                       )}
                     </td>
 
