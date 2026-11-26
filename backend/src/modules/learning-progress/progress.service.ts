@@ -178,16 +178,18 @@ export class ProgressService {
       courseProgressPercent = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
       this.courseProgressCache.set(cacheKey, courseProgressPercent);
 
-      if (totalLessons > 0 && completedLessons >= totalLessons) {
-        await this.repo.updateEnrollment(studentId, lesson.courseId, {
-          status: EnrollmentStatus.COMPLETED,
-          completedAt: new Date(),
-          lastAccessedAt: new Date(),
-        });
-      } else {
-        const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
-        if (!enrollment?.lastAccessedAt || enrollment.lastAccessedAt.getTime() < fiveMinutesAgo) {
-          await this.repo.updateEnrollment(studentId, lesson.courseId, { lastAccessedAt: new Date() });
+      if (enrollment) {
+        if (totalLessons > 0 && completedLessons >= totalLessons) {
+          await this.repo.updateEnrollment(studentId, lesson.courseId, {
+            status: EnrollmentStatus.COMPLETED,
+            completedAt: new Date(),
+            lastAccessedAt: new Date(),
+          });
+        } else {
+          const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
+          if (!enrollment.lastAccessedAt || enrollment.lastAccessedAt.getTime() < fiveMinutesAgo) {
+            await this.repo.updateEnrollment(studentId, lesson.courseId, { lastAccessedAt: new Date() });
+          }
         }
       }
     } else {
@@ -203,9 +205,11 @@ export class ProgressService {
         this.courseProgressCache.set(cacheKey, courseProgressPercent);
       }
 
-      const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
-      if (!enrollment?.lastAccessedAt || enrollment.lastAccessedAt.getTime() < fiveMinutesAgo) {
-        await this.repo.updateEnrollment(studentId, lesson.courseId, { lastAccessedAt: new Date() });
+      if (enrollment) {
+        const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
+        if (!enrollment.lastAccessedAt || enrollment.lastAccessedAt.getTime() < fiveMinutesAgo) {
+          await this.repo.updateEnrollment(studentId, lesson.courseId, { lastAccessedAt: new Date() });
+        }
       }
     }
 

@@ -1,11 +1,32 @@
 import React, { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Command } from 'cmdk';
-import { FileText, FolderPlus, LogOut, Moon, Pencil, Sun, Upload } from 'lucide-react';
+import {
+  AlertCircle,
+  Award,
+  Bell,
+  Briefcase,
+  Calendar,
+  FileBadge,
+  FileText,
+  FolderPlus,
+  Github,
+  GraduationCap,
+  LibraryBig,
+  LogOut,
+  Moon,
+  Pencil,
+  PlayCircle,
+  Sun,
+  Upload,
+  User,
+} from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Modal } from '@/shared/ui/Modal';
 import { useThemeState } from '@/context/ThemeContext';
 import { SIDEBAR_NAV, type NavEntry } from './NavItem';
+import { useSearchQuery } from '@/shared/hooks/useSearch';
+import type { SearchItem } from '@/shared/api/search';
 import type { CommandPaletteState } from '@/shared/hooks/useCommandPalette';
 
 /**
@@ -69,29 +90,31 @@ const GROUP_CLASS =
   '[&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:uppercase ' +
   '[&_[cmdk-group-heading]]:tracking-wide [&_[cmdk-group-heading]]:text-ink-muted';
 
+const TYPE_META: Record<SearchItem['type'], { icon: LucideIcon; label: string }> = {
+  course: { icon: GraduationCap, label: 'Course' },
+  lesson: { icon: PlayCircle, label: 'Lesson' },
+  project: { icon: Briefcase, label: 'Project' },
+  resume: { icon: FileText, label: 'Resume' },
+  resource: { icon: LibraryBig, label: 'Resource' },
+  event: { icon: Calendar, label: 'Event' },
+  achievement: { icon: Award, label: 'Achievement' },
+  certificate: { icon: FileBadge, label: 'Certificate' },
+  github: { icon: Github, label: 'GitHub' },
+  student: { icon: User, label: 'Student' },
+  announcement: { icon: Bell, label: 'Announcement' },
+};
+
 /**
  * §5.4 — the command palette.
  *
- * Built on `cmdk` inside the shared `Modal`. `cmdk` owns the parts that are easy
- * to get subtly wrong by hand: `↑`/`↓` selection with wrap-around, `Enter` to
- * run, and the `cmdk-list` / `cmdk-group` / `cmdk-item` roles with the
- * `aria-activedescendant` wiring between them. `Modal` owns the rest — scrim,
- * `Escape`, focus trap, focus return to whatever opened it, body scroll lock.
- * Both are already mounted by the shell; re-implementing either would be a
- * regression.
+ * Built on `cmdk` inside the shared `Modal`. `cmdk` owns `↑`/`↓` selection with
+ * wrap-around, `Enter` to run, and `cmdk-list` / `cmdk-group` / `cmdk-item`
+ * ARIA roles. `Modal` owns the scrim, `Escape`, focus trap, focus return, and
+ * body scroll lock.
  *
- * `shouldFilter={false}` because `useCommandPalette` already debounces the query
- * by `duration-fast`, the 100ms §5.4 asks for, and the index is a static table
- * matched by substring — there is nothing here worth a fuzzy scorer running on
- * every keystroke.
- *
- * `Command.Item` values are namespaced (`page:` / `recent:` / `action:`) because
- * the Recent and Pages groups hold the same destinations and cmdk keys its
- * selection map by value.
- *
- * §5.4 also lists event names pulled from the API. That is left out on purpose:
- * it needs a data layer, and this app has none until Batch 5 mounts
- * `QueryClientProvider`. The `actions` list below is where it plugs in.
+ * `shouldFilter={false}` because `useCommandPalette` debounces the query by
+ * `duration-fast` (100ms), static navigation entries are matched synchronously
+ * by substring, and indexed portal content is queried via `useSearchQuery`.
  */
 export const CommandPalette: React.FC<{
   palette: CommandPaletteState;
@@ -101,10 +124,15 @@ export const CommandPalette: React.FC<{
   const inputRef = useRef<HTMLInputElement>(null);
   const { resolvedTheme, toggleTheme } = useThemeState();
 
-  if (!palette.open) return null;
-
   /** `debouncedQuery` filters the results; the input itself is never gated. */
   const query = palette.debouncedQuery.trim().toLowerCase();
+  const hasRemoteQuery = query.length >= 2;
+  const searchResults = useSearchQuery(palette.debouncedQuery, palette.open);
+
+  if (!palette.open) return null;
+
+  const isSearching = hasRemoteQuery && searchResults.isLoading;
+  const resultItems: SearchItem[] = hasRemoteQuery ? (searchResults.data?.items ?? []) : [];
 
   const go = (path: string) => () => {
     palette.closePalette();
@@ -163,14 +191,20 @@ export const CommandPalette: React.FC<{
       )
     : allActions;
 
-  const isEmpty = recent.length === 0 && pages.length === 0 && actions.length === 0;
+  const isEmpty =
+    recent.length === 0 &&
+    pages.length === 0 &&
+    actions.length === 0 &&
+    !isSearching &&
+    !searchResults.isError &&
+    resultItems.length === 0;
 
   return (
     <Modal
       open
       onClose={palette.closePalette}
       title="Search"
-      description="Jump to a page or run an action"
+      description="Search courses, projects, resumes, resources, events, or jump to a page"
       size="lg"
       initialFocusRef={inputRef}
     >
@@ -180,7 +214,7 @@ export const CommandPalette: React.FC<{
             ref={inputRef}
             value={palette.query}
             onValueChange={palette.setQuery}
-            placeholder="Search anything…"
+            placeholder="Search courses, projects, resumes, events…"
             aria-label="Search the portal"
             className="h-11 w-full bg-transparent text-body-lg text-ink outline-none placeholder:text-ink-muted"
           />
@@ -213,6 +247,61 @@ export const CommandPalette: React.FC<{
                   <span className="min-w-0 flex-1 truncate">{entry.label}</span>
                 </Command.Item>
               ))}
+            </Command.Group>
+          ) : null}
+
+          {hasRemoteQuery && (isSearching || searchResults.isError || resultItems.length > 0) ? (
+            <Command.Group heading="Results" className={GROUP_CLASS}>
+              {isSearching ? (
+                <Command.Item disabled className={ITEM_CLASS}>
+                  <span className="text-ink-muted">Searching…</span>
+                </Command.Item>
+              ) : searchResults.isError ? (
+                <Command.Item
+                  value="search-retry"
+                  onSelect={() => void searchResults.refetch()}
+                  className={ITEM_CLASS}
+                >
+                  <AlertCircle
+                    size={16}
+                    strokeWidth={1.75}
+                    className="shrink-0 text-status-rejected"
+                    aria-hidden="true"
+                  />
+                  <span className="min-w-0 flex-1 truncate text-ink-secondary">
+                    Search unavailable — select to retry
+                  </span>
+                </Command.Item>
+              ) : (
+                resultItems.map((item) => {
+                  const meta = TYPE_META[item.type];
+                  const Icon = meta.icon;
+                  return (
+                    <Command.Item
+                      key={`result:${item.type}:${item.id}`}
+                      value={`result:${item.type}:${item.id}`}
+                      onSelect={go(item.url)}
+                      className={ITEM_CLASS}
+                    >
+                      <Icon
+                        size={16}
+                        strokeWidth={1.75}
+                        className="shrink-0 text-ink-muted"
+                        aria-hidden="true"
+                      />
+                      <span className="min-w-0 flex-1 truncate">{item.title}</span>
+                      {item.description ? (
+                        <span className="hidden max-w-[14rem] truncate text-label-sm text-ink-muted sm:inline">
+                          {item.description}
+                        </span>
+                      ) : null}
+                      <span className="shrink-0 rounded border border-edge bg-surface-sunken px-1.5 py-0.5 text-label-sm text-ink-muted">
+                        {meta.label}
+                      </span>
+                    </Command.Item>
+                  );
+                })
+              )}
             </Command.Group>
           ) : null}
 

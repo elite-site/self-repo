@@ -12,19 +12,26 @@ interface CachedIndexPayload {
   data: DirectoryStudent[];
 }
 
-export function readCachedIndex(): DirectoryStudent[] | null {
+export function readCachedIndexEntry(): { data: DirectoryStudent[]; timestamp: number } | null {
   try {
     if (typeof window === 'undefined' || !window.localStorage) return null;
     const raw = window.localStorage.getItem(STUDENT_INDEX_STORAGE_KEY);
     if (!raw) return null;
     const parsed: CachedIndexPayload = JSON.parse(raw);
     if (parsed && parsed.version === 1 && Array.isArray(parsed.data)) {
-      return parsed.data;
+      return {
+        data: parsed.data,
+        timestamp: typeof parsed.timestamp === 'number' ? parsed.timestamp : 0,
+      };
     }
   } catch {
     // Empty storage must work (e.g. quota, private browsing, corrupted data)
   }
   return null;
+}
+
+export function readCachedIndex(): DirectoryStudent[] | null {
+  return readCachedIndexEntry()?.data ?? null;
 }
 
 export function writeCachedIndex(data: DirectoryStudent[]): void {
@@ -158,7 +165,8 @@ export function useStudentIndexQuery() {
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000,
-    initialData: () => readCachedIndex() ?? undefined,
+    initialData: () => readCachedIndexEntry()?.data,
+    initialDataUpdatedAt: () => readCachedIndexEntry()?.timestamp,
   });
 }
 

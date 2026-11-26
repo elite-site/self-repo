@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { videoApi } from '../api';
 import { profileApi } from '@/features/profile/api';
 import { resolveMediaUrl, UploadProgressInfo } from '@/shared/api';
 import { pauseNotificationPolling, resumeNotificationPolling } from '@/shared/api';
+import { SESSION_QUERY_KEY } from '@/shared/lib/queryClient';
 import { StudentIntroVideo, StudentSubmission, UploadStats, VideoMeta } from '../types';
 import { useSession } from '@/context/SessionContext';
 import { useToast } from '@/shared/ui/Toast';
@@ -10,20 +12,29 @@ import { useConfirm } from '@/shared/ui/ConfirmDialog';
 
 const DEFAULT_MAX_VIDEO_MB = 25;
 
+export const videoKeys = {
+  all: ['video'] as const,
+  me: () => [...videoKeys.all, 'me'] as const,
+};
+
+interface VideoMeData {
+  video: StudentIntroVideo | null;
+  submission: StudentSubmission | null;
+  maxVideoSizeMb: number;
+}
+
 export function useVideoUpload() {
   const { session } = useSession();
   const { showToast } = useToast();
   const confirm = useConfirm();
-  const [submission, setSubmission] = useState<StudentSubmission | null>(null);
-  const [video, setVideo] = useState<StudentIntroVideo | null>(null);
-  const [maxVideoSizeMb, setMaxVideoSizeMb] = useState<number>(DEFAULT_MAX_VIDEO_MB);
+  const queryClient = useQueryClient();
+
   const [localPreviewUrl, setLocalPreviewUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadStats, setUploadStats] = useState<UploadStats | null>(null);
   const [videoMeta, setVideoMeta] = useState<VideoMeta | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -36,7 +47,6 @@ export function useVideoUpload() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const objectUrlRef = useRef<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
-  const hasSubmissionData = useRef(false);
 
   const setLocalPreview = (url: string | null) => {
     if (objectUrlRef.current && objectUrlRef.current !== url) {
@@ -57,29 +67,52 @@ export function useVideoUpload() {
     };
   }, []);
 
-  const loadSubmission = useCallback(async (isInitial = true) => {
-    if (isInitial && !hasSubmissionData.current) setLoading(true);
-    setError(null);
-    try {
-      const data: any = await profileApi.getMe();
-      if (data && data.student) {
-        setVideo(data.student.video || null);
-        setMaxVideoSizeMb(data.student.maxVideoSizeMb || DEFAULT_MAX_VIDEO_MB);
-        setSubmission(data.student.submission || null);
-        hasSubmissionData.current = true;
-        if (!data.student.video?.hasFile) {
-          setLocalPreview(null);
-          setPreviewError(false);
+  const initialSessionData: VideoMeData | undefined =
+    session?.student &&
+    (session.student.video !== undefined || session.student.submission !== undefined)
+      ? {
+          video: session.student.video ?? null,
+          submission: session.student.submission ?? null,
+          maxVideoSizeMb: session.student.maxVideoSizeMb || DEFAULT_MAX_VIDEO_MB,
         }
+      : undefined;
+
+  const { data, isPending, isError, refetch } = useQuery<VideoMeData>({
+    queryKey: videoKeys.me(),
+    queryFn: async () => {
+      const res: any = await profileApi.getMe();
+      const student = res?.student;
+      if (!student) {
+        throw new Error('Could not load your submission details.');
       }
-    } catch {
-      if (isInitial && !hasSubmissionData.current) {
-        setError('Could not load your submission details.');
-      }
-    } finally {
-      if (isInitial) setLoading(false);
+      return {
+        video: student.video || null,
+        submission: student.submission || null,
+        maxVideoSizeMb: student.maxVideoSizeMb || DEFAULT_MAX_VIDEO_MB,
+      };
+    },
+    initialData: initialSessionData,
+    staleTime: 60_000,
+  });
+
+  const video = data?.video ?? null;
+  const submission = data?.submission ?? null;
+  const maxVideoSizeMb = data?.maxVideoSizeMb ?? DEFAULT_MAX_VIDEO_MB;
+
+  useEffect(() => {
+    if (data && !data.video?.hasFile) {
+      setLocalPreview(null);
+      setPreviewError(false);
     }
-  }, []);
+  }, [data]);
+
+  const loadSubmission = useCallback(
+    async (_isInitial = true) => {
+      setActionError(null);
+      await refetch();
+    },
+    [refetch],
+  );
 
   const storedVideoUrl = useMemo(() => {
     if (!video?.hasFile) return null;
@@ -120,15 +153,34 @@ export function useVideoUpload() {
     prevVideoIdRef.current = video?.id;
   }, [video?.id]);
 
+  const syncRelatedCaches = () => {
+    void queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY });
+    void queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    void queryClient.invalidateQueries({ queryKey: ['profile'] });
+  };
+
   const handleTogglePublish = async (next: boolean) => {
     setPublishing(true);
     setPublishNotice(null);
     try {
       const res = await videoApi.setVideoPublic(next);
-      setVideo((prev) => (prev ? { ...prev, isPublic: res.isPublic, publishedAt: res.isPublic ? new Date().toISOString() : null } : prev));
-      const notice = res.message || (next ? 'Your video is now public.' : 'Your video is no longer public.');
+      queryClient.setQueryData<VideoMeData>(videoKeys.me(), (prev) =>
+        prev && prev.video
+          ? {
+              ...prev,
+              video: {
+                ...prev.video,
+                isPublic: res.isPublic,
+                publishedAt: res.isPublic ? new Date().toISOString() : null,
+              },
+            }
+          : prev,
+      );
+      const notice =
+        res.message || (next ? 'Your video is now public.' : 'Your video is no longer public.');
       setPublishNotice(notice);
       showToast(notice);
+      syncRelatedCaches();
     } catch (err: any) {
       const notice = err?.response?.data?.message || 'Could not update public visibility.';
       setPublishNotice(notice);
@@ -147,51 +199,29 @@ export function useVideoUpload() {
     });
     if (!confirmed) return;
     setDeleting(true);
-    setError(null);
+    setActionError(null);
     try {
       const res = await videoApi.deleteVideo();
       setLocalPreview(null);
-      setVideo(null);
-      setSubmission(null);
+      queryClient.setQueryData<VideoMeData>(videoKeys.me(), (prev) => ({
+        video: null,
+        submission: null,
+        maxVideoSizeMb: prev?.maxVideoSizeMb ?? DEFAULT_MAX_VIDEO_MB,
+      }));
       setUploadSuccess(false);
-      setError(null);
       const notice = res.message || 'Your introduction video has been deleted.';
       setDeleteNotice(notice);
       showToast(notice);
-      await loadSubmission(true);
+      await refetch();
+      syncRelatedCaches();
     } catch (err: any) {
       const notice = err?.response?.data?.message || 'Could not delete your video. Please try again.';
-      setError(notice);
+      setActionError(notice);
       showToast(notice, 'error');
     } finally {
       setDeleting(false);
     }
   };
-
-  const seededFromSession = useRef(false);
-  useEffect(() => {
-    if (seededFromSession.current) return;
-    const cached = session?.student;
-    if (!cached) {
-      seededFromSession.current = true;
-      loadSubmission(true);
-      return;
-    }
-    if (hasSubmissionData.current) {
-      seededFromSession.current = true;
-      return;
-    }
-    seededFromSession.current = true;
-    setVideo(cached.video ?? null);
-    setMaxVideoSizeMb(cached.maxVideoSizeMb || DEFAULT_MAX_VIDEO_MB);
-    setSubmission(cached.submission ?? null);
-    hasSubmissionData.current = true;
-    if (!cached.video?.hasFile) {
-      setLocalPreview(null);
-      setPreviewError(false);
-    }
-    setLoading(false);
-  }, [loadSubmission, session]);
 
   const inspectVideoFile = (file: File): Promise<VideoMeta> => {
     return new Promise((resolve) => {
@@ -276,7 +306,7 @@ export function useVideoUpload() {
     if (!file) return;
 
     if (!file.type.startsWith('video/')) {
-      setError('Choose an MP4, WebM or MOV video.');
+      setActionError('Choose an MP4, WebM or MOV video.');
       showToast('Choose an MP4, WebM or MOV video.', 'error');
       e.target.value = '';
       return;
@@ -284,13 +314,13 @@ export function useVideoUpload() {
 
     if (file.size > maxVideoSizeMb * 1024 * 1024) {
       const message = `This video is ${(file.size / (1024 * 1024)).toFixed(1)} MB. The limit is ${maxVideoSizeMb} MB.`;
-      setError(message);
+      setActionError(message);
       showToast(message, 'error');
       e.target.value = '';
       return;
     }
 
-    setError(null);
+    setActionError(null);
     setUploading(true);
     setUploadProgress(0);
     setUploadStats(null);
@@ -330,7 +360,13 @@ export function useVideoUpload() {
         });
       };
 
-      let res: { success: boolean; id: string; driveFileId?: string | null; previewUrl?: string | null; message?: string };
+      let res: {
+        success: boolean;
+        id: string;
+        driveFileId?: string | null;
+        previewUrl?: string | null;
+        message?: string;
+      };
       let directUploadFailed = false;
 
       let uploadSession: { sessionUrl: string | null; chunkSize: number } | null = null;
@@ -374,33 +410,36 @@ export function useVideoUpload() {
       }
 
       setUploadSuccess(true);
-      setSubmission((prev) => ({
-        id: res.id || prev?.id || 'submission',
-        status: 'SUBMITTED',
-        submittedAt: new Date().toISOString(),
-        videoUploaded: true,
-        reviewText: null,
-        reviewPros: [],
-        reviewCons: [],
-        reviewedAt: null,
-      }));
       showToast(res.message || 'Video uploaded. Faculty will review it next.');
       const newDriveId = res.driveFileId || (res as any)?.data?.driveFileId;
-      setVideo((prev) => ({
-        ...(prev || {}),
-        id: res.id || prev?.id || 'submission',
-        driveFileId: newDriveId || (prev as any)?.driveFileId || null,
-        filename: file.name,
-        sizeMb: parseFloat((file.size / (1024 * 1024)).toFixed(2)),
-        mimeType: file.type,
-        hasFile: true,
-        submittedAt: new Date().toISOString(),
-        status: 'PENDING',
-        isPublic: false,
-        publishedAt: null,
-        changeRequestedAt: null,
-        changeRequestNote: null,
-      } as any));
+      queryClient.setQueryData<VideoMeData>(videoKeys.me(), (prev) => ({
+        maxVideoSizeMb: prev?.maxVideoSizeMb ?? DEFAULT_MAX_VIDEO_MB,
+        submission: {
+          id: res.id || prev?.submission?.id || 'submission',
+          status: 'SUBMITTED',
+          submittedAt: new Date().toISOString(),
+          videoUploaded: true,
+          reviewText: null,
+          reviewPros: [],
+          reviewCons: [],
+          reviewedAt: null,
+        },
+        video: {
+          ...(prev?.video || {}),
+          id: res.id || prev?.video?.id || 'submission',
+          driveFileId: newDriveId || (prev?.video as any)?.driveFileId || null,
+          filename: file.name,
+          sizeMb: parseFloat((file.size / (1024 * 1024)).toFixed(2)),
+          mimeType: file.type,
+          hasFile: true,
+          submittedAt: new Date().toISOString(),
+          status: 'PENDING',
+          isPublic: false,
+          publishedAt: null,
+          changeRequestedAt: null,
+          changeRequestNote: null,
+        } as any,
+      }));
 
       if (newDriveId) {
         URL.revokeObjectURL(localUrl);
@@ -408,12 +447,13 @@ export function useVideoUpload() {
       } else {
         setLocalPreview(localUrl);
       }
-      loadSubmission(false);
+      void refetch();
+      syncRelatedCaches();
     } catch (err: any) {
       URL.revokeObjectURL(localUrl);
       if (err.name !== 'AbortError' && !err.message?.includes('cancelled')) {
         const notice = err.message || 'Failed to upload video. Please try again.';
-        setError(notice);
+        setActionError(notice);
         showToast(notice, 'error');
       }
     } finally {
@@ -428,12 +468,12 @@ export function useVideoUpload() {
     submission,
     video,
     maxVideoSizeMb,
-    loading,
+    loading: isPending && !data,
     uploading,
     uploadProgress,
     uploadStats,
     videoMeta,
-    error,
+    error: actionError ?? (isError && !data ? 'Could not load your submission details.' : null),
     uploadSuccess,
     publishing,
     deleting,

@@ -5,6 +5,7 @@ import { CourseCardSummary, CourseLevel } from '../types';
 import { Badge, BadgeVariant } from '@/shared/ui/Badge';
 import { ProgressBar } from '@/shared/ui/ProgressBar';
 import { cn } from '@/shared/lib/cn';
+import { requiresEnrollment } from '../lib/courseMode';
 
 export interface CourseCardProps {
   course: CourseCardSummary;
@@ -72,6 +73,9 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, className, onCli
               label={course.level.charAt(0) + course.level.slice(1).toLowerCase()}
               variant={LEVEL_VARIANT[course.level] || 'neutral'}
             />
+          )}
+          {!course.isEnrolled && course.lessonCount > 0 && !requiresEnrollment(course) && (
+            <Badge label="Direct Play" variant="success" dot={false} />
           )}
         </div>
 

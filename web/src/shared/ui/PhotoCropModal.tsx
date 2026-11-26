@@ -107,7 +107,6 @@ export const PhotoCropModal: React.FC<PhotoCropModalProps> = ({
         await onSavePosition({ photoOffsetX, photoOffsetY, photoZoom });
       }
     } catch (err: any) {
-      console.error('Failed to crop and save photo:', err);
       setError(err?.message || 'Failed to update photo. Please try again.');
     } finally {
       setIsProcessing(false);

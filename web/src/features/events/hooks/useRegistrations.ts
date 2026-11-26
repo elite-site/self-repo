@@ -1,5 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { eventsApi } from '../api';
+import { eventsKeys } from './useEvents';
 import { EventRegistration } from '../types';
 import { useToast } from '@/shared/ui/Toast';
 import { useConfirm } from '@/shared/ui/ConfirmDialog';
@@ -15,29 +17,21 @@ const isRegistrationActive = (r: EventRegistration) => {
 export function useRegistrations() {
   const { showToast } = useToast();
   const confirm = useConfirm();
-  const [regs, setRegs] = useState<EventRegistration[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [cancellingId, setCancellingId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
-  const loadRegistrations = useCallback(async (isInitial = true) => {
-    if (isInitial && regs.length === 0) setLoading(true);
-    setError(null);
-    try {
-      const data = await eventsApi.getRegistrations();
-      if (Array.isArray(data)) {
-        setRegs(data.filter(isRegistrationActive));
-      }
-    } catch {
-      if (regs.length === 0) setError('Could not load registrations. Please retry.');
-    } finally {
-      setLoading(false);
-    }
-  }, [regs.length]);
+  const { data, isPending, isError, refetch } = useQuery<EventRegistration[]>({
+    queryKey: eventsKeys.registrations(),
+    queryFn: async () => {
+      const list = await eventsApi.getRegistrations();
+      return Array.isArray(list) ? list.filter(isRegistrationActive) : [];
+    },
+    staleTime: 60_000,
+  });
 
-  useEffect(() => {
-    loadRegistrations(true);
-  }, [loadRegistrations]);
+  const loadRegistrations = useCallback(async (_isInitial = true) => {
+    await refetch();
+  }, [refetch]);
 
   const handleCancel = async (id: string) => {
     const confirmed = await confirm({
@@ -48,24 +42,31 @@ export function useRegistrations() {
     });
     if (!confirmed) return;
     setCancellingId(id);
-    setRegs((prev) => prev.filter((r) => r.id !== id));
+    const previous = queryClient.getQueryData<EventRegistration[]>(eventsKeys.registrations());
+    queryClient.setQueryData<EventRegistration[]>(eventsKeys.registrations(), (prev) =>
+      prev ? prev.filter((r) => r.id !== id) : prev,
+    );
     try {
       await eventsApi.cancelRegistration(id);
       showToast('Registration cancelled.');
-      loadRegistrations(false);
+      void queryClient.invalidateQueries({ queryKey: eventsKeys.all });
+      void queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     } catch {
+      if (previous) {
+        queryClient.setQueryData(eventsKeys.registrations(), previous);
+      }
       showToast('Failed to cancel registration.', 'error');
-      loadRegistrations(false);
+      void refetch();
     } finally {
       setCancellingId(null);
     }
   };
 
   return {
-    regs,
-    loading,
+    regs: data ?? [],
+    loading: isPending && !data,
     cancellingId,
-    error,
+    error: isError && !data ? 'Could not load registrations. Please retry.' : null,
     loadRegistrations,
     handleCancel,
   };

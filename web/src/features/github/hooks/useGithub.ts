@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { githubApi } from '../api';
 import { GithubStatusResponse } from '../types';
 import { useToast } from '@/shared/ui/Toast';
@@ -6,13 +7,15 @@ import { useConfirm } from '@/shared/ui/ConfirmDialog';
 
 const MAX_SHOWCASE = 30;
 
+export const githubKeys = {
+  all: ['github'] as const,
+  status: () => [...githubKeys.all, 'status'] as const,
+};
+
 export function useGithub() {
   const { showToast } = useToast();
   const confirm = useConfirm();
-
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [statusData, setStatusData] = useState<GithubStatusResponse | null>(null);
+  const queryClient = useQueryClient();
 
   const [connecting, setConnecting] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -31,101 +34,100 @@ export function useGithub() {
   const [sortBy, setSortBy] = useState<'pushed' | 'stars' | 'name'>('pushed');
   const [includeForks, setIncludeForks] = useState(true);
 
-  const [now, setNow] = useState(Date.now());
+  const { data: statusData = null, isPending, isError, error: queryError, refetch } =
+    useQuery<GithubStatusResponse>({
+      queryKey: githubKeys.status(),
+      queryFn: () => githubApi.getGithubStatus(),
+      staleTime: 60_000,
+      refetchInterval: (query) => {
+        const status = query.state.data?.account?.syncStatus;
+        return status === 'RUNNING' || status === 'QUEUED' ? 3000 : false;
+      },
+    });
+
+  const nextSyncAllowedAt = statusData?.account?.nextSyncAllowedAt;
+  const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), 10000);
+    if (!nextSyncAllowedAt) return;
+    const expiresAt = new Date(nextSyncAllowedAt).getTime();
+    if (expiresAt <= Date.now()) return;
+    setNow(Date.now());
+    const timer = setInterval(() => {
+      const current = Date.now();
+      setNow(current);
+      if (current >= expiresAt) {
+        clearInterval(timer);
+      }
+    }, 10000);
     return () => clearInterval(timer);
-  }, []);
+  }, [nextSyncAllowedAt]);
 
-  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isShowcaseDirty = useMemo(() => {
+    if (showcaseIds.length !== initialShowcaseIds.length) return true;
+    return showcaseIds.some((id, idx) => id !== initialShowcaseIds[idx]);
+  }, [showcaseIds, initialShowcaseIds]);
 
-  const fetchStatus = useCallback(async (isPolling = false) => {
-    if (!isPolling) setError(null);
-    try {
-      const data = await githubApi.getGithubStatus();
-      setStatusData(data);
+  const isSkillsDirty = useMemo(() => {
+    if (selectedSkillIds.length !== initialSelectedSkillIds.length) return true;
+    const initialSet = new Set(initialSelectedSkillIds);
+    return selectedSkillIds.some((id) => !initialSet.has(id));
+  }, [selectedSkillIds, initialSelectedSkillIds]);
 
-      if (data.connected && data.repos) {
-        const serverShowcased = (data.showcase || data.repos.filter((r) => r.isShowcased))
-          .slice()
-          .sort((a, b) => (a.showcaseRank ?? 99) - (b.showcaseRank ?? 99))
-          .map((r) => r.id);
-
-        if (!isPolling) {
-          setShowcaseIds(serverShowcased);
-          setInitialShowcaseIds(serverShowcased);
-        }
-      }
-
-      if (data.connected && data.skills) {
-        const serverShowcasedSkills = data.showcasedSkillIds && data.showcasedSkillIds.length > 0
-          ? data.showcasedSkillIds
-          : data.skills.filter((s) => s.isShowcased !== false).map((s) => s.skillId || s.id);
-
-        if (!isPolling) {
-          setSelectedSkillIds(serverShowcasedSkills);
-          setInitialSelectedSkillIds(serverShowcasedSkills);
-        }
-      }
-      return data;
-    } catch (err: any) {
-      if (!isPolling) {
-        setError(err.response?.data?.message || 'Failed to load GitHub status.');
-      }
-      throw err;
-    } finally {
-      if (!isPolling) setLoading(false);
-    }
-  }, []);
-
+  const hydratedSelectionsRef = useRef(false);
   useEffect(() => {
-    fetchStatus();
-  }, [fetchStatus]);
+    if (!statusData?.connected) {
+      hydratedSelectionsRef.current = false;
+      return;
+    }
+
+    if (statusData.repos && (!hydratedSelectionsRef.current || !isShowcaseDirty)) {
+      const serverShowcased = (statusData.showcase || statusData.repos.filter((r) => r.isShowcased))
+        .slice()
+        .sort((a, b) => (a.showcaseRank ?? 99) - (b.showcaseRank ?? 99))
+        .map((r) => r.id);
+      setShowcaseIds(serverShowcased);
+      setInitialShowcaseIds(serverShowcased);
+    }
+
+    if (statusData.skills && (!hydratedSelectionsRef.current || (!editingSkills && !isSkillsDirty))) {
+      const serverShowcasedSkills =
+        statusData.showcasedSkillIds && statusData.showcasedSkillIds.length > 0
+          ? statusData.showcasedSkillIds
+          : statusData.skills.filter((s) => s.isShowcased !== false).map((s) => s.skillId || s.id);
+      setSelectedSkillIds(serverShowcasedSkills);
+      setInitialSelectedSkillIds(serverShowcasedSkills);
+    }
+
+    hydratedSelectionsRef.current = true;
+  }, [statusData, isShowcaseDirty, isSkillsDirty, editingSkills]);
 
   const syncStatus = statusData?.account?.syncStatus;
   const isSyncActive = syncStatus === 'RUNNING' || syncStatus === 'QUEUED';
 
+  const prevSyncStatusRef = useRef<string | undefined>(undefined);
   useEffect(() => {
-    if (isSyncActive) {
-      if (!pollIntervalRef.current) {
-        pollIntervalRef.current = setInterval(async () => {
-          try {
-            const data = await fetchStatus(true);
-            const nextStatus = data?.account?.syncStatus;
-            if (nextStatus === 'IDLE') {
-              showToast('GitHub synchronization completed!', 'success');
-              if (pollIntervalRef.current) {
-                clearInterval(pollIntervalRef.current);
-                pollIntervalRef.current = null;
-              }
-            } else if (nextStatus === 'FAILED') {
-              showToast(data?.account?.syncError || 'GitHub synchronization failed.', 'error');
-              if (pollIntervalRef.current) {
-                clearInterval(pollIntervalRef.current);
-                pollIntervalRef.current = null;
-              }
-            }
-          } catch {
-            // keep polling
-          }
-        }, 3000);
-      }
-    } else {
-      if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current);
-        pollIntervalRef.current = null;
-      }
+    const prev = prevSyncStatusRef.current;
+    prevSyncStatusRef.current = syncStatus;
+    if (prev !== 'RUNNING' && prev !== 'QUEUED') return;
+
+    if (syncStatus === 'IDLE') {
+      showToast('GitHub synchronization completed!', 'success');
+      void queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      void queryClient.invalidateQueries({ queryKey: ['profile'] });
+    } else if (syncStatus === 'FAILED') {
+      showToast(statusData?.account?.syncError || 'GitHub synchronization failed.', 'error');
     }
+  }, [syncStatus, statusData?.account?.syncError, showToast, queryClient]);
 
-    return () => {
-      if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current);
-        pollIntervalRef.current = null;
-      }
-    };
-  }, [isSyncActive, fetchStatus, showToast]);
+  const fetchStatus = useCallback(
+    async (_isPolling = false) => {
+      const res = await refetch();
+      if (res.error) throw res.error;
+      return res.data;
+    },
+    [refetch],
+  );
 
-  const nextSyncAllowedAt = statusData?.account?.nextSyncAllowedAt;
   const cooldownRemainingMs = nextSyncAllowedAt ? new Date(nextSyncAllowedAt).getTime() - now : 0;
   const isCooldown = cooldownRemainingMs > 0;
 
@@ -159,7 +161,7 @@ export function useGithub() {
     try {
       const res = await githubApi.syncGithub();
       showToast(res.message || 'GitHub synchronization started.', 'info');
-      await fetchStatus(true);
+      await refetch();
     } catch (err: any) {
       if (err.response?.status === 429) {
         const msg = err.response?.data?.message || 'Sync cooldown is active.';
@@ -168,7 +170,7 @@ export function useGithub() {
         const msg = err.response?.data?.message || 'Failed to trigger sync.';
         showToast(msg, 'error');
       }
-      await fetchStatus(true);
+      await refetch();
     } finally {
       setSyncing(false);
     }
@@ -187,8 +189,15 @@ export function useGithub() {
     setDisconnecting(true);
     try {
       await githubApi.disconnectGithub();
+      hydratedSelectionsRef.current = false;
+      setShowcaseIds([]);
+      setInitialShowcaseIds([]);
+      setSelectedSkillIds([]);
+      setInitialSelectedSkillIds([]);
       showToast('GitHub disconnected successfully.');
-      await fetchStatus();
+      await queryClient.invalidateQueries({ queryKey: githubKeys.status() });
+      void queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      void queryClient.invalidateQueries({ queryKey: ['profile'] });
     } catch (err: any) {
       const msg = err.response?.data?.message || 'Failed to disconnect GitHub.';
       showToast(msg, 'error');
@@ -219,18 +228,14 @@ export function useGithub() {
     setShowcaseIds(next);
   };
 
-  const isShowcaseDirty = useMemo(() => {
-    if (showcaseIds.length !== initialShowcaseIds.length) return true;
-    return showcaseIds.some((id, idx) => id !== initialShowcaseIds[idx]);
-  }, [showcaseIds, initialShowcaseIds]);
-
   const handleSaveShowcase = async () => {
     setSavingShowcase(true);
     try {
       await githubApi.updateShowcase(showcaseIds);
       setInitialShowcaseIds([...showcaseIds]);
       showToast('Showcase projects saved successfully!', 'success');
-      await fetchStatus(true);
+      await queryClient.invalidateQueries({ queryKey: githubKeys.status() });
+      void queryClient.invalidateQueries({ queryKey: ['profile'] });
     } catch (err: any) {
       const msg = err.response?.data?.message || 'Failed to save showcase.';
       showToast(msg, 'error');
@@ -248,7 +253,7 @@ export function useGithub() {
         (r) =>
           r.name.toLowerCase().includes(q) ||
           (r.description && r.description.toLowerCase().includes(q)) ||
-          (r.language && r.language.toLowerCase().includes(q))
+          (r.language && r.language.toLowerCase().includes(q)),
       );
     }
     if (!includeForks) {
@@ -262,10 +267,9 @@ export function useGithub() {
     return list;
   }, [repos, searchQuery, includeForks, sortBy]);
 
-
   const toggleSkillShowcase = (skillId: string) => {
     setSelectedSkillIds((prev) =>
-      prev.includes(skillId) ? prev.filter((id) => id !== skillId) : [...prev, skillId]
+      prev.includes(skillId) ? prev.filter((id) => id !== skillId) : [...prev, skillId],
     );
   };
 
@@ -278,12 +282,6 @@ export function useGithub() {
     setSelectedSkillIds([]);
   };
 
-  const isSkillsDirty = useMemo(() => {
-    if (selectedSkillIds.length !== initialSelectedSkillIds.length) return true;
-    const initialSet = new Set(initialSelectedSkillIds);
-    return selectedSkillIds.some((id) => !initialSet.has(id));
-  }, [selectedSkillIds, initialSelectedSkillIds]);
-
   const handleSaveSkills = async () => {
     setSavingSkills(true);
     try {
@@ -291,7 +289,8 @@ export function useGithub() {
       setInitialSelectedSkillIds([...selectedSkillIds]);
       setEditingSkills(false);
       showToast('Skill showcase updated successfully!', 'success');
-      await fetchStatus(true);
+      await queryClient.invalidateQueries({ queryKey: githubKeys.status() });
+      void queryClient.invalidateQueries({ queryKey: ['profile'] });
     } catch (err: any) {
       const msg = err.response?.data?.message || 'Failed to update showcased skills.';
       showToast(msg, 'error');
@@ -305,8 +304,15 @@ export function useGithub() {
     setEditingSkills(false);
   };
 
+  const error =
+    isError && !statusData
+      ? (queryError as any)?.response?.data?.message ||
+        (queryError as any)?.message ||
+        'Failed to load GitHub status.'
+      : null;
+
   return {
-    loading,
+    loading: isPending && !statusData,
     error,
     statusData,
     connecting,

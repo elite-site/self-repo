@@ -61,7 +61,7 @@ export const DashboardPage: React.FC = () => {
     <motion.div
       className="space-y-6"
       variants={staggerContainer}
-      initial="hidden"
+      initial={false}
       animate="show"
     >
       {/* 1. ASYMMETRICAL TOP ARCHITECTURE (Featured Hero + Key Stats + Accent Priority Block) */}

@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { profileApi } from '../api';
 import { StudentProfile } from '../types';
 import { portfolioApi } from '@/features/portfolio/api';
@@ -6,18 +7,58 @@ import { resumeApi } from '@/features/resume/api';
 import { Project, Certificate, Achievement, StudentIntroVideo, StudentPortfolioResponse } from '@/shared/types';
 import { useToast } from '@/shared/ui/Toast';
 
+export const profileKeys = {
+  all: ['profile'] as const,
+  overview: () => [...profileKeys.all, 'overview'] as const,
+};
+
+interface ProfileOverviewData {
+  profile: StudentProfile;
+  video: StudentIntroVideo | null;
+  resume: any | null;
+  projects: Project[];
+  achievements: Achievement[];
+  certificates: Certificate[];
+  changeRequests: any[];
+  portfolio: StudentPortfolioResponse | null;
+}
+
+async function fetchProfileOverview(): Promise<ProfileOverviewData> {
+  const [pData, rResult, prResult, achResult, certResult, meResult, portResult] =
+    await Promise.all([
+      profileApi.getProfile(),
+      resumeApi.getResume().catch(() => null),
+      portfolioApi.getProjects().catch(() => []),
+      portfolioApi.getAchievements().catch(() => []),
+      portfolioApi.getCertificates().catch(() => []),
+      profileApi.getMe().catch(() => null),
+      portfolioApi.getStudentPortfolio().catch(() => null),
+    ]);
+
+  const resume = Array.isArray(rResult) ? (rResult.length > 0 ? rResult[0] : null) : rResult;
+  const video = (meResult as any)?.student?.video ?? null;
+
+  return {
+    profile: pData,
+    video,
+    resume,
+    projects: Array.isArray(prResult) ? prResult : [],
+    achievements: Array.isArray(achResult) ? achResult : [],
+    certificates: Array.isArray(certResult) ? certResult : [],
+    changeRequests: Array.isArray((pData as any)?.changeRequests) ? (pData as any).changeRequests : [],
+    portfolio: portResult,
+  };
+}
+
 export function useProfile() {
   const { showToast } = useToast();
-  const [profile, setProfile] = useState<StudentProfile | null>(null);
-  const [video, setVideo] = useState<StudentIntroVideo | null>(null);
-  const [resume, setResume] = useState<any | null>(null);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [achievements, setAchievements] = useState<Achievement[]>([]);
-  const [certificates, setCertificates] = useState<Certificate[]>([]);
-  const [changeRequests, setChangeRequests] = useState<any[]>([]);
-  const [portfolio, setPortfolio] = useState<StudentPortfolioResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+
+  const { data, isPending, isError, refetch } = useQuery<ProfileOverviewData>({
+    queryKey: profileKeys.overview(),
+    queryFn: fetchProfileOverview,
+    staleTime: 2 * 60_000,
+  });
 
   // Change request modal state
   const [modalOpen, setModalOpen] = useState(false);
@@ -29,61 +70,8 @@ export function useProfile() {
   const [reqError, setReqError] = useState<string | null>(null);
 
   const fetchProfileData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-
-    const [pResult, rResult, prResult, achResult, certResult, meResult, portResult] = await Promise.allSettled([
-      profileApi.getProfile(),
-      resumeApi.getResume(),
-      portfolioApi.getProjects(),
-      portfolioApi.getAchievements(),
-      portfolioApi.getCertificates(),
-      profileApi.getMe(),
-      portfolioApi.getStudentPortfolio(),
-    ]);
-
-    if (pResult.status === 'fulfilled') {
-      const pData = pResult.value;
-      setProfile(pData);
-      if ((pData as any).changeRequests) setChangeRequests((pData as any).changeRequests);
-    } else {
-      setError('Could not load profile. Please refresh.');
-    }
-
-    if (rResult.status === 'fulfilled') {
-      const rData = rResult.value;
-      setResume(Array.isArray(rData) ? (rData.length > 0 ? rData[0] : null) : rData);
-    }
-
-    if (prResult.status === 'fulfilled') {
-      setProjects(Array.isArray(prResult.value) ? prResult.value : []);
-    }
-
-    if (achResult.status === 'fulfilled') {
-      setAchievements(Array.isArray(achResult.value) ? achResult.value : []);
-    }
-
-    if (certResult.status === 'fulfilled') {
-      setCertificates(Array.isArray(certResult.value) ? certResult.value : []);
-    }
-
-    if (meResult.status === 'fulfilled') {
-      const meData = meResult.value as any;
-      if (meData?.student?.video) {
-        setVideo(meData.student.video);
-      }
-    }
-
-    if (portResult.status === 'fulfilled') {
-      setPortfolio(portResult.value);
-    }
-
-    setLoading(false);
-  }, []);
-
-  useEffect(() => {
-    fetchProfileData();
-  }, [fetchProfileData]);
+    await refetch();
+  }, [refetch]);
 
   const handleSubmitChangeRequest = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -104,7 +92,7 @@ export function useProfile() {
         setRequestedValue('');
         setReason('');
         setReqSuccess(false);
-        fetchProfileData();
+        void queryClient.invalidateQueries({ queryKey: profileKeys.overview() });
       }, 1500);
     } catch (err: any) {
       setReqError(err.response?.data?.message || 'Failed to submit request.');
@@ -114,16 +102,16 @@ export function useProfile() {
   };
 
   return {
-    profile,
-    video,
-    resume,
-    projects,
-    achievements,
-    certificates,
-    changeRequests,
-    portfolio,
-    loading,
-    error,
+    profile: data?.profile ?? null,
+    video: data?.video ?? null,
+    resume: data?.resume ?? null,
+    projects: data?.projects ?? [],
+    achievements: data?.achievements ?? [],
+    certificates: data?.certificates ?? [],
+    changeRequests: data?.changeRequests ?? [],
+    portfolio: data?.portfolio ?? null,
+    loading: isPending && !data,
+    error: isError && !data ? 'Could not load profile. Please refresh.' : null,
     modalOpen,
     setModalOpen,
     fieldName,

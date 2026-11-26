@@ -85,6 +85,8 @@ export interface YouTubePlayerProps {
   videoId: string;
   lessonId?: string;
   initialSeconds?: number;
+  /** Whether this lesson was already marked completed before playback started. */
+  initialCompleted?: boolean;
   /** Seconds of the furthest point the student has ever reached in this lesson. */
   maxPositionSec?: number;
   /** Transcript segments used for the hover-preview bubble on the time bar. */
@@ -149,6 +151,7 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
   videoId,
   lessonId,
   initialSeconds = 0,
+  initialCompleted = false,
   maxPositionSec,
   transcriptSegments = [],
   onProgress,
@@ -165,7 +168,7 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
   const cleanVideoId = useMemo(() => {
     if (!videoId) return '';
     const match = videoId.match(
-      /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([wd-]{11})/,
+      /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([\w-]{11})/,
     );
     return match ? match[1] : videoId;
   }, [videoId]);
@@ -188,7 +191,8 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
   const currentTimeRef = useRef(initialSeconds);
   const durationRef = useRef(0);
   const lastReportedTimeRef = useRef(initialSeconds);
-  const isCompletedRef = useRef(false);
+  const isCompletedRef = useRef(Boolean(initialCompleted));
+  const hasReported90Ref = useRef(Boolean(initialCompleted));
   const prevVideoIdRef = useRef(cleanVideoId);
   const initialVideoIdRef = useRef(cleanVideoId);
   if (!initialVideoIdRef.current && cleanVideoId) {
@@ -625,7 +629,16 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                       const frac = playerRef.current!.getVideoLoadedFraction();
                       setBufferedFraction(frac);
 
-                      if (curr - lastReportedTimeRef.current >= 30) {
+                      const reachedCompletionThreshold =
+                        durationRef.current > 0 &&
+                        curr / durationRef.current >= 0.9 &&
+                        !isCompletedRef.current &&
+                        !hasReported90Ref.current;
+
+                      if (reachedCompletionThreshold) {
+                        hasReported90Ref.current = true;
+                        reportProgress(curr, false);
+                      } else if (curr - lastReportedTimeRef.current >= 30) {
                         reportProgress(curr, false);
                       }
 
@@ -711,7 +724,8 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
       prevVideoIdRef.current = cleanVideoId;
       currentTimeRef.current = initialSeconds;
       lastReportedTimeRef.current = initialSeconds;
-      isCompletedRef.current = false;
+      isCompletedRef.current = Boolean(initialCompleted);
+      hasReported90Ref.current = Boolean(initialCompleted);
       setCurrentTime(initialSeconds);
       setDuration(0);
       durationRef.current = 0;
@@ -750,7 +764,7 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
         initialVideoIdRef.current = cleanVideoId;
       }
     }
-  }, [cleanVideoId, initialSeconds, reportProgress, initPlayer]);
+  }, [cleanVideoId, initialSeconds, initialCompleted, reportProgress, initPlayer]);
 
   // ─── Keyboard shortcuts ────────────────────────────────────────────────────
 

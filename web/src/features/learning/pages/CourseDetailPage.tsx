@@ -20,6 +20,7 @@ import { Skeleton } from '@/shared/ui/Skeleton';
 import { EmptyState } from '@/shared/ui/EmptyState';
 import { AsymGrid, AsymFeatured, AsymSide, AsymAccent } from '@/shared/layout/AsymLayout';
 import { MasonryGrid, MasonryItem } from '@/shared/layout/MasonryLayout';
+import { requiresEnrollment } from '../lib/courseMode';
 import { LessonType } from '../types';
 
 const TYPE_ICONS: Record<LessonType, React.ComponentType<{ className?: string }>> = {
@@ -67,6 +68,8 @@ export const CourseDetailPage: React.FC = () => {
 
   const { course, enrollment } = data;
   const firstUnfinishedLesson = course.lessons.find((l) => !l.completed) || course.lessons[0];
+  const needsEnrollment = requiresEnrollment(course);
+  const canDirectPlay = enrollment.enrolled || (!needsEnrollment && Boolean(firstUnfinishedLesson));
 
   const now = new Date();
   const dueDate = course.dueAt ? new Date(course.dueAt) : null;
@@ -141,14 +144,24 @@ export const CourseDetailPage: React.FC = () => {
             </div>
 
             <div className="pt-2">
-              {enrollment.enrolled ? (
+              {canDirectPlay ? (
                 <div className="space-y-3">
-                  <ProgressBar label="Your Course Progress" value={enrollment.progressPercent} showValue />
+                  {(enrollment.enrolled || enrollment.progressPercent > 0) && (
+                    <ProgressBar label="Your Course Progress" value={enrollment.progressPercent} showValue />
+                  )}
                   {firstUnfinishedLesson && (
                     <Link to={`/learning/lessons/${firstUnfinishedLesson.id}`}>
                       <Button variant="primary" size="md" className="gap-2 min-h-[44px]">
                         <Play className="size-4 fill-current" />
-                        <span>{enrollment.progressPercent > 0 ? 'Continue Learning' : 'Start Course'}</span>
+                        <span>
+                          {enrollment.progressPercent > 0
+                            ? enrollment.enrolled
+                              ? 'Continue Learning'
+                              : 'Continue Watching'
+                            : enrollment.enrolled
+                              ? 'Start Course'
+                              : 'Watch Now'}
+                        </span>
                       </Button>
                     </Link>
                   )}
@@ -172,15 +185,17 @@ export const CourseDetailPage: React.FC = () => {
           <AsymAccent className="flex flex-col justify-between h-full">
             <div className="space-y-3">
               <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-brand">
-                Course Enrolment Status
+                {needsEnrollment ? 'Course Enrolment Status' : 'Direct Play Course'}
               </span>
               <p className="text-body-xs text-ink-secondary leading-relaxed">
                 {enrollment.enrolled
                   ? `You are currently enrolled. Progress: ${enrollment.progressPercent}% completed.`
-                  : 'Enroll in this course to start watching lessons, track completion, and take quizzes.'}
+                  : needsEnrollment
+                    ? 'Enroll in this playlist course to track your lessons, progress, and quizzes.'
+                    : 'Open access course — start watching immediately without enrolling. Your progress is tracked automatically.'}
               </p>
               <div className="space-y-1 pt-1 text-label-xs font-mono text-ink-secondary">
-                <div>Enrolment: <span className="font-bold text-ink">{course.enrolment}</span></div>
+                <div>Access: <span className="font-bold text-ink">{needsEnrollment ? course.enrolment : 'DIRECT PLAY'}</span></div>
                 <div>Status: <span className="text-ink">{course.status}</span></div>
               </div>
             </div>

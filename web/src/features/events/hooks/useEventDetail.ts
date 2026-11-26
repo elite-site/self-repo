@@ -1,5 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { eventsApi } from '../api';
+import { eventsKeys } from './useEvents';
 import { Event, EventRegistration, isActiveRegistration } from '../types';
 import { useToast } from '@/shared/ui/Toast';
 import { useConfirm } from '@/shared/ui/ConfirmDialog';
@@ -7,13 +9,15 @@ import { celebrate } from '@/shared/lib/celebrate';
 import { flyToTarget } from '@/shared/lib/flyToTarget';
 import { teamsApi } from '@/features/teams/api';
 
+interface EventDetailData {
+  event: Event;
+  registration: EventRegistration | null;
+}
+
 export function useEventDetail(id?: string) {
   const { showToast } = useToast();
   const confirm = useConfirm();
-  const [event, setEvent] = useState<Event | null>(null);
-  const [registration, setRegistration] = useState<EventRegistration | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
   const [modalOpen, setModalOpen] = useState(false);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -27,34 +31,37 @@ export function useEventDetail(id?: string) {
   const [teamError, setTeamError] = useState<string | null>(null);
   const [teamSuccess, setTeamSuccess] = useState<string | null>(null);
 
-  const loadEventAndReg = useCallback(async (isInitial = true) => {
-    if (!id) return;
-    if (isInitial && !event) setLoading(true);
-    setError(null);
-
-    try {
+  const { data, isPending, isError, refetch } = useQuery<EventDetailData>({
+    queryKey: eventsKeys.detail(id ?? ''),
+    enabled: Boolean(id),
+    queryFn: async () => {
+      const eventId = id ?? '';
       const [evData, regList] = await Promise.all([
-        eventsApi.getEvent(id).catch(() => eventsApi.getPublicEvent(id)),
+        eventsApi.getEvent(eventId).catch(() => eventsApi.getPublicEvent(eventId)),
         eventsApi.getRegistrations().catch(() => []),
       ]);
-      setEvent(evData);
+      const found = Array.isArray(regList)
+        ? regList.find(
+            (r: EventRegistration) => r.eventId === eventId && isActiveRegistration(r.status),
+          ) ?? null
+        : null;
+      return { event: evData, registration: found };
+    },
+    staleTime: 60_000,
+  });
 
-      if (Array.isArray(regList)) {
-        const found = regList.find(
-          (r: EventRegistration) => r.eventId === id && isActiveRegistration(r.status)
-        );
-        setRegistration(found || null);
-      }
-    } catch {
-      if (isInitial) setError('Event not found or failed to load details.');
-    } finally {
-      setLoading(false);
+  const loadEventAndReg = useCallback(async (_isInitial = true) => {
+    await refetch();
+  }, [refetch]);
+
+  const invalidateEventCaches = () => {
+    if (id) {
+      void queryClient.invalidateQueries({ queryKey: eventsKeys.detail(id) });
     }
-  }, [id, event]);
-
-  useEffect(() => {
-    loadEventAndReg(true);
-  }, [loadEventAndReg]);
+    void queryClient.invalidateQueries({ queryKey: eventsKeys.list() });
+    void queryClient.invalidateQueries({ queryKey: eventsKeys.registrations() });
+    void queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+  };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,14 +75,16 @@ export function useEventDetail(id?: string) {
 
     try {
       const res = await eventsApi.registerForEvent(id, { answers });
-      setRegistration(res);
+      queryClient.setQueryData<EventDetailData>(eventsKeys.detail(id), (prev) =>
+        prev ? { ...prev, registration: res } : prev,
+      );
       setModalOpen(false);
       showToast('Successfully registered for the event!');
       if (fromRect) {
         void flyToTarget(fromRect);
       }
       void celebrate('success');
-      loadEventAndReg(false);
+      invalidateEventCaches();
     } catch (err: any) {
       setRegError(err.response?.data?.message || 'Failed to register. Please try again.');
     } finally {
@@ -84,6 +93,7 @@ export function useEventDetail(id?: string) {
   };
 
   const handleCancelRegistration = async () => {
+    const registration = data?.registration;
     if (!registration) return;
     const confirmed = await confirm({
       title: 'Cancel registration?',
@@ -96,9 +106,13 @@ export function useEventDetail(id?: string) {
     setCancelling(true);
     try {
       await eventsApi.cancelRegistration(registration.id);
-      setRegistration(null);
+      if (id) {
+        queryClient.setQueryData<EventDetailData>(eventsKeys.detail(id), (prev) =>
+          prev ? { ...prev, registration: null } : prev,
+        );
+      }
       showToast('Registration cancelled.');
-      loadEventAndReg(false);
+      invalidateEventCaches();
     } catch (err: any) {
       showToast(err.response?.data?.message || 'Failed to cancel registration.', 'error');
     } finally {
@@ -119,7 +133,7 @@ export function useEventDetail(id?: string) {
         setTeamModalOpen(false);
         setTeamName('');
         setTeamSuccess(null);
-        loadEventAndReg(false);
+        invalidateEventCaches();
       }, 1200);
     } catch (err: any) {
       setTeamError(err.response?.data?.message || 'Failed to create team.');
@@ -129,10 +143,10 @@ export function useEventDetail(id?: string) {
   };
 
   return {
-    event,
-    registration,
-    loading,
-    error,
+    event: data?.event ?? null,
+    registration: data?.registration ?? null,
+    loading: Boolean(id) && isPending && !data,
+    error: isError && !data ? 'Event not found or failed to load details.' : null,
     modalOpen,
     setModalOpen,
     answers,

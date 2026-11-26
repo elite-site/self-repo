@@ -38,6 +38,7 @@ import { startQuizReminderScheduler } from './jobs/quizReminder.job';
 import { startRetentionScheduler } from './jobs/retentionJob';
 import { studentLearningRouter, adminLearningRouter } from './modules/learning-home';
 import { studentResourcesRouter, adminResourcesRouter } from './modules/resources';
+import { searchRouter } from './modules/search';
 import { mountFrontend } from './config/staticAssets';
 import { requestIdMiddleware } from './middleware/requestId';
 import { installProcessGuards } from './infrastructure/processGuards';
@@ -203,6 +204,7 @@ app.use('/api/student/portfolio', studentPortfolioRoutes);      // Phase 2: proj
 app.use('/api/student/github', studentGithubRoutes);            // Phase 2: GitHub portfolio & sync
 app.use('/api/student/codechef', codechefFlagGuard, studentCodeChefRouter); // CodeChef integration
 app.use('/api/student/events', studentEventsRoutes);            // Phase 4: events
+app.use('/api/student/search', searchRouter);                   // Portal-wide search (student auth)
 app.use('/api/student', studentRoutes);                         // existing: SSO, me, video upload
 app.use('/api/student', studentInteractionsRoutes);             // Phase 5: voting, notifications, registrations, teams
 

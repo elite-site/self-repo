@@ -140,17 +140,27 @@ export const LessonPlayerPage: React.FC = () => {
       const maxPos = typeof secondsOrProgress === 'number' ? secondsOrProgress : (secondsOrProgress.maxPositionSec ?? seconds);
       const completed = typeof secondsOrProgress === 'number' ? Boolean(completedArg) : Boolean(secondsOrProgress.completed);
 
-      if (completed && !lesson.progress.completed) {
+      const shouldCelebrateOptimistically = completed && !lesson.progress.completed;
+      if (shouldCelebrateOptimistically) {
         void celebrate('success');
       }
-      progressMutation.mutate({
-        lessonId: lesson.id,
-        data: {
-          secondsWatched: seconds,
-          maxPositionSec: maxPos,
-          completed,
+      progressMutation.mutate(
+        {
+          lessonId: lesson.id,
+          data: {
+            secondsWatched: seconds,
+            maxPositionSec: maxPos,
+            completed,
+          },
         },
-      });
+        {
+          onSuccess: (res) => {
+            if (!shouldCelebrateOptimistically && res?.completed && !lesson.progress.completed) {
+              void celebrate('success');
+            }
+          },
+        },
+      );
     },
     [lesson, progressMutation],
   );
@@ -288,6 +298,7 @@ export const LessonPlayerPage: React.FC = () => {
           videoId={lesson.youtubeVideoId}
           lessonId={lesson.id}
           initialSeconds={lesson.progress.secondsWatched}
+          initialCompleted={lesson.progress.completed}
           onProgress={handleProgress}
           onTimeUpdate={(sec) => setCurrentTime(sec)}
           onPlayerReady={(controller) => {

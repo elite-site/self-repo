@@ -33,7 +33,8 @@ export function useLessonProgressMutation(courseSlugOrId?: string) {
       lessonId: string;
       data: { secondsWatched: number; maxPositionSec: number; completed?: boolean };
     }) => learningApi.saveProgress(lessonId, data),
-    onSuccess: (_res, variables) => {
+    onSuccess: (res, variables) => {
+      const isNowCompleted = Boolean(variables.data.completed || res?.completed);
       queryClient.setQueryData<LessonDetailResponse>(
         ['learning', 'lesson', variables.lessonId],
         (prev) => {
@@ -44,13 +45,13 @@ export function useLessonProgressMutation(courseSlugOrId?: string) {
               ...prev.progress,
               secondsWatched: variables.data.secondsWatched,
               maxPositionSec: Math.max(prev.progress?.maxPositionSec ?? 0, variables.data.maxPositionSec),
-              completed: variables.data.completed ? true : prev.progress?.completed ?? false,
+              completed: isNowCompleted || (prev.progress?.completed ?? false),
             },
           };
         }
       );
 
-      if (variables.data.completed) {
+      if (isNowCompleted) {
         if (courseSlugOrId) {
           queryClient.invalidateQueries({ queryKey: ['learning', 'course', courseSlugOrId] });
         }

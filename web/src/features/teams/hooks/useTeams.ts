@@ -1,17 +1,27 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { teamsApi } from '../api';
 import { Team, TeamInvitation } from '../types';
 import { client } from '@/shared/api/client';
 import { useToast } from '@/shared/ui/Toast';
 import { useConfirm } from '@/shared/ui/ConfirmDialog';
 
+export const teamsKeys = {
+  all: ['teams'] as const,
+  overview: () => [...teamsKeys.all, 'overview'] as const,
+};
+
+interface TeamsQueryData {
+  teams: Team[];
+  invitations: TeamInvitation[];
+  events: any[];
+}
+
 export function useTeams() {
   const { showToast } = useToast();
   const confirm = useConfirm();
-  const [teams, setTeams] = useState<Team[]>([]);
-  const [invitations, setInvitations] = useState<TeamInvitation[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+
   const [removingTeamId, setRemovingTeamId] = useState<string | null>(null);
   const [teamError, setTeamError] = useState<string | null>(null);
   const [teamNotice, setTeamNotice] = useState<string | null>(null);
@@ -19,7 +29,6 @@ export function useTeams() {
   // Modals
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [teamName, setTeamName] = useState('');
-  const [events, setEvents] = useState<any[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<string>('');
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
@@ -31,33 +40,34 @@ export function useTeams() {
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [inviteSuccess, setInviteSuccess] = useState(false);
 
-  const loadTeamsData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
+  const { data, isPending, isError, refetch } = useQuery<TeamsQueryData>({
+    queryKey: teamsKeys.overview(),
+    queryFn: async () => {
       const [tData, iData, eRes] = await Promise.all([
         teamsApi.getMyTeams().catch(() => []),
         teamsApi.getTeamInvitations().catch(() => []),
         client.get('/student/events').then((r) => r.data).catch(() => []),
       ]);
-      if (Array.isArray(tData)) setTeams(tData);
-      if (Array.isArray(iData)) setInvitations(iData);
-      if (Array.isArray(eRes)) {
-        setEvents(eRes);
-        if (eRes.length > 0) {
-          setSelectedEventId((prev) => prev || eRes[0].id);
-        }
+      const eventsList = Array.isArray(eRes) ? eRes : [];
+      if (eventsList.length > 0) {
+        setSelectedEventId((prev) => prev || eventsList[0].id);
       }
-    } catch {
-      setError('Could not load teams information.');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+      return {
+        teams: Array.isArray(tData) ? tData : [],
+        invitations: Array.isArray(iData) ? iData : [],
+        events: eventsList,
+      };
+    },
+    staleTime: 60_000,
+  });
 
-  useEffect(() => {
-    loadTeamsData();
-  }, [loadTeamsData]);
+  const teams = data?.teams ?? [];
+  const invitations = data?.invitations ?? [];
+  const events = data?.events ?? [];
+
+  const loadTeamsData = useCallback(async () => {
+    await refetch();
+  }, [refetch]);
 
   const handleRemoveTeam = async (team: Team) => {
     const name = team?.name || 'this team';
@@ -72,8 +82,11 @@ export function useTeams() {
     setTeamError(null);
     try {
       const res = await teamsApi.removeTeam(team.id);
-      setTeams((prev) => prev.filter((t) => t.id !== team.id));
+      queryClient.setQueryData<TeamsQueryData>(teamsKeys.overview(), (prev) =>
+        prev ? { ...prev, teams: prev.teams.filter((t) => t.id !== team.id) } : prev,
+      );
       setTeamNotice(res?.message || `Team "${name}" has been removed.`);
+      void queryClient.invalidateQueries({ queryKey: teamsKeys.overview() });
     } catch (err: any) {
       setTeamError(err?.response?.data?.message || 'Could not remove the team. Please try again.');
     } finally {
@@ -91,7 +104,7 @@ export function useTeams() {
       await teamsApi.createTeam({ name: teamName.trim(), eventId: selectedEventId });
       setCreateModalOpen(false);
       setTeamName('');
-      loadTeamsData();
+      void queryClient.invalidateQueries({ queryKey: teamsKeys.overview() });
     } catch (err: any) {
       setCreateError(err.response?.data?.message || 'Failed to create team.');
     } finally {
@@ -124,7 +137,7 @@ export function useTeams() {
     try {
       await teamsApi.acceptInvitation(id);
       showToast('Invitation accepted.');
-      loadTeamsData();
+      void queryClient.invalidateQueries({ queryKey: teamsKeys.overview() });
     } catch {
       showToast('Failed to accept invitation.', 'error');
     }
@@ -134,7 +147,7 @@ export function useTeams() {
     try {
       await teamsApi.declineInvitation(id);
       showToast('Invitation declined.');
-      loadTeamsData();
+      void queryClient.invalidateQueries({ queryKey: teamsKeys.overview() });
     } catch {
       showToast('Failed to decline invitation.', 'error');
     }
@@ -161,8 +174,8 @@ export function useTeams() {
     teams,
     invitations,
     events,
-    loading,
-    error,
+    loading: isPending && !data,
+    error: isError && !data ? 'Could not load teams information.' : null,
     removingTeamId,
     teamError,
     teamNotice,

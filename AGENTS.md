@@ -73,7 +73,7 @@ tools/              token build, contrast and utility checks
 docs/               decisions/ (ADRs), architecture/, perf/, runbooks/
 ```
 
-Existing domain modules: `admin, announcements, auth, codechef, email, events, github, learning-courses, learning-home, learning-progress, learning-quizzes, learning-reports, media, moderation, portfolio, public, resources, students, video-cache, voting`.
+Existing domain modules: `admin, announcements, auth, codechef, email, events, github, learning-courses, learning-home, learning-progress, learning-quizzes, learning-reports, media, moderation, portfolio, public, resources, search, students, video-cache, voting`.
 Frontend features (web): `auth, codechef, dashboard, directory, events, github, learning, notifications, portfolio, profile, public-profile, resources, resume, teams, video, voting`.
 Frontend features (admin-client): `activity-log, analytics, announcements, codechef, email-automation, events, github, learning, moderation, registrations, resources, roles, settings, storage, students`.
 Path alias in the frontends: `@/*` maps to `src/*`.

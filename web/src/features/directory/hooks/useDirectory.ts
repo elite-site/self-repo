@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useDeferredValue, useRef } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { directoryApi } from '../api';
 import { DirectoryStudent, SkillItem, StatusFilter } from '../types';
@@ -13,7 +14,6 @@ export function useDirectory(limit = 24) {
   const [sectionFilter, setSectionFilter] = useState('ALL');
   const [skillFilter, setSkillFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
-  const [availableSkills, setAvailableSkills] = useState<SkillItem[]>([]);
   const [page, setPage] = useState(1);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
@@ -28,14 +28,26 @@ export function useDirectory(limit = 24) {
   // Instant index hook (React Query, staleTime 5m, localStorage)
   const studentIndex = useStudentIndex();
 
-  // Keep deep links (?search=) working on searchParams navigation
+  const { data: availableSkills = [] } = useQuery<SkillItem[]>({
+    queryKey: ['public', 'skills'],
+    queryFn: async () => {
+      const skills = await directoryApi.getPublicSkills();
+      return Array.isArray(skills) ? skills : [];
+    },
+    staleTime: 5 * 60_000,
+    retry: false,
+  });
+
+  // Keep deep links (?search=) working on external searchParams navigation
+  const urlSearchParam = searchParams.get('search') || '';
+  const searchRef = useRef(search);
+  searchRef.current = search;
   useEffect(() => {
-    const q = searchParams.get('search') || '';
-    if (q !== search) {
-      setSearch(q);
+    if (urlSearchParam !== searchRef.current) {
+      setSearch(urlSearchParam);
       setPage(1);
     }
-  }, [searchParams]);
+  }, [urlSearchParam]);
 
   const searchParamsRef = useRef(searchParams);
   searchParamsRef.current = searchParams;
@@ -51,19 +63,6 @@ export function useDirectory(limit = 24) {
       setSearchParams(nextParams, { replace: true });
     }
   }, [search, setSearchParams]);
-
-  // Load available skills for filter dropdown
-  useEffect(() => {
-    directoryApi
-      .getPublicSkills()
-      .then((skills) => {
-        if (Array.isArray(skills)) setAvailableSkills(skills);
-      })
-      .catch((err) => {
-        // Non-fatal: the skill filter just stays empty; directory results are unaffected.
-        console.warn('Could not load directory skill filters:', err);
-      });
-  }, []);
 
   // Use deferred value for instant responsive keystroke rendering
   const deferredSearch = useDeferredValue(search);

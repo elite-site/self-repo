@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
 import { publicProfileApi } from '../api';
 import { PublicStudent } from '../types';
@@ -9,13 +10,15 @@ import { resolveMediaUrl } from '@/shared/api';
 const PLACEHOLDER_REGEX = /fill personal data of yours/i;
 const DEPARTMENT = 'Information Technology';
 
+export const publicProfileKeys = {
+  all: ['public-profile'] as const,
+  byRollNo: (rollNo: string) => [...publicProfileKeys.all, rollNo] as const,
+};
+
 export function usePublicStudentProfile() {
   const { rollNo } = useParams<{ rollNo: string }>();
   const { toast } = useToast();
 
-  const [student, setStudent] = useState<PublicStudent | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [imageError, setImageError] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('home');
@@ -25,77 +28,35 @@ export function usePublicStudentProfile() {
     setImageError(false);
   }, [rollNo]);
 
-  const retry = () => {
-    if (!rollNo) return;
-    setLoading(true);
-    setError(null);
-
-    publicProfileApi
-      .getPublicStudent(rollNo)
-      .then((data) => {
-        setStudent(data);
-        setError(null);
+  const { data: student = null, isPending, isError, error: queryError, refetch } =
+    useQuery<PublicStudent | null>({
+      queryKey: publicProfileKeys.byRollNo(rollNo ?? ''),
+      enabled: Boolean(rollNo),
+      queryFn: async () => {
+        if (!rollNo) return null;
         try {
-          sessionStorage.setItem(`student_profile_${rollNo}`, JSON.stringify(data));
-        } catch {
-          // ignore
-        }
-      })
-      .catch((err) => {
-        const status = err?.status ?? err?.response?.status;
-        if (status === 404) {
-          setStudent(null);
-          setError(null);
-        } else {
-          setStudent(null);
-          setError(err?.message || 'Could not load student profile. Please retry.');
-        }
-      })
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(() => {
-    if (!rollNo) return;
-    const cacheKey = `student_profile_${rollNo}`;
-    const cached = sessionStorage.getItem(cacheKey);
-    if (cached) {
-      try {
-        const parsed = JSON.parse(cached);
-        setStudent(parsed);
-        setLoading(false);
-      } catch {
-        // invalid cache entry, proceed to fetch
-      }
-    } else {
-      setLoading(true);
-    }
-    setError(null);
-
-    publicProfileApi
-      .getPublicStudent(rollNo)
-      .then((data) => {
-        setStudent(data);
-        setError(null);
-        try {
-          sessionStorage.setItem(cacheKey, JSON.stringify(data));
-        } catch {
-          // sessionStorage quota exceeded, safely ignore
-        }
-      })
-      .catch((err) => {
-        const status = err?.status ?? err?.response?.status;
-        if (status === 404) {
-          if (!cached) setStudent(null);
-          setError(null);
-        } else {
-          if (!cached) {
-            setStudent(null);
-            setError(err?.message || 'Could not load student profile. Please retry.');
+          return await publicProfileApi.getPublicStudent(rollNo);
+        } catch (err: any) {
+          const status = err?.status ?? err?.response?.status;
+          if (status === 404) {
+            return null;
           }
+          throw err;
         }
-      })
-      .finally(() => setLoading(false));
-  }, [rollNo]);
+      },
+      staleTime: 2 * 60_000,
+    });
+
+  const loading = Boolean(rollNo) && isPending && student === null;
+  const error =
+    isError && student === null
+      ? (queryError as any)?.message || 'Could not load student profile. Please retry.'
+      : null;
+
+  const retry = useCallback(() => {
+    if (!rollNo) return;
+    void refetch();
+  }, [rollNo, refetch]);
 
   useEffect(() => {
     if (loading) {

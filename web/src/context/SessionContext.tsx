@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { StudentSession } from '@/shared/types';
 import { profileApi } from '@/features/profile/api';
@@ -8,7 +8,6 @@ import {
   TOKEN_STORAGE_KEY,
   bootstrapToken,
   classifySessionFailure,
-  hasStoredToken,
 } from '@/shared/utils/sessionBootstrap';
 
 interface SessionContextValue {
@@ -64,8 +63,16 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // already final on the first render. An effect would leave one render in which
   // `authChecking` is wrong and a public page flashes a loader it is not waiting for.
   const [verifyEnabled, setVerifyEnabled] = useState(() => {
-    bootstrapToken();
-    return hasStoredToken();
+    const hadUrlToken =
+      typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('token');
+    const result = bootstrapToken();
+    if (hadUrlToken) {
+      // Fresh OAuth callback token: discard any previous cached session/queries
+      // so the newly authenticated student is verified cleanly.
+      queryClient.removeQueries();
+      clearPersistedQueryCache();
+    }
+    return result.needsVerification;
   });
 
   const { data, error, isPending, refetch } = useQuery<StudentSession | null>({
@@ -77,12 +84,10 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     // on the loader for seconds before they are signed out. `classifySessionFailure`
     // below is the only thing allowed to decide what a rejection means.
     retry: false,
-    // The student is verified once per page load, exactly as before. Re-verifying
-    // mid-visit would hand every page holding a `session` a different copy of it.
-    staleTime: Infinity,
-    // Opt back in to window-focus refetch for this query only — it is the one
-    // place a photo change made on another tab needs to propagate immediately.
-    refetchOnWindowFocus: true,
+    // Re-verify `/me` at most once per minute in the background when mounted,
+    // and never refetch on window/DevTools focus to avoid tab-switch reloads.
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
   });
 
   const session = data ?? null;
@@ -92,11 +97,8 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // the rejection instead of one commit later. Only a non-auth failure has a
   // message: a 401 has nothing to report, it is a signed-out visitor.
   const sessionError = failure?.kind === 'unavailable' ? failure.message : null;
-  // True only while a verification is still outstanding. The cache now owns the
-  // guard the old `cancelled` flag provided: a `/me` that resolves after an unmount,
-  // or after the query is destroyed at logout, has nowhere left to write a session
-  // for a token that is no longer in storage.
-  const authChecking = verifyEnabled && isPending;
+  // Block the shell only when we have no hydrated session yet (first login / cold cache).
+  const authChecking = verifyEnabled && !session && isPending;
 
   useEffect(() => {
     if (!error) return;
@@ -105,13 +107,22 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       // write the signed-out state into the cache so nothing re-asks `/me`.
       localStorage.removeItem(TOKEN_STORAGE_KEY);
       queryClient.setQueryData<StudentSession | null>(SESSION_QUERY_KEY, null);
+      clearPersistedQueryCache();
       setVerifyEnabled(false);
-      return;
     }
-    // A server-side failure must not masquerade as a logout. The retry screen is
-    // shown instead of silently dumping the student on sign-in.
-    console.error('Could not verify student session:', error);
   }, [error, unauthorized, queryClient]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleSessionExpired = () => {
+      localStorage.removeItem(TOKEN_STORAGE_KEY);
+      queryClient.setQueryData<StudentSession | null>(SESSION_QUERY_KEY, null);
+      clearPersistedQueryCache();
+      setVerifyEnabled(false);
+    };
+    window.addEventListener('elite-session-expired', handleSessionExpired);
+    return () => window.removeEventListener('elite-session-expired', handleSessionExpired);
+  }, [queryClient]);
 
   const handlePhotoChange = useCallback(
     (photoUrl: string | null) => {
@@ -133,9 +144,8 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const logout = useCallback(async () => {
     try {
       await authApi.logout();
-    } catch (err) {
+    } catch {
       // Non-fatal: local session cleanup must proceed even if network fails
-      console.warn('Logout API failed non-fatally:', err);
     }
     localStorage.removeItem(TOKEN_STORAGE_KEY);
     setVerifyEnabled(false);
@@ -151,10 +161,20 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     clearPersistedQueryCache();
   }, [queryClient]);
 
+  const value = useMemo(
+    () => ({
+      session,
+      authChecking,
+      sessionError,
+      retrySessionCheck,
+      logout,
+      setPhoto: handlePhotoChange,
+    }),
+    [session, authChecking, sessionError, retrySessionCheck, logout, handlePhotoChange],
+  );
+
   return (
-    <SessionContext.Provider
-      value={{ session, authChecking, sessionError, retrySessionCheck, logout, setPhoto: handlePhotoChange }}
-    >
+    <SessionContext.Provider value={value}>
       {children}
     </SessionContext.Provider>
   );

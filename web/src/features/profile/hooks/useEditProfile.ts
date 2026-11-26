@@ -1,22 +1,25 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { profileApi } from '../api';
+import { profileKeys } from './useProfile';
 import { StudentProfile } from '../types';
 import type { SocialLinkKind } from '@/shared/utils/socialLinks';
 import { compressImageToWebP } from '@/shared/utils/cropImage';
 import { invalidateApiCache } from '@/shared/api';
+import { SESSION_QUERY_KEY } from '@/shared/lib/queryClient';
 import { useToast } from '@/shared/ui/Toast';
 import { useConfirm } from '@/shared/ui/ConfirmDialog';
 
 export function useEditProfile(onPhotoChangeProp?: (newUrl: string | null) => void) {
   const { showToast } = useToast();
   const confirm = useConfirm();
-  const [profile, setProfile] = useState<StudentProfile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+
   const [saving, setSaving] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [removingPhoto, setRemovingPhoto] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -35,6 +38,7 @@ export function useEditProfile(onPhotoChangeProp?: (newUrl: string | null) => vo
   const [isCropModalOpen, setIsCropModalOpen] = useState(false);
   const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
   const objectUrlRef = useRef<string | null>(null);
+  const hydratedFormRef = useRef(false);
 
   useEffect(() => {
     return () => {
@@ -45,35 +49,32 @@ export function useEditProfile(onPhotoChangeProp?: (newUrl: string | null) => vo
     };
   }, []);
 
-  const loadProfile = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await profileApi.getProfile();
-      setProfile(data);
-      setBio(data.bio || '');
-      setSpecialQualities(data.specialQualities || '');
-      setGithubUrl(data.githubUrl || '');
-      setLinkedinUrl(data.linkedinUrl || '');
-      setLeetcodeUrl(data.leetcodeUrl || '');
-      setCodechefUrl(data.codechefUrl || '');
-      setHackerrankUrl(data.hackerrankUrl || '');
-      setCodeforcesUrl(data.codeforcesUrl || '');
-      setPortfolioUrl(data.portfolioUrl || '');
-    } catch {
-      setError('Could not load profile. Please refresh.');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const editProfileKey = [...profileKeys.all, 'edit'] as const;
+
+  const { data: profile = null, isPending, isError } = useQuery<StudentProfile>({
+    queryKey: editProfileKey,
+    queryFn: () => profileApi.getProfile(),
+    staleTime: 2 * 60_000,
+  });
 
   useEffect(() => {
-    loadProfile();
-  }, [loadProfile]);
+    if (!profile || hydratedFormRef.current) return;
+    hydratedFormRef.current = true;
+    setBio(profile.bio || '');
+    setSpecialQualities(profile.specialQualities || '');
+    setGithubUrl(profile.githubUrl || '');
+    setLinkedinUrl(profile.linkedinUrl || '');
+    setLeetcodeUrl(profile.leetcodeUrl || '');
+    setCodechefUrl(profile.codechefUrl || '');
+    setHackerrankUrl(profile.hackerrankUrl || '');
+    setCodeforcesUrl(profile.codeforcesUrl || '');
+    setPortfolioUrl(profile.portfolioUrl || '');
+  }, [profile]);
 
   const handleSave = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setSaving(true);
-    setError(null);
+    setActionError(null);
     setSuccess(false);
 
     try {
@@ -88,12 +89,14 @@ export function useEditProfile(onPhotoChangeProp?: (newUrl: string | null) => vo
         codeforcesUrl: codeforcesUrl.trim() || undefined,
         portfolioUrl: portfolioUrl.trim() || undefined,
       });
-      setProfile(updated);
+      queryClient.setQueryData<StudentProfile>(editProfileKey, updated);
       setSuccess(true);
       showToast('Profile updated successfully!');
       invalidateApiCache();
+      void queryClient.invalidateQueries({ queryKey: profileKeys.overview() });
+      void queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     } catch (err: any) {
-      setError(err?.response?.data?.message || 'Failed to update profile.');
+      setActionError(err?.response?.data?.message || 'Failed to update profile.');
       showToast('Failed to update profile.', 'error');
     } finally {
       setSaving(false);
@@ -133,10 +136,15 @@ export function useEditProfile(onPhotoChangeProp?: (newUrl: string | null) => vo
 
       const res = await profileApi.uploadProfilePhoto(formData);
       if (res.photoUrl) {
-        setProfile((prev) => (prev ? { ...prev, photoUrl: res.photoUrl } : null));
+        queryClient.setQueryData<StudentProfile>(editProfileKey, (prev) =>
+          prev ? { ...prev, photoUrl: res.photoUrl } : prev,
+        );
         if (onPhotoChangeProp) onPhotoChangeProp(res.photoUrl);
         showToast('Photo uploaded successfully!');
         invalidateApiCache();
+        void queryClient.invalidateQueries({ queryKey: profileKeys.overview() });
+        void queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+        void queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY });
       }
     } catch (err: any) {
       setPhotoError(err?.response?.data?.message || 'Failed to upload photo.');
@@ -159,10 +167,15 @@ export function useEditProfile(onPhotoChangeProp?: (newUrl: string | null) => vo
     setPhotoError(null);
     try {
       await profileApi.deleteProfilePhoto();
-      setProfile((prev) => (prev ? { ...prev, photoUrl: undefined } : null));
+      queryClient.setQueryData<StudentProfile>(editProfileKey, (prev) =>
+        prev ? { ...prev, photoUrl: undefined } : prev,
+      );
       if (onPhotoChangeProp) onPhotoChangeProp(null);
       showToast('Photo removed.');
       invalidateApiCache();
+      void queryClient.invalidateQueries({ queryKey: profileKeys.overview() });
+      void queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      void queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY });
     } catch (err: any) {
       setPhotoError(err?.response?.data?.message || 'Failed to remove photo.');
     } finally {
@@ -172,12 +185,12 @@ export function useEditProfile(onPhotoChangeProp?: (newUrl: string | null) => vo
 
   return {
     profile,
-    loading,
+    loading: isPending && !profile,
     saving,
     uploadingPhoto,
     removingPhoto,
     photoError,
-    error,
+    error: actionError ?? (isError && !profile ? 'Could not load profile. Please refresh.' : null),
     success,
     bio,
     setBio,

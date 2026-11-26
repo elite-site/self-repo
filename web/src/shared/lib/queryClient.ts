@@ -1,4 +1,5 @@
 import { QueryClient, QueryCache, MutationCache, dehydrate, hydrate } from '@tanstack/react-query';
+import { hasStoredToken } from '@/shared/utils/sessionBootstrap';
 
 /**
  * The query cache and the keys that name its entries.
@@ -20,6 +21,9 @@ export const SESSION_QUERY_KEY = ['session'] as const;
 
 /** Faculty-approved, published introduction videos shown on public pages. */
 export const PUBLIC_VIDEOS_QUERY_KEY = ['public', 'videos'] as const;
+
+/** Unread notification badge count shared between the shell and dashboard. */
+export const UNREAD_COUNT_QUERY_KEY = ['student', 'notifications', 'unread-count'] as const;
 
 export const CACHE_STORAGE_KEY = 'elite_query_cache_v1';
 const CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
@@ -44,6 +48,9 @@ export function restoreQueryCache(client: QueryClient): void {
       return;
     }
     hydrate(client, clientState);
+    if (!hasStoredToken()) {
+      client.removeQueries({ queryKey: SESSION_QUERY_KEY });
+    }
   } catch {
     clearPersistedQueryCache();
   }
@@ -56,11 +63,14 @@ export function setupQueryCachePersistence(client: QueryClient): () => void {
 
   const saveCache = () => {
     try {
+      const tokenPresent = hasStoredToken();
       const clientState = dehydrate(client, {
         shouldDehydrateQuery: (query) => {
-          // Never persist session data to query cache (handled by sessionBootstrap)
           const firstKey = query.queryKey[0];
-          return firstKey !== 'session' && query.state.status === 'success';
+          // Only persist the session snapshot while a token exists so reloads
+          // paint the portal shell immediately while `/me` verifies in the background.
+          if (firstKey === 'session' && !tokenPresent) return false;
+          return query.state.status === 'success';
         },
       });
       window.localStorage.setItem(
@@ -80,8 +90,13 @@ export function setupQueryCachePersistence(client: QueryClient): () => void {
     }, 2000);
   };
 
-  const unsubscribe = client.getQueryCache().subscribe(() => {
-    scheduleSave();
+  const unsubscribe = client.getQueryCache().subscribe((event) => {
+    if (
+      event.type === 'removed' ||
+      (event.type === 'updated' && event.action.type === 'success')
+    ) {
+      scheduleSave();
+    }
   });
 
   const handleBeforeUnload = () => {

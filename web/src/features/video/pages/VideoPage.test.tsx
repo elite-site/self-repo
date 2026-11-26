@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import VideoPage from './VideoPage';
 import { profileApi } from '@/features/profile/api';
 
@@ -60,10 +61,16 @@ describe('VideoPage video playback and proxy fallback', () => {
   it('initially points to direct media url, retries with ?proxy=1 on error, and shows retry UI if both fail', async () => {
     (profileApi.getMe as any).mockResolvedValue(mockVideoData);
 
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+
     const { container } = render(
-      <MemoryRouter>
-        <VideoPage />
-      </MemoryRouter>,
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <VideoPage />
+        </MemoryRouter>
+      </QueryClientProvider>,
     );
 
     // Wait for video element to render

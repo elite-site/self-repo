@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { dashboardApi } from '../api';
+import { UNREAD_COUNT_QUERY_KEY } from '@/shared/lib/queryClient';
 import { useSession } from '@/context/SessionContext';
 import { StudentDashboardResponse, DashboardTask, DashboardTone } from '../types';
 import { Notification } from '@/shared/types';
@@ -134,6 +135,14 @@ export function useDashboard() {
     queryFn: () => dashboardApi.getDashboard(),
     staleTime: 5 * 60_000,
   });
+
+  useEffect(() => {
+    if (typeof dashboardData?.unreadNotificationsCount === 'number') {
+      queryClient.setQueryData(UNREAD_COUNT_QUERY_KEY, {
+        unreadCount: dashboardData.unreadNotificationsCount,
+      });
+    }
+  }, [dashboardData?.unreadNotificationsCount, queryClient]);
 
   const profile = dashboardData?.profile ?? null;
   const resume = dashboardData?.resume ?? null;

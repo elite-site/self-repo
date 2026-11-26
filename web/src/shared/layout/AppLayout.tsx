@@ -98,11 +98,11 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ session, unreadCount, onLo
               fallbackTitle="Unable to load this section"
               fallbackMessage="An error occurred while loading this section of the portal. Please retry."
             >
-              <Suspense fallback={<SkeletonPage label="Loading page" />}>
-                <PageTransition>
+              <PageTransition>
+                <Suspense fallback={<SkeletonPage label="Loading page" />}>
                   <Outlet context={{ onPhotoChange } satisfies StudentOutletContext} />
-                </PageTransition>
-              </Suspense>
+                </Suspense>
+              </PageTransition>
             </ErrorBoundary>
           </div>
         </main>

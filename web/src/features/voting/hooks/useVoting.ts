@@ -1,11 +1,15 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { votingApi } from '../api';
 import { VotingCampaign } from '../types';
 
+export const votingKeys = {
+  all: ['voting'] as const,
+  campaigns: () => [...votingKeys.all, 'campaigns'] as const,
+};
+
 export function useVoting(initialCampaignId?: string) {
-  const [campaigns, setCampaigns] = useState<VotingCampaign[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
   const [activeCampaign, setActiveCampaign] = useState<VotingCampaign | null>(null);
   const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null);
@@ -15,22 +19,21 @@ export function useVoting(initialCampaignId?: string) {
 
   const deepLinkHandled = useRef(false);
 
-  const loadCampaigns = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await votingApi.getVotingCampaigns();
-      if (Array.isArray(data)) setCampaigns(data);
-    } catch {
-      setError('Could not load active voting campaigns.');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const { data, isPending, isError, refetch } = useQuery<VotingCampaign[]>({
+    queryKey: votingKeys.campaigns(),
+    queryFn: async () => {
+      const res = await votingApi.getVotingCampaigns();
+      return Array.isArray(res) ? res : [];
+    },
+    staleTime: 60_000,
+  });
 
-  useEffect(() => {
-    loadCampaigns();
-  }, [loadCampaigns]);
+  const campaigns = data ?? [];
+  const loading = isPending && !data;
+
+  const loadCampaigns = useCallback(async () => {
+    await refetch();
+  }, [refetch]);
 
   useEffect(() => {
     if (!initialCampaignId || loading || deepLinkHandled.current) return;
@@ -67,7 +70,8 @@ export function useVoting(initialCampaignId?: string) {
       setVoteSuccess(true);
       setTimeout(() => {
         setActiveCampaign(null);
-        loadCampaigns();
+        void queryClient.invalidateQueries({ queryKey: votingKeys.campaigns() });
+        void queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       }, 1500);
     } catch (err: any) {
       setVoteError(err.response?.data?.message || 'Failed to submit vote. You may have already voted.');
@@ -79,7 +83,7 @@ export function useVoting(initialCampaignId?: string) {
   return {
     campaigns,
     loading,
-    error,
+    error: isError && !data ? 'Could not load active voting campaigns.' : null,
     activeCampaign,
     selectedCandidateId,
     setSelectedCandidateId,

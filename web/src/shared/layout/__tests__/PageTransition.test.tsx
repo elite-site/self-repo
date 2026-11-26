@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { getTransitionKey } from '../PageTransition';
+import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import { PageTransition, getTransitionKey } from '../PageTransition';
 
 describe('PageTransition getTransitionKey', () => {
   it('stabilizes lesson player routes so sibling lessons share the same key', () => {
@@ -13,5 +15,17 @@ describe('PageTransition getTransitionKey', () => {
     expect(getTransitionKey('/learning/courses/python-101')).toBe('/learning/courses/python-101');
     expect(getTransitionKey('/profile')).toBe('/profile');
     expect(getTransitionKey('/learning')).toBe('/learning');
+  });
+
+  it('renders route content immediately on initial mount without blocking', () => {
+    render(
+      <MemoryRouter initialEntries={['/dashboard']}>
+        <PageTransition>
+          <div>Dashboard Content</div>
+        </PageTransition>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText('Dashboard Content')).toBeInTheDocument();
   });
 });

@@ -1,5 +1,5 @@
-import React, { useRef } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import React, { useEffect, useRef } from 'react';
+import { motion } from 'framer-motion';
 import { useLocation, useNavigationType } from 'react-router-dom';
 import { usePageTransitionVariants } from '@/shared/lib/motion';
 
@@ -73,20 +73,24 @@ export const PageTransition: React.FC<{ children: React.ReactNode }> = ({ childr
   const { pathname } = useLocation();
   const direction = useNavigationDirection();
   const { variants, transition } = usePageTransitionVariants(direction);
+  const isFirstMount = useRef(true);
 
+  useEffect(() => {
+    isFirstMount.current = false;
+  }, []);
+
+  // Animate entrance directly without `mode="wait"`, so switching routes mounts
+  // and starts fetching the incoming page immediately instead of stalling on exit.
   return (
-    <AnimatePresence mode="wait" initial={false}>
-      <motion.div
-        key={getTransitionKey(pathname)}
-        variants={variants}
-        initial="initial"
-        animate="animate"
-        exit="exit"
-        transition={transition}
-      >
-        {children}
-      </motion.div>
-    </AnimatePresence>
+    <motion.div
+      key={getTransitionKey(pathname)}
+      variants={variants}
+      initial={isFirstMount.current ? false : 'initial'}
+      animate="animate"
+      transition={transition}
+    >
+      {children}
+    </motion.div>
   );
 };
 

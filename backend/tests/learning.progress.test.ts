@@ -241,6 +241,13 @@ describe('LearningHub - Progress Module', () => {
         completed: true,
       } as any);
 
+      vi.mocked(prisma.enrollment.findUnique).mockResolvedValue({
+        id: 'enr_full',
+        studentId: 'stud_prog_1',
+        courseId: 'c_full',
+        status: 'ACTIVE',
+      } as any);
+
       vi.mocked(prisma.lessonProgress.upsert).mockResolvedValue({} as any);
       vi.mocked(prisma.lesson.count).mockResolvedValue(5);
       vi.mocked(prisma.lessonProgress.count).mockResolvedValue(5); // all 5 complete!
@@ -263,6 +270,35 @@ describe('LearningHub - Progress Module', () => {
           }),
         })
       );
+    });
+
+    it('saves lesson progress cleanly during direct play without enrollment (does not call enrollment.update)', async () => {
+      vi.mocked(prisma.lesson.findUnique).mockResolvedValue({
+        id: 'l_direct',
+        courseId: 'c_direct',
+        type: 'YOUTUBE',
+        durationSec: 120,
+        course: { id: 'c_direct', status: 'PUBLISHED' },
+      } as any);
+
+      vi.mocked(prisma.lessonProgress.findUnique).mockResolvedValue(null);
+      vi.mocked(prisma.enrollment.findUnique).mockResolvedValue(null);
+      vi.mocked(prisma.lessonProgress.upsert).mockResolvedValue({} as any);
+      vi.mocked(prisma.lesson.count).mockResolvedValue(1);
+      vi.mocked(prisma.lessonProgress.count).mockResolvedValue(1);
+
+      const res = await request(app)
+        .post('/lessons/l_direct/progress')
+        .set('Cookie', studentCookie)
+        .send({
+          secondsWatched: 110,
+          maxPositionSec: 110,
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.completed).toBe(true);
+      expect(res.body.courseProgressPercent).toBe(100);
+      expect(prisma.enrollment.update).not.toHaveBeenCalled();
     });
   });
 

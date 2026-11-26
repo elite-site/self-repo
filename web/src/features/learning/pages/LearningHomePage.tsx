@@ -7,6 +7,7 @@ import { ProgressBar } from '@/shared/ui/ProgressBar';
 import { Button } from '@/shared/ui/Button';
 import { EmptyState } from '@/shared/ui/EmptyState';
 import { AsymGrid, AsymFeatured, AsymSide, AsymAccent } from '@/shared/layout/AsymLayout';
+import { requiresEnrollment } from '../lib/courseMode';
 import { CourseCardSummary } from '../types';
 
 export const LearningHomePage: React.FC = () => {
@@ -112,7 +113,7 @@ export const LearningHomePage: React.FC = () => {
                 <Link to={`/learning/courses/${hero.slug || hero.id}`}>
                   <Button variant="primary" size="lg" className="gap-2 min-h-[44px]">
                     <Play className="size-4 fill-current" aria-hidden="true" />
-                    <span>{hero.isEnrolled ? 'Continue Learning' : 'Start Course'}</span>
+                    <span>{hero.isEnrolled ? 'Continue Learning' : requiresEnrollment(hero) ? 'Start Course' : 'Watch Now'}</span>
                   </Button>
                 </Link>
               </div>

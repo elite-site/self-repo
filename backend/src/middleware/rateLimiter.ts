@@ -130,3 +130,20 @@ export const studentLoginRateLimiter = rateLimit({
     message: 'Too many login attempts from this network. Please wait a few minutes before trying again.',
   },
 });
+
+/**
+ * Portal-wide search rate limiter (SEC-6).
+ * Keyed per authenticated student so campus NAT traffic does not collide.
+ * 60 search requests per minute gives ample headroom for debounced typing.
+ */
+export const searchRateLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => getClientIdentity(req),
+  message: {
+    error: 'RATE_LIMITED',
+    message: 'Too many search requests. Please wait a moment before trying again.',
+  },
+});

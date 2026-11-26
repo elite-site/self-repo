@@ -7,8 +7,9 @@ import { ConfirmProvider } from '@/shared/ui/ConfirmDialog';
 import { SkeletonPage } from '@/shared/ui/Skeleton';
 import { ErrorBoundary } from '@/shared/ui/ErrorBoundary';
 import { hasStoredToken } from '@/shared/utils/sessionBootstrap';
+import { prefetchRoute } from '@/shared/utils/prefetch';
 import { useUnreadCount } from '@/features/notifications/hooks/useUnreadCount';
-import './router/routePrefetch';
+import { prefetchAppShell } from './router/routePrefetch';
 
 // Public Pages (isolated chunk for public visitors)
 const HomePage = lazy(() => import('./pages/public/HomePage'));
@@ -48,6 +49,13 @@ const MyLearningPage = lazy(() => import('@/features/learning/pages/MyLearningPa
 
 const isLearningHubEnabled = import.meta.env.VITE_FEATURE_LEARNINGHUB !== 'false';
 const isCodeChefEnabled = import.meta.env.VITE_FEATURE_CODECHEF !== 'false';
+
+// Start fetching the portal shell and active route chunk immediately on reload
+// for signed-in students so they download in parallel with `/student/me`.
+if (typeof window !== 'undefined' && hasStoredToken()) {
+  prefetchAppShell();
+  prefetchRoute(window.location.pathname);
+}
 
 const RouteLoadingFallback: React.FC = () => (
   <div className="min-h-[100dvh] bg-surface-canvas px-4 py-8 sm:px-6 sm:py-10">

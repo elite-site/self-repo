@@ -37,8 +37,7 @@ export const ReadmeExcerptView: React.FC<ReadmeExcerptViewProps> = ({
         } else {
           setLoadedExcerpt('No README found for this repository on GitHub.');
         }
-      } catch (err) {
-        console.error('Failed to load README:', err);
+      } catch {
         setLoadedExcerpt('Unable to load README from GitHub right now.');
       } finally {
         setLoading(false);
