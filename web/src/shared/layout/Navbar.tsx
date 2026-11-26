@@ -5,6 +5,7 @@ import { StudentSession } from '@/shared/types';
 import { getStudentOAuthAuthorizeUrl, resolveMediaUrl } from '@/shared/api';
 import { getPhotoStyle } from '@/shared/utils/photoStyle';
 import { prefetchRoute } from '@/shared/utils/prefetch';
+import { useConfirm } from '@/shared/ui/ConfirmDialog';
 
 interface NavbarProps {
   session?: StudentSession | null;
@@ -22,6 +23,7 @@ export const Navbar: React.FC<NavbarProps> = ({ session, onLogout }) => {
   const [profileOpen, setProfileOpen] = useState(false);
   const chipRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
+  const confirm = useConfirm();
 
   const isActive = (path: string) =>
     path === '/' ? location.pathname === '/' : location.pathname.startsWith(path);
@@ -73,9 +75,18 @@ export const Navbar: React.FC<NavbarProps> = ({ session, onLogout }) => {
         .join('')
     : '';
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setProfileOpen(false);
     setMobileMenuOpen(false);
+    const ok = await confirm({
+      title: 'Sign out?',
+      description:
+        'You will be signed out of the portal and returned to the home page. This cannot be undone.',
+      confirmLabel: 'Sign out',
+      cancelLabel: 'Cancel',
+      tone: 'danger',
+    });
+    if (!ok) return;
     if (onLogout) onLogout();
   };
 
@@ -85,7 +96,7 @@ export const Navbar: React.FC<NavbarProps> = ({ session, onLogout }) => {
 
   return (
     <header className="sticky top-0 z-sticky w-full border-b border-edge bg-surface/95 backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-canvas items-center gap-3 px-4 sm:px-8">
+      <div className="mx-auto flex h-16 max-w-canvas items-center gap-3 px-4 sm:px-8 pt-[env(safe-area-inset-top)]">
         <Link to="/" className="flex shrink-0 items-center gap-2.5" aria-label="ELITE home">
           <picture className="flex items-center">
             <source srcSet="/elite-logo.webp" type="image/webp" />

@@ -39,7 +39,7 @@ export const PublicProfileNavbar: React.FC<PublicProfileNavbarProps> = ({
 }) => {
   return (
     <nav className="sticky top-0 z-50 w-full backdrop-blur-xl bg-surface-canvas/80 border-b border-edge/80 print:hidden">
-      <div className="mx-auto flex h-16 max-w-[1200px] items-center justify-between px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto flex h-16 max-w-[1200px] items-center justify-between px-4 sm:px-6 lg:px-8 pt-[env(safe-area-inset-top)]">
         {/* Left: Directory Link + Personal Logo Mark */}
         <div className="flex items-center gap-3">
           <Link
@@ -48,7 +48,7 @@ export const PublicProfileNavbar: React.FC<PublicProfileNavbarProps> = ({
             title="Return to Student Directory"
           >
             <ArrowLeft size={14} className="transition-transform group-hover:-translate-x-0.5" />
-            <span className="hidden sm:inline">Directory</span>
+            <span>Directory</span>
           </Link>
 
           <div className="h-4 w-px bg-surface-raised hidden sm:block" />
