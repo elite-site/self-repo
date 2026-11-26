@@ -36,6 +36,17 @@ learning the architecture.
 - No CSS gradients anywhere. Flat, solid fills only.
 - Database migrations are new files only; applying them is a human step.
 
+## Design system
+
+- `shared/tokens.mjs` + `shared/tokens.css` are the single source of truth for
+  colour, spacing, radius, type scale and elevation. Both `web/` and
+  `admin-client/` read them through `shared/tailwind-preset.mjs`. Components
+  read semantic tokens (`--brand`, `--surface`, `--text`, `--border-edge`, …),
+  never raw hex or a second palette. Regenerate with `npm run tokens`.
+- The legacy `docs-redesign/REPORT.md` (a cached redesign plan referencing a
+  `DESIGN.md` that no longer exists) was removed. Design decisions live in the
+  code and in `docs/decisions/` ADRs, not in off-repo plans.
+
 ## Verification
 
 Run the checks for every package you touch before reporting work as done:

@@ -53,7 +53,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
 
   if (error && !student) {
     return (
-      <div className="min-h-[100dvh] bg-[#070B16] text-slate-100 flex items-center justify-center p-6">
+      <div className="min-h-[100dvh] bg-surface-canvas text-ink flex items-center justify-center p-6">
         <ErrorState
           title="Unable to load profile"
           message={error}
@@ -68,15 +68,15 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
   }
 
   return (
-    <div className="min-h-[100dvh] bg-[#070B16] text-slate-100 font-sans selection:bg-rose-500 selection:text-white antialiased overflow-x-clip scroll-smooth print:bg-white print:text-black">
+    <div className="min-h-[100dvh] bg-surface-canvas text-ink font-sans selection:bg-brand selection:text-ink antialiased overflow-x-clip scroll-smooth print:bg-white print:text-black">
       <style>{`
         @media print {
           *, *::before, *::after {
-            color: #0f172a !important;
+            color: var(--text) !important;
             background-color: transparent !important;
             box-shadow: none !important;
             text-shadow: none !important;
-            border-color: #cbd5e1 !important;
+            border-color: var(--border-strong) !important;
           }
         }
       `}</style>
@@ -142,10 +142,10 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
       </main>
 
       {/* Compact Footer */}
-      <footer className="border-t border-slate-800/80 py-8 text-xs text-slate-400 print:hidden">
+      <footer className="border-t border-edge/80 py-8 text-xs text-ink-muted print:hidden">
         <div className="mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p>© {new Date().getFullYear()} {name}. All rights reserved.</p>
-          <p className="text-slate-500">Built using modern web technologies · ELITE Portal</p>
+          <p className="text-ink-muted">Built using modern web technologies · ELITE Portal</p>
         </div>
       </footer>
 
@@ -154,7 +154,7 @@ export const PublicStudentProfilePage: React.FC<PublicProfileProps> = () => {
         <button
           type="button"
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          className="fixed bottom-6 right-6 z-40 min-h-[44px] min-w-[44px] flex items-center justify-center p-3 rounded-full bg-rose-500 text-white shadow-lg shadow-rose-950/50 hover:bg-rose-600 transition-all duration-200 print:hidden"
+          className="fixed bottom-6 right-6 z-40 min-h-[44px] min-w-[44px] flex items-center justify-center p-3 rounded-full bg-surface-inset text-ink shadow-lg  hover:bg-brand-hover transition-all duration-200 print:hidden"
           style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}
           aria-label="Scroll to top"
         >

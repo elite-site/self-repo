@@ -49,23 +49,23 @@ export const PublicProfileHero: React.FC<PublicProfileHeroProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
         {/* Left Content */}
         <div className="lg:col-span-5 text-center lg:text-left order-2 lg:order-1">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-rose-500/30 bg-rose-500/10 px-3 py-1 text-xs font-medium text-rose-300">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-edge/30 bg-surface-inset/10 px-3 py-1 text-xs font-medium text-ink-brand">
             <span>Hello, I'm 👋</span>
           </span>
 
-          <h1 className="mt-3 font-heading text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-white leading-tight">
+          <h1 className="mt-3 font-heading text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-ink leading-tight">
             {firstName}{' '}
-            <span className="text-red-500">
+            <span className="text-ink-brand">
               {restOfName}
             </span>
           </h1>
 
-          <p className="mt-2 text-base sm:text-lg font-medium text-rose-400">
+          <p className="mt-2 text-base sm:text-lg font-medium text-ink-muted">
             {department} Student
           </p>
 
           {bio ? (
-            <p className="mt-3 text-sm sm:text-base text-slate-300 leading-relaxed max-w-prose mx-auto lg:mx-0">
+            <p className="mt-3 text-sm sm:text-base text-ink-secondary leading-relaxed max-w-prose mx-auto lg:mx-0">
               {taglineOf(bio)}
             </p>
           ) : null}
@@ -74,7 +74,7 @@ export const PublicProfileHero: React.FC<PublicProfileHeroProps> = ({
           <div className="mt-6 flex flex-wrap items-center justify-center lg:justify-start gap-3">
             <a
               href="#contact"
-              className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-red-500 px-5 py-2.5 text-xs sm:text-sm font-semibold text-white shadow-md shadow-rose-950/40 hover:bg-red-600 transition-all duration-200"
+              className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-brand px-5 py-2.5 text-xs sm:text-sm font-semibold text-ink shadow-md  hover:bg-brand-hover transition-all duration-200"
             >
               <Mail size={15} />
               <span>Contact Me</span>
@@ -85,7 +85,7 @@ export const PublicProfileHero: React.FC<PublicProfileHeroProps> = ({
                 href={resumeDownloadHref}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-800/80 px-4 py-2.5 text-xs sm:text-sm font-semibold text-slate-200 hover:bg-slate-800 hover:text-white transition-colors"
+                className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-edge-strong bg-surface-raised/80 px-4 py-2.5 text-xs sm:text-sm font-semibold text-ink hover:bg-surface-raised hover:text-ink transition-colors"
               >
                 <FileText size={15} />
                 <span>Download Resume</span>
@@ -100,7 +100,7 @@ export const PublicProfileHero: React.FC<PublicProfileHeroProps> = ({
                 href={safeUrl(profile.githubUrl)}
                 target="_blank"
                 rel="noreferrer"
-                className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-slate-800 bg-slate-900/80 text-slate-300 hover:border-slate-700 hover:text-white transition-colors"
+                className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-edge bg-surface/80 text-ink-secondary hover:border-edge-strong hover:text-ink transition-colors"
                 title="GitHub"
               >
                 <Github size={16} />
@@ -111,7 +111,7 @@ export const PublicProfileHero: React.FC<PublicProfileHeroProps> = ({
                 href={safeUrl(profile.linkedinUrl)}
                 target="_blank"
                 rel="noreferrer"
-                className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-slate-800 bg-slate-900/80 text-slate-300 hover:border-slate-700 hover:text-white transition-colors"
+                className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-edge bg-surface/80 text-ink-secondary hover:border-edge-strong hover:text-ink transition-colors"
                 title="LinkedIn"
               >
                 <Linkedin size={16} />
@@ -122,10 +122,10 @@ export const PublicProfileHero: React.FC<PublicProfileHeroProps> = ({
                 href={safeUrl(profile.leetcodeUrl)}
                 target="_blank"
                 rel="noreferrer"
-                className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-slate-800 bg-slate-900/80 text-slate-300 hover:border-slate-700 hover:text-amber-400 transition-colors"
+                className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-edge bg-surface/80 text-ink-secondary hover:border-edge-strong hover:text-ink-muted transition-colors"
                 title="LeetCode"
               >
-                <LeetCodeIcon className="size-4 text-amber-500" />
+                <LeetCodeIcon className="size-4 text-ink-muted" />
               </a>
             )}
             {safeUrl(profile.codechefUrl) && (
@@ -133,10 +133,10 @@ export const PublicProfileHero: React.FC<PublicProfileHeroProps> = ({
                 href={safeUrl(profile.codechefUrl)}
                 target="_blank"
                 rel="noreferrer"
-                className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-slate-800 bg-slate-900/80 text-slate-300 hover:border-slate-700 hover:text-amber-600 transition-colors"
+                className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-edge bg-surface/80 text-ink-secondary hover:border-edge-strong hover:text-ink-muted transition-colors"
                 title="CodeChef"
               >
-                <CodeChefIcon className="size-4 text-amber-600" />
+                <CodeChefIcon className="size-4 text-ink-muted" />
               </a>
             )}
             {safeUrl(profile.hackerrankUrl) && (
@@ -144,10 +144,10 @@ export const PublicProfileHero: React.FC<PublicProfileHeroProps> = ({
                 href={safeUrl(profile.hackerrankUrl)}
                 target="_blank"
                 rel="noreferrer"
-                className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-slate-800 bg-slate-900/80 text-slate-300 hover:border-slate-700 hover:text-emerald-500 transition-colors"
+                className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-edge bg-surface/80 text-ink-secondary hover:border-edge-strong hover:text-ink-muted transition-colors"
                 title="HackerRank"
               >
-                <HackerRankIcon className="size-4 text-emerald-500" />
+                <HackerRankIcon className="size-4 text-ink-muted" />
               </a>
             )}
             {safeUrl(profile.codeforcesUrl) && (
@@ -155,10 +155,10 @@ export const PublicProfileHero: React.FC<PublicProfileHeroProps> = ({
                 href={safeUrl(profile.codeforcesUrl)}
                 target="_blank"
                 rel="noreferrer"
-                className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-slate-800 bg-slate-900/80 text-slate-300 hover:border-slate-700 hover:text-blue-500 transition-colors"
+                className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-edge bg-surface/80 text-ink-secondary hover:border-edge-strong hover:text-ink-muted transition-colors"
                 title="Codeforces"
               >
-                <CodeforcesIcon className="size-4 text-blue-500" />
+                <CodeforcesIcon className="size-4 text-ink-muted" />
               </a>
             )}
             {safeUrl(profile.portfolioUrl) && (
@@ -166,7 +166,7 @@ export const PublicProfileHero: React.FC<PublicProfileHeroProps> = ({
                 href={safeUrl(profile.portfolioUrl)}
                 target="_blank"
                 rel="noreferrer"
-                className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-slate-800 bg-slate-900/80 text-slate-300 hover:border-slate-700 hover:text-white transition-colors"
+                className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-edge bg-surface/80 text-ink-secondary hover:border-edge-strong hover:text-ink transition-colors"
                 title="Personal Website"
               >
                 <Globe size={16} />
@@ -175,7 +175,7 @@ export const PublicProfileHero: React.FC<PublicProfileHeroProps> = ({
             {student.email && safeUrl(`mailto:${student.email}`) && (
               <a
                 href={safeUrl(`mailto:${student.email}`)}
-                className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-slate-800 bg-slate-900/80 text-slate-300 hover:border-slate-700 hover:text-white transition-colors"
+                className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border border-edge bg-surface/80 text-ink-secondary hover:border-edge-strong hover:text-ink transition-colors"
                 title="Email"
               >
                 <Mail size={16} />
@@ -186,8 +186,8 @@ export const PublicProfileHero: React.FC<PublicProfileHeroProps> = ({
 
         {/* Center Profile Image */}
         <div className="lg:col-span-4 flex flex-col items-center justify-center order-1 lg:order-2">
-          <div className="relative p-1.5 rounded-full bg-red-500 shadow-xl shadow-rose-950/30">
-            <div className="relative size-36 sm:size-44 lg:size-48 rounded-full overflow-hidden bg-slate-950 border-4 border-[#070B16]">
+          <div className="relative p-1.5 rounded-full bg-brand shadow-xl ">
+            <div className="relative size-36 sm:size-44 lg:size-48 rounded-full overflow-hidden bg-surface-canvas border-4 border-surface-canvas">
               {photo && !imageError ? (
                 <img
                   src={resolveMediaUrl(photo)}
@@ -197,40 +197,40 @@ export const PublicProfileHero: React.FC<PublicProfileHeroProps> = ({
                   className="size-full object-cover"
                 />
               ) : (
-                <div className="size-full flex items-center justify-center bg-slate-900 text-rose-400 font-heading text-3xl font-black">
+                <div className="size-full flex items-center justify-center bg-surface text-ink-muted font-heading text-3xl font-bold">
                   {initials}
                 </div>
               )}
             </div>
           </div>
 
-          <div className="mt-3.5 inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-400 backdrop-blur-sm">
-            <span className="size-2 rounded-full bg-emerald-400 animate-pulse" />
+          <div className="mt-3.5 inline-flex items-center gap-1.5 rounded-full border border-edge/30 bg-surface-inset/10 px-3 py-1 text-xs font-semibold text-ink-muted backdrop-blur-sm">
+            <span className="size-2 rounded-full bg-surface-inset animate-pulse" />
             <span>{student.status === 'GRADUATED' ? 'Alumni' : 'Active Student'}</span>
           </div>
         </div>
 
         {/* Right Information Card */}
         <div className="lg:col-span-3 order-3">
-          <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 p-5 backdrop-blur-md shadow-lg space-y-3.5">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-800/80">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Student Profile</span>
-              <span className="font-mono text-xs font-semibold text-rose-400">{student.rollNo}</span>
+          <div className="rounded-2xl border border-edge/80 bg-surface/60 p-5 backdrop-blur-md shadow-lg space-y-3.5">
+            <div className="flex items-center justify-between pb-2 border-b border-edge/80">
+              <span className="text-xs font-bold uppercase tracking-wider text-ink-muted">Student Profile</span>
+              <span className="font-mono text-xs font-semibold text-ink-muted">{student.rollNo}</span>
             </div>
 
             <div>
-              <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Academic Year</span>
-              <p className="text-sm font-bold text-white mt-0.5">Year {student.year || 1} (Section {student.section || 'A'})</p>
+              <span className="text-xs text-ink-muted uppercase tracking-wider font-semibold">Academic Year</span>
+              <p className="text-sm font-bold text-ink mt-0.5">Year {student.year || 1} (Section {student.section || 'A'})</p>
             </div>
 
             <div>
-              <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Department</span>
-              <p className="text-sm font-bold text-white mt-0.5">{department}</p>
+              <span className="text-xs text-ink-muted uppercase tracking-wider font-semibold">Department</span>
+              <p className="text-sm font-bold text-ink mt-0.5">{department}</p>
             </div>
 
             <div>
-              <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Institution</span>
-              <p className="text-xs font-medium text-slate-300 mt-0.5 leading-snug">SASI Institute of Technology & Engineering</p>
+              <span className="text-xs text-ink-muted uppercase tracking-wider font-semibold">Institution</span>
+              <p className="text-xs font-medium text-ink-secondary mt-0.5 leading-snug">SASI Institute of Technology & Engineering</p>
             </div>
           </div>
         </div>

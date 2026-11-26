@@ -5,7 +5,7 @@ import { EmptyState } from '@/shared/ui/EmptyState';
 
 export const PublicProfileNotFound: React.FC = () => {
   return (
-    <div className="min-h-[100dvh] bg-[#070B16] text-slate-100 flex flex-col justify-center items-center px-4">
+    <div className="min-h-[100dvh] bg-surface-canvas text-ink flex flex-col justify-center items-center px-4">
       <h1 className="sr-only">Profile not found</h1>
       <div className="max-w-md w-full text-center space-y-6">
         <EmptyState
@@ -15,7 +15,7 @@ export const PublicProfileNotFound: React.FC = () => {
           action={
             <Link
               to="/students"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-red-500 text-sm font-semibold text-white shadow-md hover:bg-red-600 transition-colors"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand text-sm font-semibold text-ink shadow-md hover:bg-brand-hover transition-colors"
             >
               <ArrowLeft size={16} />
               <span>Back to Directory</span>

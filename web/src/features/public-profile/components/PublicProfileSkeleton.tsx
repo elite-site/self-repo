@@ -5,29 +5,29 @@ import { Skeleton, SkeletonText } from '@/shared/ui/Skeleton';
 
 export const PublicProfileSkeleton: React.FC = () => {
   return (
-    <div className="min-h-[100dvh] bg-[#070B16] text-slate-100 flex flex-col antialiased overflow-x-clip">
+    <div className="min-h-[100dvh] bg-surface-canvas text-ink flex flex-col antialiased overflow-x-clip">
       {/* Flat ambient wash */}
       <div className="pointer-events-none fixed inset-0 -z-10 bg-scrim/20" />
 
-      <nav className="sticky top-0 z-50 w-full backdrop-blur-xl bg-[#070B16]/80 border-b border-slate-800/80">
+      <nav className="sticky top-0 z-50 w-full backdrop-blur-xl bg-surface-canvas/80 border-b border-edge/80">
         <div className="mx-auto flex h-16 max-w-[1200px] items-center justify-between px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
             <Link
               to="/students"
-              className="group inline-flex min-h-[44px] items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-white transition-colors py-2 px-2.5 rounded-lg hover:bg-slate-800/60"
+              className="group inline-flex min-h-[44px] items-center gap-1.5 text-xs font-semibold text-ink-muted hover:text-ink transition-colors py-2 px-2.5 rounded-lg hover:bg-surface-raised/60"
               title="Return to Student Directory"
             >
               <ArrowLeft size={14} className="transition-transform group-hover:-translate-x-0.5" />
               <span className="hidden sm:inline">Directory</span>
             </Link>
-            <div className="h-4 w-px bg-slate-800 hidden sm:block" />
+            <div className="h-4 w-px bg-surface-raised hidden sm:block" />
             <div className="flex items-center gap-2.5 min-h-[44px]">
               <Skeleton className="size-8 rounded-lg" />
               <Skeleton className="h-4 w-28 rounded hidden md:inline-block" />
             </div>
           </div>
 
-          <div className="hidden lg:flex items-center gap-1 rounded-full border border-slate-800/80 bg-slate-900/60 p-1 backdrop-blur-md">
+          <div className="hidden lg:flex items-center gap-1 rounded-full border border-edge/80 bg-surface/60 p-1 backdrop-blur-md">
             <Skeleton className="h-6 w-14 rounded-full" />
             <Skeleton className="h-6 w-14 rounded-full" />
             <Skeleton className="h-6 w-14 rounded-full" />
