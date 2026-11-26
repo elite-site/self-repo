@@ -1,36 +1,37 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { rolesApi } from '../api/index';
 import { RolesResponse } from '../types';
 
+export const ADMIN_ROLES_QUERY_KEY = ['admin', 'roles'] as const;
+
 export const useRoles = () => {
-  const [data, setData] = useState<RolesResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [assigningAdminId, setAssigningAdminId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [creating, setCreating] = useState(false);
 
-  const loadRoles = useCallback(async (isManual = false) => {
-    if (isManual) setRefreshing(true);
-    else setLoading(true);
-    setError(null);
-    try {
-      const res = await rolesApi.getRoles();
-      setData(res);
-    } catch (err: any) {
-      console.error('Failed to load roles & permissions:', err);
-      setError(err?.response?.data?.message || 'Failed to load security roles');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
+  const query = useQuery<RolesResponse>({
+    queryKey: ADMIN_ROLES_QUERY_KEY,
+    queryFn: () => rolesApi.getRoles(),
+  });
 
   useEffect(() => {
-    loadRoles();
-  }, [loadRoles]);
+    if (query.isError) {
+      setError((query.error as any)?.response?.data?.message || 'Failed to load security roles');
+    } else if (query.isSuccess) {
+      setError(null);
+    }
+  }, [query.isError, query.isSuccess, query.error]);
+
+  const loadRoles = useCallback(
+    async (_isManual = false) => {
+      setError(null);
+      await query.refetch();
+    },
+    [query],
+  );
 
   const handleAssign = async (adminId: string, roleId: string) => {
     setAssigningAdminId(adminId);
@@ -38,7 +39,7 @@ export const useRoles = () => {
     try {
       await rolesApi.assignRole(adminId, roleId);
       setSuccess('Security role assigned.');
-      await loadRoles(true);
+      await query.refetch();
     } catch (err: any) {
       console.error('Failed to assign role:', err);
       setError(err?.response?.data?.message || 'Failed to assign role');
@@ -58,7 +59,7 @@ export const useRoles = () => {
       });
       setIsModalOpen(false);
       setSuccess('Custom security role created.');
-      await loadRoles(true);
+      await query.refetch();
     } catch (err: any) {
       console.error('Failed to create role:', err);
       setError(err?.response?.data?.message || 'Failed to create role');
@@ -68,9 +69,9 @@ export const useRoles = () => {
   };
 
   return {
-    data,
-    loading,
-    refreshing,
+    data: query.data ?? null,
+    loading: query.isPending,
+    refreshing: query.isFetching && !query.isPending,
     error,
     setError,
     success,

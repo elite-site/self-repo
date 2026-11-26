@@ -1,37 +1,38 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { storageApi } from '../api/index';
 import { StorageStatsResponse } from '../types';
 import { useConfirm } from '@/shared/ui/ConfirmDialog';
 
+export const ADMIN_STORAGE_QUERY_KEY = ['admin', 'storage'] as const;
+
 export const useStorage = () => {
   const confirm = useConfirm();
-  const [stats, setStats] = useState<StorageStatsResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [clearingCache, setClearingCache] = useState(false);
   const [syncingPermissions, setSyncingPermissions] = useState(false);
   const [cacheMessage, setCacheMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const loadStorage = useCallback(async (isManual = false) => {
-    if (isManual) setRefreshing(true);
-    else setLoading(true);
-    setError(null);
-    try {
-      const data = await storageApi.getStorageStats();
-      setStats(data);
-    } catch (err: any) {
-      console.error('Failed to load storage statistics:', err);
-      setError(err?.response?.data?.message || 'Failed to connect to storage service');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
+  const query = useQuery<StorageStatsResponse>({
+    queryKey: ADMIN_STORAGE_QUERY_KEY,
+    queryFn: () => storageApi.getStorageStats(),
+  });
 
   useEffect(() => {
-    loadStorage();
-  }, [loadStorage]);
+    if (query.isError) {
+      setError((query.error as any)?.response?.data?.message || 'Failed to connect to storage service');
+    } else if (query.isSuccess) {
+      setError(null);
+    }
+  }, [query.isError, query.isSuccess, query.error]);
+
+  const loadStorage = useCallback(
+    async (_isManual = false) => {
+      setError(null);
+      await query.refetch();
+    },
+    [query],
+  );
 
   const handleClearCache = async () => {
     const confirmed = await confirm({
@@ -46,7 +47,7 @@ export const useStorage = () => {
     try {
       const res = await storageApi.clearStorageCache();
       setCacheMessage(res.message || 'Drive folder cache cleared.');
-      await loadStorage(true);
+      await query.refetch();
     } catch (err: any) {
       console.error('Failed to clear cache:', err);
       setError(err?.response?.data?.message || 'Failed to purge cache');
@@ -70,9 +71,9 @@ export const useStorage = () => {
   };
 
   return {
-    stats,
-    loading,
-    refreshing,
+    stats: query.data ?? null,
+    loading: query.isPending,
+    refreshing: query.isFetching && !query.isPending,
     clearingCache,
     syncingPermissions,
     cacheMessage,

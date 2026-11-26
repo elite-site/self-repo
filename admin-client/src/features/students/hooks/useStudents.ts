@@ -34,12 +34,14 @@ export const useStudents = (params: StudentsQueryParams) => {
         section: params.section || undefined,
         uploaded: params.uploaded || undefined,
       }),
+    placeholderData: (previous) => previous,
     retry: false,
   });
 
   return {
     data: query.data ?? null,
-    loading: query.isPending || query.isFetching,
+    loading: query.isPending,
+    refreshing: query.isFetching && !query.isPending,
     error: query.isError ? 'Couldn’t reach the server. Please try again.' : null,
     refetch: query.refetch,
     exportUrl: studentsApi.getStudentsExportUrl(params.eventId),

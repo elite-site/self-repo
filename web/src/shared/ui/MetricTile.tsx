@@ -62,7 +62,7 @@ export const MetricTile: React.FC<MetricTileProps> = ({
           {label}
         </span>
       </div>
-      <p className="font-heading text-headline-lg sm:text-headline-xl font-bold text-ink tabular-nums leading-none tracking-tight">
+      <p className="font-ui text-headline-md sm:text-headline-lg font-bold text-ink tabular-nums leading-none tracking-tight">
         {animatedValue}
         {suffix}
       </p>
@@ -75,14 +75,14 @@ export const MetricTile: React.FC<MetricTileProps> = ({
   );
 
   const cardClasses = cn(
-    'rounded-xl p-4 sm:p-5 flex flex-col gap-2.5 sm:gap-3 transition-all duration-quick border border-edge bg-surface shadow-xs',
+    'rounded-xl p-4 sm:p-5 flex flex-col justify-between gap-2.5 sm:gap-3 transition-all duration-quick border border-edge bg-surface shadow-xs',
     (to || onClick) && 'hover:-translate-y-0.5 hover:shadow-md hover:border-brand/40 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2',
     className,
   );
 
   if (to) {
     return (
-      <Link to={to} className="block no-underline group focus-visible:outline-none">
+      <Link to={to} className="block h-full no-underline group focus-visible:outline-none">
         <Card className={cardClasses}>{content}</Card>
       </Link>
     );

@@ -1,34 +1,25 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { analyticsApi } from '../api/index';
 import { AdminStats } from '../types';
+import { getAdminStatsQueryKey } from './usePortalStats';
 
 export const useStats = (eventId?: string) => {
-  const [stats, setStats] = useState<AdminStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const query = useQuery<AdminStats>({
+    queryKey: getAdminStatsQueryKey(eventId),
+    queryFn: () => analyticsApi.getStats(eventId),
+  });
 
   const loadStats = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await analyticsApi.getStats(eventId);
-      setStats(data);
-    } catch (err: any) {
-      console.error('Failed to load stats', err);
-      setError(err?.response?.data?.message || 'Failed to load stats');
-    } finally {
-      setLoading(false);
-    }
-  }, [eventId]);
-
-  useEffect(() => {
-    loadStats();
-  }, [loadStats]);
+    await query.refetch();
+  }, [query]);
 
   return {
-    stats,
-    loading,
-    error,
+    stats: query.data ?? null,
+    loading: query.isPending,
+    error: query.isError
+      ? ((query.error as any)?.response?.data?.message || (query.error as Error)?.message || 'Failed to load stats')
+      : null,
     loadStats,
   };
 };

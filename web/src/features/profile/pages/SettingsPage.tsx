@@ -1,5 +1,7 @@
 import React, { useEffect } from 'react';
 import { useSession } from '@/context/SessionContext';
+import { useThemeState } from '@/context/ThemeContext';
+import type { Theme } from '@/shared/lib/theme';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/shared/ui/Toast';
 import { Button } from '@/shared/ui/Button';
@@ -7,6 +9,7 @@ import { Select } from '@/shared/ui/Select';
 
 export const SettingsPage: React.FC = () => {
   const { logout } = useSession();
+  const { theme, setTheme } = useThemeState();
   const navigate = useNavigate();
   const { showToast } = useToast();
 
@@ -14,24 +17,28 @@ export const SettingsPage: React.FC = () => {
     document.title = 'Settings — ELITE Portal';
   }, []);
 
-  const handleThemeChange = (theme: 'light' | 'dark') => {
-    showToast(`Switched to ${theme} mode`);
+  const handleThemeChange = (nextTheme: Theme) => {
+    setTheme(nextTheme);
+    const label = nextTheme === 'system' ? 'system default' : `${nextTheme} mode`;
+    showToast(`Switched to ${label}`);
   };
 
   return (
-    <div className="min-h-[100dvh] bg-surface px-6 sm:px-8 py-8">
-      <div className="max-w-md w-full bg-surface-canvas rounded-2xl shadow-xl p-8 sm:p-10 border border-edge">
-        <h1 className="text-2xl font-heading text-brand mb-6">Settings</h1>
+    <div className="py-2 sm:py-4">
+      <div className="max-w-md w-full bg-surface rounded-2xl shadow-sm p-6 sm:p-8 border border-edge">
+        <h1 className="font-ui text-headline-md font-bold text-ink mb-6">Settings</h1>
 
         <div className="mb-4">
           <Select
             id="theme-select"
             label="Theme"
+            value={theme}
             options={[
+              { value: 'system', label: 'System' },
               { value: 'light', label: 'Light' },
               { value: 'dark', label: 'Dark' },
             ]}
-            onChange={(e) => handleThemeChange(e.target.value as 'light' | 'dark')}
+            onChange={(e) => handleThemeChange(e.target.value as Theme)}
             className="bg-surface-sunken"
           />
         </div>

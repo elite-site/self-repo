@@ -15,7 +15,7 @@ export const AsymGrid = React.forwardRef<HTMLDivElement, AsymGridProps>(
       <div
         ref={ref}
         className={cn(
-          'asym-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-6 items-start',
+          'asym-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-6 items-stretch',
           className
         )}
         {...props}

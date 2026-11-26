@@ -1,25 +1,37 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useConfirm } from '@/shared/ui';
 import { registrationsApi } from '../api/index';
 import { eventsApi } from '@/features/events/api/index';
+import { ADMIN_EVENTS_QUERY_KEY } from '@/features/events/hooks/useEvents';
 import { EventItem } from '@/features/events/types';
 import {
   RegistrationItem,
   RegistrationStatus,
   RegistrationStats,
+  RegistrationsResponse,
 } from '../types';
+
+export const ADMIN_REGISTRATIONS_QUERY_KEY = ['admin', 'registrations'] as const;
+
+const EMPTY_STATS: RegistrationStats = {
+  total: 0,
+  confirmed: 0,
+  pending: 0,
+  waitlisted: 0,
+  cancelled: 0,
+  rejected: 0,
+  totalTeams: 0,
+  completedTeams: 0,
+};
 
 export const useRegistrations = () => {
   const confirm = useConfirm();
+  const queryClient = useQueryClient();
 
   const [activeView, setActiveView] = useState<'table' | 'teams'>('table');
-  const [registrations, setRegistrations] = useState<RegistrationItem[]>([]);
-  const [totalRegistrations, setTotalRegistrations] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const [events, setEvents] = useState<EventItem[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
   const [selectedYear, setSelectedYear] = useState<string>('ALL');
@@ -29,84 +41,62 @@ export const useRegistrations = () => {
   const [page, setPage] = useState(1);
   const limit = 20;
 
-  const [stats, setStats] = useState<RegistrationStats>({
-    total: 0,
-    confirmed: 0,
-    pending: 0,
-    waitlisted: 0,
-    cancelled: 0,
-    rejected: 0,
-    totalTeams: 0,
-    completedTeams: 0,
-  });
-
   const [selectedRegistration, setSelectedRegistration] = useState<RegistrationItem | null>(null);
   const [statusUpdateLoading, setStatusUpdateLoading] = useState(false);
   const [statusNote, setStatusNote] = useState('');
 
-  // Load events
-  useEffect(() => {
-    eventsApi
-      .getEvents()
-      .then((res) => setEvents(res.events || []))
-      .catch((err) => console.error('Failed to load events:', err));
-  }, []);
+  const eventsQuery = useQuery<EventItem[]>({
+    queryKey: ADMIN_EVENTS_QUERY_KEY,
+    queryFn: async () => {
+      const res = await eventsApi.getEvents();
+      return res.events || [];
+    },
+  });
 
-  const fetchRegistrations = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await registrationsApi.getRegistrations({
-        eventId: selectedEventId === 'all' ? undefined : selectedEventId,
-        status: selectedStatus === 'ALL' ? undefined : selectedStatus,
-        year: selectedYear === 'ALL' ? undefined : parseInt(selectedYear, 10),
-        section: selectedSection === 'ALL' ? undefined : selectedSection,
-        team: selectedTeamFilter === 'all' ? undefined : selectedTeamFilter,
-        search: searchQuery.trim() || undefined,
-        page,
-        limit,
-      });
-
-      setRegistrations(res.registrations || []);
-      setTotalRegistrations(res.pagination?.total || 0);
-      if (res.stats) {
-        setStats({
-          total: res.stats.total || 0,
-          confirmed: res.stats.confirmed || 0,
-          pending: res.stats.pending || 0,
-          waitlisted: res.stats.waitlisted || 0,
-          cancelled: res.stats.cancelled || 0,
-          rejected: res.stats.rejected || 0,
-          totalTeams: res.stats.totalTeams || 0,
-          completedTeams: res.stats.completedTeams || 0,
-        });
-      }
-    } catch (err: any) {
-      setError(err?.response?.data?.message || err.message || 'Failed to load registrations.');
-    } finally {
-      setLoading(false);
-    }
-  }, [
-    selectedEventId,
-    selectedStatus,
-    selectedYear,
-    selectedSection,
-    selectedTeamFilter,
-    searchQuery,
+  const filters = {
+    eventId: selectedEventId === 'all' ? undefined : selectedEventId,
+    status: selectedStatus === 'ALL' ? undefined : selectedStatus,
+    year: selectedYear === 'ALL' ? undefined : parseInt(selectedYear, 10),
+    section: selectedSection === 'ALL' ? undefined : selectedSection,
+    team: selectedTeamFilter === 'all' ? undefined : selectedTeamFilter,
+    search: searchQuery.trim() || undefined,
     page,
     limit,
-  ]);
+  };
 
-  useEffect(() => {
-    if (activeView === 'table') {
-      fetchRegistrations();
-    }
-  }, [activeView, fetchRegistrations]);
+  const registrationsQueryKey = [...ADMIN_REGISTRATIONS_QUERY_KEY, filters] as const;
+
+  const registrationsQuery = useQuery<RegistrationsResponse>({
+    queryKey: registrationsQueryKey,
+    queryFn: () => registrationsApi.getRegistrations(filters),
+    enabled: activeView === 'table',
+    placeholderData: (previous) => previous,
+  });
+
+  const fetchRegistrations = useCallback(async () => {
+    await registrationsQuery.refetch();
+  }, [registrationsQuery]);
+
+  const registrations = registrationsQuery.data?.registrations ?? [];
+  const totalRegistrations = registrationsQuery.data?.pagination?.total ?? 0;
+  const rawStats = registrationsQuery.data?.stats;
+  const stats: RegistrationStats = rawStats
+    ? {
+        total: rawStats.total || 0,
+        confirmed: rawStats.confirmed || 0,
+        pending: rawStats.pending || 0,
+        waitlisted: rawStats.waitlisted || 0,
+        cancelled: rawStats.cancelled || 0,
+        rejected: rawStats.rejected || 0,
+        totalTeams: rawStats.totalTeams || 0,
+        completedTeams: rawStats.completedTeams || 0,
+      }
+    : EMPTY_STATS;
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setPage(1);
-    fetchRegistrations();
+    void registrationsQuery.refetch();
   };
 
   const handleUpdateStatus = async (id: string, newStatus: RegistrationStatus) => {
@@ -115,13 +105,20 @@ export const useRegistrations = () => {
     try {
       const res = await registrationsApi.updateRegistrationStatus(id, newStatus, statusNote.trim() || undefined);
       if (res.success && res.registration) {
-        setRegistrations((prev) =>
-          prev.map((r) => (r.id === id ? { ...r, status: newStatus } : r))
+        queryClient.setQueryData<RegistrationsResponse>(registrationsQueryKey, (prev) =>
+          prev
+            ? {
+                ...prev,
+                registrations: (prev.registrations || []).map((r) =>
+                  r.id === id ? { ...r, status: newStatus } : r,
+                ),
+              }
+            : prev,
         );
         if (selectedRegistration?.id === id) {
           setSelectedRegistration((prev) => (prev ? { ...prev, status: newStatus } : null));
         }
-        fetchRegistrations();
+        void registrationsQuery.refetch();
         setStatusNote('');
       }
     } catch (err: any) {
@@ -143,7 +140,7 @@ export const useRegistrations = () => {
       setActionError(null);
       await registrationsApi.deleteRegistration(id);
       setSelectedRegistration(null);
-      fetchRegistrations();
+      void registrationsQuery.refetch();
     } catch (err: any) {
       setActionError(err?.response?.data?.message || 'Failed to delete registration.');
     }
@@ -182,11 +179,15 @@ export const useRegistrations = () => {
     setActiveView,
     registrations,
     totalRegistrations,
-    loading,
-    error,
+    loading: registrationsQuery.isPending,
+    error: registrationsQuery.isError
+      ? ((registrationsQuery.error as any)?.response?.data?.message ||
+        (registrationsQuery.error as Error)?.message ||
+        'Failed to load registrations.')
+      : null,
     actionError,
     setActionError,
-    events,
+    events: eventsQuery.data ?? [],
     selectedEventId,
     setSelectedEventId,
     selectedStatus,

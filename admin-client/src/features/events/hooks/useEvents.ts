@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { eventsApi } from '../api/index';
 import { EventItem, EventPayload, FormState } from '../types';
+
+export const ADMIN_EVENTS_QUERY_KEY = ['admin', 'events'] as const;
 
 export const toLocalInput = (iso?: string | null) => {
   if (!iso) return '';
@@ -47,9 +50,6 @@ export const fromEvent = (e: EventItem): FormState => ({
 });
 
 export const useEvents = () => {
-  const [events, setEvents] = useState<EventItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<EventItem | null | undefined>(undefined);
   const [viewing, setViewing] = useState<EventItem | null>(null);
   const [archiving, setArchiving] = useState<EventItem | null>(null);
@@ -59,6 +59,14 @@ export const useEvents = () => {
   const [toast, setToast] = useState<{ message: string; type?: 'success' | 'error' } | null>(null);
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  const query = useQuery<EventItem[]>({
+    queryKey: ADMIN_EVENTS_QUERY_KEY,
+    queryFn: async () => {
+      const res = await eventsApi.getEvents();
+      return res.events || [];
+    },
+  });
 
   const notify = useCallback((message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
@@ -90,21 +98,12 @@ export const useEvents = () => {
   }, []);
 
   const fetchEvents = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await eventsApi.getEvents();
-      setEvents(res.events || []);
-    } catch {
-      setError('Failed to load events.');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    await query.refetch();
+  }, [query]);
 
-  useEffect(() => {
-    fetchEvents();
-  }, [fetchEvents]);
+  const events = query.data ?? [];
+  const loading = query.isPending;
+  const error = query.isError ? 'Failed to load events.' : null;
 
   const handleDuplicate = async (ev: EventItem) => {
     setBusyId(ev.id);

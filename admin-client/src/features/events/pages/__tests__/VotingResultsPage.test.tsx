@@ -1,10 +1,18 @@
+import { createElement, type ReactNode } from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
-import { renderHook, act } from '@testing-library/react';
+import { render, screen, waitFor, renderHook, act } from '@testing-library/react';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { VotingResultsPage } from '../VotingResultsPage';
 import { useVotingResults } from '../../hooks/useVotingResults';
 import { eventsApi } from '../../api/index';
 import { VotingCampaign, CampaignResult } from '../../types';
+import { createQueryClient } from '@/shared/lib/queryClient';
+
+const withFreshClient = () => {
+  const client = createQueryClient();
+  return ({ children }: { children: ReactNode }) =>
+    createElement(QueryClientProvider, { client }, children);
+};
 
 vi.mock('../../api/index', () => ({
   eventsApi: {
@@ -73,7 +81,7 @@ describe('VotingResultsPage Component', () => {
     // Mock getVotingCampaigns to return an unresolved promise simulating initial fetch in flight
     vi.mocked(eventsApi.getVotingCampaigns).mockReturnValue(new Promise(() => {}));
 
-    render(<VotingResultsPage />);
+    render(<VotingResultsPage />, { wrapper: withFreshClient() });
 
     // Skeleton loader should be rendered with aria-busy="true"
     const skeletonContainer = screen.getByLabelText(/loading election results/i);
@@ -90,7 +98,7 @@ describe('VotingResultsPage Component', () => {
   it('renders "No Election Results Available" empty state IF and only IF isLoading is false and returned campaigns is empty', async () => {
     vi.mocked(eventsApi.getVotingCampaigns).mockResolvedValue({ campaigns: [] });
 
-    render(<VotingResultsPage />);
+    render(<VotingResultsPage />, { wrapper: withFreshClient() });
 
     // Initially while request is processing, empty state must not be visible
     expect(screen.queryByText('No Election Results Available')).not.toBeInTheDocument();
@@ -111,7 +119,7 @@ describe('VotingResultsPage Component', () => {
     vi.mocked(eventsApi.getVotingCampaigns).mockResolvedValue({ campaigns: mockCampaigns });
     vi.mocked(eventsApi.getVotingResults).mockResolvedValue(mockResult);
 
-    render(<VotingResultsPage />);
+    render(<VotingResultsPage />, { wrapper: withFreshClient() });
 
     // During loading, empty state must NOT flash
     expect(screen.queryByText('No Election Results Available')).not.toBeInTheDocument();
@@ -147,7 +155,7 @@ describe('useVotingResults Hook', () => {
       })
     );
 
-    const { result } = renderHook(() => useVotingResults());
+    const { result } = renderHook(() => useVotingResults(), { wrapper: withFreshClient() });
 
     // Initially, isLoading is true
     expect(result.current.isLoading).toBe(true);
@@ -159,10 +167,12 @@ describe('useVotingResults Hook', () => {
       resolveCampaigns({ campaigns: mockCampaigns });
     });
 
+    // Verified that it automatically picked the last ACTIVE campaign ('camp-2')
+    await waitFor(() => {
+      expect(result.current.selectedId).toBe('camp-2');
+    });
     // isLoading must STAY true while resolving the campaign result profile!
     expect(result.current.isLoading).toBe(true);
-    // Verified that it automatically picked the last ACTIVE campaign ('camp-2')
-    expect(result.current.selectedId).toBe('camp-2');
 
     // Resolve results for camp-2
     await act(async () => {
@@ -170,7 +180,9 @@ describe('useVotingResults Hook', () => {
     });
 
     // Now isLoading becomes false
-    expect(result.current.isLoading).toBe(false);
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
     expect(result.current.campaigns).toEqual(mockCampaigns);
     expect(result.current.result).toEqual(mockResult);
   });
@@ -178,7 +190,7 @@ describe('useVotingResults Hook', () => {
   it('resolves isLoading to false and leaves campaigns empty when 0 campaigns returned', async () => {
     vi.mocked(eventsApi.getVotingCampaigns).mockResolvedValue({ campaigns: [] });
 
-    const { result } = renderHook(() => useVotingResults());
+    const { result } = renderHook(() => useVotingResults(), { wrapper: withFreshClient() });
 
     expect(result.current.isLoading).toBe(true);
 

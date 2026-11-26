@@ -1,5 +1,8 @@
+import { createElement, type ReactNode } from 'react';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { createQueryClient } from '@/shared/lib/queryClient';
 
 const moderationApiMock = vi.hoisted(() => ({
   getModerationItems: vi.fn(),
@@ -76,12 +79,18 @@ beforeEach(() => {
   githubApiMock.getGithubShowcasedProjects.mockReset();
 });
 
+const withFreshClient = () => {
+  const client = createQueryClient();
+  return ({ children }: { children: ReactNode }) =>
+    createElement(QueryClientProvider, { client }, children);
+};
+
 describe('useModeration loading', () => {
   it('populates githubProjects from the GitHub showcase API with repository-shaped rows', async () => {
     moderationApiMock.getModerationItems.mockResolvedValue({ items: [queueItem], total: 1 });
     githubApiMock.getGithubShowcasedProjects.mockResolvedValue(showcaseResponse);
 
-    const { result } = renderHook(() => useModeration());
+    const { result } = renderHook(() => useModeration(), { wrapper: withFreshClient() });
 
     await waitFor(() => expect(result.current.items).toHaveLength(1));
 
@@ -99,7 +108,7 @@ describe('useModeration loading', () => {
     moderationApiMock.getModerationItems.mockResolvedValue({ items: [queueItem], total: 1 });
     githubApiMock.getGithubShowcasedProjects.mockRejectedValue(new Error('502 Bad Gateway'));
 
-    const { result } = renderHook(() => useModeration());
+    const { result } = renderHook(() => useModeration(), { wrapper: withFreshClient() });
 
     await waitFor(() => expect(result.current.items).toHaveLength(1));
 
@@ -114,7 +123,7 @@ describe('useModeration loading', () => {
     moderationApiMock.getModerationItems.mockRejectedValue(new Error('500 Server Error'));
     githubApiMock.getGithubShowcasedProjects.mockResolvedValue(showcaseResponse);
 
-    const { result } = renderHook(() => useModeration());
+    const { result } = renderHook(() => useModeration(), { wrapper: withFreshClient() });
 
     await waitFor(() => expect(result.current.error).not.toBeNull());
 

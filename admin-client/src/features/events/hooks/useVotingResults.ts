@@ -1,106 +1,62 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useMemo } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { eventsApi } from '../api/index';
 import { CampaignOption, CampaignResult } from '../types';
+import { ADMIN_VOTING_CAMPAIGNS_QUERY_KEY } from './useVotingManagement';
+
+export const getVotingResultsQueryKey = (campaignId: string) =>
+  ['admin', 'voting-results', campaignId] as const;
 
 export const useVotingResults = () => {
-  const [campaigns, setCampaigns] = useState<CampaignOption[]>([]);
-  const [selectedId, setSelectedId] = useState<string>('');
-  const [result, setResult] = useState<CampaignResult | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const queryClient = useQueryClient();
+  const [userSelectedId, setUserSelectedId] = useState<string>('');
   const [finalizing, setFinalizing] = useState<boolean>(false);
   const [showFinalizeConfirm, setShowFinalizeConfirm] = useState<boolean>(false);
 
-  const initialFetchDone = useRef<boolean>(false);
-  const previousSelectedId = useRef<string>('');
-
-  // Initial load: keep isLoading true until campaign data list and the default or last active campaign profile are resolved
-  useEffect(() => {
-    let isCancelled = false;
-
-    const fetchInitialData = async () => {
-      setIsLoading(true);
+  const campaignsQuery = useQuery<CampaignOption[]>({
+    queryKey: ADMIN_VOTING_CAMPAIGNS_QUERY_KEY,
+    queryFn: async () => {
       try {
         const res = await eventsApi.getVotingCampaigns();
-        if (isCancelled) return;
-
-        const list = res?.campaigns ?? [];
-        setCampaigns(list);
-
-        if (list.length > 0) {
-          // Identify the last active campaign or default to the first campaign
-          const activeCampaigns = list.filter((c) => c.status === 'ACTIVE');
-          const defaultCampaign =
-            activeCampaigns.length > 0
-              ? activeCampaigns[activeCampaigns.length - 1]
-              : list[0];
-
-          setSelectedId(defaultCampaign.id);
-          previousSelectedId.current = defaultCampaign.id;
-
-          try {
-            const resultsData = await eventsApi.getVotingResults(defaultCampaign.id);
-            if (!isCancelled) {
-              setResult(resultsData ?? null);
-            }
-          } catch (err) {
-            console.warn('Could not load voting campaign results:', err);
-            if (!isCancelled) {
-              setResult(null);
-            }
-          }
-        } else {
-          setSelectedId('');
-          setResult(null);
-        }
+        return res?.campaigns ?? [];
       } catch (err) {
-        // Non-fatal: the results view simply has no campaigns to select.
         console.warn('Could not load voting campaigns:', err);
-        if (!isCancelled) {
-          setCampaigns([]);
-          setSelectedId('');
-          setResult(null);
-        }
-      } finally {
-        if (!isCancelled) {
-          initialFetchDone.current = true;
-          setIsLoading(false);
-        }
+        return [];
       }
-    };
+    },
+  });
 
-    fetchInitialData();
+  const campaigns = campaignsQuery.data ?? [];
 
-    return () => {
-      isCancelled = true;
-    };
-  }, []);
+  const defaultId = useMemo(() => {
+    if (campaigns.length === 0) return '';
+    const activeCampaigns = campaigns.filter((c) => c.status === 'ACTIVE');
+    const chosen =
+      activeCampaigns.length > 0
+        ? activeCampaigns[activeCampaigns.length - 1]
+        : campaigns[0];
+    return chosen?.id ?? '';
+  }, [campaigns]);
 
-  // Subsequent campaign selection changes
-  useEffect(() => {
-    if (!initialFetchDone.current) return;
-    if (!selectedId || selectedId === previousSelectedId.current) return;
+  const selectedId = userSelectedId || defaultId;
 
-    previousSelectedId.current = selectedId;
-    let isCancelled = false;
-    setIsLoading(true);
-
-    eventsApi
-      .getVotingResults(selectedId)
-      .then((res) => {
-        if (!isCancelled) setResult(res ?? null);
-      })
-      .catch((err) => {
+  const resultsQuery = useQuery<CampaignResult | null>({
+    queryKey: getVotingResultsQueryKey(selectedId),
+    queryFn: async () => {
+      if (!selectedId) return null;
+      try {
+        const res = await eventsApi.getVotingResults(selectedId);
+        return res ?? null;
+      } catch (err) {
         console.warn('Could not load voting campaign results:', err);
-        if (!isCancelled) setResult(null);
-      })
-      .finally(() => {
-        if (!isCancelled) setIsLoading(false);
-      });
+        return null;
+      }
+    },
+    enabled: Boolean(selectedId),
+  });
 
-    return () => {
-      isCancelled = true;
-    };
-  }, [selectedId]);
+  const isLoading =
+    campaignsQuery.isPending || (Boolean(selectedId) && resultsQuery.isPending);
 
   const handleFinalize = async () => {
     if (!selectedId) return;
@@ -108,23 +64,22 @@ export const useVotingResults = () => {
     try {
       await eventsApi.finalizeVotingResults(selectedId);
       setShowFinalizeConfirm(false);
-      setIsLoading(true);
-      const res = await eventsApi.getVotingResults(selectedId);
-      setResult(res ?? null);
+      await queryClient.invalidateQueries({
+        queryKey: getVotingResultsQueryKey(selectedId),
+      });
     } catch (err) {
       // Non-fatal: the dialog stays open and the operator can retry finalizing.
       console.warn('Could not finalize voting results:', err);
     } finally {
       setFinalizing(false);
-      setIsLoading(false);
     }
   };
 
   return {
     campaigns,
     selectedId,
-    setSelectedId,
-    result,
+    setSelectedId: setUserSelectedId,
+    result: resultsQuery.data ?? null,
     isLoading,
     loading: isLoading,
     finalizing,

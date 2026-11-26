@@ -377,6 +377,14 @@ export interface StudentDashboardResponse {
     totalCommits?: number;
     lastCommitAt?: string | null;
   };
+  codechef?: {
+    connected: boolean;
+    verified: boolean;
+    handle?: string;
+    currentRating?: number | null;
+    stars?: number | null;
+    totalSolved?: number | null;
+  } | null;
 }
 
 export interface GithubSummaryResponse {

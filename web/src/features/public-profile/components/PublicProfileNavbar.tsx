@@ -38,8 +38,8 @@ export const PublicProfileNavbar: React.FC<PublicProfileNavbarProps> = ({
   onShare,
 }) => {
   return (
-    <nav className="sticky top-0 z-50 w-full backdrop-blur-xl bg-surface-canvas/80 border-b border-edge/80 print:hidden">
-      <div className="mx-auto flex h-16 max-w-[1200px] items-center justify-between px-4 sm:px-6 lg:px-8 pt-[env(safe-area-inset-top)]">
+    <nav className="sticky top-0 z-50 w-full safe-area-pt backdrop-blur-xl bg-surface-canvas/80 border-b border-edge/80 print:hidden">
+      <div className="mx-auto flex h-16 max-w-[1200px] items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Left: Directory Link + Personal Logo Mark */}
         <div className="flex items-center gap-3">
           <Link

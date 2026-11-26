@@ -1,32 +1,27 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useConfirm } from '@/shared/ui';
 import { eventsApi } from '../api/index';
 import { VotingCampaign } from '../types';
 
+export const ADMIN_VOTING_CAMPAIGNS_QUERY_KEY = ['admin', 'voting-campaigns'] as const;
+
 export const useVotingManagement = () => {
   const confirm = useConfirm();
-  const [campaigns, setCampaigns] = useState<VotingCampaign[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [activating, setActivating] = useState<string | null>(null);
 
-  const fetchCampaigns = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
+  const query = useQuery<VotingCampaign[]>({
+    queryKey: ADMIN_VOTING_CAMPAIGNS_QUERY_KEY,
+    queryFn: async () => {
       const res = await eventsApi.getVotingCampaigns();
-      setCampaigns(res.campaigns || []);
-    } catch {
-      setError('Failed to load campaigns.');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+      return res.campaigns || [];
+    },
+  });
 
-  useEffect(() => {
-    fetchCampaigns();
-  }, [fetchCampaigns]);
+  const fetchCampaigns = useCallback(async () => {
+    await query.refetch();
+  }, [query]);
 
   const handleActivate = async (id: string) => {
     const confirmed = await confirm({
@@ -38,7 +33,7 @@ export const useVotingManagement = () => {
     setActivating(id);
     try {
       await eventsApi.activateVotingCampaign(id);
-      fetchCampaigns();
+      void query.refetch();
     } catch (err) {
       // Non-fatal: the list keeps its previous state and can be refreshed.
       console.warn('Could not activate voting campaign:', err);
@@ -57,7 +52,7 @@ export const useVotingManagement = () => {
     if (!confirmed) return;
     try {
       await eventsApi.closeVotingCampaign(id);
-      fetchCampaigns();
+      void query.refetch();
     } catch (err) {
       // Non-fatal: the list keeps its previous state and can be refreshed.
       console.warn('Could not close voting campaign:', err);
@@ -65,9 +60,9 @@ export const useVotingManagement = () => {
   };
 
   return {
-    campaigns,
-    loading,
-    error,
+    campaigns: query.data ?? [],
+    loading: query.isPending,
+    error: query.isError ? 'Failed to load campaigns.' : null,
     showCreate,
     setShowCreate,
     activating,

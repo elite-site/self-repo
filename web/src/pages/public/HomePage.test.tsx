@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { HomePage } from './HomePage';
 
 vi.mock('@/shared/layout/Navbar', () => ({
@@ -16,10 +17,15 @@ vi.mock('@/features/directory/api', () => ({
 }));
 
 const renderHome = async (session: any = null) => {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
   return render(
-    <MemoryRouter>
-      <HomePage session={session} onLogout={vi.fn()} />
-    </MemoryRouter>,
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter>
+        <HomePage session={session} onLogout={vi.fn()} />
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
 };
 

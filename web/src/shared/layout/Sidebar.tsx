@@ -104,7 +104,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       animate={{ width: collapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_EXPANDED_WIDTH }}
       transition={selectVariantsByName(shouldReduce, 'sidebar')}
       className={cn(
-        'fixed inset-y-0 left-0 z-sticky hidden select-none flex-col border-r border-edge bg-surface md:flex',
+        'fixed inset-y-0 left-0 z-sticky safe-area-pt hidden select-none flex-col border-r border-edge bg-surface md:flex',
         className,
       )}
     >

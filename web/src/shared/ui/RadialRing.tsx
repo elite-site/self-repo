@@ -88,7 +88,7 @@ export const RadialRing: React.FC<RadialRingProps> = ({
           r={radius}
           fill="none"
           strokeWidth={strokeWidth}
-          className="stroke-border"
+          className="stroke-edge"
         />
         {/* Progress arc */}
         <circle

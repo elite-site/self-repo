@@ -95,8 +95,8 @@ export const Navbar: React.FC<NavbarProps> = ({ session, onLogout }) => {
   };
 
   return (
-    <header className="sticky top-0 z-sticky w-full border-b border-edge bg-surface/95 backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-canvas items-center gap-3 px-4 sm:px-8 pt-[env(safe-area-inset-top)]">
+    <header className="sticky top-0 z-sticky w-full safe-area-pt border-b border-edge bg-surface/95 backdrop-blur-md">
+      <div className="mx-auto flex h-16 max-w-canvas items-center gap-3 px-4 sm:px-8">
         <Link to="/" className="flex shrink-0 items-center gap-2.5" aria-label="ELITE home">
           <picture className="flex items-center">
             <source srcSet="/elite-logo.webp" type="image/webp" />

@@ -8,38 +8,44 @@ import {
   useNavigate,
 } from 'react-router-dom';
 import type { RouteObject } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Sidebar, AdminHeader, AdminTab } from '@/shared/layout';
 import { BrandedLoading, ConfirmProvider, LoginPage } from '@/shared/ui';
 import { ErrorBoundary } from '@/shared/ui/ErrorBoundary';
 import { AdminUser } from '@/shared/types';
 import { authApi, ApiError } from '@/shared/api';
+import { ADMIN_SESSION_QUERY_KEY, clearPersistedQueryCache } from '@/shared/lib/queryClient';
+import { prefetchActiveAdminRoute } from '@/router/routePrefetch';
 import { usePortalStats } from '@/features/analytics/hooks/usePortalStats';
 import { useTheme } from './context/ThemeContext';
 
-// Lazy Loaded Pages
-const DashboardPage = React.lazy(() => import('@/features/analytics').then((m) => ({ default: m.DashboardPage })));
-const StudentsPage = React.lazy(() => import('@/features/students').then((m) => ({ default: m.StudentsPage })));
-const ModerationPage = React.lazy(() => import('@/features/moderation').then((m) => ({ default: m.ModerationPage })));
-const AdminEventsPage = React.lazy(() => import('@/features/events').then((m) => ({ default: m.AdminEventsPage })));
-const EventRegistrationsPage = React.lazy(() => import('@/features/registrations').then((m) => ({ default: m.EventRegistrationsPage })));
-const VotingManagementPage = React.lazy(() => import('@/features/events').then((m) => ({ default: m.VotingManagementPage })));
-const VotingResultsPage = React.lazy(() => import('@/features/events').then((m) => ({ default: m.VotingResultsPage })));
-const AnnouncementsPage = React.lazy(() => import('@/features/announcements').then((m) => ({ default: m.AnnouncementsPage })));
-const EmailAutomationPage = React.lazy(() => import('@/features/email-automation').then((m) => ({ default: m.EmailAutomationPage })));
-const EmailHistoryPage = React.lazy(() => import('@/features/email-automation').then((m) => ({ default: m.EmailHistoryPage })));
-const AnalyticsPage = React.lazy(() => import('@/features/analytics').then((m) => ({ default: m.AnalyticsPage })));
-const ExportsPage = React.lazy(() => import('@/features/registrations').then((m) => ({ default: m.ExportsPage })));
-const StoragePage = React.lazy(() => import('@/features/storage').then((m) => ({ default: m.StoragePage })));
-const AdminResourcesPage = React.lazy(() => import('@/features/resources').then((m) => ({ default: m.AdminResourcesPage })));
-const RolesPermissionsPage = React.lazy(() => import('@/features/roles').then((m) => ({ default: m.RolesPermissionsPage })));
-const AuditLogsPage = React.lazy(() => import('@/features/activity-log').then((m) => ({ default: m.AuditLogsPage })));
-const SettingsPage = React.lazy(() => import('@/features/settings').then((m) => ({ default: m.SettingsPage })));
-const AdminGithubPage = React.lazy(() => import('@/features/github').then((m) => ({ default: m.AdminGithubPage })));
-const AdminCodeChefPage = React.lazy(() => import('@/features/codechef').then((m) => ({ default: m.AdminCodeChefPage })));
+// Direct page-level lazy imports avoid bundling unrelated sibling pages from feature barrels.
+const DashboardPage = React.lazy(() => import('@/features/analytics/pages/DashboardPage'));
+const StudentsPage = React.lazy(() => import('@/features/students/pages/StudentsPage'));
+const ModerationPage = React.lazy(() => import('@/features/moderation/pages/ModerationPage'));
+const AdminEventsPage = React.lazy(() => import('@/features/events/pages/AdminEventsPage'));
+const EventRegistrationsPage = React.lazy(() => import('@/features/registrations/pages/EventRegistrationsPage'));
+const VotingManagementPage = React.lazy(() => import('@/features/events/pages/VotingManagementPage'));
+const VotingResultsPage = React.lazy(() => import('@/features/events/pages/VotingResultsPage'));
+const AnnouncementsPage = React.lazy(() => import('@/features/announcements/pages/AnnouncementsPage'));
+const EmailAutomationPage = React.lazy(() => import('@/features/email-automation/pages/EmailAutomationPage'));
+const EmailHistoryPage = React.lazy(() => import('@/features/email-automation/pages/EmailHistoryPage'));
+const AnalyticsPage = React.lazy(() => import('@/features/analytics/pages/AnalyticsPage'));
+const ExportsPage = React.lazy(() => import('@/features/registrations/pages/ExportsPage'));
+const StoragePage = React.lazy(() => import('@/features/storage/pages/StoragePage'));
+const AdminResourcesPage = React.lazy(() => import('@/features/resources/pages/AdminResourcesPage'));
+const RolesPermissionsPage = React.lazy(() => import('@/features/roles/pages/RolesPermissionsPage'));
+const AuditLogsPage = React.lazy(() => import('@/features/activity-log/pages/AuditLogsPage'));
+const SettingsPage = React.lazy(() => import('@/features/settings/pages/SettingsPage'));
+const AdminGithubPage = React.lazy(() => import('@/features/github/pages/AdminGithubPage'));
+const AdminCodeChefPage = React.lazy(() => import('@/features/codechef/pages/AdminCodeChefPage'));
 const AdminCoursesPage = React.lazy(() => import('@/features/learning/pages/AdminCoursesPage'));
 const AdminCourseEditPage = React.lazy(() => import('@/features/learning/pages/AdminCourseEditPage'));
 const AdminCourseEnrollmentsPage = React.lazy(() => import('@/features/learning/pages/AdminCourseEnrollmentsPage'));
 const AdminCourseReportsPage = React.lazy(() => import('@/features/learning/pages/AdminCourseReportsPage'));
+
+// Start downloading the active route chunk immediately so it loads in parallel with `/admin/me`.
+prefetchActiveAdminRoute();
 
 const PageLoadingFallback: React.FC = () => (
   <BrandedLoading message="Loading Module" fullScreen={false} />
@@ -67,65 +73,76 @@ export const useAuth = () => {
 };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const queryClient = useQueryClient();
   const { setAdminUser } = useTheme();
-  const [user, setUser] = useState<AdminUser | null>(null);
-  const [authChecking, setAuthChecking] = useState(true);
-  const [authError, setAuthError] = useState<string | null>(null);
 
-  const checkAuth = useCallback(async () => {
-    try {
+  const { data, error, isPending, refetch } = useQuery<AdminUser | null>({
+    queryKey: ADMIN_SESSION_QUERY_KEY,
+    queryFn: async () => {
       const res = await authApi.getMe();
-      if (res.authenticated && res.user) {
-        setUser(res.user);
-        setAdminUser(res.user);
-      } else {
-        setUser(null);
-        setAdminUser(null);
-      }
-    } catch (err: unknown) {
-      const status = err instanceof ApiError ? err.status : null;
-      if (status === 401 || status === 403) {
-        setUser(null);
-        setAdminUser(null);
-      } else {
-        console.error('Could not verify admin session:', err);
-        setAuthError(
-          status
-            ? `Could not reach the server (HTTP ${status}). Please retry.`
-            : 'Could not reach the server. Please check your connection and retry.',
-        );
-      }
-    } finally {
-      setAuthChecking(false);
-    }
-  }, [setAdminUser]);
+      return res.authenticated && res.user ? res.user : null;
+    },
+    retry: false,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+  });
+
+  const user = data ?? null;
+  const errorStatus = error instanceof ApiError ? error.status : (error as { status?: number } | null)?.status ?? null;
+  const unauthorized = errorStatus === 401 || errorStatus === 403;
+  const authError =
+    !user && error && !unauthorized
+      ? errorStatus
+        ? `Could not reach the server (HTTP ${errorStatus}). Please retry.`
+        : 'Could not reach the server. Please check your connection and retry.'
+      : null;
+  // Block the shell only on a cold load with no cached session snapshot.
+  const authChecking = !user && isPending;
 
   useEffect(() => {
-    checkAuth();
-  }, [checkAuth]);
+    setAdminUser(user);
+  }, [user, setAdminUser]);
+
+  useEffect(() => {
+    if (error && unauthorized) {
+      queryClient.setQueryData<AdminUser | null>(ADMIN_SESSION_QUERY_KEY, null);
+      clearPersistedQueryCache();
+    }
+  }, [error, unauthorized, queryClient]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleExpired = () => {
+      queryClient.setQueryData<AdminUser | null>(ADMIN_SESSION_QUERY_KEY, null);
+      clearPersistedQueryCache();
+    };
+    window.addEventListener('admin-session-expired', handleExpired);
+    return () => window.removeEventListener('admin-session-expired', handleExpired);
+  }, [queryClient]);
 
   const retryAuthCheck = useCallback(async () => {
-    setAuthError(null);
-    setAuthChecking(true);
-    await checkAuth();
-  }, [checkAuth]);
+    await refetch();
+  }, [refetch]);
 
-  const completeLogin = (newUser: AdminUser) => {
-    setAuthError(null);
-    setUser(newUser);
-    setAdminUser(newUser);
-  };
+  const completeLogin = useCallback(
+    (newUser: AdminUser) => {
+      queryClient.setQueryData<AdminUser | null>(ADMIN_SESSION_QUERY_KEY, newUser);
+      setAdminUser(newUser);
+    },
+    [queryClient, setAdminUser],
+  );
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
       await authApi.logout();
     } catch (err) {
       console.error('Logout failed', err);
     } finally {
-      setUser(null);
+      queryClient.removeQueries();
+      clearPersistedQueryCache();
       setAdminUser(null);
     }
-  };
+  }, [queryClient, setAdminUser]);
 
   return (
     <AuthContext.Provider value={{ user, authChecking, authError, completeLogin, logout, retryAuthCheck }}>

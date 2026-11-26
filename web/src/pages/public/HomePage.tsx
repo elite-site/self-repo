@@ -1,5 +1,6 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { StudentSession } from '@/shared/types';
 import { directoryApi } from '@/features/directory/api';
 import { authApi } from '@/features/auth/api';
@@ -20,32 +21,40 @@ export const HomePage: React.FC<HomePageProps> = ({ session, onLogout }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
 
-  const [featuredStudents, setFeaturedStudents] = useState<any[]>([]);
-  const [studentsLoading, setStudentsLoading] = useState(true);
-  const [studentsError, setStudentsError] = useState<string | null>(null);
-  const [studentTotal, setStudentTotal] = useState<number | null>(null);
+  const {
+    data: featuredData,
+    isPending: studentsLoading,
+    error: studentsQueryError,
+    refetch: loadFeaturedStudents,
+  } = useQuery({
+    queryKey: ['public', 'home-students'],
+    queryFn: () => directoryApi.getPublicStudents({ limit: 6 }),
+    staleTime: 5 * 60_000,
+  });
 
-  const loadFeaturedStudents = useCallback(() => {
-    setStudentsLoading(true);
-    setStudentsError(null);
-
-    directoryApi
-      .getPublicStudents({ limit: 6 })
-      .then((data) => {
-        setFeaturedStudents(Array.isArray(data?.students) ? data.students : []);
-        if (typeof data?.total === 'number') setStudentTotal(data.total);
-      })
-      .catch((err) => {
-        setStudentsError(err?.message || 'Unable to load spotlight students.');
-      })
-      .finally(() => {
-        setStudentsLoading(false);
-      });
-  }, []);
-
-  useEffect(() => {
-    loadFeaturedStudents();
-  }, [loadFeaturedStudents]);
+  const featuredStudents = Array.isArray(featuredData?.students)
+    ? featuredData.students
+        .filter((s): s is typeof s & { id: string; name: string } => Boolean(s.id && s.name))
+        .map((s) => ({
+          id: s.id,
+          name: s.name,
+          rollNo: s.rollNo,
+          year: s.year ?? undefined,
+          section: s.section ?? undefined,
+          profile: s.profile
+            ? {
+                photoUrl: s.profile.photoUrl ?? undefined,
+                bio: typeof (s.profile as { bio?: string | null }).bio === 'string'
+                  ? (s.profile as { bio: string }).bio
+                  : undefined,
+              }
+            : undefined,
+        }))
+    : [];
+  const studentTotal = typeof featuredData?.total === 'number' ? featuredData.total : null;
+  const studentsError = studentsQueryError
+    ? (studentsQueryError instanceof Error ? studentsQueryError.message : 'Unable to load spotlight students.')
+    : null;
 
   useEffect(() => {
     document.title = 'ELITE Student Portal — Department of IT, SASI';

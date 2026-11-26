@@ -73,8 +73,8 @@ export const TopBar: React.FC<TopBarProps> = ({
   const count = formatCount(unreadCount);
 
   return (
-    <header className="sticky top-0 z-sticky border-b border-edge bg-surface/95 backdrop-blur-sm">
-      <div className="mx-auto flex h-14 w-full max-w-canvas items-center gap-2 px-4 sm:px-6">
+    <header className="sticky top-0 z-sticky safe-area-pt border-b border-edge bg-surface/95 backdrop-blur-sm">
+      <div className="mx-auto flex h-14 w-full max-w-canvas items-center gap-2 px-4 sm:px-6 md:px-8">
         {/* ── Mobile: the mark, or the field once the search icon is tapped ── */}
         <div className="flex min-w-0 flex-1 items-center md:hidden">
           <AnimatePresence mode="wait" initial={false}>

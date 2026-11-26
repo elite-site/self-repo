@@ -1,14 +1,15 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, type SetStateAction } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { moderationApi } from '../api/index';
 import { githubApi } from '@/features/github/api/index';
 import type { GithubShowcasedProject } from '@/features/github/types';
 import { UnifiedModerationItem, ModerationType, TabType, StatusFilter } from '../types';
 
+export const ADMIN_MODERATION_ITEMS_KEY = ['admin', 'moderation', 'items'] as const;
+export const ADMIN_MODERATION_GITHUB_KEY = ['admin', 'moderation', 'github-projects'] as const;
+
 export const useModeration = () => {
-  const [items, setItems] = useState<UnifiedModerationItem[]>([]);
-  const [githubProjects, setGithubProjects] = useState<GithubShowcasedProject[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
   // Filters
   const [activeTab, setActiveTab] = useState<TabType>('all');
@@ -34,40 +35,43 @@ export const useModeration = () => {
     setCurrentPage(1);
   }, [activeTab, statusFilter, searchQuery]);
 
-  const fetchItems = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  // Independent queries settle in parallel so a GitHub showcase failure degrades
+  // to a warning instead of blanking the moderation queue.
+  const queueQuery = useQuery<UnifiedModerationItem[]>({
+    queryKey: ADMIN_MODERATION_ITEMS_KEY,
+    queryFn: async () => (await moderationApi.getModerationItems('all', 'ALL')).items ?? [],
+    retry: false,
+  });
 
-    // The queue and the showcased GitHub repositories are independent reads.
-    // Settling both means a failing GitHub call degrades to a warning instead
-    // of blanking the moderation page.
-    const [queueResult, projectsResult] = await Promise.allSettled([
-      moderationApi.getModerationItems('all', 'ALL'),
-      githubApi.getGithubShowcasedProjects(),
-    ]);
-
-    const queueLoaded = queueResult.status === 'fulfilled';
-    if (queueLoaded) {
-      setItems(queueResult.value.items ?? []);
-    } else {
-      setError("Couldn't load the queue. Try again.");
-    }
-
-    if (projectsResult.status === 'fulfilled') {
-      setGithubProjects(projectsResult.value.items ?? []);
-    } else {
-      setGithubProjects([]);
-      if (queueLoaded) {
-        showToast("Couldn't load showcased projects. The moderation queue is still up to date.", 'error');
-      }
-    }
-
-    setLoading(false);
-  }, [showToast]);
+  const projectsQuery = useQuery<GithubShowcasedProject[]>({
+    queryKey: ADMIN_MODERATION_GITHUB_KEY,
+    queryFn: async () => (await githubApi.getGithubShowcasedProjects()).items ?? [],
+    retry: false,
+  });
 
   useEffect(() => {
-    fetchItems();
-  }, [fetchItems]);
+    if (projectsQuery.isError && queueQuery.isSuccess) {
+      showToast("Couldn't load showcased projects. The moderation queue is still up to date.", 'error');
+    }
+  }, [projectsQuery.isError, queueQuery.isSuccess, showToast]);
+
+  const items = queueQuery.data ?? [];
+  const githubProjects = projectsQuery.data ?? [];
+  const loading = queueQuery.isPending;
+  const error = queueQuery.isError ? "Couldn't load the queue. Try again." : null;
+
+  const setItems = useCallback(
+    (updater: SetStateAction<UnifiedModerationItem[]>) => {
+      queryClient.setQueryData<UnifiedModerationItem[]>(ADMIN_MODERATION_ITEMS_KEY, (prev = []) =>
+        typeof updater === 'function' ? updater(prev) : updater,
+      );
+    },
+    [queryClient],
+  );
+
+  const fetchItems = useCallback(async () => {
+    await Promise.all([queueQuery.refetch(), projectsQuery.refetch()]);
+  }, [queueQuery, projectsQuery]);
 
   // Compute counts per tab
   const counts = useMemo(() => {
@@ -93,14 +97,12 @@ export const useModeration = () => {
   // Filtered list
   const filteredItems = useMemo(() => {
     return items.filter((item) => {
-      // Tab filter
       if (activeTab === 'videos' && item.type !== 'videos' && item.itemType !== 'video') return false;
       if (activeTab === 'resumes' && item.type !== 'resumes' && item.itemType !== 'resume') return false;
       if (activeTab === 'certificates' && item.type !== 'certificates' && item.itemType !== 'certificate') return false;
       if (activeTab === 'projects' && item.type !== 'projects' && item.itemType !== 'project') return false;
       if (activeTab === 'achievements' && item.type !== 'achievements' && item.itemType !== 'achievement') return false;
 
-      // Status filter
       if (statusFilter === 'PENDING_REVIEW') {
         if (item.status !== 'PENDING' && item.status !== 'UNDER_REVIEW') return false;
       } else if (statusFilter === 'APPROVED') {
@@ -111,7 +113,6 @@ export const useModeration = () => {
         if (item.status !== 'REJECTED') return false;
       }
 
-      // Search query filter
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
         const matchesName = item.studentName?.toLowerCase().includes(q);

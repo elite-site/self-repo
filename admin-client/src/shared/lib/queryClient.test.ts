@@ -1,6 +1,18 @@
-import { describe, expect, it, vi } from 'vitest';
-import { createQueryClient, is4xxError, handleGlobal401 } from './queryClient';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
+import {
+  createQueryClient,
+  is4xxError,
+  handleGlobal401,
+  ADMIN_CACHE_STORAGE_KEY,
+  ADMIN_SESSION_QUERY_KEY,
+  restoreQueryCache,
+  clearPersistedQueryCache,
+} from './queryClient';
 import { ApiError } from '@/shared/api';
+
+beforeEach(() => {
+  window.localStorage.clear();
+});
 
 describe('queryClient error handling and retry defaults', () => {
   it('correctly identifies 4xx errors as non-retryable', () => {
@@ -37,7 +49,8 @@ describe('queryClient error handling and retry defaults', () => {
     }
   });
 
-  it('triggers session expired event on 401', () => {
+  it('triggers session expired event on 401 and clears persisted cache', () => {
+    window.localStorage.setItem(ADMIN_CACHE_STORAGE_KEY, JSON.stringify({ timestamp: Date.now(), clientState: { queries: [], mutations: [] } }));
     const dispatchSpy = vi.spyOn(window, 'dispatchEvent');
     const err401 = new ApiError({ message: 'Session expired', status: 401 });
 
@@ -46,5 +59,30 @@ describe('queryClient error handling and retry defaults', () => {
     expect(dispatchSpy).toHaveBeenCalledWith(
       expect.objectContaining({ type: 'admin-session-expired' })
     );
+    expect(window.localStorage.getItem(ADMIN_CACHE_STORAGE_KEY)).toBeNull();
+  });
+
+  it('restores valid persisted cache and drops expired entries', () => {
+    const client = createQueryClient();
+    const validState = {
+      mutations: [],
+      queries: [
+        {
+          queryKey: ADMIN_SESSION_QUERY_KEY,
+          queryHash: JSON.stringify(ADMIN_SESSION_QUERY_KEY),
+          state: { data: { username: 'admin' }, dataUpdateCount: 1, dataUpdatedAt: Date.now(), error: null, errorUpdateCount: 0, errorUpdatedAt: 0, fetchFailureCount: 0, fetchFailureReason: null, fetchMeta: null, isInvalidated: false, status: 'success', fetchStatus: 'idle' },
+        },
+      ],
+    };
+
+    window.localStorage.setItem(
+      ADMIN_CACHE_STORAGE_KEY,
+      JSON.stringify({ timestamp: Date.now(), clientState: validState }),
+    );
+    restoreQueryCache(client);
+    expect(client.getQueryData(ADMIN_SESSION_QUERY_KEY)).toEqual({ username: 'admin' });
+
+    clearPersistedQueryCache();
+    expect(window.localStorage.getItem(ADMIN_CACHE_STORAGE_KEY)).toBeNull();
   });
 });

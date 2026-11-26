@@ -1,35 +1,27 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { emailAutomationApi } from '../api/index';
 import { EmailHistoryResponse } from '../types';
 
+export const ADMIN_EMAIL_HISTORY_QUERY_KEY = ['admin', 'email-history'] as const;
+
 export const useEmailHistory = () => {
-  const [data, setData] = useState<EmailHistoryResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [activeView, setActiveView] = useState<'runs' | 'logs'>('runs');
   const [search, setSearch] = useState('');
-  const [error, setError] = useState<string | null>(null);
 
-  const loadHistory = useCallback(async (isManual = false) => {
-    if (isManual) setRefreshing(true);
-    else setLoading(true);
-    setError(null);
-    try {
-      const res = await emailAutomationApi.getEmailHistory();
-      setData(res);
-    } catch (err: any) {
-      console.error('Failed to load email history:', err);
-      setError(err?.response?.data?.message || 'Failed to load dispatch history');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
+  const query = useQuery<EmailHistoryResponse>({
+    queryKey: ADMIN_EMAIL_HISTORY_QUERY_KEY,
+    queryFn: () => emailAutomationApi.getEmailHistory(),
+  });
 
-  useEffect(() => {
-    loadHistory();
-  }, [loadHistory]);
+  const loadHistory = useCallback(
+    async (_isManual = false) => {
+      await query.refetch();
+    },
+    [query],
+  );
 
+  const data = query.data ?? null;
   const automationRuns = data?.automationRuns || [];
   const emailLogs = data?.emailLogs || [];
 
@@ -55,13 +47,15 @@ export const useEmailHistory = () => {
 
   return {
     data,
-    loading,
-    refreshing,
+    loading: query.isPending,
+    refreshing: query.isFetching && !query.isPending,
     activeView,
     setActiveView,
     search,
     setSearch,
-    error,
+    error: query.isError
+      ? ((query.error as any)?.response?.data?.message || 'Failed to load dispatch history')
+      : null,
     filteredRuns,
     filteredLogs,
     loadHistory,

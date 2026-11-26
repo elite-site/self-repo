@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { prefetchAdminRoute } from '@/router/routePrefetch';
 import {
   Home,
   Users,
@@ -166,6 +167,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab, onLogo
                 <div key={group.label} className="mb-2">
                   <button
                     onClick={() => onSelectTab(item.id)}
+                    onMouseEnter={() => prefetchAdminRoute(item.id)}
+                    onFocus={() => prefetchAdminRoute(item.id)}
                     className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                       isActive
                         ? 'bg-brand-soft text-brand-soft-text font-semibold'
@@ -209,6 +212,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onSelectTab, onLogo
                         <button
                           key={item.id}
                           onClick={() => onSelectTab(item.id)}
+                          onMouseEnter={() => prefetchAdminRoute(item.id)}
+                          onFocus={() => prefetchAdminRoute(item.id)}
                           className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                             isActive
                               ? 'bg-brand-soft text-brand-soft-text font-semibold'

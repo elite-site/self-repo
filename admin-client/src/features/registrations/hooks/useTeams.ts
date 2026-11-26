@@ -1,49 +1,56 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { registrationsApi } from '../api/index';
 import { RegistrationTeam, TeamStatus, MemberToRemove } from '../types';
+
+export const ADMIN_TEAMS_QUERY_KEY = ['admin', 'teams'] as const;
 
 export const useTeams = (
   selectedEventId: string,
   selectedStatus: string,
   searchQuery: string,
   activeView: 'table' | 'teams',
-  onMemberRemoved?: () => void
+  onMemberRemoved?: () => void,
 ) => {
-  const [teams, setTeams] = useState<RegistrationTeam[]>([]);
-  const [teamsLoading, setTeamsLoading] = useState(false);
   const [memberToRemove, setMemberToRemove] = useState<MemberToRemove | null>(null);
   const [removeReason, setRemoveReason] = useState('');
   const [removingMember, setRemovingMember] = useState(false);
   const [teamsError, setTeamsError] = useState<string | null>(null);
 
-  const fetchTeams = useCallback(async () => {
-    setTeamsLoading(true);
-    setTeamsError(null);
-    try {
-      const res = await registrationsApi.getTeams({
-        eventId: selectedEventId === 'all' ? undefined : selectedEventId,
-        status: selectedStatus === 'ALL' ? undefined : selectedStatus,
-        search: searchQuery.trim() || undefined,
-      });
-      setTeams(res.teams || []);
-    } catch (err: any) {
-      setTeamsError(err?.response?.data?.message || 'Failed to load teams.');
-    } finally {
-      setTeamsLoading(false);
-    }
-  }, [selectedEventId, selectedStatus, searchQuery]);
+  const params = {
+    eventId: selectedEventId === 'all' ? undefined : selectedEventId,
+    status: selectedStatus === 'ALL' ? undefined : selectedStatus,
+    search: searchQuery.trim() || undefined,
+  };
+
+  const query = useQuery<RegistrationTeam[]>({
+    queryKey: [...ADMIN_TEAMS_QUERY_KEY, params],
+    queryFn: async () => {
+      const res = await registrationsApi.getTeams(params);
+      return res.teams || [];
+    },
+    enabled: activeView === 'teams',
+    placeholderData: (previous) => previous,
+  });
 
   useEffect(() => {
-    if (activeView === 'teams') {
-      fetchTeams();
+    if (query.isError) {
+      setTeamsError((query.error as any)?.response?.data?.message || 'Failed to load teams.');
+    } else if (query.isSuccess) {
+      setTeamsError(null);
     }
-  }, [activeView, fetchTeams]);
+  }, [query.isError, query.isSuccess, query.error]);
+
+  const fetchTeams = useCallback(async () => {
+    setTeamsError(null);
+    await query.refetch();
+  }, [query]);
 
   const handleUpdateTeamStatus = async (teamId: string, newStatus: TeamStatus) => {
     try {
       setTeamsError(null);
       await registrationsApi.updateTeamStatus(teamId, newStatus);
-      fetchTeams();
+      void query.refetch();
     } catch (err: any) {
       setTeamsError(err?.response?.data?.message || 'Failed to update team status.');
     }
@@ -57,11 +64,11 @@ export const useTeams = (
       await registrationsApi.removeTeamMember(
         memberToRemove.teamId,
         memberToRemove.studentId,
-        removeReason.trim() || undefined
+        removeReason.trim() || undefined,
       );
       setMemberToRemove(null);
       setRemoveReason('');
-      fetchTeams();
+      void query.refetch();
       if (onMemberRemoved) onMemberRemoved();
     } catch (err: any) {
       setTeamsError(err?.response?.data?.message || 'Failed to remove member.');
@@ -71,8 +78,8 @@ export const useTeams = (
   };
 
   return {
-    teams,
-    teamsLoading,
+    teams: query.data ?? [],
+    teamsLoading: activeView === 'teams' && query.isPending,
     teamsError,
     memberToRemove,
     setMemberToRemove,

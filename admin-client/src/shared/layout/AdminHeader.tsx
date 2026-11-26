@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { prefetchAdminRoute } from '@/router/routePrefetch';
 import {
   Bell,
   User,
@@ -33,6 +35,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
   const [themeDropdownOpen, setThemeDropdownOpen] = useState(false);
   const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
   const [accountDropdownOpen, setAccountDropdownOpen] = useState(false);
+  const navigate = useNavigate();
 
   const { theme, setTheme } = useTheme();
 
@@ -209,12 +212,18 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
                   <div
                     onClick={() => {
                       setNotifDropdownOpen(false);
-                      window.location.href = '/admin/moderation';
+                      navigate('/admin/moderation');
                     }}
+                    onMouseEnter={() => prefetchAdminRoute('moderation')}
                     className="p-4 hover:bg-surface-sunken transition-colors cursor-pointer flex items-start gap-3"
                     role="menuitem"
                     tabIndex={0}
-                    onKeyDown={(e) => e.key === 'Enter' && window.location.assign('/admin/moderation')}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        setNotifDropdownOpen(false);
+                        navigate('/admin/moderation');
+                      }
+                    }}
                   >
                     <div className="p-2 rounded-xl bg-status-bg-pending text-status-pending shrink-0">
                       <AlertCircle className="w-4 h-4" aria-hidden="true" />
@@ -259,8 +268,9 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
                 <button
                   onClick={() => {
                     setNotifDropdownOpen(false);
-                    window.location.href = '/admin/moderation';
+                    navigate('/admin/moderation');
                   }}
+                  onMouseEnter={() => prefetchAdminRoute('moderation')}
                   className="text-xs font-bold text-brand hover:underline cursor-pointer"
                 >
                   Open Moderation Workspace →
@@ -310,8 +320,9 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
                 <button
                   onClick={() => {
                     setAccountDropdownOpen(false);
-                    window.location.href = '/admin/moderation';
+                    navigate('/admin/moderation');
                   }}
+                  onMouseEnter={() => prefetchAdminRoute('moderation')}
                   role="menuitem"
                   className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-medium text-ink-secondary hover:bg-brand-soft hover:text-brand transition-colors cursor-pointer"
                 >
@@ -321,8 +332,9 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
                 <button
                   onClick={() => {
                     setAccountDropdownOpen(false);
-                    window.location.href = '/admin/settings';
+                    navigate('/admin/settings');
                   }}
+                  onMouseEnter={() => prefetchAdminRoute('settings')}
                   role="menuitem"
                   className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-medium text-ink-secondary hover:bg-brand-soft hover:text-brand transition-colors cursor-pointer"
                 >

@@ -1,10 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { studentsApi } from '../api/index';
 
+export const getAdminStudentDetailKey = (studentId: string) =>
+  ['admin', 'student', studentId] as const;
+
 export const useStudentDetail = (studentId: string) => {
-  const [student, setStudent] = useState<any | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
   // Modal states
@@ -27,6 +28,12 @@ export const useStudentDetail = (studentId: string) => {
   const [actionLoading, setActionLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'portfolio' | 'media'>('overview');
 
+  const query = useQuery<any | null>({
+    queryKey: getAdminStudentDetailKey(studentId),
+    queryFn: () => studentsApi.getStudent(studentId),
+    enabled: Boolean(studentId),
+  });
+
   const showToast = useCallback((msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(null), 6000);
@@ -34,21 +41,14 @@ export const useStudentDetail = (studentId: string) => {
 
   const loadStudent = useCallback(async () => {
     if (!studentId) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await studentsApi.getStudent(studentId);
-      setStudent(data);
-    } catch (err: any) {
-      setError(err?.response?.data?.message || 'Could not load student profile.');
-    } finally {
-      setLoading(false);
-    }
-  }, [studentId]);
+    await query.refetch();
+  }, [studentId, query]);
 
-  useEffect(() => {
-    loadStudent();
-  }, [loadStudent]);
+  const student = query.data ?? null;
+  const loading = Boolean(studentId) && query.isPending;
+  const error = query.isError
+    ? ((query.error as any)?.response?.data?.message || 'Could not load student profile.')
+    : null;
 
   // Handle request change submit
   const handleRequestChangeSubmit = async (e: React.FormEvent) => {
