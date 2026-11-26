@@ -330,6 +330,7 @@ Domain-specific codes (`ALREADY_VOTED`, `EVENT_CLOSED`) are allowed, are `UPPER_
 - **Scope:** never delete features, routes, or data to make a task easier. Never replace real functionality with mock data.
 - **Honesty:** never mark unfinished work as done, never fabricate output.
 - **No color gradients:** never use CSS gradients (`linear-gradient`, `radial-gradient`, `conic-gradient`, `gradient-to-*` Tailwind utilities, `bg-gradient-*`) anywhere in the codebase — UI, tokens, or inline styles. Flat, solid color fills only.
+- **Brand color is red, not blue:** the interactive brand color is ELITE red (`red-600` / `#E11D48`). Never change `--brand`, `--brand-hover`, `--brand-active`, `--brand-soft`, `--text-brand`, `--focus`, `--border-brand`, or `--brand-ring` to blue, purple, or any non-red hue. The `blue` ramp in `tokens.mjs` exists only for semantic `info` and `review` status indicators.
 - **Portfolio page is frozen:** never modify any file under `web/src/features/portfolio/` or `backend/src/modules/portfolio/`. Leave those files exactly as they are unless the task is explicitly and exclusively about the portfolio feature.
 
 ## 17. Documentation

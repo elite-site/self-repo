@@ -65,8 +65,8 @@ export const red = {
  * 400–600 text, 800–950 dark-mode surfaces.
  */
 /**
- * Modern tech royal blue ramp — primary interactive accent for student portal.
- * Matches approved reference mockup (DESIGN.md / SKILL.md).
+ * Info blue ramp — used only for semantic info/review status indicators,
+ * NOT for the brand. The brand is red.
  */
 export const blue = {
   50: '#EFF6FF',
@@ -237,7 +237,7 @@ const lightTheme = {
 
   border: slate[200],
   'border-strong': slate[300],
-  'border-brand': blue[600],
+  'border-brand': red[600],
   'border-inverse': slate[700],
 
   text: slate[900], // 17.28:1 on canvas
@@ -252,14 +252,14 @@ const lightTheme = {
   'text-muted': slate[500], // 4.76:1 — captions, timestamps, meta
   'text-disabled': slate[300], // WCAG 1.4.3 exempts disabled controls
   'text-inverse': '#FFFFFF',
-  'text-brand': blue[600], // 4.70:1 — never red-500 for body-size text
+  'text-brand': red[600], // 4.70:1 — the brand colour for body-size text
 
-  brand: blue[600], // solid fill
-  'brand-hover': blue[700],
-  'brand-active': blue[800],
-  'brand-soft': blue[50], // tinted background
-  'brand-soft-text': blue[700],
-  'brand-ring': blue[500],
+  brand: red[600], // solid fill — white on red-600 is 4.70:1
+  'brand-hover': red[700],
+  'brand-active': red[800],
+  'brand-soft': red[50], // tinted background
+  'brand-soft-text': red[700],
+  'brand-ring': red[500],
 
   // The plan has no accent. It inherits the old role — the dark, high-contrast
   // anchor that used to be ELITE navy — which is now the primary text colour.
@@ -270,7 +270,7 @@ const lightTheme = {
   // chip stays a solid chip, only `surface-inverse` flips.
   'on-primary': '#FFFFFF',
 
-  focus: blue[600], // 4.49:1 against canvas — non-text contrast needs 3:1
+  focus: red[600], // 4.70:1 against canvas — non-text contrast needs 3:1
   'overlay-scrim': 'rgba(15, 23, 42, 0.44)',
 
   success: semantic.light.success,
@@ -316,7 +316,7 @@ const darkTheme = {
 
   border: slate[800],
   'border-strong': slate[700],
-  'border-brand': blue[500],
+  'border-brand': red[500],
   'border-inverse': slate[300],
 
   text: slate[50], // 19.48:1 on canvas
@@ -337,27 +337,19 @@ const darkTheme = {
   'text-muted': slate[400], // 6.96:1 on surface, 5.71:1 on surface-raised
   'text-disabled': slate[700],
   'text-inverse': slate[900],
-  'text-brand': blue[400], // 6.4:1 on the dark canvas
+  'text-brand': red[400], // bright red brand text on dark surfaces
 
-  // ── AA deviation from the plan's §4.1 dark table ──────────────────────────
-  // Plan value: red-500 #F43F5E. White on it is 3.67:1, which fails the 4.5:1
-  // body-text floor — and a solid brand button is exactly a white label on
-  // this fill, so it is a text pair, not a decorative one. Chosen: red-600
-  // #E11D48, which puts white at 4.70:1 and matches the light theme's brand.
-  // `border-brand`, `focus` and `brand-ring` stay red-500 below: they are
-  // non-text indicators under WCAG 1.4.11, they need only 3:1, and the plan
-  // names red-500 for the dark `border-brand` precisely because the brighter
-  // red reads best on a near-black surface.
-  brand: blue[600], // solid fill — white on it is 5.17:1
-  'brand-hover': blue[500], // lighter, per the plan's dark hover direction
-  // The plan's dark `brand-active` is red-600, which is now the resting brand
-  // fill itself, so keeping it would make the press state invisible. Same
-  // direction the plan uses (darken on press, from a fill lighter than the
-  // hover step), one step further along: red-700.
-  'brand-active': blue[700],
-  'brand-soft': blue[950], // tinted background
-  'brand-soft-text': blue[300],
-  'brand-ring': blue[400],
+  // red-600 (#E11D48) is the interactive brand colour in BOTH themes: 4.70:1
+  // against white, so it clears the 4.5:1 body-text floor as a solid button
+  // fill with a white label. red-500 (#F43F5E) survives only where it is a
+  // non-text indicator — border-brand, focus and brand-ring — where WCAG 1.4.11
+  // asks for 3:1 and the brighter red reads better on a near-black surface.
+  brand: red[600], // solid fill — white on it is 4.70:1
+  'brand-hover': red[500], // lighter, per the dark hover direction
+  'brand-active': red[700],
+  'brand-soft': red[950], // tinted background
+  'brand-soft-text': red[300],
+  'brand-ring': red[400],
 
   accent: slate[50],
   'accent-hover': '#FFFFFF',
@@ -366,7 +358,7 @@ const darkTheme = {
   // `on-primary` pairing is checkable against each theme independently.
   'on-primary': '#FFFFFF',
 
-  focus: blue[500], // 5.48:1 against canvas — non-text contrast needs 3:1
+  focus: red[500], // non-text indicator on dark, 3:1 is the floor
   'overlay-scrim': 'rgba(2, 6, 23, 0.66)',
 
   success: semantic.dark.success,
